@@ -8,10 +8,11 @@
 !/.zprofile
 !/.zsh/
 !/.vimrc
-!/.gitignore_py
+!/.tmux.conf
 !/.wezterm.lua
 !/pyproject.toml
 !/Cargo.toml
+!/.gitignore_py
 
 !/.config/**
 !/.github/**
