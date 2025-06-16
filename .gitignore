@@ -1,0 +1,23 @@
+### all ignore ###
+/*
+/.**
+
+### not ignore ###
+!/.zshrc
+!/.zshenv
+!/.zprofile
+!/.zsh/
+!/.vimrc
+!/.gitignore_py
+!/.wezterm.lua
+!/pyproject.toml
+!/Cargo.toml
+
+!/.config/**
+!/.github/**
+!/.vscode/**
+!/.claude/**
+
+!/README.md
+!/LICENSE
+!.gitignore

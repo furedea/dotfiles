@@ -1,0 +1,144 @@
+[project]
+name = "learn-python"
+version = "0.1.0"
+description = ""
+readme = "README.md"
+requires-python = ">= 3.13"
+dependencies = [
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.uv]
+managed = true
+dev-dependencies = [
+    "pyright>=1.1.401",
+    "pytest>=8.3.5",
+    "ty>=0.0.1a3",
+]
+
+[tool.ruff]
+target-version = "py313"
+src = ["src", "tests"]
+line-length = 119
+
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "G004", # logging-f-string
+    "PLC1901", # compare-to-empty-string
+    "PLR2004", # magic-value-comparison
+    "ANN101", # missing-type-self
+    "ANN102", # missing-type-cls
+    "ANN002", # missing-type-args
+    "ANN003", # missing-type-kwargs
+    "ANN401", # any-type
+    "ERA", # commented-out-code
+    "ARG002", # unused-method-argument
+    "INP001", # implicit-namespace-package
+    "PGH004", # blanket-noqa
+    "B008", # for using in Depends
+    "A002", # builtin-argument-shadowing
+    "A003", # builtin-attribute-shadowing
+    "PLR0913", # too-many-arguments
+    "RSE", # flake8-raise
+    "D", # pydocstyle
+    "C90", # mccabe
+    "T20", # flake8-print
+    "SLF", #  flake8-self
+    "BLE", # flake8-blind-except
+    "FBT", # flake8-boolean-trap
+    "TRY", # tryceratops
+    "COM", # flake8-commas
+    "S", # flake8-bandit
+    "EM", #flake8-errmsg
+    "EXE", # flake8-executable
+    "ICN", # flake8-import-conventions
+    "RET", #flake8-return
+    "SIM", #flake8-simplify
+    "TCH", # flake8-type-checking
+    "ISC", #flake8-implicit-str-concat
+    "N", # pep8-naming
+    "PT", # flake8-pytest-style
+    "W191", # from
+    "E111",
+    "E114",
+    "E117",
+    "D206",
+    "D300",
+    "Q000",
+    "Q001",
+    "Q002",
+    "Q003",
+    "COM812",
+    "COM819",
+    "ISC001",
+    "ISC002", # to(when using as formatter, avoid these rules)
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ty.src]
+root = "./src"
+
+[tool.ty.rules]
+
+[tool.pyright]
+include = ["src", "tests"] # automatically exclude **/__pycache__, **/.*, **/.venv
+stubPath = "stubs"
+venvPath = ".venv"
+# venv = "venv_name"
+
+pythonVersion = "3.13"
+# pythonPlatform = "linux"
+
+executionEnvironments = [{ root = "src/", extraPaths = [ "src/" ] }]
+
+typeCheckingMode = "standard"
+strictListInference = true
+strictDictionaryInference = true
+strictSetInference = true
+reportPropertyTypeMismatch = true
+reportImportCycles = true
+reportUnusedImport = "warning"
+reportUnusedClass = "warning"
+reportUnusedFunction = "warning"
+reportUnusedVariable = "warning"
+reportDuplicateImport = true
+reportUntypedFunctionDecorator = true
+reportUntypedClassDecorator = true
+reportUntypedBaseClass = true
+reportUntypedNamedTuple = true
+reportPrivateUsage = true
+reportConstantResetting = true
+reportDeprecated = "warning"
+reportInconsistentConstructor = true
+reportMissingSuperCall = "warning" # __init__, __init_subclass__, __enter__, __exit__のsuper()
+reportInitializedInstanceVariable = true
+reportMissingParameterType = true # 関数の引数の型がない場合に警告するかどうか
+reportUnknownParameterType = "warning" # 関数の引数のAny型を警告するかどうか
+reportUnknownArgumentType = "warning" # 関数の実引数のAny型を警告するかどうか
+reportUnknownLambdaType = "warning" # ラムダ式のAny型を警告するかどうか
+reportUnknownVariableType = "warning" # 変数のAny型を警告するかどうか
+reportUnknownMemberType = "warning" # メンバのAny型を警告するかどうか # 外部ライブラリにガンガン刺してくる
+reportMissingTypeArgument = true # 必要なジェネリック[]がない場合に警告するかどうか
+reportCallInDefaultInitializer = true # デフォルト引数の初期化で関数呼び出しを警告するかどうか
+reportUnnecessaryIsInstance = "warning"
+reportUnnecessaryCast = "warning"
+reportUnnecessaryComparison = "warning"
+reportUnnecessaryContains = "warning"
+reportImplicitStringConcatenation = "warning"
+reportUnusedCallResult = "warning"
+reportUnusedExpression = "warning"
+reportUnnecessaryTypeIgnoreComment = "warning"
+reportMatchNotExhaustive = true # match文のexhaustiveチェック
+reportImplicitOverride = "warning" # 特殊メソッドのオーバーライドまでチェックしてしまう
+reportShadowedImports = true # import文のシャドウイング(同名オブジェクトによる上書き)
