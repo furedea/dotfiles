@@ -1,0 +1,20 @@
+[
+  {
+    "content": "task.mdの要件を理解する",
+    "status": "completed",
+    "priority": "high",
+    "id": "1"
+  },
+  {
+    "content": "TDDに基づいてテストを先に書く",
+    "status": "completed",
+    "priority": "high",
+    "id": "2"
+  },
+  {
+    "content": "Obsidian用Markdown変換スクリプトを実装する",
+    "status": "completed",
+    "priority": "high",
+    "id": "3"
+  }
+]

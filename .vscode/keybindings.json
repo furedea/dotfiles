@@ -1,0 +1,179 @@
+// 既定値を上書きするには、このファイル内にキー バインドを挿入します
+[
+  {
+    "key": "cmd+n",
+    "command": "-workbench.action.files.newUntitledFile"
+  },
+  {
+    "key": "cmd+n",
+    "command": "explorer.newFile"
+  },
+  {
+    "key": "shift+cmd+n",
+    "command": "-workbench.action.newWindow"
+  },
+  {
+    "key": "shift+cmd+n",
+    "command": "explorer.newFolder"
+  },
+  {
+    "key": "cmd+j",
+    "command": "-workbench.action.togglePanel"
+  },
+  {
+    "key": "cmd+j",
+    "command": "workbench.action.terminal.toggleTerminal",
+    "when": "terminal.active"
+  },
+  {
+    "key": "f10",
+    "command": "code-runner.run"
+  },
+  {
+    "key": "f11",
+    "command": "-workbench.action.toggleFullScreen",
+    "when": "!isIOS"
+  },
+  {
+    "key": "f11",
+    "command": "cSpell.addWordToUserDictionary"
+  },
+  {
+    "key": "f12",
+    "command": "editor.action.openLink"
+  },
+  {
+    "key": "f12",
+    "command": "editor.action.goToTypeDefinition"
+  },
+  {
+    "key": "f12",
+    "command": "editor.action.revealDefinition"
+  },
+  {
+    "key": "ctrl+a",
+    "command": "-vscode-neovim.send",
+    "when": "editorTextFocus && neovim.ctrlKeysNormal && neovim.init && neovim.mode != 'insert'"
+  },
+  {
+    "key": "ctrl+a",
+    "command": "-vscode-neovim.send",
+    "when": "editorTextFocus && neovim.ctrlKeysInsert && neovim.mode == 'insert'"
+  },
+  {
+    "key": "ctrl+d",
+    "command": "-vscode-neovim.send",
+    "when": "editorTextFocus && neovim.ctrlKeysInsert && neovim.mode == 'insert'"
+  },
+  {
+    "key": "ctrl+a",
+    "command": "-vscode-neovim.send",
+    "when": "editorTextFocus && neovim.ctrlKeysInsert.a && neovim.init && neovim.mode == 'insert' && editorLangId not in 'neovim.editorLangIdExclusions'"
+  },
+  {
+    "key": "ctrl+d",
+    "command": "-vscode-neovim.send",
+    "when": "editorTextFocus && neovim.ctrlKeysInsert.d && neovim.init && neovim.mode == 'insert' && editorLangId not in 'neovim.editorLangIdExclusions'"
+  },
+  {
+    "key": "shift+cmd+g",
+    "command": "-editor.action.previousMatchFindAction",
+    "when": "editorFocus"
+  },
+  {
+    "key": "shift+cmd+g",
+    "command": "-workbench.action.terminal.findPrevious",
+    "when": "terminalFindFocused && terminalHasBeenCreated || terminalFindFocused && terminalProcessSupported || terminalFocusInAny && terminalHasBeenCreated || terminalFocusInAny && terminalProcessSupported"
+  },
+  {
+    "key": "shift+cmd+g",
+    "command": "-workbench.action.terminal.openDetectedLink",
+    "when": "accessibleViewIsShown && terminalHasBeenCreated && accessibleViewCurrentProviderId == 'terminal'"
+  },
+  {
+    "key": "shift+cmd+g",
+    "command": "workbench.view.scm",
+    "when": "workbench.scm.active"
+  },
+  {
+    "key": "ctrl+shift+g",
+    "command": "-workbench.view.scm",
+    "when": "workbench.scm.active"
+  },
+  {
+    "key": "shift+cmd+g",
+    "command": "workbench.view.scm",
+    "when": "workbench.scm.active && !gitlens:disabled && config.gitlens.keymap == 'chorded'"
+  },
+  {
+    "key": "ctrl+shift+g",
+    "command": "-workbench.view.scm",
+    "when": "workbench.scm.active && !gitlens:disabled && config.gitlens.keymap == 'chorded'"
+  },
+  {
+    "key": "shift+cmd+t",
+    "command": "workbench.view.extension.test"
+  },
+  {
+    "key": "alt+d",
+    "command": "-aidebug.autodebugterminal"
+  },
+  {
+    "key": "cmd+s",
+    "command": "testing.runAll"
+  },
+  {
+    "key": "cmd+l",
+    "command": "workbench.panel.chat",
+    "when": "workbench.panel.chat.view.copilot.active"
+  },
+  {
+    "key": "ctrl+cmd+i",
+    "command": "-workbench.panel.chat",
+    "when": "workbench.panel.chat.view.copilot.active"
+  },
+  {
+    "key": "shift+cmd+l",
+    "command": "workbench.panel.chatEditing"
+  },
+  {
+    "key": "shift+cmd+c",
+    "command": "workbench.view.extension.recline-ActivityBar"
+  },
+  {
+    "key": "shift+cmd+c",
+    "command": "-workbench.action.terminal.openNativeConsole",
+    "when": "!terminalFocus"
+  },
+  {
+    "key": "ctrl+s",
+    "command": "workbench.action.files.save"
+  },
+  {
+    "key": "cmd+e",
+    "command": "-editor.action.toggleScreenReaderAccessibilityMode",
+    "when": "accessibilityHelpIsShown"
+  },
+  {
+    "key": "cmd+e",
+    "command": "-actions.findWithSelection"
+  },
+  {
+    "key": "cmd+e",
+    "command": "markdown.showPreview",
+    "when": "!notebookEditorFocused && editorLangId == 'markdown'"
+},
+{
+    "key": "shift+enter",
+    "command": "workbench.action.terminal.sendSequence",
+    "args": {
+        "text": "\\\r\n"
+    },
+    "when": "terminalFocus"
+},
+{
+  "key": "cmd+;",
+  "command": "claude-code.runClaude.keyboard",
+  "when": "claude-code.hasClaudeInPath"
+}
+]

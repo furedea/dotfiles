@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__obsidian-mcp-tools__get_vault_file",
+      "mcp__obsidian-mcp-tools__search_vault_simple",
+      "mcp__obsidian-mcp-tools__list_vault_files",
+      "Bash(python -m pytest tests/ -v)",
+      "Bash(python -m pytest tests/test_fix_md.py -v)",
+      "mcp__ide__getDiagnostics",
+      "Bash(python:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": false
+}

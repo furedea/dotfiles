@@ -1,0 +1,26 @@
+[
+  {
+    "content": "ファイル全体を検索し、ハイフン（-）とコロン（:）の間にあるコマンドやコードを特定する",
+    "status": "completed",
+    "priority": "high",
+    "id": "1"
+  },
+  {
+    "content": "単一行のコマンド/コードをバッククォート（``）で囲む",
+    "status": "in_progress",
+    "priority": "high",
+    "id": "2"
+  },
+  {
+    "content": "複数行にまたがるコード/コマンドをトリプルバッククォート（```）で囲む",
+    "status": "pending",
+    "priority": "high",
+    "id": "3"
+  },
+  {
+    "content": "修正されたファイル全体を出力する",
+    "status": "pending",
+    "priority": "medium",
+    "id": "4"
+  }
+]

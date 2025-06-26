@@ -14,10 +14,12 @@
 !/Cargo.toml
 !/.gitignore_py
 
+!/.config
 !/.config/**
+!/.github
 !/.github/**
+!/.vscode
 !/.vscode/**
-!/.claude/**
 
 !/README.md
 !/LICENSE
