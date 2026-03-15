@@ -88,7 +88,16 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$HOME/.claude/hooks/stop_notification.sh"
+            "command": "$HOME/.claude/hooks/macos_notify_done.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "dotenvx run -f $HOME/dotfiles/claude/.env -- $HOME/.claude/hooks/bark_notify.sh 'タスクが完了しました'"
           }
         ]
       },
@@ -108,7 +117,16 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$HOME/.claude/hooks/notification_permission.sh"
+            "command": "$HOME/.claude/hooks/macos_notify_await.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "dotenvx run -f $HOME/dotfiles/claude/.env -- $HOME/.claude/hooks/bark_notify.sh '確認が必要です'"
           }
         ]
       },
@@ -138,7 +156,7 @@
     "autoAllowBashIfSandboxed": false,
     "allowUnsandboxedCommands": true,
     "network": {
-      "allowedDomains": []
+      "allowedDomains": ["api.day.app"]
     },
     "excludedCommands": [
       "docker",
@@ -147,5 +165,6 @@
   },
   "feedbackSurveyState": {
     "lastShownTime": 1754030513973
-  }
+  },
+  "autoMemoryEnabled": false
 }
