@@ -14,21 +14,35 @@ furedea's macOS dotfiles — managed with [Nix](https://nixos.org/), [nix-darwin
 ## Requirements
 
 - macOS (Apple Silicon)
-- [Nix](https://nixos.org/download/) with flakes enabled
-- [nix-darwin](https://github.com/nix-darwin/nix-darwin)
+- macOS username must be **`kaito`** (hardcoded in `nix/darwin/default.nix` and `nix/home/default.nix`). If different, update the following before running:
+  - `flake.nix` — `home-manager.users.<name>`
+  - `nix/darwin/default.nix` — `users.users.<name>.home`, `system.primaryUser`
+  - `nix/home/default.nix` — `home.username`, `home.homeDirectory`
 
 ## Setup (new Mac)
 
 ```sh
-# 1. Install Nix
+# 1. Install Nix (Determinate Systems installer — enables flakes by default)
 curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+```
 
+> **Official installer only:** flakes are not enabled by default. Add the following to `/etc/nix/nix.conf` before proceeding:
+> ```
+> experimental-features = nix-command flakes
+> ```
+
+```sh
 # 2. Clone dotfiles
 git clone https://github.com/furedea/dotfiles ~/dotfiles
 
-# 3. Apply configuration
-sudo darwin-rebuild switch --flake "$HOME/dotfiles#mba"
+# 3. Bootstrap nix-darwin (first time — darwin-rebuild is not yet available)
+nix run nix-darwin -- switch --flake "$HOME/dotfiles#mba"
 ```
+
+> Subsequent updates use `darwin-rebuild` directly (installed by the step above):
+> ```sh
+> sudo darwin-rebuild switch --flake "$HOME/dotfiles#mba"
+> ```
 
 `darwin-rebuild switch` automatically:
 - Installs all CLI tools via Nix
