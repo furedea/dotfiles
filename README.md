@@ -91,6 +91,12 @@ dotfiles/
 | AI / CLI | claude-code, codex |
 | macOS | mas, xcodes, dotenvx, marp-cli |
 
+### Homebrew Formulae
+
+| Tool | Notes |
+|------|-------|
+| jj-starship | Starship prompt integration for jj — not in nixpkgs, installed via `dmmulroy/tap` |
+
 ### GUI Apps (Homebrew Cask)
 
 appcleaner, arc, bitwarden, chatgpt, claude, cmux, discord, firefox, font-jetbrains-mono, ghostty, google-chrome, karabiner-elements, mactex, nani, obsidian, orbstack, raycast, slack, steam, vimr, visual-studio-code, zoom

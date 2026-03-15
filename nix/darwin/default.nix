@@ -222,6 +222,10 @@
       "zoom"
     ];
 
+    brews = [
+      "dmmulroy/tap/jj-starship"
+    ];
+
     masApps = {
       LINE = 539883307;
     };
