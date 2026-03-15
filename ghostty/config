@@ -1,0 +1,23 @@
+font-family = JetBrains Mono
+theme = Catppuccin Mocha
+window-padding-x = 20
+window-padding-y = 5
+window-padding-balance = true
+window-theme = ghostty
+background-opacity = 0.6
+background-blur-radius = 0
+macos-titlebar-style = tabs
+font-feature = -calt
+font-feature = -liga
+font-feature = -dlig
+keybind = shift+enter=text:\n
+keybind = ctrl+0=text:\x1b[48;5u
+keybind = ctrl+1=text:\x1b[49;5u
+keybind = ctrl+2=text:\x1b[50;5u
+keybind = ctrl+3=text:\x1b[51;5u
+keybind = ctrl+4=text:\x1b[52;5u
+keybind = ctrl+5=text:\x1b[53;5u
+keybind = ctrl+6=text:\x1b[54;5u
+keybind = ctrl+7=text:\x1b[55;5u
+keybind = ctrl+8=text:\x1b[56;5u
+keybind = ctrl+9=text:\x1b[57;5u

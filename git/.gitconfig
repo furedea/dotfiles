@@ -1,0 +1,51 @@
+# This is Git's per-user configuration file.
+[user]
+	# name = furedea
+	# email = 132188853+furedea@users.noreply.github.com
+[init]
+	defaultbranch = main
+[credential]
+	helper = osxkeychain
+[column]
+        ui = auto
+[branch]
+        sort = -committerdate
+[tag]
+        sort = version:refname
+[diff]
+        algorithm = histogram
+        colorMoved = plain
+        mnemonicPrefix = true
+        renames = true
+[push]
+        default = simple
+        autoSetupRemote = true
+        followTags = true
+[fetch]
+        prune = true
+        pruneTags = true
+        all = true
+[help]
+        autocorrect = prompt
+[commit]
+        verbose = true
+[rerere]
+        enabled = true
+        autoupdate = true
+[core]
+        excludesfile = ~/.gitignore
+[rebase]
+        autoSquash = true
+        autoStash = true
+        updateRefs = true
+[core]
+        fsmonitor = true
+        untrackedCache = true
+[merge]
+        # (just 'diff3' if git version < 2.3)
+        conflictstyle = zdiff3
+[pull]
+        # rebase = true
+[diff]
+        external = difft
+

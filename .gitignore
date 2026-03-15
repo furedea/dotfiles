@@ -1,0 +1,24 @@
+# Nix
+.jj/
+result
+result-*
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+*.swp
+*.swo
+*.bak
+.idea/
+.vscode/
+
+# Logs / cache
+*.log
+.cache/
+
+# Nix vim undo files in nvim config
+nvim/.undo/
+nvim/lazy-lock.json

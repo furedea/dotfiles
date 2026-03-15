@@ -1,0 +1,54 @@
+---
+description: Manage .kiro/steering/ as persistent project knowledge
+allowed-tools: Read, Task, Glob
+---
+
+# Agile SDD Steering Management
+
+## Mode Detection
+
+Perform detection before invoking Subagent:
+
+Check `.kiro/steering/` status:
+- Bootstrap Mode: Empty OR missing core files (product.md, tech.md, structure.md)
+- Sync Mode: All core files exist
+
+Use Glob to check for existing steering files.
+
+## Invoke Subagent
+
+Delegate steering management to asdd-steering-agent:
+
+```
+Task(
+  subagent_type="asdd-steering-agent",
+  description="Manage steering files",
+  prompt="""
+Mode: {bootstrap or sync based on detection}
+
+File patterns to read:
+- .kiro/steering/*.md (if sync mode)
+
+JIT Strategy: Fetch codebase files when needed, not upfront
+"""
+)
+```
+
+## Display Result
+
+Show Subagent summary to user:
+
+### Bootstrap:
+- Generated steering files: product.md, tech.md, structure.md
+- Review and approve as Source of Truth
+
+### Sync:
+- Updated steering files
+- Code drift warnings
+- Recommendations for custom steering
+
+## Notes
+
+- All `.kiro/steering/*.md` loaded as project memory
+- Focus on patterns, not catalogs
+- "Golden Rule": New code following patterns shouldn't require steering updates
