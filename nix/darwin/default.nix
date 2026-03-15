@@ -180,8 +180,8 @@
     defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticDownload -bool false
     defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticCheckEnabled -bool false
 
-    # Display sleep: 5 min on battery, never on charger
-    pmset -b displaysleep 5
+    # Display sleep: never (both battery and charger)
+    pmset -b displaysleep 0
     pmset -c displaysleep 0
 
     # NOTE: com.apple.universalaccess (reduceMotion, reduceTransparency) cannot be

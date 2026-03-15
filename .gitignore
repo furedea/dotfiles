@@ -1,7 +1,9 @@
 # Nix
+.claude/
 .jj/
 result
 result-*
+*-workspace
 
 # OS
 .DS_Store

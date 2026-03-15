@@ -1,5 +1,15 @@
 ---
-description: Jujutsu (jj) command reference for daily VCS operations, GitHub PR workflow, and conflict resolution
+name: jj
+description: >
+  Jujutsu (jj) command reference. jj is a VCS with fundamentally different
+  semantics from git: no staging area, automatic working-copy commits, immutable
+  change IDs, and bookmarks instead of branches. Because jj commands differ
+  significantly from git equivalents, always consult this skill before answering
+  any question that involves jj — including `jj new`, `jj squash`, `jj rebase`,
+  `jj bookmark`, `jj git push`, `jj undo`, conflict resolution, or PR workflows.
+  Whenever the user's message contains "jj" in a VCS context, or they describe
+  version-control tasks in a repository managed with jj, load this skill
+  immediately rather than guessing from git knowledge.
 allowed-tools: Bash(jj *)
 ---
 
@@ -27,6 +37,7 @@ jj git init --colocate      # Coexist with existing Git repo
 | `jj new <rev> [-m "<msg>"]` | Create new change on top of `<rev>` |
 | `jj new <rev1> <rev2> ...` | Create merge commit from multiple revisions |
 | `jj edit <rev>` | Move working copy to `<rev>` for direct editing |
+| `jj restore <file>` | Restore file to its parent revision state |
 
 ## Squash / Split / Rebase
 
@@ -35,6 +46,7 @@ jj git init --colocate      # Coexist with existing Git repo
 | `jj squash` | Merge working copy into parent |
 | `jj squash -i` | Interactive squash (partial) |
 | `jj squash -r <rev> -d <dest>` | Merge `<rev>` into `<dest>` without checkout |
+| `jj absorb` | Automatically squash fixup commits into their appropriate parents |
 | `jj split` | Split working copy into two consecutive changes |
 | `jj split -i` | Interactive split (like `git add -p`) |
 | `jj rebase -r <rev> -d <dest>` | Move `<rev>` onto `<dest>` without checkout |
@@ -97,12 +109,28 @@ jj rebase -b feature-name -d main@origin
 
 ## Conflict Resolution
 
-Conflicts are embedded as markers in files; no need to resolve all at once.
+jj embeds conflicts as markers directly in files — you don't need to resolve them all at once, and the repo stays usable with unresolved conflicts.
 
 ```bash
-jj new                  # Start a new change on top of conflict
-# ... resolve markers in files ...
+# Option A: resolve using a merge tool (recommended)
+jj resolve <file>       # Open configured merge tool for one file
+jj resolve --all        # Resolve all conflicted files
+
+# Option B: manually edit conflict markers, then record the resolution
+jj new                  # Start a new change on top of the conflict
+# ... edit markers in files by hand ...
 jj squash               # Merge resolution back into the conflicted commit
+
+# Check remaining conflicts
+jj log -r 'conflicts()'
+jj status
+```
+
+Configure a merge tool in `~/.config/jj/config.toml`:
+
+```toml
+[ui]
+merge-editor = "vimdiff"   # or "meld", "vscode", etc.
 ```
 
 ## Automation Tips
