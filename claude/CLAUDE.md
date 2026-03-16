@@ -3,7 +3,7 @@
 - Think in English, but generate responses in Japanese
 - Implement based on Agile-like SDD and Kent Beck's TDD using Claude Code's slash commands, hooks, and agents
   - TDD: [@~/.claude/rules/coding_guideline.md](./rules/coding_guideline.md)
-  - SDD: [@~/.claude/rules/asdd_guideline.md](./rules/asdd_guideline.md)
+  - SDD: [@~/.claude/rules/asdd_workflow.md](./rules/asdd_workflow.md)
 - When suspecting issues with given components, investigate evidence and present it to the user
 - Prefer jj (Jujutsu) over Git for all VCS operations
 - Don't perform the following tasks without user instructions:
@@ -28,11 +28,9 @@
 ## Coding Guideline
 
 - [@~/.claude/rules/coding_guideline.md](./rules/coding_guideline.md)
-- [@~/.claude/rules/jj_guideline.md](./rules/jj_guideline.md)
 
 ### Coding Style
 
-- Refer to language and library-specific rules in @~/.claude/rules/**
 - Create only the classes and functions in @./.kiro/specs/{feature}/spec.md or @./docs/class.pu
 - Write code comments in English
 

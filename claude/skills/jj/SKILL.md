@@ -1,19 +1,51 @@
 ---
 name: jj
 description: >
-  Jujutsu (jj) command reference. jj is a VCS with fundamentally different
-  semantics from git: no staging area, automatic working-copy commits, immutable
-  change IDs, and bookmarks instead of branches. Because jj commands differ
-  significantly from git equivalents, always consult this skill before answering
-  any question that involves jj — including `jj new`, `jj squash`, `jj rebase`,
-  `jj bookmark`, `jj git push`, `jj undo`, conflict resolution, or PR workflows.
-  Whenever the user's message contains "jj" in a VCS context, or they describe
-  version-control tasks in a repository managed with jj, load this skill
-  immediately rather than guessing from git knowledge.
-allowed-tools: Bash(jj *)
+  Jujutsu (jj) VCS reference: no staging area, auto working-copy commits, change IDs,
+  bookmarks instead of branches. Load for any VCS task in a jj-managed repo — commits,
+  bookmarks, rebase, squash, absorb, conflict resolution, PR workflows, undo,
+  divergent changes, or git-equivalent operations (stash, cherry-pick, amend, reset).
+  Trigger on "jj", change ID, working copy, @-revision, revset, or operation log mentions.
+allowed-tools: Bash(jj *), Bash(git status), Bash(git log), Read, Glob, Grep
 ---
 
-# jj Command Reference
+# jj Reference
+
+## Core Concepts
+
+- **Revision**: Minimum unit of change. The working copy (`@`) is always one revision — no explicit staging step.
+- **Change**: An immutable identifier for a line of work (personal task unit).
+  - **Change ID**: Short English word sequence, constant across rewrites (prefix-matchable).
+  - **Commit ID**: Hex hash that changes whenever content changes (same as Git hash).
+- **Bookmark**: Named pointer to a commit for collaboration (equivalent to a Git branch).
+
+## Rev Syntax
+
+| Symbol | Meaning |
+|--------|---------|
+| `@` | Current working copy |
+| `@-` | Parent of the working copy |
+| `x-` / `x+` | Parent / children of revision `x` |
+| `<change-id>` | Specific change (prefix-matchable) |
+| `<bookmark>` | Tip commit of a bookmark |
+
+Key distinctions:
+- `jj new @-` creates a **new sibling change** at the parent level (does NOT navigate there)
+- `jj edit @-` moves the working copy to the parent for direct editing
+
+## Revsets
+
+Revset is jj's query language. Use with `-r` on any command (e.g., `jj log -r 'mine()'`).
+
+| Expression | Meaning |
+|------------|---------|
+| `main..@` | Commits from `main` to working copy |
+| `mine()` | Commits by current user |
+| `trunk()` | Main branch tip (auto-detected) |
+| `~merges()` | Exclude merge commits |
+| `conflicts()` | Commits with unresolved conflicts |
+| `author(email:<email>)` | Commits by specific author |
+| `::<rev>` / `<rev>::` | Ancestors / descendants of `<rev>` |
 
 ## Setup
 
@@ -137,3 +169,5 @@ merge-editor = "vimdiff"   # or "meld", "vscode", etc.
 
 - Pass `--no-editor` on `describe`, `split`, etc., in headless scripts.
 - Use `--template '{id} {description|escape_json}\n'` for JSON-friendly output.
+- `jj git push --all` pushes **bookmarks only**, not all revisions.
+- Exclude `.jj/**` from file watchers (Vite/Vitest, etc.).

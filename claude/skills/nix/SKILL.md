@@ -1,6 +1,11 @@
 ---
 name: nix
-description: Reference guide for editing Nix configuration in this dotfiles repo (nix-darwin + home-manager on Apple Silicon macOS). Always load this skill when adding packages, configuring programs, modifying macOS defaults, managing dotfile symlinks, or running darwin-rebuild. Use this whenever the user mentions flake.nix, home.nix, darwin configuration, adding a package with Nix, or any Nix-related task in this repository — even if they don't explicitly say "Nix skill".
+description: >
+  Nix configuration reference for nix-darwin + home-manager on Apple Silicon macOS.
+  Load when the user asks about adding packages, configuring programs, dotfile symlinks,
+  macOS system defaults, activation scripts, unfree packages, or darwin-rebuild.
+  Trigger on: flake.nix, home.nix, nixpkgs, home-manager, programs.*, homebrew.casks,
+  homebrew.brews, mkOutOfStoreSymlink, allowUnfree, darwin-rebuild, or any nix-related task in a nix-darwin setup.
 ---
 
 # Nix Configuration — Dotfiles Reference
