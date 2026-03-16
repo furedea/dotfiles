@@ -116,6 +116,7 @@ in
       user.name = "furedea";
       user.email = "132188853+furedea@users.noreply.github.com";
       ui."diff.tool" = ["difft" "--color=always" "$left" "$right"];
+      ui.pager = "less -FRX";
     };
   };
 
