@@ -4,8 +4,15 @@ description: >
   Nix configuration reference for nix-darwin + home-manager on Apple Silicon macOS.
   Load when the user asks about adding packages, configuring programs, dotfile symlinks,
   macOS system defaults, activation scripts, unfree packages, or darwin-rebuild.
-  Trigger on: flake.nix, home.nix, nixpkgs, home-manager, programs.*, homebrew.casks,
-  homebrew.brews, mkOutOfStoreSymlink, allowUnfree, darwin-rebuild, or any nix-related task in a nix-darwin setup.
+  Also load whenever the user wants to update their dotfiles in a way that requires
+  touching nix config — e.g. adding a new app to homebrew.casks, registering a new
+  config file symlink via home.file, changing programs.* settings, or running
+  darwin-rebuild. Do NOT load just because a file happens to live in ~/dotfiles/ —
+  if the task is editing a plain config file (karabiner.json, starship.toml, etc.)
+  directly without touching any .nix file, this skill is not needed.
+  Trigger on: flake.nix, nix/home/default.nix, nix/darwin/default.nix, nixpkgs,
+  home-manager, programs.*, homebrew.casks, homebrew.brews, mkOutOfStoreSymlink,
+  allowUnfree, darwin-rebuild, or phrases like "dotfiles更新" / "nixで管理" / "add to nix".
 ---
 
 # Nix Configuration — Dotfiles Reference
