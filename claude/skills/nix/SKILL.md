@@ -2,17 +2,17 @@
 name: nix
 description: >
   Nix configuration reference for nix-darwin + home-manager on Apple Silicon macOS.
-  Load when the user asks about adding packages, configuring programs, dotfile symlinks,
-  macOS system defaults, activation scripts, unfree packages, or darwin-rebuild.
-  Also load whenever the user wants to update their dotfiles in a way that requires
-  touching nix config — e.g. adding a new app to homebrew.casks, registering a new
-  config file symlink via home.file, changing programs.* settings, or running
-  darwin-rebuild. Do NOT load just because a file happens to live in ~/dotfiles/ —
-  if the task is editing a plain config file (karabiner.json, starship.toml, etc.)
-  directly without touching any .nix file, this skill is not needed.
-  Trigger on: flake.nix, nix/home/default.nix, nix/darwin/default.nix, nixpkgs,
-  home-manager, programs.*, homebrew.casks, homebrew.brews, mkOutOfStoreSymlink,
-  allowUnfree, darwin-rebuild, or phrases like "dotfiles更新" / "nixで管理" / "add to nix".
+  ALWAYS load when the user says "dotfiles" in any context — dotfiles in this environment
+  means nix-managed config. Load for: adding packages, configuring programs, dotfile
+  symlinks, macOS system defaults, activation scripts, unfree packages, darwin-rebuild,
+  or any macOS app preference/shortcut change (app preferences like Homerow, Raycast,
+  Ghostty are managed via system.defaults in nix/darwin/default.nix, NOT edited directly).
+  Do NOT load only when editing a truly standalone config file (karabiner.json,
+  starship.toml, nvim/) that is explicitly NOT a .nix file and requires no nix rebuild.
+  Trigger on: "dotfiles", flake.nix, nix/home/default.nix,
+  nix/darwin/default.nix, nixpkgs, home-manager, programs.*, homebrew.casks,
+  homebrew.brews, mkOutOfStoreSymlink, allowUnfree, darwin-rebuild, system.defaults,
+  "nixで管理", "add to nix", any app shortcut/preference update request.
 ---
 
 # Nix Configuration — Dotfiles Reference
