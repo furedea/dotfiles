@@ -232,7 +232,6 @@
       "steam"
       "vimr"
       "visual-studio-code"
-      "zoom"
     ];
 
     brews = [
