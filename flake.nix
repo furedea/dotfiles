@@ -20,7 +20,7 @@
         home-manager.darwinModules.home-manager
         {
           nixpkgs.config.allowUnfreePredicate = pkg:
-            builtins.elem pkg.pname [ "zsh-abbr" "claude-code" ];
+            builtins.elem pkg.pname [ "zsh-abbr" "claude-code" "github-copilot-cli" ];
 
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;

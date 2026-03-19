@@ -42,6 +42,7 @@ in
     # AI / CLI
     claude-code
     codex
+    github-copilot-cli
 
     # macOS-specific
     mas

@@ -216,6 +216,7 @@
       "chatgpt"
       "claude"
       "cmux"
+      "deepl"
       "discord"
       "firefox"
       "font-jetbrains-mono"
