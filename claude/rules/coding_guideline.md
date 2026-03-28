@@ -209,6 +209,16 @@ This document provides comprehensive coding guidelines for programming and softw
 
 - Implement only currently needed features
 
+### Minimum Visibility Principle
+
+- Default to the most restricted visibility the language permits
+  - Functions not used outside the file: file-private or module-private
+  - Modules/packages: expose only to the files/modules that actually depend on them
+    - Python: `_` prefix for module-internal names (convention; skipped by `from M import *`)
+    - Rust: prefer `pub(crate)` or `pub(super)` over `pub`
+- Promote visibility only when an external caller is added
+- Treat a wide public API as a coupling surface: the smaller, the safer to refactor
+
 ### F.I.R.S.T (Clean Test Conditions)
 
 - Fast
