@@ -231,6 +231,5 @@ in
     ".claude/rules".source = link "claude/rules";
     ".claude/CLAUDE.md".source = link "claude/CLAUDE.md";
     ".claude/settings.json".source = link "claude/settings.json";
-    ".claude/plugins/installed_plugins.json".source = link "claude/plugins/installed_plugins.json";
   };
 }

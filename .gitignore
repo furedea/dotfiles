@@ -25,6 +25,8 @@ desktop.ini
 nvim/.undo/
 nvim/lazy-lock.json
 
-# dotenvx secrets (not committed - recreate per machine)
-claude/.env
-claude/.env.keys
+# Secrets
+.env*
+
+# Codex auto-generated system skills
+claude/skills/.system/
