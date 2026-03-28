@@ -1,26 +1,31 @@
 [project]
-name = "learn-python"
+name = "project"
 version = "0.1.0"
 description = ""
 readme = "README.md"
-requires-python = ">= 3.13"
+requires-python = ">= 3.14"
 dependencies = [
 ]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src"]
 
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
 [tool.uv]
 managed = true
 dev-dependencies = [
     "pyright>=1.1.401",
     "pytest>=8.3.5",
+    "pytest-mock>=3.0",
     "ruff>=0.12.1",
     "ty>=0.0.1a3",
 ]
 
 [tool.ruff]
-target-version = "py313"
+target-version = "py314"
 src = ["src", "tests"]
 line-length = 119
 
@@ -98,7 +103,7 @@ stubPath = "stubs"
 venvPath = ".venv"
 # venv = "venv_name"
 
-pythonVersion = "3.13"
+pythonVersion = "3.14"
 # pythonPlatform = "linux"
 
 executionEnvironments = [{ root = "src/", extraPaths = [ "src/" ] }]
@@ -108,7 +113,7 @@ strictListInference = true
 strictDictionaryInference = true
 strictSetInference = true
 reportPropertyTypeMismatch = true
-"deprecateTypingAliases": true
+deprecateTypingAliases = true
 reportImportCycles = true
 reportUnusedImport = "warning"
 reportUnusedClass = "warning"
@@ -144,3 +149,4 @@ reportUnnecessaryTypeIgnoreComment = "warning"
 reportMatchNotExhaustive = true # match文のexhaustiveチェック
 reportImplicitOverride = "warning" # 特殊メソッドのオーバーライドまでチェックしてしまう
 reportShadowedImports = true # import文のシャドウイング(同名オブジェクトによる上書き)
+

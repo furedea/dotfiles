@@ -1,3 +1,5 @@
+.jj
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -73,6 +75,7 @@ celerybeat.pid
 
 # Environments
 .env
+.env.keys
 .venv
 env/
 venv/
@@ -104,5 +107,3 @@ dmypy.json
 # macOS metadata
 .DS_Store
 
-# streamlit
-.streamlit/secrets.toml
