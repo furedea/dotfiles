@@ -155,7 +155,7 @@ in
 
   programs.atuin = {
     enable = true;
-    enableZshIntegration = false; # .zshrc が dotfile のため手動 eval 行を使う
+    enableZshIntegration = false; # .zshrc が dotfile のため手動 eval を使う
     settings = {
       enter_accept = true;
       sync.records = true;
@@ -187,7 +187,7 @@ in
       is_vim="ps -o state= -o comm= -t '#{pane_tty}' | grep -iqE '^[^TXZ ]+ +(\\S+\\/)?g?(view|n?vim?x?)(diff)?$'"
       bind-key -n C-h if-shell "$is_vim" "send-keys C-h" "select-pane -L"
       bind-key -n C-j if-shell "$is_vim" "send-keys C-j" "select-pane -D"
-      bind-key -n C-k if-shell "$is_vim" "send-keys C-k" "select-pane -U"
+      bind-key -n C-k if-shell "$is_vim" "send-keys C-k" "if -F '#{pane_at_top}' 'send-keys C-k' 'select-pane -U'"
       bind-key -n C-l if-shell "$is_vim" "send-keys C-l" "select-pane -R"
 
       # Dim inactive panes (Catppuccin Mocha)

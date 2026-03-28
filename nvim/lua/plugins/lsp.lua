@@ -24,12 +24,13 @@ return {
           local diagnostics = vim.diagnostic.get(0, { lnum = vim.api.nvim_win_get_cursor(0)[1] - 1 })
           if #diagnostics > 0 then
             vim.diagnostic.open_float({ focusable = false })
-          else
+          end
+          vim.schedule(function()
             local clients = vim.lsp.get_clients({ bufnr = 0 })
             if #clients > 0 then
               vim.lsp.buf.hover()
             end
-          end
+          end)
         end,
       })
 

@@ -65,6 +65,13 @@ return {
           ["vim.lsp.util.stylize_markdown"] = true,
         },
       },
+      routes = {
+        -- Suppress "No information available" from hover with no result
+        {
+          filter = { event = "notify", find = "No information available" },
+          opts = { skip = true },
+        },
+      },
       presets = {
         bottom_search = true,
         command_palette = true,
