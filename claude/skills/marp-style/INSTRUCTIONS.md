@@ -1,15 +1,3 @@
----
-name: marp
-description: >
-  Create Marp presentation slide decks in Markdown. Use this skill whenever
-  the user wants to make slides, a presentation, a deck, or a slideshow —
-  even if they don't say "Marp" explicitly. Also trigger for requests like
-  "研究発表のスライドを作って", "プレゼン資料を作りたい", "勉強会のスライドを作って",
-  "スライドのドラフトを作って", or any context where the output is a slide deck.
-  This skill enforces the user's established Marp format conventions (base theme,
-  4:3, paginate) so always load it for slide creation tasks.
----
-
 # Marp Slide Creation
 
 Always generate a Marp slide file using the conventions below.
@@ -23,7 +11,6 @@ Every slide file must begin with this exact frontmatter:
 ---
 marp: true
 theme: base
-size: 4:3
 paginate: true
 ---
 ```

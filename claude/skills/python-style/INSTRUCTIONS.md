@@ -1,0 +1,257 @@
+# Python Coding Style Guidelines
+
+## Package Management
+
+- Use only `uv` for package management, don't use `pip`
+- Initialize a new project using `uv init --template ~/dotfiles/templates/uv/ {project-name}`
+- Install dependencies using `uv sync`
+- Install packages using `uv add {package}`
+- Run tools using `uv run {tool}`
+- Upgrade packages using `uv add --dev {package} --upgrade-package {package}`
+- Prohibited: `uv pip install`, `@latest`
+
+## Directory Structure
+
+- Store production code including entry points in `./src` directory
+- Store test code in `./tests` directory
+
+## File Standards
+
+- Keep code within 119 characters per line (URLs may exceed this limit)
+- Always include type hints
+- Use pyright for static analysis
+
+## Testing
+
+- Use only `pytest` as test framework, do not use `unittest`
+- Run tests using `uv run --frozen pytest`
+- Use `anyio` for async tests, do not use `asyncio`
+- Use `pytest-mock` for mocking (`mocker` fixture), do not use `unittest.mock` directly
+- Use `pytest`, `anyio`, and `pytest-mock` with `--dev` flag as they are development packages
+- Test coverage should include edge cases and errors
+- Always add tests for new features
+- Add unit tests for bug fixes
+
+### Test Structure
+
+- **Function-based by default**; class only for namespace grouping or `setup_method`/`teardown_method`
+- **`@pytest.fixture`**: shared setup across 2+ tests, external resources, or teardown via `yield`; put in `conftest.py` when shared across files
+- **Helper function**: prefer over fixture when arguments need to be passed or setup is lightweight
+- **`@pytest.mark.parametrize`**: same logic with different inputs
+- **Fixture scope**: default `function`; use `module`/`session` only when setup is expensive
+- **Mocking**: use `mocker.patch("mod.func", autospec=True)` — enforces real signature, catches wrong-argument bugs silently missed by plain mocks
+
+Async test pattern:
+
+```python
+# conftest.py
+import pytest
+
+@pytest.fixture
+def anyio_backend() -> str:
+    return "asyncio"
+
+# tests/test_xxx.py
+import pytest
+
+@pytest.mark.anyio
+async def test_something() -> None:
+    result = await some_async_func()
+    assert result == expected
+```
+
+## Syntax Rules
+
+### Classes
+
+- Use `__slots__` to restrict variables when not using `dataclasses` or `pydantic`
+
+```python
+class Foo:
+    __slots__ = ("name", "age")
+
+    def __init__(self, name: str, age: int) -> None:
+        self.name = name
+        self.age = age
+```
+
+- Value Objects:
+  - Medium-scale or when `dataclasses` fits: use `dataclasses.dataclass(frozen=True, slots=True)` — `slots=True` (3.10+) auto-generates `__slots__`, no need to write it manually
+  - Large-scale: use `pydantic`
+  - When difficult to determine, defer judgment to user
+  - Use `__post_init__` to enforce invariants:
+
+```python
+@dataclass(frozen=True, slots=True)
+class Age:
+    value: int
+
+    def __post_init__(self) -> None:
+        if self.value < 0:
+            raise ValueError(f"Age must be non-negative, got {self.value}")
+```
+
+- Basically don't use `@staticmethod` — needing it indicates a design error
+- **Use classmethods as alternative constructors for pure construction** (no I/O).
+  `from_X`, `parse_X`, `create_X`, `make_X` → classmethod.
+  **If construction involves I/O (network, file system), separate into a module-level function**
+  to keep the Value Object pure and testable.
+
+```python
+from typing import Self
+
+@dataclass(frozen=True, slots=True)
+class SWEInstance:
+    instance_id: str
+    repo: str
+
+    @classmethod
+    def from_dict(cls, data: dict[str, str]) -> Self:   # pure → classmethod
+        return cls(instance_id=data["id"], repo=data["repo"])
+
+
+def load_instance(instance_id: str) -> SWEInstance:     # I/O → module-level function
+    row = fetch_from_dataset(instance_id)
+    return SWEInstance.from_dict(row)
+
+
+# WRONG — module-level factory for pure construction:
+def swe_instance_from_dict(data: dict) -> SWEInstance: ...  # move inside as classmethod
+```
+
+### Enums
+
+- Use `Enum`/`StrEnum` for fixed choices instead of raw string literals or dict maps
+- Convert user input strings to Enum early, then map through Enum values
+- Prefer `StrEnum` when values are serialized or user-facing
+
+
+### Functions
+
+- Keep functions focused and small
+- Use Pythonic syntax (comprehensions, `with` statements, etc.)
+- Don't use `global`, `nonlocal` (not explicit enough)
+- Use built-in generics (e.g., `tuple`, `list`, `dict`) instead of `typing.Tuple`, `typing.List`, `typing.Dict`
+
+### Strings
+
+#### Quote Usage
+
+- String contains `'` → use `"`
+- String contains `"` → use `'`
+- f-strings (variable substitution) → use `"`
+- `raise` statements → use `"` (normal sentences use `'`)
+
+#### Operators
+
+- Separate operators and operands by one space
+- When using 2+ operators, omit spaces around `*`, `/`, `//`, `%`, `**` (higher precedence)
+
+### Logging
+
+Write in dictionary format. Add extensive logging at critical system points where failures
+would be hard to diagnose (CSV file references, before/after raise statements, etc.).
+
+```python
+logger.info({
+    "action": "save",
+    "csv_file": self.csv_file,
+    "status": "run"
+})
+```
+
+## Naming Conventions
+
+- Constants: `SCREAMING_SNAKE_CASE` — define semantically meaningful string literals as module-level constants (two blank lines after imports) rather than embedding them inline
+- Variables / functions / files: `snake_case`
+  - Getters: name of the output variable
+- Classes: `UpperCamelCase`
+- Iterator arguments:
+  - Loop body ≤ 2 lines: single character (`x`, `i`)
+  - Loop body ≥ 3 lines: descriptive name
+
+### File Naming
+
+- Name files after the **domain/action** they represent, not the role suffix
+  - Prefer `retrieval.py` over `retriever.py`, `prompt.py` over `prompt_builder.py`
+  - `-er`/`-or` suffixes belong on **class names** (e.g. `class Retriever`), not file names
+- Avoid `utils.py` / `helpers.py` — name by what the module actually does (e.g. `model.py`, `inference.py`)
+
+## Whitespace & Layout
+
+### Two blank lines before/after
+
+- Import statements
+- Global variable definitions
+- Object (class/function) definitions
+
+### One blank line between
+
+- Function/method docstring sections: summary `"""`, detail, `Args`, `Returns/Yields`, `Raises`
+- Import groups (standard / third-party / local / personal)
+- Instance methods
+
+### Imports
+
+- Order import groups as: standard library → third-party → local
+- Use exactly one blank line between these groups
+- Avoid `from ... import ...` unless the imported name is self-explanatory (e.g., `Enum`, `Path`), or the module path is so long that `module.name` at call sites becomes unwieldy (e.g., `from swebench.inference.make_datasets.utils import extract_diff`)
+- Avoid `as` aliases unless required for clarity
+
+### Indentation
+
+- When handling multiple objects in parallel, align indentation with the previous element
+
+### Line Breaks
+
+- One element per line for lists/dicts with 3+ items or long expressions; trailing comma on last element
+- Don't sacrifice readability for brevity
+
+```python
+# Good
+sections = [
+    problem_statement,
+    *_file_sections(files),
+    "Please output a unified diff patch.",
+]
+
+# Bad
+sections = [problem_statement, *_file_sections(files), "Please output a unified diff patch."]
+```
+
+## Comments & Docstrings
+
+- Write comments on their own line above the relevant code
+- Always add docstrings to public APIs
+- Comment non-obvious choices (algorithm params, fallback behavior, encoding handling)
+
+```python
+# File level
+"""Explanation of file functionality"""
+
+# Class & method level
+class MyClass:
+    """Class functionality explanation"""
+
+    def method(self):
+        """Method functionality explanation"""
+
+# Function level
+def function_name(arg1, arg2):
+    """Function functionality summary.
+
+    (Detailed function functionality.)
+
+    Args:
+        arg1 (type): Argument description
+        arg2 (type): Argument description
+
+    Returns/Yields:
+        type: Return value description
+
+    Raises:
+        ErrorType: Error description
+
+    (see details at: URL)
+    """
+```
