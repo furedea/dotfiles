@@ -149,9 +149,10 @@
     "command": "npx ccstatusline@latest"
   },
   "enabledPlugins": {
-    "security-guidance@claude-plugins-official": [],
-    "ralph-loop@claude-plugins-official": [],
-    "skill-creator@claude-plugins-official": true
+    "security-guidance@claude-plugins-official": true,
+    "ralph-loop@claude-plugins-official": true,
+    "skill-creator@claude-plugins-official": true,
+    "feature-dev@claude-plugins-official": true
   },
   "language": "Japanese",
   "sandbox": {
