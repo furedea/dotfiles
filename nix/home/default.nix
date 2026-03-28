@@ -1,4 +1,4 @@
-{ config, pkgs, lib, username, ... }:
+{ config, pkgs, lib, username, unstable, ... }:
 let
   dotfiles = "${config.home.homeDirectory}/dotfiles";
   link = path: config.lib.file.mkOutOfStoreSymlink "${dotfiles}/${path}";
@@ -155,6 +155,7 @@ in
 
   programs.atuin = {
     enable = true;
+    package = unstable.atuin;
     enableZshIntegration = false; # .zshrc が dotfile のため手動 eval を使う
     settings = {
       enter_accept = true;
