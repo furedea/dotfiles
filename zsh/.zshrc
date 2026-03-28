@@ -84,6 +84,8 @@ abbr --quiet -S lt="eza --tree --level=2"
 abbr --quiet -S arm="exec arch -arch arm64e /bin/zsh --login"
 abbr --quiet -S x64="exec arch -arch x86_64 /bin/zsh --login"
 abbr --quiet -S ob="cd ~/Library/Mobile\ Documents/iCloud\~md\~obsidian/Documents/furedea"
+abbr --quiet -S ee='kasa edit --no-notice "議事録/2026年度配属/shigyo" && kasa wip -f --no-notice "議事録/2026年度配属/shigyo"'
+abbr --quiet -S es='kasa unwip "議事録/2026年度配属/shigyo"'
 
 eval "$(mise activate zsh)"
 eval "$(zoxide init zsh --cmd j)"
