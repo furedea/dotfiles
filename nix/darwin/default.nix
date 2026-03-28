@@ -212,6 +212,7 @@
     casks = [
       "appcleaner"
       "arc"
+      "betterdisplay"
       "bitwarden"
       "chatgpt"
       "claude"
@@ -235,8 +236,14 @@
       "visual-studio-code"
     ];
 
+    taps = [
+      "dmmulroy/tap"
+      "winebarrel/kasa"
+    ];
+
     brews = [
       "dmmulroy/tap/jj-starship"
+      "winebarrel/kasa/kasa"
     ];
 
     masApps = {
