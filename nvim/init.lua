@@ -38,3 +38,29 @@ vim.api.nvim_create_autocmd("VimEnter", {
   end,
 })
 
+vim.api.nvim_create_autocmd("BufReadPost", {
+  pattern = { "*.json", "*.jsonl" },
+  callback = function(args)
+    if vim.fn.executable("jq") ~= 1 then
+      return
+    end
+
+    if vim.bo[args.buf].modified or vim.bo[args.buf].buftype ~= "" then
+      return
+    end
+
+    local view = vim.fn.winsaveview()
+    local lines = vim.api.nvim_buf_get_lines(args.buf, 0, -1, false)
+    local content = table.concat(lines, "\n")
+    local formatted = vim.fn.system({ "jq", "." }, content)
+
+    if vim.v.shell_error ~= 0 then
+      return
+    end
+
+    local new_lines = vim.split(vim.trim(formatted), "\n", { plain = true })
+    vim.api.nvim_buf_set_lines(args.buf, 0, -1, false, new_lines)
+    vim.fn.winrestview(view)
+    vim.bo[args.buf].modified = false
+  end,
+})
