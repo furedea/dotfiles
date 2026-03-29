@@ -16,7 +16,9 @@ testpaths = ["tests"]
 
 [tool.uv]
 managed = true
-dev-dependencies = [
+
+[dependency-groups]
+dev = [
     "pyright>=1.1.401",
     "pytest>=8.3.5",
     "pytest-mock>=3.0",
@@ -149,4 +151,3 @@ reportUnnecessaryTypeIgnoreComment = "warning"
 reportMatchNotExhaustive = true # match文のexhaustiveチェック
 reportImplicitOverride = "warning" # 特殊メソッドのオーバーライドまでチェックしてしまう
 reportShadowedImports = true # import文のシャドウイング(同名オブジェクトによる上書き)
-

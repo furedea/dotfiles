@@ -3,7 +3,7 @@
 ## Package Management
 
 - Use only `uv` for package management, don't use `pip`
-- Initialize a new project using `uv init --template ~/dotfiles/templates/uv/ {project-name}`
+- Initialize a new project with `uv init`, then copy the template files from `~/dotfiles/templates/uv/` into the project and merge the template configuration into `pyproject.toml`
 - Install dependencies using `uv sync`
 - Install packages using `uv add {package}`
 - Run tools using `uv run {tool}`
@@ -14,6 +14,9 @@
 
 - Store production code including entry points in `./src` directory
 - Store test code in `./tests` directory
+- For an application or internal project, prefer flat module placement like `src/main.py`
+- Use `src/<package_name>/` only when the project is explicitly a distributable package or library with a real package namespace
+- If a tool or template generates `src/<package_name>/` by default, do not keep it unless the project actually needs package semantics
 
 ## File Standards
 
@@ -76,8 +79,8 @@ class Foo:
 ```
 
 - Value Objects:
-  - Medium-scale or when `dataclasses` fits: use `dataclasses.dataclass(frozen=True, slots=True)` — `slots=True` (3.10+) auto-generates `__slots__`, no need to write it manually
-  - Large-scale: use `pydantic`
+  - **When `pydantic` is a project dependency**: use `pydantic.BaseModel` (see [Pydantic](#pydantic) section)
+  - **When `pydantic` is not a dependency**: use `dataclasses.dataclass(frozen=True, slots=True)` — `slots=True` (3.10+) auto-generates `__slots__`, no need to write it manually
   - When difficult to determine, defer judgment to user
   - Use `__post_init__` to enforce invariants:
 
@@ -117,6 +120,20 @@ def load_instance(instance_id: str) -> SWEInstance:     # I/O → module-level f
 
 # WRONG — module-level factory for pure construction:
 def swe_instance_from_dict(data: dict) -> SWEInstance: ...  # move inside as classmethod
+```
+
+### Pydantic
+
+Frozen model config: `pydantic.ConfigDict(extra="forbid", frozen=True, strict=True, validate_default=True)`
+
+When multiple frozen models exist, extract a shared base class to `base.py`:
+
+```python
+import pydantic
+
+
+class FrozenModel(pydantic.BaseModel):
+    model_config = pydantic.ConfigDict(extra="forbid", frozen=True, strict=True, validate_default=True)
 ```
 
 ### Enums
