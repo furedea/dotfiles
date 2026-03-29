@@ -18,8 +18,8 @@ min_time = 3000
 truncation_length = 3
 
 [custom.jj]
-when = "jj-starship detect"
-shell = ["jj-starship", "--no-symbol", "--no-jj-prefix", "--no-jj-status", "--no-git-prefix", "--no-git-status"]
+when = "jj root 2>/dev/null || git rev-parse --git-dir 2>/dev/null"
+command = "$HOME/.config/starship/jj_prompt.sh"
 format = "$output "
 
 [git_branch]

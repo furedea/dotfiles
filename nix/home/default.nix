@@ -212,8 +212,9 @@ in
     # Neovim（多ファイル・頻繁に編集）
     ".config/nvim".source = link "nvim";
 
-    # Starship（jj-starship 参照のため dotfile のまま）
+    # Starship
     ".config/starship.toml".source = link "starship/starship.toml";
+    ".config/starship/jj_prompt.sh".source = link "starship/jj_prompt.sh";
 
     # Vim
     ".vimrc".source = link "vim/.vimrc";

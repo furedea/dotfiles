@@ -242,7 +242,6 @@
     ];
 
     brews = [
-      "dmmulroy/tap/jj-starship"
       "winebarrel/kasa/kasa"
     ];
 
