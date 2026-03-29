@@ -143,9 +143,10 @@
       "com.apple.Spotlight" = {
         "orderedItems" = [];
       };
-      # Prevent .DS_Store file creation on network shares
+      # Prevent .DS_Store file creation on network shares and USB drives
       "com.apple.desktopservices" = {
         "DSDontWriteNetworkStores" = true;
+        "DSDontWriteUSBStores" = true;
       };
       # Hot corner modifier keys (0 = no modifier key required)
       "com.apple.dock" = {
