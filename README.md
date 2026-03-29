@@ -39,10 +39,18 @@ git clone https://github.com/furedea/dotfiles ~/dotfiles
 nix run nix-darwin -- switch --flake "$HOME/dotfiles#mba"
 ```
 
-> Subsequent updates use `darwin-rebuild` directly (installed by the step above):
+> Subsequent system updates use `darwin-rebuild` directly (installed by the step above):
 > ```sh
 > sudo darwin-rebuild switch --flake "$HOME/dotfiles#mba"
 > ```
+>
+> For user-environment updates only, use `home-manager` directly:
+> ```sh
+> home-manager switch --flake "$HOME/dotfiles#kaito"
+> ```
+>
+> `home-manager` CLI itself is installed by this config, so if it is not yet available on PATH,
+> run one `darwin-rebuild switch` first.
 
 `darwin-rebuild switch` automatically:
 - Installs all CLI tools via Nix
@@ -174,6 +182,17 @@ These settings cannot be automated:
 ## Update
 
 ```sh
-# Update all packages and apply changes
+# Update all packages and apply system + user changes
 sudo darwin-rebuild switch --flake "$HOME/dotfiles#mba"
+```
+
+```sh
+# Update user packages and home-manager config only
+home-manager switch --flake "$HOME/dotfiles#kaito"
+```
+
+```sh
+# Update codex from nixpkgs-unstable, then apply only home-manager changes
+nix flake lock --update-input nixpkgs-unstable
+home-manager switch --flake "$HOME/dotfiles#kaito"
 ```

@@ -38,6 +38,7 @@ in
     mise
     uv
     rustup
+    home-manager
 
     # AI / CLI
     claude-code
