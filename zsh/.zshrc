@@ -77,6 +77,45 @@ export ESA_TOKEN=$(security find-generic-password -s "esa-token" -a "$USER" -w)
 # Plugins
 source "$HOME/.config/zsh/nix-plugins.zsh"
 
+# esa helpers — edit saves as WIP (no notice), prompt to ship after closing vim
+# NOTE: avoid `local path` — zsh's $path array is tied to $PATH; shadowing it breaks command lookup
+
+# en: create new post under Members/k-shigyo/, edit, then optionally ship
+function en() {
+    [[ -z "$1" ]] && echo "usage: en <title>" && return 1
+    local post="Members/k-shigyo/$1"
+    if kasa touch --no-notice "$post" && \
+       kasa edit --no-notice "$post" && \
+       kasa wip -f --no-notice "$post"; then
+        read -q "?ship it? [y/N] " && kasa unwip -f --notice "$post"
+        echo
+    fi
+}
+
+# ee: edit post under Members/k-shigyo/ — direct name if arg given, fzf picker if no arg
+function ee() {
+    local post
+    if [[ -n "$1" ]]; then
+        post="Members/k-shigyo/$1"
+    else
+        post=$(kasa ls "Members/k-shigyo/" | awk '{print $NF}' | fzf --prompt="esa > ")
+        [[ -z "$post" ]] && return
+    fi
+    if kasa edit --no-notice "$post" && kasa wip -f --no-notice "$post"; then
+        read -q "?ship it? [y/N] " && kasa unwip -f --notice "$post"
+        echo
+    fi
+}
+
+# eep: edit daily progress post, then optionally ship
+function eep() {
+    local post="議事録/2026年度配属/shigyo"
+    if kasa edit --no-notice "$post" && kasa wip -f --no-notice "$post"; then
+        read -q "?ship it? [y/N] " && kasa unwip -f --notice "$post"
+        echo
+    fi
+}
+
 # Abbreviations: new shortcuts that don't shadow existing commands.
 # Using -S (session scope) so definitions stay in this file, not in a separate file.
 abbr --quiet -S ll="eza -la --git"
@@ -84,8 +123,6 @@ abbr --quiet -S lt="eza --tree --level=2"
 abbr --quiet -S arm="exec arch -arch arm64e /bin/zsh --login"
 abbr --quiet -S x64="exec arch -arch x86_64 /bin/zsh --login"
 abbr --quiet -S ob="cd ~/Library/Mobile\ Documents/iCloud\~md\~obsidian/Documents/furedea"
-abbr --quiet -S ee='kasa edit --no-notice "議事録/2026年度配属/shigyo" && kasa wip -f --no-notice "議事録/2026年度配属/shigyo"'
-abbr --quiet -S es='kasa unwip "議事録/2026年度配属/shigyo"'
 
 eval "$(mise activate zsh)"
 eval "$(zoxide init zsh --cmd j)"
