@@ -221,8 +221,6 @@ in
     # macOS GUI 設定
     ".config/ghostty/config".source = link "ghostty/config";
     ".config/karabiner/karabiner.json".source = link "karabiner/karabiner.json";
-    ".config/ccstatusline/settings.json".source = link "ccstatusline/settings.json";
-
     # Codex (shares the same global instructions and skills as Claude Code)
     ".codex/AGENTS.md".source = link "claude/CLAUDE.md";
     ".codex/skills".source = link "claude/skills";
