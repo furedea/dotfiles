@@ -42,7 +42,7 @@ in
 
     # AI / CLI
     claude-code
-    codex
+    unstable.codex
     github-copilot-cli
 
     # macOS-specific
