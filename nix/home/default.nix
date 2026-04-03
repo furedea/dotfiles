@@ -33,6 +33,7 @@ in
     neovim
     starship
     tree-sitter
+    dprint
 
     # Language runtimes（バージョン管理はツール自身に委譲）
     mise
@@ -219,6 +220,9 @@ in
 
     # Vim
     ".vimrc".source = link "vim/.vimrc";
+
+    # dprint (global formatter config)
+    ".config/dprint/dprint.json".source = link "dprint/dprint.json";
 
     # macOS GUI 設定
     ".config/ghostty/config".source = link "ghostty/config";
