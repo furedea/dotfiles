@@ -16,6 +16,7 @@ testpaths = ["tests"]
 
 [tool.uv]
 managed = true
+exclude-newer = "1 week"
 
 [dependency-groups]
 dev = [
