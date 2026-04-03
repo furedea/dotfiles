@@ -16,6 +16,7 @@ in
     zsh-autosuggestions
     zsh-completions
     zsh-fast-syntax-highlighting
+    starship
 
     # File operations
     bat
@@ -29,10 +30,9 @@ in
     difftastic
 
     # Dev tools
-    just
     neovim
-    starship
     tree-sitter
+    just
     dprint
 
     # Language runtimes（バージョン管理はツール自身に委譲）

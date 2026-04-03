@@ -238,7 +238,6 @@
     ];
 
     taps = [
-      "dmmulroy/tap"
       "winebarrel/kasa"
     ];
 
