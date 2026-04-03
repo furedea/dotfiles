@@ -142,6 +142,7 @@ in
       tools = {
         node = "lts";
         pnpm = "latest";
+        "npm:@antfu/ni" = "latest";
       };
     };
   };
