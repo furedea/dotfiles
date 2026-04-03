@@ -33,6 +33,9 @@ in
     neovim
     tree-sitter
     just
+
+    # Formatters
+    autocorrect
     dprint
 
     # Language runtimes（バージョン管理はツール自身に委譲）
