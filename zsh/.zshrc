@@ -77,19 +77,25 @@ export ESA_TOKEN=$(security find-generic-password -s "esa-token" -a "$USER" -w)
 # Plugins
 source "$HOME/.config/zsh/nix-plugins.zsh"
 
-# esa helpers — edit saves as WIP (no notice), prompt to ship after closing vim
-# NOTE: avoid `local path` — zsh's $path array is tied to $PATH; shadowing it breaks command lookup
+# esa helpers — always saves as WIP; use `es` to explicitly ship
+_ESA_LAST_POST=""
 
-# en: create new post under Members/k-shigyo/, edit, then optionally ship
+# _esa_edit: open editor and remember post for `es`
+function _esa_edit() {
+    local post="$1"
+    local editor="${EDITOR:-vim}"
+    echo "editor: $editor"
+    if EDITOR="$editor" kasa edit --no-notice "$post"; then
+        _ESA_LAST_POST="$post"
+    fi
+}
+
+# en: create new post under Members/k-shigyo/; errors if already exists (typo guard)
 function en() {
     [[ -z "$1" ]] && echo "usage: en <title>" && return 1
-    local post="Members/k-shigyo/$1"
-    if kasa touch --no-notice "$post" && \
-       kasa edit --no-notice "$post" && \
-       kasa wip -f --no-notice "$post"; then
-        read -q "?ship it? [y/N] " && kasa unwip -f --notice "$post"
-        echo
-    fi
+    local url
+    url=$(kasa touch --no-notice "Members/k-shigyo/$1") || return 1
+    _esa_edit "$url"
 }
 
 # ee: edit post under Members/k-shigyo/ — direct name if arg given, fzf picker if no arg
@@ -101,19 +107,21 @@ function ee() {
         post=$(kasa ls "Members/k-shigyo/" | awk '{print $NF}' | fzf --prompt="esa > ")
         [[ -z "$post" ]] && return
     fi
-    if kasa edit --no-notice "$post" && kasa wip -f --no-notice "$post"; then
-        read -q "?ship it? [y/N] " && kasa unwip -f --notice "$post"
-        echo
-    fi
+    kasa wip -f --no-notice "$post" >/dev/null 2>&1 || true
+    _esa_edit "$post"
 }
 
-# eep: edit daily progress post, then optionally ship
+# eep: edit daily progress post; ensures WIP state before editing
 function eep() {
     local post="議事録/2026年度配属/shigyo"
-    if kasa edit --no-notice "$post" && kasa wip -f --no-notice "$post"; then
-        read -q "?ship it? [y/N] " && kasa unwip -f --notice "$post"
-        echo
-    fi
+    kasa wip -f --no-notice "$post" >/dev/null 2>&1 || true
+    _esa_edit "$post"
+}
+
+# es: ship the last edited post (unwip with notice)
+function es() {
+    [[ -z "$_ESA_LAST_POST" ]] && echo "es: no post to ship (edit something first)" && return 1
+    kasa unwip -f --notice "$_ESA_LAST_POST" && _ESA_LAST_POST=""
 }
 
 # Abbreviations: new shortcuts that don't shadow existing commands.
