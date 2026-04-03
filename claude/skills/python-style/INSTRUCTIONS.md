@@ -67,6 +67,7 @@ async def test_something() -> None:
 
 ### Classes
 
+- In Python modules, prefer `Enum -> model/class -> function` ordering when those concepts coexist
 - Use `__slots__` to restrict variables when not using `dataclasses` or `pydantic`
 
 ```python
