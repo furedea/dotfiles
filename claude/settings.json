@@ -1,8 +1,11 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "cleanupPeriodDays": 9999,
   "env": {
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
-    "ENABLE_TOOL_SEARCH": "true"
+    "CLAUDE_CODE_NO_FLICKER": "1",
+    "ENABLE_TOOL_SEARCH": "true",
+    "CLAUDE_CODE_DISABLE_1M_CONTEXT": "1"
   },
   "permissions": {
     "allow": [
@@ -30,8 +33,7 @@
       "Bash(psql:*)",
       "Bash(mysql:*)",
       "Bash(mongod:*)"
-    ],
-    "defaultMode": "plan"
+    ]
   },
   "enableAllProjectMcpServers": false,
   "hooks": {
@@ -170,9 +172,9 @@
       "watchman"
     ]
   },
+  "effortLevel": "low",
   "autoMemoryEnabled": false,
   "feedbackSurveyState": {
     "lastShownTime": 1754030513973
-  },
-  "model": "opusplan"
+  }
 }
