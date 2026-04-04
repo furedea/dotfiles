@@ -225,8 +225,8 @@ in
     # Vim
     ".vimrc".source = link "vim/.vimrc";
 
-    # dprint (global formatter config)
-    ".config/dprint/dprint.json".source = link "dprint/dprint.json";
+    # dprint (global formatter config — dprint looks for ~/dprint.json by default)
+    "dprint.json".source = link "dprint/dprint.json";
 
     # macOS GUI 設定
     ".config/ghostty/config".source = link "ghostty/config";
