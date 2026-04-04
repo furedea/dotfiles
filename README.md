@@ -161,6 +161,24 @@ Some directories are kept as **plain copies for backup/reference** only. They ar
 | `kawasemi4/` | `~/Library/Mobile Documents/com~apple~CloudDocs/Kawasemi4/` | Kawasemi4 key settings and dictionary. Synced via iCloud on new Mac; copy here is for version control backup. Update manually when settings change. |
 | `templates/` | — | Project starter templates (Cargo.toml, pyproject.toml, etc.). Copy manually to new projects as needed. |
 
+## Post-rebuild Checklist
+
+Run these after `darwin-rebuild switch` if needed:
+
+```sh
+# Verify mise tools installed correctly (npm packages may fail during rebuild
+# because npm is not in PATH in the activation environment)
+mise list
+
+# If any tools show "(missing)", install manually:
+mise install
+```
+
+```sh
+# Update dprint plugin checksums (first time only, or after changing plugin versions)
+dprint config update
+```
+
 ## Manual Setup (after darwin-rebuild)
 
 These settings cannot be automated:

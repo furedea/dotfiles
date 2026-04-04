@@ -149,7 +149,7 @@ in
 
   home.activation = {
     miseInstall = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      ${pkgs.mise}/bin/mise install --quiet 2>/dev/null || true
+      ${pkgs.mise}/bin/mise install || true
     '';
     rustupInit = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       ${pkgs.rustup}/bin/rustup toolchain install stable --no-self-update 2>/dev/null || true
