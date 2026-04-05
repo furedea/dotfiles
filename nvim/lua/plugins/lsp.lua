@@ -7,7 +7,15 @@ return {
       vim.lsp.config("nixd", {})
       vim.lsp.config("ruff", {})
       vim.lsp.config("ty", {})
-      vim.lsp.config("rust_analyzer", {})
+      vim.lsp.config("rust_analyzer", {
+        settings = {
+          ["rust-analyzer"] = {
+            check = {
+              command = "clippy",
+            },
+          },
+        },
+      })
       vim.lsp.enable("nixd")
       vim.lsp.enable("ruff")
       vim.lsp.enable("ty")
