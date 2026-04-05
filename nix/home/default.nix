@@ -64,7 +64,7 @@ in
     # AI Coding Agent
     claude-code
     unstable.codex
-    github-copilot-cli
+    unstable.github-copilot-cli
 
     # macOS-specific
     mas
