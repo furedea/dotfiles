@@ -10,6 +10,7 @@ in
 
   home.packages = with pkgs; [
     # Shell utilities
+    home-manager
     carapace
     zoxide
     zsh-abbr
