@@ -19,11 +19,11 @@ exclude-newer = "1 week"
 
 [dependency-groups]
 dev = [
-  "ruff>=0.12.1",
-  "ty>=0.0.29",
+  "pyright>=1.1.401",
   "pytest>=8.3.5",
   "pytest-mock>=3.0",
-  "pytest-cov>=7.1.0",
+  "ruff>=0.12.1",
+  "ty>=0.0.1a3",
 ]
 
 [tool.ruff]
@@ -50,7 +50,7 @@ select = [
   "DTZ", # Datetime/timezone-related issues
   "T10", # Debugger statement detection
   "DJ", # Django-specific checks
-  "FIX", # fixme/todo/hack comment detection
+  "FIX", # FIXME/TODO/HACK comment detection
   "FA", # __future__ annotations-related checks
   "INT", # gettext / i18n-related checks
   "LOG", # Logging-related checks
@@ -60,7 +60,7 @@ select = [
   "Q", # Quote style rules
   "SLOT", # __slots__-related checks
   "TID", # Import restrictions / replacements
-  "TD", # todo comment formatting/content rules
+  "TD", # TODO comment formatting/content rules
   "ARG", # Unused argument rules
   "PTH", # Prefer pathlib over os/path
   "FLY", # String literal joining / static join improvements
@@ -102,37 +102,59 @@ ignore = [
   "E117", # Disable over-indented check
 ]
 [tool.ty.src]
-include = ["src", "tests"]
-
-[tool.ty.analysis]
-respect-type-ignore-comments = true
+root = "./src"
 
 [tool.ty.rules]
-deprecated = "warn"
 
-invalid-argument-type = "error"
-invalid-assignment = "error"
-invalid-attribute-access = "error"
-invalid-method-override = "error"
-invalid-parameter-default = "error"
-invalid-return-type = "error"
-invalid-type-arguments = "error"
+[tool.pyright]
+include = ["src", "tests"] # automatically exclude **/__pycache__, **/.*, **/.venv
+stubPath = "stubs"
+venvPath = ".venv"
+# venv = "venv_name"
 
-missing-argument = "error"
-no-matching-overload = "error"
-not-subscriptable = "error"
+pythonVersion = "3.14"
+# pythonPlatform = "linux"
 
-unresolved-attribute = "error"
-unresolved-import = "error"
-unresolved-reference = "error"
+executionEnvironments = [{ root = "src/", extraPaths = ["src/"] }]
 
-possibly-missing-attribute = "warn"
-possibly-missing-import = "warn"
-possibly-unresolved-reference = "warn"
-
-redundant-cast = "warn"
-unknown-argument = "warn"
-unused-type-ignore-comment = "warn"
-
-[tool.ty.terminal]
-error-on-warning = false
+typeCheckingMode = "standard"
+strictListInference = true
+strictDictionaryInference = true
+strictSetInference = true
+reportPropertyTypeMismatch = true
+deprecateTypingAliases = true
+reportImportCycles = true
+reportUnusedImport = "warning"
+reportUnusedClass = "warning"
+reportUnusedFunction = "warning"
+reportUnusedVariable = "warning"
+reportDuplicateImport = true
+reportUntypedFunctionDecorator = true
+reportUntypedClassDecorator = true
+reportUntypedBaseClass = true
+reportUntypedNamedTuple = true
+reportPrivateUsage = true
+reportConstantResetting = true
+reportDeprecated = "warning"
+reportInconsistentConstructor = true
+reportMissingSuperCall = "warning" # __init__, __init_subclass__, __enter__, __exit__のsuper()
+reportInitializedInstanceVariable = true
+reportMissingParameterType = true # 関数の引数の型がない場合に警告するかどうか
+reportUnknownParameterType = "warning" # 関数の引数のAny型を警告するかどうか
+reportUnknownArgumentType = "warning" # 関数の実引数のAny型を警告するかどうか
+reportUnknownLambdaType = "warning" # ラムダ式のAny型を警告するかどうか
+reportUnknownVariableType = "warning" # 変数のAny型を警告するかどうか
+reportUnknownMemberType = "warning" # メンバのAny型を警告するかどうか # 外部ライブラリにガンガン刺してくる
+reportMissingTypeArgument = true # 必要なジェネリック[]がない場合に警告するかどうか
+reportCallInDefaultInitializer = true # デフォルト引数の初期化で関数呼び出しを警告するかどうか
+reportUnnecessaryIsInstance = "warning"
+reportUnnecessaryCast = "warning"
+reportUnnecessaryComparison = "warning"
+reportUnnecessaryContains = "warning"
+reportImplicitStringConcatenation = "warning"
+reportUnusedCallResult = "warning"
+reportUnusedExpression = "warning"
+reportUnnecessaryTypeIgnoreComment = "warning"
+reportMatchNotExhaustive = true # match文のexhaustiveチェック
+reportImplicitOverride = "warning" # 特殊メソッドのオーバーライドまでチェックしてしまう
+reportShadowedImports = true # import文のシャドウイング(同名オブジェクトによる上書き)
