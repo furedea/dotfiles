@@ -13,7 +13,6 @@ export XDG_CONFIG_HOME="$HOME/.config"
 eval "$(/opt/homebrew/bin/brew shellenv)"
 
 # Tool initializations (bash)
-eval "$(mise activate bash)"
 eval "$(zoxide init bash --cmd j)"
 eval "$(starship init bash)"
 eval "$(atuin init bash --disable-up-arrow)"

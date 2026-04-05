@@ -132,8 +132,6 @@ abbr --quiet -S arm="exec arch -arch arm64e /bin/zsh --login"
 abbr --quiet -S x64="exec arch -arch x86_64 /bin/zsh --login"
 abbr --quiet -S ob="cd ~/Library/Mobile\ Documents/iCloud\~md\~obsidian/Documents/furedea"
 
-eval "$(mise activate zsh)"
 eval "$(zoxide init zsh --cmd j)"
 eval "$(starship init zsh)"
 eval "$(atuin init zsh --disable-up-arrow)"
-

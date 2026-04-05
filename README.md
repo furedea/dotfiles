@@ -9,7 +9,7 @@ furedea's macOS dotfiles — managed with [Nix](https://nixos.org/), [nix-darwin
 | System settings | nix-darwin | macOS defaults, Homebrew, activation scripts |
 | User environment | home-manager | CLI tools, shell, git, editor config |
 | Dotfiles | symlinks (`mkOutOfStoreSymlink`) | Direct editable files in this repo |
-| Language versions | mise / rustup / uv | Node.js + pnpm / Rust / Python |
+| Language toolchains | Nix / rustup / uv | Node.js + pnpm + ni / Rust / Python |
 
 ## Requirements
 
@@ -57,7 +57,7 @@ nix run nix-darwin -- switch --flake "$HOME/dotfiles#mba"
 - Installs GUI apps via Homebrew Cask + Mac App Store
 - Applies all macOS system settings
 - Generates `~/.config/zsh/nix-plugins.zsh` (zsh plugin paths)
-- Runs `mise install`, `rustup toolchain install stable`, `uv python install`
+- Runs `rustup toolchain install stable`, `uv python install`
 - Symlinks dotfiles from this repo to `~`
 
 ## Directory Structure
@@ -94,8 +94,9 @@ dotfiles/
 | Shell | carapace, zoxide, zsh-abbr, zsh-autosuggestions, zsh-fast-syntax-highlighting |
 | File ops | bat, dust, eza, fd, fzf, ripgrep |
 | Dev | just, neovim, starship, tree-sitter, difftastic |
+| Formatters | autocorrect, dprint, prettierd (markdown only — see [note](#markdown-formatter)) |
 | VCS | git (programs.git), delta, jujutsu, gh |
-| Language managers | mise (Node.js + pnpm), rustup (Rust), uv (Python) |
+| Language runtimes | nodejs, pnpm, ni, rustup (Rust), uv (Python) |
 | AI / CLI | claude-code, codex |
 | macOS | mas, xcodes, dotenvx, marp-cli |
 
@@ -164,15 +165,6 @@ Some directories are kept as **plain copies for backup/reference** only. They ar
 ## Post-rebuild Checklist
 
 Run these after `darwin-rebuild switch` if needed:
-
-```sh
-# Verify mise tools installed correctly (npm packages may fail during rebuild
-# because npm is not in PATH in the activation environment)
-mise list
-
-# If any tools show "(missing)", install manually:
-mise install
-```
 
 ```sh
 # Update dprint plugin checksums (first time only, or after changing plugin versions)

@@ -42,9 +42,13 @@ in
     mise
     uv
     rustup
-    home-manager
 
-    # AI / CLI
+    # TypeScript tools
+    nodejs
+    pnpm
+    nodePackages."@antfu/ni"
+
+    # AI Coding Agent
     claude-code
     unstable.codex
     github-copilot-cli
@@ -135,22 +139,7 @@ in
     };
   };
 
-  programs.mise = {
-    enable = true;
-    enableZshIntegration = false; # .zshrc が dotfile のため手動 eval を使う
-    globalConfig = {
-      tools = {
-        node = "lts";
-        pnpm = "latest";
-        "npm:@antfu/ni" = "latest";
-      };
-    };
-  };
-
   home.activation = {
-    miseInstall = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      ${pkgs.mise}/bin/mise install || true
-    '';
     rustupInit = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       ${pkgs.rustup}/bin/rustup toolchain install stable --no-self-update 2>/dev/null || true
     '';
