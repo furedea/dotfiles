@@ -197,6 +197,29 @@ case "$EXTENSION" in
             echo "⚠️  autocorrect not found, skipping text correction"
         fi
         ;;
+    "lua")
+        echo "Running stylua and selene on Lua file..."
+        if command -v stylua &> /dev/null; then
+            stylua "$FILE_PATH" 2>&1 || {
+                echo "❌ stylua failed for $FILENAME"
+                exit 1
+            }
+            echo "✅ stylua formatting completed for $FILENAME"
+        else
+            echo "⚠️  stylua not found, skipping Lua formatting"
+        fi
+
+        if command -v selene &> /dev/null; then
+            # Run from the file's directory so selene picks up selene.toml.
+            (cd "$(dirname "$FILE_PATH")" && selene "$FILE_PATH") 2>&1 || {
+                echo "❌ selene failed for $FILENAME"
+                exit 1
+            }
+            echo "✅ selene linting completed for $FILENAME"
+        else
+            echo "⚠️  selene not found, skipping Lua linting"
+        fi
+        ;;
     *)
         echo "ℹ️  No formatter/linter configured for .$EXTENSION files"
         ;;

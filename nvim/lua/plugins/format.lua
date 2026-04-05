@@ -14,6 +14,7 @@ return {
           -- Text files: CJK spacing then structure formatting
           markdown = { "autocorrect", "prettierd" },
           nix      = { "nixfmt" },
+          lua      = { "stylua" },
           text     = { "autocorrect" },
           -- Programming languages: each ecosystem's de facto formatter
           python   = { "ruff_format" },

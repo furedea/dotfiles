@@ -56,6 +56,11 @@ in
     # Rust tools
     rustup
 
+    # Lua tools
+    stylua
+    selene
+    lua-language-server
+
     # TypeScript tools
     nodejs
     pnpm
