@@ -112,6 +112,91 @@ case "$EXTENSION" in
             echo "⚠️  cargo not found, skipping clippy linting"
         fi
         ;;
+    "nix")
+        echo "Running nixfmt, statix, and deadnix on Nix file..."
+        if command -v nixfmt &> /dev/null; then
+            nixfmt "$FILE_PATH" 2>&1 || {
+                echo "❌ nixfmt failed for $FILENAME"
+                exit 1
+            }
+            echo "✅ nixfmt formatting completed for $FILENAME"
+        else
+            echo "⚠️  nixfmt not found, skipping Nix formatting"
+        fi
+
+        if command -v statix &> /dev/null; then
+            statix check "$FILE_PATH" 2>&1 || {
+                echo "❌ statix check failed for $FILENAME"
+                exit 1
+            }
+            echo "✅ statix check completed for $FILENAME"
+        else
+            echo "⚠️  statix not found, skipping Nix anti-pattern linting"
+        fi
+
+        if command -v deadnix &> /dev/null; then
+            # --fail exits non-zero when any dead code is detected.
+            deadnix --fail "$FILE_PATH" 2>&1 || {
+                echo "❌ deadnix detected dead code in $FILENAME"
+                exit 1
+            }
+            echo "✅ deadnix check completed for $FILENAME"
+        else
+            echo "⚠️  deadnix not found, skipping Nix dead-code linting"
+        fi
+        ;;
+    "md"|"markdown")
+        echo "Running autocorrect and prettierd on Markdown file..."
+        if command -v autocorrect &> /dev/null; then
+            autocorrect --fix "$FILE_PATH" 2>&1 || {
+                echo "❌ autocorrect failed for $FILENAME"
+                exit 1
+            }
+            echo "✅ autocorrect completed for $FILENAME"
+        else
+            echo "⚠️  autocorrect not found, skipping CJK spacing correction"
+        fi
+
+        if command -v prettierd &> /dev/null; then
+            # prettierd has no --write: read from stdin, write to stdout, then swap atomically.
+            TMPFILE=$(mktemp)
+            if PRETTIERD_DEFAULT_CONFIG="$HOME/.prettierrc" \
+                prettierd "$FILE_PATH" < "$FILE_PATH" > "$TMPFILE" 2>&1; then
+                mv "$TMPFILE" "$FILE_PATH"
+                echo "✅ prettierd formatting completed for $FILENAME"
+            else
+                rm -f "$TMPFILE"
+                echo "❌ prettierd failed for $FILENAME"
+                exit 1
+            fi
+        else
+            echo "⚠️  prettierd not found, skipping Markdown formatting"
+        fi
+        ;;
+    "json"|"toml")
+        echo "Running dprint on $EXTENSION file..."
+        if command -v dprint &> /dev/null; then
+            dprint fmt --config "$HOME/dprint.json" "$FILE_PATH" 2>&1 || {
+                echo "❌ dprint fmt failed for $FILENAME"
+                exit 1
+            }
+            echo "✅ dprint formatting completed for $FILENAME"
+        else
+            echo "⚠️  dprint not found, skipping $EXTENSION formatting"
+        fi
+        ;;
+    "txt")
+        echo "Running autocorrect on text file..."
+        if command -v autocorrect &> /dev/null; then
+            autocorrect --fix "$FILE_PATH" 2>&1 || {
+                echo "❌ autocorrect failed for $FILENAME"
+                exit 1
+            }
+            echo "✅ autocorrect completed for $FILENAME"
+        else
+            echo "⚠️  autocorrect not found, skipping text correction"
+        fi
+        ;;
     *)
         echo "ℹ️  No formatter/linter configured for .$EXTENSION files"
         ;;
