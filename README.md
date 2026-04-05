@@ -162,6 +162,13 @@ Some directories are kept as **plain copies for backup/reference** only. They ar
 | `kawasemi4/` | `~/Library/Mobile Documents/com~apple~CloudDocs/Kawasemi4/` | Kawasemi4 key settings and dictionary. Synced via iCloud on new Mac; copy here is for version control backup. Update manually when settings change. |
 | `templates/` | — | Project starter templates (Cargo.toml, pyproject.toml, etc.). Copy manually to new projects as needed. |
 
+## Markdown Formatter
+
+`dprint-plugin-markdown` hardcodes list indent to 2 spaces (CommonMark minimum) with no configuration option.
+`prettierd` is used instead with `tabWidth: 4` in `~/.prettierrc` to get 4-space list nesting matching Obsidian.
+
+> **TODO:** switch back to dprint once [dprint-plugin-markdown#176](https://github.com/dprint/dprint-plugin-markdown/pull/176) merges.
+
 ## Post-rebuild Checklist
 
 Run these after `darwin-rebuild switch` if needed:

@@ -1,12 +1,18 @@
 return {
   {
     "stevearc/conform.nvim",
-    event = "InsertLeave",
+    event = { "BufReadPre", "BufNewFile" },
     config = function()
       require("conform").setup({
+        formatters = {
+          -- Use PRETTIERD_DEFAULT_CONFIG so prettierd finds ~/.prettierrc for files outside ~
+          prettierd = {
+            env = { PRETTIERD_DEFAULT_CONFIG = vim.fn.expand("~/.prettierrc") },
+          },
+        },
         formatters_by_ft = {
           -- Text files: CJK spacing then structure formatting
-          markdown = { "autocorrect", "dprint" },
+          markdown = { "autocorrect", "prettierd" },
           text     = { "autocorrect" },
           -- Programming languages: each ecosystem's de facto formatter
           python   = { "ruff_format" },
@@ -21,6 +27,10 @@ return {
       vim.api.nvim_create_autocmd("InsertLeave", {
         callback = function(args)
           local bufnr = args.buf
+          if not vim.api.nvim_buf_is_valid(bufnr) or not vim.bo[bufnr].modifiable then
+            return
+          end
+
           local tick = vim.api.nvim_buf_get_changedtick(bufnr)
           if last_tick[bufnr] == tick then return end
           last_tick[bufnr] = tick

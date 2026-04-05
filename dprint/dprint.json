@@ -7,7 +7,9 @@
     "indentWidth": 2
   },
   "toml": {},
-  "includes": ["**/*.{md,json,toml}"],
+  "includes": [
+    "**/*.{md,json,toml}"
+  ],
   "excludes": [
     "**/node_modules",
     "**/.git",

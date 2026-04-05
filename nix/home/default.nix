@@ -34,13 +34,18 @@ in
     tree-sitter
     just
 
-    # Formatters
+    # General Formatters
     autocorrect
     dprint
+    # prettierd: used for markdown because dprint-plugin-markdown hardcodes 2-space list indent.
+    # tabWidth:4 in ~/.prettierrc gives 4-space list nesting to match Obsidian.
+    # TODO: replace with dprint once https://github.com/dprint/dprint-plugin-markdown/pull/176 merges.
+    prettierd
 
-    # Language runtimes（バージョン管理はツール自身に委譲）
-    mise
+    # Python tools
     uv
+
+    # Rust tools
     rustup
 
     # TypeScript tools
@@ -216,6 +221,9 @@ in
 
     # dprint (global formatter config — dprint looks for ~/dprint.json by default)
     "dprint.json".source = link "dprint/dprint.json";
+
+    # prettierd (global formatter config)
+    ".prettierrc".source = link "prettier/.prettierrc";
 
     # macOS GUI 設定
     ".config/ghostty/config".source = link "ghostty/config";
