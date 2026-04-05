@@ -44,8 +44,11 @@ return {
       end, { desc = "Toggle auto hover" })
       vim.api.nvim_create_autocmd("CursorHold", {
         callback = function()
-          if not vim.g.auto_hover then return end
-          local diagnostics = vim.diagnostic.get(0, { lnum = vim.api.nvim_win_get_cursor(0)[1] - 1 })
+          if not vim.g.auto_hover then
+            return
+          end
+          local diagnostics =
+            vim.diagnostic.get(0, { lnum = vim.api.nvim_win_get_cursor(0)[1] - 1 })
           if #diagnostics > 0 then
             vim.diagnostic.open_float({ focusable = false })
           end
@@ -62,7 +65,12 @@ return {
         callback = function(ev)
           local opts = { buffer = ev.buf }
           vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
-          vim.keymap.set("n", "<leader>rn", ":IncRename ", vim.tbl_extend("force", opts, { desc = "Incremental rename" }))
+          vim.keymap.set(
+            "n",
+            "<leader>rn",
+            ":IncRename ",
+            vim.tbl_extend("force", opts, { desc = "Incremental rename" })
+          )
           vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, opts)
         end,
       })
@@ -98,7 +106,11 @@ return {
     opts = {},
     keys = {
       { "<leader>xx", "<cmd>Trouble diagnostics toggle<cr>", desc = "Diagnostics" },
-      { "<leader>xd", "<cmd>Trouble diagnostics toggle filter.buf=0<cr>", desc = "Buffer diagnostics" },
+      {
+        "<leader>xd",
+        "<cmd>Trouble diagnostics toggle filter.buf=0<cr>",
+        desc = "Buffer diagnostics",
+      },
     },
   },
 

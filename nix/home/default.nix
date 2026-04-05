@@ -1,12 +1,21 @@
-{ config, pkgs, lib, username, unstable, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  username,
+  unstable,
+  ...
+}:
 let
   dotfiles = "${config.home.homeDirectory}/dotfiles";
   link = path: config.lib.file.mkOutOfStoreSymlink "${dotfiles}/${path}";
 in
 {
-  home.username = username;
-  home.homeDirectory = "/Users/${username}";
-  home.stateVersion = "25.11";
+  home = {
+    inherit username;
+    homeDirectory = "/Users/${username}";
+    stateVersion = "25.11";
+  };
 
   home.packages = with pkgs; [
     # Shell utilities
@@ -86,74 +95,135 @@ in
     source ${pkgs.zsh-abbr}/share/zsh/zsh-abbr/zsh-abbr.zsh
   '';
 
-  programs.git = {
-    enable = true;
-    settings = {
-      user.name = "furedea";
-      user.email = "132188853+furedea@users.noreply.github.com";
-      init.defaultBranch = "main";
-      credential.helper = "osxkeychain";
-      column.ui = "auto";
-      branch.sort = "-committerdate";
-      tag.sort = "version:refname";
-      diff = {
-        algorithm = "histogram";
-        colorMoved = "plain";
-        mnemonicPrefix = true;
-        renames = true;
-        external = "difft";
+  programs = {
+    git = {
+      enable = true;
+      settings = {
+        user.name = "furedea";
+        user.email = "132188853+furedea@users.noreply.github.com";
+        init.defaultBranch = "main";
+        credential.helper = "osxkeychain";
+        column.ui = "auto";
+        branch.sort = "-committerdate";
+        tag.sort = "version:refname";
+        diff = {
+          algorithm = "histogram";
+          colorMoved = "plain";
+          mnemonicPrefix = true;
+          renames = true;
+          external = "difft";
+        };
+        push = {
+          default = "simple";
+          autoSetupRemote = true;
+          followTags = true;
+        };
+        fetch = {
+          prune = true;
+          pruneTags = true;
+          all = true;
+        };
+        help.autocorrect = "prompt";
+        commit.verbose = true;
+        rerere = {
+          enabled = true;
+          autoupdate = true;
+        };
+        core = {
+          excludesfile = "~/.gitignore";
+          fsmonitor = true;
+          untrackedCache = true;
+        };
+        rebase = {
+          autoSquash = true;
+          autoStash = true;
+          updateRefs = true;
+        };
+        merge.conflictstyle = "zdiff3";
       };
-      push = {
-        default = "simple";
-        autoSetupRemote = true;
-        followTags = true;
-      };
-      fetch = {
-        prune = true;
-        pruneTags = true;
-        all = true;
-      };
-      help.autocorrect = "prompt";
-      commit.verbose = true;
-      rerere = {
-        enabled = true;
-        autoupdate = true;
-      };
-      core = {
-        excludesfile = "~/.gitignore";
-        fsmonitor = true;
-        untrackedCache = true;
-      };
-      rebase = {
-        autoSquash = true;
-        autoStash = true;
-        updateRefs = true;
-      };
-      merge.conflictstyle = "zdiff3";
     };
-  };
 
-  programs.delta = {
-    enable = true;
-    enableGitIntegration = true;
-  };
-
-  programs.jujutsu = {
-    enable = true;
-    settings = {
-      user.name = "furedea";
-      user.email = "132188853+furedea@users.noreply.github.com";
-      ui."diff.tool" = ["difft" "--color=always" "$left" "$right"];
-      ui.pager = "less -FRX";
+    delta = {
+      enable = true;
+      enableGitIntegration = true;
     };
-  };
 
-  programs.gh = {
-    enable = true;
-    settings = {
-      git_protocol = "https";
-      prompt = "enabled";
-      aliases.co = "pr checkout";
+    jujutsu = {
+      enable = true;
+      settings = {
+        user.name = "furedea";
+        user.email = "132188853+furedea@users.noreply.github.com";
+        ui = {
+          "diff-editor" = ":builtin";
+          "diff.tool" = [
+            "difft"
+            "--color=always"
+            "$left"
+            "$right"
+          ];
+          pager = "less -FRX";
+        };
+      };
+    };
+
+    gh = {
+      enable = true;
+      settings = {
+        git_protocol = "https";
+        prompt = "enabled";
+        aliases.co = "pr checkout";
+      };
+    };
+
+    atuin = {
+      enable = true;
+      package = unstable.atuin;
+      enableZshIntegration = false; # .zshrc が dotfile のため手動 eval を使う
+      settings = {
+        enter_accept = true;
+        sync.records = true;
+      };
+    };
+
+    yazi = {
+      enable = true;
+      settings = {
+        mgr.show_hidden = true;
+      };
+      keymap = {
+        mgr.prepend_keymap = [
+          {
+            on = [ "o" ];
+            run = "create";
+            desc = "Create a file or directory";
+          }
+          {
+            on = [ "<Esc>" ];
+            run = "quit";
+            desc = "Quit";
+          }
+        ];
+      };
+    };
+
+    tmux = {
+      enable = true;
+      mouse = true;
+      extraConfig = ''
+        set -s extended-keys on
+        set -as terminal-features 'xterm-ghostty:extkeys'
+
+        # vim-tmux-navigator
+        is_vim="ps -o state= -o comm= -t '#{pane_tty}' | grep -iqE '^[^TXZ ]+ +(\\S+\\/)?g?(view|n?vim?x?)(diff)?$'"
+        bind-key -n C-h if-shell "$is_vim" "send-keys C-h" "select-pane -L"
+        bind-key -n C-j if-shell "$is_vim" "send-keys C-j" "select-pane -D"
+        bind-key -n C-k if-shell "$is_vim" "send-keys C-k" "if -F '#{pane_at_top}' 'send-keys C-k' 'select-pane -U'"
+        bind-key -n C-l if-shell "$is_vim" "send-keys C-l" "select-pane -R"
+
+        # Dim inactive panes (Catppuccin Mocha)
+        set -g window-style 'fg=#6c7086,bg=#181825'
+        set -g window-active-style 'fg=#cdd6f4,bg=#1e1e2e'
+      '';
     };
   };
 
@@ -163,50 +233,6 @@ in
     '';
     uvPythonInstall = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       ${pkgs.uv}/bin/uv python install 2>/dev/null || true
-    '';
-  };
-
-  programs.atuin = {
-    enable = true;
-    package = unstable.atuin;
-    enableZshIntegration = false; # .zshrc が dotfile のため手動 eval を使う
-    settings = {
-      enter_accept = true;
-      sync.records = true;
-    };
-  };
-
-  programs.yazi = {
-    enable = true;
-    settings = {
-      mgr.show_hidden = true;
-    };
-    keymap = {
-      mgr.prepend_keymap = [
-        { on = [ "o" ];      run = "create"; desc = "Create a file or directory"; }
-        { on = [ "<Esc>" ];  run = "quit";   desc = "Quit";                       }
-      ];
-    };
-  };
-
-
-  programs.tmux = {
-    enable = true;
-    mouse = true;
-    extraConfig = ''
-      set -s extended-keys on
-      set -as terminal-features 'xterm-ghostty:extkeys'
-
-      # vim-tmux-navigator
-      is_vim="ps -o state= -o comm= -t '#{pane_tty}' | grep -iqE '^[^TXZ ]+ +(\\S+\\/)?g?(view|n?vim?x?)(diff)?$'"
-      bind-key -n C-h if-shell "$is_vim" "send-keys C-h" "select-pane -L"
-      bind-key -n C-j if-shell "$is_vim" "send-keys C-j" "select-pane -D"
-      bind-key -n C-k if-shell "$is_vim" "send-keys C-k" "if -F '#{pane_at_top}' 'send-keys C-k' 'select-pane -U'"
-      bind-key -n C-l if-shell "$is_vim" "send-keys C-l" "select-pane -R"
-
-      # Dim inactive panes (Catppuccin Mocha)
-      set -g window-style 'fg=#6c7086,bg=#181825'
-      set -g window-active-style 'fg=#cdd6f4,bg=#1e1e2e'
     '';
   };
 

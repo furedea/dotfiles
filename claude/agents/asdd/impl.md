@@ -35,6 +35,7 @@ If you haven't run the verification command in this message, you cannot claim it
 ## Execution Protocol
 
 You will receive task prompts containing:
+
 - Feature name and spec directory path
 - File path patterns (NOT expanded file lists)
 - Target requirements: requirement IDs or "all pending"
@@ -42,6 +43,7 @@ You will receive task prompts containing:
 ### Step 0: Load Context
 
 Use Glob to expand file patterns, then read all files:
+
 - Glob(`.kiro/steering/*.md`) → read each
 - Read `.kiro/specs/{feature}/spec.md`
 - Parse Status section: identify target requirements (unchecked `- [ ]` items)
@@ -56,6 +58,7 @@ For each target requirement:
 Write one minimal test for the requirement.
 
 Run the test. Confirm:
+
 - Test fails (not errors)
 - Failure is because feature is missing (not typos)
 - Failure message matches expectation
@@ -81,6 +84,7 @@ Options, configurability, "nice to have" parameters. YAGNI.
 #### REFACTOR — Clean Up
 
 After green only:
+
 - Remove duplication
 - Improve names
 - Extract helpers if needed
@@ -95,14 +99,14 @@ Before claiming anything:
 2. RUN: Execute the FULL command (fresh, complete)
 3. READ: Full output, check exit code, count failures
 4. VERIFY: Does output confirm the claim?
-   - If NO: State actual status with evidence
-   - If YES: State claim WITH evidence
+    - If NO: State actual status with evidence
+    - If YES: State claim WITH evidence
 5. ONLY THEN: Make the claim
 
 Skip any step = lying, not verifying.
 
 | Claim | Requires | Not Sufficient |
-|-------|----------|----------------|
+| --- | --- | --- |
 | Tests pass | Test command output: 0 failures | Previous run, "should pass" |
 | Build succeeds | Build command: exit 0 | Linter passing |
 | Bug fixed | Test original symptom: passes | Code changed, assumed fixed |
@@ -119,6 +123,7 @@ Skip any step = lying, not verifying.
 During implementation, watch for these conditions:
 
 🔴 BLOCKER — stop and report immediately:
+
 - Spec contradictions discovered during implementation
 - Technical impossibility that prevents requirement fulfillment
 - Missing boundary conditions / edge cases that affect correctness
@@ -136,6 +141,7 @@ Proposed change: [spec.md modification suggestion]
 ```
 
 🟢 NOT a blocker — do not report:
+
 - Style / naming preferences
 - "Nice to have" feature additions
 - Scope expansion beyond current requirements
@@ -144,7 +150,7 @@ Proposed change: [spec.md modification suggestion]
 ## Rationalization Prevention
 
 | Excuse | Reality |
-|--------|---------|
+| --- | --- |
 | "Too simple to test" | Simple code breaks. Test takes 30 seconds. |
 | "I'll test after" | Tests passing immediately prove nothing. |
 | "Already manually tested" | Ad-hoc ≠ systematic. No record, can't re-run. |
@@ -188,6 +194,7 @@ Can't check all boxes? You skipped TDD. Start over.
 ## Output
 
 Brief summary:
+
 1. Requirements executed and test results
 2. Blockers encountered (if any)
 3. Status: completed requirements marked in spec.md, remaining count
@@ -195,14 +202,17 @@ Brief summary:
 ## Safety & Fallback
 
 Spec Not Found:
+
 - Stop execution
 - Suggest: "Run `/asdd:init` first"
 
 Test Failures:
+
 - Stop implementation for current requirement
 - Debug and fix, then re-run
 
 Blocker Found:
+
 - Stop implementation
 - Report blocker with evidence
 - Wait for human decision

@@ -80,10 +80,10 @@ class Foo:
 ```
 
 - Value Objects:
-  - **When `pydantic` is a project dependency**: use `pydantic.BaseModel` (see [Pydantic](#pydantic) section)
-  - **When `pydantic` is not a dependency**: use `dataclasses.dataclass(frozen=True, slots=True)` — `slots=True` (3.10+) auto-generates `__slots__`, no need to write it manually
-  - When difficult to determine, defer judgment to user
-  - Use `__post_init__` to enforce invariants:
+    - **When `pydantic` is a project dependency**: use `pydantic.BaseModel` (see [Pydantic](#pydantic) section)
+    - **When `pydantic` is not a dependency**: use `dataclasses.dataclass(frozen=True, slots=True)` — `slots=True` (3.10+) auto-generates `__slots__`, no need to write it manually
+    - When difficult to determine, defer judgment to user
+    - Use `__post_init__` to enforce invariants:
 
 ```python
 @dataclass(frozen=True, slots=True)
@@ -96,10 +96,7 @@ class Age:
 ```
 
 - Basically don't use `@staticmethod` — needing it indicates a design error
-- **Use classmethods as alternative constructors for pure construction** (no I/O).
-  `from_X`, `parse_X`, `create_X`, `make_X` → classmethod.
-  **If construction involves I/O (network, file system), separate into a module-level function**
-  to keep the Value Object pure and testable.
+- **Use classmethods as alternative constructors for pure construction** (no I/O). `from_X`, `parse_X`, `create_X`, `make_X` → classmethod. **If construction involves I/O (network, file system), separate into a module-level function** to keep the Value Object pure and testable.
 
 ```python
 from typing import Self
@@ -143,7 +140,6 @@ class FrozenModel(pydantic.BaseModel):
 - Convert user input strings to Enum early, then map through Enum values
 - Prefer `StrEnum` when values are serialized or user-facing
 
-
 ### Functions
 
 - Keep functions focused and small
@@ -167,8 +163,7 @@ class FrozenModel(pydantic.BaseModel):
 
 ### Logging
 
-Write in dictionary format. Add extensive logging at critical system points where failures
-would be hard to diagnose (CSV file references, before/after raise statements, etc.).
+Write in dictionary format. Add extensive logging at critical system points where failures would be hard to diagnose (CSV file references, before/after raise statements, etc.).
 
 ```python
 logger.info({
@@ -182,17 +177,17 @@ logger.info({
 
 - Constants: `SCREAMING_SNAKE_CASE` — define semantically meaningful string literals as module-level constants (two blank lines after imports) rather than embedding them inline
 - Variables / functions / files: `snake_case`
-  - Getters: name of the output variable
+    - Getters: name of the output variable
 - Classes: `UpperCamelCase`
 - Iterator arguments:
-  - Loop body ≤ 2 lines: single character (`x`, `i`)
-  - Loop body ≥ 3 lines: descriptive name
+    - Loop body ≤ 2 lines: single character (`x`, `i`)
+    - Loop body ≥ 3 lines: descriptive name
 
 ### File Naming
 
 - Name files after the **domain/action** they represent, not the role suffix
-  - Prefer `retrieval.py` over `retriever.py`, `prompt.py` over `prompt_builder.py`
-  - `-er`/`-or` suffixes belong on **class names** (e.g. `class Retriever`), not file names
+    - Prefer `retrieval.py` over `retriever.py`, `prompt.py` over `prompt_builder.py`
+    - `-er`/`-or` suffixes belong on **class names** (e.g. `class Retriever`), not file names
 - Avoid `utils.py` / `helpers.py` — name by what the module actually does (e.g. `model.py`, `inference.py`)
 
 ## Whitespace & Layout

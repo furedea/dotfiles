@@ -1,7 +1,6 @@
 # Marp Slide Creation
 
-Always generate a Marp slide file using the conventions below.
-Do not invent a different frontmatter or theme — use exactly what is specified here.
+Always generate a Marp slide file using the conventions below. Do not invent a different frontmatter or theme — use exactly what is specified here.
 
 ## Fixed Frontmatter
 
@@ -59,7 +58,7 @@ Each content slide starts with `# Heading` (becomes a section title with underli
 
 - Point A
 - Point B
-  - Sub-point
+    - Sub-point
 
 **Key insight:** use `<b>text</b>` or `**text**` for emphasis.
 ```
@@ -82,7 +81,7 @@ Use `---` on its own line to separate slides.
 ## CSS Classes and Their Usage
 
 | Class | Purpose | How to apply |
-|-------|---------|--------------|
+| --- | --- | --- |
 | `lead` | Title slide — centered layout, no underline on h1 | `<!-- _class: lead -->` |
 | `toc` | Table of contents — vertically centered list | `<!--\n_class: toc\nheader: Title\n-->` |
 | `photo-reserve` | Reserves the top half for a photo/image placeholder | `<!-- _class: photo-reserve -->` |
@@ -116,10 +115,10 @@ Use this for citing sources on a specific slide.
 
 ## Theme Design (base.css)
 
-The `base` theme is defined in `assets/base.css` in this skill directory (also lives at
-`~/Library/Mobile Documents/iCloud~md~obsidian/Documents/furedea/Slides/base.css`).
+The `base` theme is defined in `assets/base.css` in this skill directory (also lives at `~/Library/Mobile Documents/iCloud~md~obsidian/Documents/furedea/Slides/base.css`).
 
 Key design tokens:
+
 - Primary color: `rgb(14, 131, 253)` (blue)
 - Background: `rgb(239, 255, 255)` (light cyan)
 - Code background: `rgb(255, 229, 193)` (peach)
@@ -130,11 +129,13 @@ Key design tokens:
 ## Save Location
 
 Save completed slides to:
+
 ```
 ~/Library/Mobile Documents/iCloud~md~obsidian/Documents/furedea/Slides/
 ```
 
 Use a descriptive Japanese or English filename with underscores:
+
 - `研究進捗_2026_03.md`
 - `tech_talk_rust.md`
 

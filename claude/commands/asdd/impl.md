@@ -10,8 +10,8 @@ argument-hint: <feature-name> [req-ids] [-y]
 
 - Feature name: `$1`
 - Requirement IDs: `$2` (optional)
-  - Format: "REQ-001" (single) or "REQ-001,REQ-002" (multiple)
-  - If not provided: Execute all pending requirements
+    - Format: "REQ-001" (single) or "REQ-001,REQ-002" (multiple)
+    - If not provided: Execute all pending requirements
 
 ## Resolve Feature Name
 
@@ -35,6 +35,7 @@ Check that spec exists and is ready:
 If `-y` flag is present in arguments: skip approval gate, auto-approve.
 
 If `status: draft` (and no `-y` flag):
+
 - Warn: "This spec has not been reviewed yet. The status is still `draft`."
 - Ask: "Have you reviewed the spec and want to proceed? [y/N]"
 - If approved: Update frontmatter to `status: approved`, then continue
@@ -71,14 +72,18 @@ Show subagent summary to user, then provide next step guidance:
 ### Commands
 
 Execute specific requirement(s):
+
 - `/asdd:impl feature-name REQ-001` - Single requirement
 - `/asdd:impl feature-name REQ-001,REQ-002` - Multiple requirements
 
 Execute all pending:
+
 - `/asdd:impl feature-name` - All unchecked requirements
 
 Check progress:
+
 - `/asdd:status feature-name`
 
 Evolve spec if needed:
+
 - `/asdd:evolve feature-name`

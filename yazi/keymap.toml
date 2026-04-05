@@ -1,9 +1,9 @@
 [[mgr.prepend_keymap]]
-on  = "o"
+on = "o"
 run = "create"
 desc = "Create a file or directory"
 
 [[mgr.prepend_keymap]]
-on  = "<Esc>"
+on = "<Esc>"
 run = "quit"
 desc = "Quit"

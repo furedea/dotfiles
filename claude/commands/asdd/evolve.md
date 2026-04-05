@@ -7,13 +7,13 @@ argument-hint: <feature-name>
 # Spec Evolution
 
 <background_information>
+
 - **Mission**: Update spec.md when requirements change, maintaining consistency across all sections
 - **Success Criteria**:
-  - Changes proposed in diff format before applying
-  - Human approval required before any spec.md modification
-  - Requirements, Approach, and Status sections stay in sync
-  - Updated timestamp in frontmatter
-</background_information>
+    - Changes proposed in diff format before applying
+    - Human approval required before any spec.md modification
+    - Requirements, Approach, and Status sections stay in sync
+    - Updated timestamp in frontmatter </background_information>
 
 <instructions>
 
@@ -24,6 +24,7 @@ Read the current spec and propose changes based on conversation context. Apply c
 ## Triggers
 
 This command handles two scenarios:
+
 - Human-initiated: User wants to add, modify, or remove requirements
 - AI-initiated: Implementation agent reported a blocker and human approved a change
 
@@ -43,6 +44,7 @@ Read `.kiro/specs/{resolved-name}/spec.md`
 ### Step 2: Identify Changes
 
 From conversation context, determine:
+
 - Requirements to add (new REQ-IDs, continue sequential numbering)
 - Requirements to modify (changed acceptance criteria)
 - Requirements to remove (no longer needed)
@@ -74,6 +76,7 @@ Wait for human approval before proceeding.
 ### Step 4: Apply Changes
 
 After approval only:
+
 - Update Requirements section
 - Update Approach section if needed
 - Update Status section (add/remove checkboxes)

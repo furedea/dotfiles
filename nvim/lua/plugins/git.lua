@@ -9,21 +9,36 @@ return {
         local opts = { buffer = bufnr }
 
         vim.keymap.set("n", "]c", function()
-          if vim.wo.diff then return "]c" end
-          vim.schedule(function() gs.next_hunk() end)
+          if vim.wo.diff then
+            return "]c"
+          end
+          vim.schedule(function()
+            gs.next_hunk()
+          end)
           return "<Ignore>"
         end, vim.tbl_extend("force", opts, { expr = true, desc = "Next hunk" }))
 
         vim.keymap.set("n", "[c", function()
-          if vim.wo.diff then return "[c" end
-          vim.schedule(function() gs.prev_hunk() end)
+          if vim.wo.diff then
+            return "[c"
+          end
+          vim.schedule(function()
+            gs.prev_hunk()
+          end)
           return "<Ignore>"
         end, vim.tbl_extend("force", opts, { expr = true, desc = "Previous hunk" }))
 
         -- stage/reset are disabled for jj compatibility (use jj commands instead)
 
-        vim.keymap.set("n", "<leader>hp", gs.preview_hunk, vim.tbl_extend("force", opts, { desc = "Preview hunk" }))
-        vim.keymap.set("n", "<leader>hb", function() gs.blame_line({ full = true }) end, vim.tbl_extend("force", opts, { desc = "Blame line" }))
+        vim.keymap.set(
+          "n",
+          "<leader>hp",
+          gs.preview_hunk,
+          vim.tbl_extend("force", opts, { desc = "Preview hunk" })
+        )
+        vim.keymap.set("n", "<leader>hb", function()
+          gs.blame_line({ full = true })
+        end, vim.tbl_extend("force", opts, { desc = "Blame line" }))
       end,
     },
   },

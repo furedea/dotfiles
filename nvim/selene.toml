@@ -1,1 +1,5 @@
 std = "lua51+vim"
+
+[lints]
+# lazy.nvim plugin specs `{ "user/repo", opts = {...} }` are intentional mixed tables.
+mixed_table = "allow"

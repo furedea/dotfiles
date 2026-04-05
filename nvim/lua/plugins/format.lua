@@ -13,14 +13,14 @@ return {
         formatters_by_ft = {
           -- Text files: CJK spacing then structure formatting
           markdown = { "autocorrect", "prettierd" },
-          nix      = { "nixfmt" },
-          lua      = { "stylua" },
-          text     = { "autocorrect" },
+          nix = { "nixfmt" },
+          lua = { "stylua" },
+          text = { "autocorrect" },
           -- Programming languages: each ecosystem's de facto formatter
-          python   = { "ruff_format" },
-          rust     = { "rustfmt" },
-          json     = { "dprint" },
-          toml     = { "dprint" },
+          python = { "ruff_format" },
+          rust = { "rustfmt" },
+          json = { "dprint" },
+          toml = { "dprint" },
         },
       })
 
@@ -34,7 +34,9 @@ return {
           end
 
           local tick = vim.api.nvim_buf_get_changedtick(bufnr)
-          if last_tick[bufnr] == tick then return end
+          if last_tick[bufnr] == tick then
+            return
+          end
           last_tick[bufnr] = tick
           require("conform").format({ bufnr = bufnr, async = true })
         end,

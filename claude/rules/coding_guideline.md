@@ -9,11 +9,11 @@ This document provides comprehensive coding guidelines for programming and softw
 - 80-120 characters per line
 - 200-500 lines per file
 - Order from high abstraction to low abstraction
-  - Write called functions immediately after calling functions
+    - Write called functions immediately after calling functions
 - Place closely related concepts near each other, unrelated concepts in different files
-  - Define classes with their specific enums and exception classes in the same file
+    - Define classes with their specific enums and exception classes in the same file
 - Separate object creation and execution (make dependencies unidirectional, separate creation and execution responsibilities)
-  - Object creation and configuration only in main, AbstractFactory, or DI containers
+    - Object creation and configuration only in main, AbstractFactory, or DI containers
 
 ### Class Design
 
@@ -21,8 +21,8 @@ This document provides comprehensive coding guidelines for programming and softw
 
 - Class has single responsibility (SRP)
 - Minimize number of fields and methods
-  - All methods use all fields evenly (high cohesion)
-  - Split class when field-method correspondence separates
+    - All methods use all fields evenly (high cohesion)
+    - Split class when field-method correspondence separates
 - Fields and methods are private by default, public only when necessary for exposure
 
 #### Class Principles
@@ -30,8 +30,8 @@ This document provides comprehensive coding guidelines for programming and softw
 - Class name represents responsibility
 - Method order: public → private
 - Prohibit fields and methods not used in specific domains
-  - Wrap objects that are not user-defined types
-  - Define interfaces for user-defined type objects
+    - Wrap objects that are not user-defined types
+    - Define interfaces for user-defined type objects
 - Separate internal implementation through interfaces (loose coupling)
 - One exception class per concept
 - Don't practice feature envy (Law of Demeter)
@@ -42,22 +42,22 @@ This document provides comprehensive coding guidelines for programming and softw
 #### Function Policy
 
 - Function does exactly one thing
-  - Split functions that do multiple things
-    - Extract duplications
-    - Extract by paragraphs (SRP)
-    - Extract control structures
-    - Separate different responsibilities in iterations by splitting iterations themselves
-    - Extract commands and queries separately (Command Query Responsibility Segregation)
+    - Split functions that do multiple things
+        - Extract duplications
+        - Extract by paragraphs (SRP)
+        - Extract control structures
+        - Separate different responsibilities in iterations by splitting iterations themselves
+        - Extract commands and queries separately (Command Query Responsibility Segregation)
 - Express function processing with multiple more specific functions
-  - One abstraction level per function
-  - Make readable as sequence of to-clauses from high to low abstraction
+    - One abstraction level per function
+    - Make readable as sequence of to-clauses from high to low abstraction
 
 #### Function Principles
 
 - 0-3 arguments
-  - Create parameter class when many arguments
-  - Express processing order through arguments
-  - Provide information through keyword arguments
+    - Create parameter class when many arguments
+    - Express processing order through arguments
+    - Provide information through keyword arguments
 - 2-4 lines with maximum one indentation level
 - Define variables just before use (shorten variable lifetime)
 - Convert temporary variables to functions when used in processing
@@ -80,9 +80,9 @@ This document provides comprehensive coding guidelines for programming and softw
 - Use programming terms and domain terms
 - Precise word selection (get/fetch/download)
 - Add attributes
-  - Units (length→chars/start_ms)
-  - Prefixes/suffixes (unsafe_/untrust_/plaintext_/_urlenc)
-  - Boolean (is/has/can/show/should/enabled)
+    - Units (length→chars/start_ms)
+    - Prefixes/suffixes (unsafe*/untrust*/plaintext\_/_urlenc)
+    - Boolean (is/has/can/show/should/enabled)
 - Omit unnecessary words
 
 ### Comments
@@ -212,10 +212,10 @@ This document provides comprehensive coding guidelines for programming and softw
 ### Minimum Visibility Principle
 
 - Default to the most restricted visibility the language permits
-  - Functions not used outside the file: file-private or module-private
-  - Modules/packages: expose only to the files/modules that actually depend on them
-    - Python: `_` prefix for module-internal names (convention; skipped by `from M import *`)
-    - Rust: prefer `pub(crate)` or `pub(super)` over `pub`
+    - Functions not used outside the file: file-private or module-private
+    - Modules/packages: expose only to the files/modules that actually depend on them
+        - Python: `_` prefix for module-internal names (convention; skipped by `from M import *`)
+        - Rust: prefer `pub(crate)` or `pub(super)` over `pub`
 - Promote visibility only when an external caller is added
 - Treat a wide public API as a coupling surface: the smaller, the safer to refactor
 
@@ -247,8 +247,8 @@ This document provides comprehensive coding guidelines for programming and softw
 
 - Model that organizes small target domain as independent object model
 - Create domain model from concerns, not features
-  - Don't create as part of feature (feature-centric design creates dependencies)
-  - Concern of wanting to know age → Create age class as place to put calculation logic
+    - Don't create as part of feature (feature-centric design creates dependencies)
+    - Concern of wanting to know age → Create age class as place to put calculation logic
 
 ##### Domain Object
 

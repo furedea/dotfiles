@@ -10,50 +10,65 @@
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = inputs@{ self, nix-darwin, nixpkgs, nixpkgs-unstable, home-manager }:
-  let
-    username = "kaito";
-    system = "aarch64-apple-darwin";
-    allowUnfreePredicate = pkg:
-      builtins.elem pkg.pname [ "zsh-abbr" "claude-code" "github-copilot-cli" ];
-    pkgs = import nixpkgs {
-      inherit system;
-      config.allowUnfreePredicate = allowUnfreePredicate;
-    };
-    unstable = import nixpkgs-unstable {
-      inherit system;
-    };
-  in {
-    darwinConfigurations."mba" = nix-darwin.lib.darwinSystem {
-      specialArgs = { inherit username; };
-      modules = [
-        ./nix/darwin/default.nix
-        home-manager.darwinModules.home-manager
-        {
-          # Allowlist for packages with non-free licenses (nixpkgs blocks unfree by default).
-          # Use allowUnfreePredicate instead of allowUnfree = true to avoid
-          # accidentally permitting other proprietary packages.
-          #   zsh-abbr         : CC-BY-NC-SA-4.0 + Hippocratic License v3.0 (both free=false)
-          #   claude-code      : Anthropic proprietary
-          #   github-copilot-cli: GitHub proprietary
-          nixpkgs.config.allowUnfreePredicate = allowUnfreePredicate;
+  outputs =
+    inputs@{
+      self,
+      nix-darwin,
+      nixpkgs,
+      nixpkgs-unstable,
+      home-manager,
+    }:
+    let
+      username = "kaito";
+      system = "aarch64-apple-darwin";
+      allowUnfreePredicate =
+        pkg:
+        builtins.elem pkg.pname [
+          "zsh-abbr"
+          "claude-code"
+          "github-copilot-cli"
+        ];
+      pkgs = import nixpkgs {
+        inherit system;
+        config = { inherit allowUnfreePredicate; };
+      };
+      unstable = import nixpkgs-unstable {
+        inherit system;
+        config = { inherit allowUnfreePredicate; };
+      };
+    in
+    {
+      darwinConfigurations."mba" = nix-darwin.lib.darwinSystem {
+        specialArgs = { inherit username; };
+        modules = [
+          ./nix/darwin/default.nix
+          home-manager.darwinModules.home-manager
+          {
+            # Allowlist for packages with non-free licenses (nixpkgs blocks unfree by default).
+            # Use allowUnfreePredicate instead of allowUnfree = true to avoid
+            # accidentally permitting other proprietary packages.
+            #   zsh-abbr         : CC-BY-NC-SA-4.0 + Hippocratic License v3.0 (both free=false)
+            #   claude-code      : Anthropic proprietary
+            #   github-copilot-cli: GitHub proprietary
+            nixpkgs.config.allowUnfreePredicate = allowUnfreePredicate;
 
-          home-manager.useGlobalPkgs = true;
-          home-manager.useUserPackages = true;
-          home-manager.backupFileExtension = "bak";
-          home-manager.extraSpecialArgs = { inherit username unstable; };
+            home-manager = {
+              useGlobalPkgs = true;
+              useUserPackages = true;
+              backupFileExtension = "bak";
+              extraSpecialArgs = { inherit username unstable; };
+              users.${username} = import ./nix/home/default.nix;
+            };
+          }
+        ];
+      };
 
-          home-manager.users.${username} = import ./nix/home/default.nix;
-        }
-      ];
+      homeConfigurations.${username} = home-manager.lib.homeManagerConfiguration {
+        inherit pkgs;
+        extraSpecialArgs = { inherit username unstable; };
+        modules = [
+          ./nix/home/default.nix
+        ];
+      };
     };
-
-    homeConfigurations.${username} = home-manager.lib.homeManagerConfiguration {
-      inherit pkgs;
-      extraSpecialArgs = { inherit username unstable; };
-      modules = [
-        ./nix/home/default.nix
-      ];
-    };
-  };
 }

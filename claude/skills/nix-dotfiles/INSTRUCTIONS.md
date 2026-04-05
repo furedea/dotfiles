@@ -23,13 +23,12 @@ Platform: `aarch64-darwin` (Apple Silicon). Release channel: `25.11` for all inp
 sudo darwin-rebuild switch --flake "$HOME/dotfiles#mba"
 ```
 
-Run this after every edit to `flake.nix`, `nix/darwin/default.nix`, or `nix/home/default.nix`.
-Changes to symlinked dotfiles (e.g. `.zshrc`, `starship.toml`) take effect immediately — no rebuild needed.
+Run this after every edit to `flake.nix`, `nix/darwin/default.nix`, or `nix/home/default.nix`. Changes to symlinked dotfiles (e.g. `.zshrc`, `starship.toml`) take effect immediately — no rebuild needed.
 
 ## Where to Add a Package
 
 | What | Where | Example |
-|------|-------|---------|
+| --- | --- | --- |
 | CLI tool available in nixpkgs | `nix/home/default.nix` → `home.packages` | `bat`, `ripgrep` |
 | GUI app (macOS .app) | `nix/darwin/default.nix` → `homebrew.casks` | `"obsidian"` |
 | Homebrew tap formula | `nix/darwin/default.nix` → `homebrew.brews` | `"dmmulroy/tap/jj-starship"` |
@@ -82,9 +81,7 @@ programs.some-tool = {
 };
 ```
 
-> **Why `enableZshIntegration = false`?** `.zshrc` is a `mkOutOfStoreSymlink` dotfile managed
-> directly in the repo. Auto-injected lines would conflict. Add shell integration manually in
-> `zsh/.zshrc` using `eval "$(tool init zsh)"` or source the generated file.
+> **Why `enableZshIntegration = false`?** `.zshrc` is a `mkOutOfStoreSymlink` dotfile managed directly in the repo. Auto-injected lines would conflict. Add shell integration manually in `zsh/.zshrc` using `eval "$(tool init zsh)"` or source the generated file.
 
 ## Dotfile Symlinks
 
@@ -152,8 +149,7 @@ system.defaults = {
 };
 ```
 
-Common namespaces: `NSGlobalDomain`, `finder`, `dock`, `trackpad`, `screencapture`,
-`screensaver`, `menuExtraClock`, `WindowManager`.
+Common namespaces: `NSGlobalDomain`, `finder`, `dock`, `trackpad`, `screencapture`, `screensaver`, `menuExtraClock`, `WindowManager`.
 
 ## Activation Scripts (system-level)
 
@@ -169,9 +165,9 @@ system.activationScripts.postActivation.text = ''
 ## Key Patterns in This Repo
 
 | Pattern | Usage |
-|---------|-------|
+| --- | --- | --- | --- |
 | `with pkgs;` | Avoids repeating `pkgs.` inside `home.packages = with pkgs; [ ... ]` |
 | `link "path"` | Helper defined in `let` block for `mkOutOfStoreSymlink` |
 | `${pkgs.xxx}` in `.text` | Embeds Nix store paths into generated shell files |
 | `enableZshIntegration = false` | All programs with shell integration, because `.zshrc` is a symlink |
-| `|| true` in activation | Prevents non-fatal errors from aborting the rebuild |
+| ` |  | true` in activation | Prevents non-fatal errors from aborting the rebuild |

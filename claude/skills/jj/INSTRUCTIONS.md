@@ -4,21 +4,22 @@
 
 - **Revision**: Minimum unit of change. The working copy (`@`) is always one revision — no explicit staging step.
 - **Change**: An immutable identifier for a line of work (personal task unit).
-  - **Change ID**: Short English word sequence, constant across rewrites (prefix-matchable).
-  - **Commit ID**: Hex hash that changes whenever content changes (same as Git hash).
+    - **Change ID**: Short English word sequence, constant across rewrites (prefix-matchable).
+    - **Commit ID**: Hex hash that changes whenever content changes (same as Git hash).
 - **Bookmark**: Named pointer to a commit for collaboration (equivalent to a Git branch).
 
 ## Rev Syntax
 
-| Symbol | Meaning |
-|--------|---------|
-| `@` | Current working copy |
-| `@-` | Parent of the working copy |
-| `x-` / `x+` | Parent / children of revision `x` |
+| Symbol        | Meaning                            |
+| ------------- | ---------------------------------- |
+| `@`           | Current working copy               |
+| `@-`          | Parent of the working copy         |
+| `x-` / `x+`   | Parent / children of revision `x`  |
 | `<change-id>` | Specific change (prefix-matchable) |
-| `<bookmark>` | Tip commit of a bookmark |
+| `<bookmark>`  | Tip commit of a bookmark           |
 
 Key distinctions:
+
 - `jj new @-` creates a **new sibling change** at the parent level (does NOT navigate there)
 - `jj edit @-` moves the working copy to the parent for direct editing
 
@@ -26,15 +27,15 @@ Key distinctions:
 
 Revset is jj's query language. Use with `-r` on any command (e.g., `jj log -r 'mine()'`).
 
-| Expression | Meaning |
-|------------|---------|
-| `main..@` | Commits from `main` to working copy |
-| `mine()` | Commits by current user |
-| `trunk()` | Main branch tip (auto-detected) |
-| `~merges()` | Exclude merge commits |
-| `conflicts()` | Commits with unresolved conflicts |
-| `author(email:<email>)` | Commits by specific author |
-| `::<rev>` / `<rev>::` | Ancestors / descendants of `<rev>` |
+| Expression              | Meaning                             |
+| ----------------------- | ----------------------------------- |
+| `main..@`               | Commits from `main` to working copy |
+| `mine()`                | Commits by current user             |
+| `trunk()`               | Main branch tip (auto-detected)     |
+| `~merges()`             | Exclude merge commits               |
+| `conflicts()`           | Commits with unresolved conflicts   |
+| `author(email:<email>)` | Commits by specific author          |
+| `::<rev>` / `<rev>::`   | Ancestors / descendants of `<rev>`  |
 
 ## Setup
 
@@ -48,7 +49,7 @@ jj git init --colocate      # Coexist with existing Git repo
 ## Daily Commands
 
 | Command | Description |
-|---------|-------------|
+| --- | --- |
 | `jj status` | Show working copy and parent commit info |
 | `jj log [-r <rev>]` | Show commit graph (optionally filtered) |
 | `jj diff` | Show working copy diff (syntax-aware via difftastic) |
@@ -63,7 +64,7 @@ jj git init --colocate      # Coexist with existing Git repo
 ## Squash / Split / Rebase
 
 | Command | Description |
-|---------|-------------|
+| --- | --- |
 | `jj squash` | Merge working copy into parent |
 | `jj squash -i` | Interactive squash (partial) |
 | `jj squash -r <rev> -d <dest>` | Merge `<rev>` into `<dest>` without checkout |
@@ -77,7 +78,7 @@ jj git init --colocate      # Coexist with existing Git repo
 ## Bookmarks
 
 | Command | Description |
-|---------|-------------|
+| --- | --- |
 | `jj bookmark list` | List all bookmarks |
 | `jj bookmark create <name>` | Attach bookmark to working copy |
 | `jj bookmark create <name> -r <rev>` | Attach bookmark to specific revision |
@@ -88,7 +89,7 @@ jj git init --colocate      # Coexist with existing Git repo
 ## Remote
 
 | Command | Description |
-|---------|-------------|
+| --- | --- |
 | `jj git fetch` | Fetch latest remote state |
 | `jj git push` | Push bookmarks to remote |
 | `jj git push -c @-` | Create auto-named bookmark on `@-` and push |
@@ -96,10 +97,10 @@ jj git init --colocate      # Coexist with existing Git repo
 
 ## Undo / History
 
-| Command | Description |
-|---------|-------------|
-| `jj undo` | Undo last state-changing operation |
-| `jj op log` | Show operation history |
+| Command                 | Description                                   |
+| ----------------------- | --------------------------------------------- |
+| `jj undo`               | Undo last state-changing operation            |
+| `jj op log`             | Show operation history                        |
 | `jj op restore <op-id>` | Restore state to just after a given operation |
 
 ## GitHub PR Workflow

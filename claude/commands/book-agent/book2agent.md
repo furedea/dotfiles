@@ -29,7 +29,7 @@ Note: Avoid deriving the `agent-name` directly from the source's title because t
 
 ```markdown
 ---
-name: {agent-name}
+name: { agent-name }
 description: Expert for code and design reviews and improvement suggestions based on a specific knowledge base
 tools: Bash, Read, Write, Edit, MultiEdit, Glob, Grep
 ---

@@ -1,17 +1,24 @@
-{ pkgs, config, username, ... }: {
+{
+  pkgs,
+  config,
+  username,
+  ...
+}:
+{
   environment.systemPackages = [ pkgs.vim ];
 
   nix.settings.experimental-features = "nix-command flakes";
 
-  system.configurationRevision = null;
-  system.stateVersion = 6;
+  system = {
+    configurationRevision = null;
+    stateVersion = 6;
+    primaryUser = username;
+  };
 
   nixpkgs.hostPlatform = "aarch64-darwin";
 
   # Required for home-manager to resolve home directory.
   users.users.${username}.home = "/Users/${username}";
-
-  system.primaryUser = username;
 
   time.timeZone = "Asia/Tokyo";
 
@@ -19,117 +26,128 @@
   # macOS system defaults
   # ──────────────────────────────────────────────────────
   system.defaults = {
-
     # ────────── Keyboard ──────────
-    NSGlobalDomain.KeyRepeat = 2;           # fastest
-    NSGlobalDomain.InitialKeyRepeat = 15;   # fastest
-    NSGlobalDomain."com.apple.keyboard.fnState" = true;  # F1-F12 as standard function keys
+    NSGlobalDomain = {
+      KeyRepeat = 2; # fastest
+      InitialKeyRepeat = 15; # fastest
+      "com.apple.keyboard.fnState" = true; # F1-F12 as standard function keys
 
-    # ────────── Text input ──────────
-    NSGlobalDomain.NSAutomaticCapitalizationEnabled = false;
-    NSGlobalDomain.NSAutomaticSpellingCorrectionEnabled = false;
-    NSGlobalDomain.NSAutomaticQuoteSubstitutionEnabled = false;
-    NSGlobalDomain.NSAutomaticDashSubstitutionEnabled = false;
-    NSGlobalDomain.NSAutomaticPeriodSubstitutionEnabled = false;
+      # ────────── Text input ──────────
+      NSAutomaticCapitalizationEnabled = false;
+      NSAutomaticSpellingCorrectionEnabled = false;
+      NSAutomaticQuoteSubstitutionEnabled = false;
+      NSAutomaticDashSubstitutionEnabled = false;
+      NSAutomaticPeriodSubstitutionEnabled = false;
 
-    # ────────── Appearance ──────────
-    NSGlobalDomain.AppleInterfaceStyle = "Dark";
-    NSGlobalDomain.AppleShowAllExtensions = true;
-    NSGlobalDomain.AppleShowScrollBars = "Always";
+      # ────────── Appearance ──────────
+      AppleInterfaceStyle = "Dark";
+      AppleShowAllExtensions = true;
+      AppleShowScrollBars = "Always";
 
-    # ────────── Trackpad cursor speed ──────────
-    NSGlobalDomain."com.apple.trackpad.scaling" = 3.0;
+      # ────────── Trackpad cursor speed ──────────
+      "com.apple.trackpad.scaling" = 3.0;
+    };
 
     # ────────── Finder ──────────
-    finder.AppleShowAllFiles = true;
-    finder.ShowPathbar = true;
-    finder.ShowStatusBar = true;
-    finder.FXPreferredViewStyle = "clmv";          # column view
-    finder.FXEnableExtensionChangeWarning = false;
-    finder.ShowExternalHardDrivesOnDesktop = true;
-    finder.ShowHardDrivesOnDesktop = false;
-    finder.ShowMountedServersOnDesktop = true;
-    finder.ShowRemovableMediaOnDesktop = true;
-    finder._FXSortFoldersFirst = true;
-    finder.QuitMenuItem = true;
+    finder = {
+      AppleShowAllFiles = true;
+      ShowPathbar = true;
+      ShowStatusBar = true;
+      FXPreferredViewStyle = "clmv"; # column view
+      FXEnableExtensionChangeWarning = false;
+      ShowExternalHardDrivesOnDesktop = true;
+      ShowHardDrivesOnDesktop = false;
+      ShowMountedServersOnDesktop = true;
+      ShowRemovableMediaOnDesktop = true;
+      _FXSortFoldersFirst = true;
+      QuitMenuItem = true;
+    };
 
     # ────────── Dock ──────────
-    dock.autohide = true;
-    dock.orientation = "bottom";
-    dock.tilesize = 128;
-    dock.magnification = false;
-    dock.largesize = 16;
-    dock.show-recents = false;
-    dock.minimize-to-application = true;
-    dock.mineffect = "scale";
-    dock.launchanim = true;
-    dock.expose-group-apps = true;
-    dock.mru-spaces = true;
-    dock.show-process-indicators = true;
-    dock.showMissionControlGestureEnabled = true;
-    dock.showAppExposeGestureEnabled = false;
-    dock.showDesktopGestureEnabled = false;
-    dock.showLaunchpadGestureEnabled = false;
+    dock = {
+      autohide = true;
+      orientation = "bottom";
+      tilesize = 128;
+      magnification = false;
+      largesize = 16;
+      show-recents = false;
+      minimize-to-application = true;
+      mineffect = "scale";
+      launchanim = true;
+      expose-group-apps = true;
+      mru-spaces = true;
+      show-process-indicators = true;
+      showMissionControlGestureEnabled = true;
+      showAppExposeGestureEnabled = false;
+      showDesktopGestureEnabled = false;
+      showLaunchpadGestureEnabled = false;
 
-    # ────────── Hot corners ──────────
-    # 4=Desktop, 12=Notification Center, 13=Lock Screen, 14=Quick Note
-    dock.wvous-tl-corner = 4;
-    dock.wvous-tr-corner = 12;
-    dock.wvous-bl-corner = 13;
-    dock.wvous-br-corner = 14;
+      # ────────── Hot corners ──────────
+      # 4=Desktop, 12=Notification Center, 13=Lock Screen, 14=Quick Note
+      wvous-tl-corner = 4;
+      wvous-tr-corner = 12;
+      wvous-bl-corner = 13;
+      wvous-br-corner = 14;
 
-    # ────────── Dock persistent apps (in order) ──────────
-    # Finder is always pinned to the left by macOS; no need to specify it here
-    dock.persistent-apps = [
-      { app = "/Applications/cmux.app"; }
-      { app = "/Applications/Raycast.app"; }
-      { app = "/Applications/Arc.app"; }
-      { app = "/Applications/Obsidian.app"; }
-      { app = "/Applications/OrbStack.app"; }
-      { app = "/Applications/Slack.app"; }
-      { app = "/Applications/Discord.app"; }
-      { app = "/Applications/LINE.app"; }
-      { app = "/System/Applications/System Settings.app"; }
-      { app = "/Applications/Nani.app"; }
-    ];
+      # ────────── Dock persistent apps (in order) ──────────
+      # Finder is always pinned to the left by macOS; no need to specify it here
+      persistent-apps = [
+        { app = "/Applications/cmux.app"; }
+        { app = "/Applications/Raycast.app"; }
+        { app = "/Applications/Arc.app"; }
+        { app = "/Applications/Obsidian.app"; }
+        { app = "/Applications/OrbStack.app"; }
+        { app = "/Applications/Slack.app"; }
+        { app = "/Applications/Discord.app"; }
+        { app = "/Applications/LINE.app"; }
+        { app = "/System/Applications/System Settings.app"; }
+        { app = "/Applications/Nani.app"; }
+      ];
+    };
 
     # ────────── Screenshot ──────────
     screencapture.location = "~/Pictures";
     screencapture.target = "file";
 
     # ────────── Stage Manager ──────────
-    WindowManager.GloballyEnabled = false;
-    WindowManager.AutoHide = true;
-    WindowManager.HideDesktop = false;
-    WindowManager.StageManagerHideWidgets = false;
-    WindowManager.StandardHideWidgets = false;
+    WindowManager = {
+      GloballyEnabled = false;
+      AutoHide = true;
+      HideDesktop = false;
+      StageManagerHideWidgets = false;
+      StandardHideWidgets = false;
+    };
 
     # ────────── Trackpad gestures ──────────
-    trackpad.Clicking = true;              # tap to click
-    trackpad.TrackpadRightClick = true;    # two-finger right click
-    trackpad.TrackpadMomentumScroll = true;
-    trackpad.TrackpadPinch = true;
-    trackpad.TrackpadRotate = true;
-    trackpad.ActuateDetents = true;
-    trackpad.FirstClickThreshold = 0;     # light click
-    trackpad.SecondClickThreshold = 0;
-    trackpad.ForceSuppressed = false;     # Force Click enabled
-    trackpad.TrackpadFourFingerHorizSwipeGesture = 2;
-    trackpad.TrackpadFourFingerVertSwipeGesture = 2;
-    trackpad.TrackpadThreeFingerHorizSwipeGesture = 2;
-    trackpad.TrackpadThreeFingerVertSwipeGesture = 2;
-    trackpad.TrackpadTwoFingerFromRightEdgeSwipeGesture = 3;
+    trackpad = {
+      Clicking = true; # tap to click
+      TrackpadRightClick = true; # two-finger right click
+      TrackpadMomentumScroll = true;
+      TrackpadPinch = true;
+      TrackpadRotate = true;
+      ActuateDetents = true;
+      FirstClickThreshold = 0; # light click
+      SecondClickThreshold = 0;
+      ForceSuppressed = false; # Force Click enabled
+      TrackpadFourFingerHorizSwipeGesture = 2;
+      TrackpadFourFingerVertSwipeGesture = 2;
+      TrackpadThreeFingerHorizSwipeGesture = 2;
+      TrackpadThreeFingerVertSwipeGesture = 2;
+      TrackpadTwoFingerFromRightEdgeSwipeGesture = 3;
+    };
 
     # ────────── Lock screen ──────────
     screensaver.askForPassword = true;
-    screensaver.askForPasswordDelay = 0;  # require password immediately after sleep
+    screensaver.askForPasswordDelay = 0; # require password immediately after sleep
 
     # ────────── Menu bar clock ──────────
     # Preserve current format: "Sun Mar 15 16:40:41"
-    menuExtraClock.Show24Hour = true;
-    menuExtraClock.ShowSeconds = true;
-    menuExtraClock.ShowDate = 1;
-    menuExtraClock.ShowDayOfWeek = true;
+    menuExtraClock = {
+      Show24Hour = true;
+      ShowSeconds = true;
+      ShowDate = 1;
+      ShowDayOfWeek = true;
+    };
 
     # ────────── Custom preferences (not covered by native options) ──────────
     CustomUserPreferences = {
@@ -141,7 +159,7 @@
       };
       # Spotlight: disable all categories (using Raycast instead)
       "com.apple.Spotlight" = {
-        "orderedItems" = [];
+        "orderedItems" = [ ];
       };
       # Prevent .DS_Store file creation on network shares and USB drives
       "com.apple.desktopservices" = {
@@ -157,15 +175,15 @@
       };
       # Homerow: keyboard-driven macOS navigation
       "com.superultra.Homerow" = {
-        "launch-at-login"             = true;
-        "scroll-shortcut"             = "⌘J";
-        "non-search-shortcut"         = "⌘F";
-        "scroll-px-per-ms"            = 1.5;
-        "theme-id"                    = "original";
+        "launch-at-login" = true;
+        "scroll-shortcut" = "⌘J";
+        "non-search-shortcut" = "⌘F";
+        "scroll-px-per-ms" = 1.5;
+        "theme-id" = "original";
         "auto-switch-input-source-id" = "com.google.inputmethod.Japanese.Roman";
-        "use-search-predicate"        = true;
-        "dash-speed-multiplier"       = 1;
-        "map-arrow-keys-to-scroll"    = false;
+        "use-search-predicate" = true;
+        "dash-speed-multiplier" = 1;
+        "map-arrow-keys-to-scroll" = false;
       };
     };
   };

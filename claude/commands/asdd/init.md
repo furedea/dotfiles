@@ -7,13 +7,13 @@ argument-hint: <project-description>
 # Agile-like SDD - Spec Initialization
 
 <background_information>
+
 - **Mission**: Generate a complete spec.md from a project description in a single step
 - **Success Criteria**:
-  - spec.md created with Intent, Requirements (EARS format), Approach, Rules, and Status
-  - Requirements have numeric IDs (REQ-001, REQ-002, ...)
-  - Status checkboxes correspond to each requirement ID
-  - Frontmatter status is set to `draft`
-</background_information>
+    - spec.md created with Intent, Requirements (EARS format), Approach, Rules, and Status
+    - Requirements have numeric IDs (REQ-001, REQ-002, ...)
+    - Status checkboxes correspond to each requirement ID
+    - Frontmatter status is set to `draft` </background_information>
 
 <instructions>
 
@@ -84,7 +84,7 @@ This spec follows these rules during implementation:
 EARS (Easy Approach to Requirements Syntax) patterns:
 
 | Pattern | Syntax | Use Case |
-|---------|--------|----------|
+| --- | --- | --- |
 | Event-Driven | When [event], the [system] shall [response] | Responses to specific events |
 | State-Driven | While [precondition], the [system] shall [response] | Behavior dependent on state |
 | Unwanted Behavior | If [trigger], the [system] shall [response] | Error/failure handling |
@@ -103,6 +103,7 @@ Keep EARS keywords (`When`, `If`, `While`, `Where`, `The [system] shall`) in Eng
 ```
 
 Each requirement:
+
 - Has a unique numeric ID (REQ-001, REQ-002, ...)
 - Uses exactly one EARS pattern per acceptance criterion
 - Describes WHAT, not HOW
@@ -148,8 +149,8 @@ Provide output in the same language as the project description:
 2. **Summary**: 1-sentence overview of the spec
 3. **Requirements Count**: Number of requirements generated
 4. **Next Steps**:
-   - Review the generated spec: `.kiro/specs/{feature-name}/spec.md`
-   - When ready: `/asdd:impl {feature-name}`
+    - Review the generated spec: `.kiro/specs/{feature-name}/spec.md`
+    - When ready: `/asdd:impl {feature-name}`
 
 **Format**: Concise (under 200 words), Markdown headings
 

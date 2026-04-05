@@ -176,7 +176,14 @@ case "$EXTENSION" in
     "json"|"toml")
         echo "Running dprint on $EXTENSION file..."
         if command -v dprint &> /dev/null; then
-            dprint fmt --config "$HOME/dprint.json" "$FILE_PATH" 2>&1 || {
+            # dprint scans from CWD using config includes. Force single-file
+            # formatting by cd'ing to the file and using --includes-override.
+            FILE_DIR=$(dirname "$FILE_PATH")
+            FILE_BASE=$(basename "$FILE_PATH")
+            (cd "$FILE_DIR" && \
+                dprint fmt --config "$HOME/dprint.json" \
+                    --includes-override "$FILE_BASE" \
+                    --allow-no-files) 2>&1 || {
                 echo "❌ dprint fmt failed for $FILENAME"
                 exit 1
             }
@@ -210,8 +217,13 @@ case "$EXTENSION" in
         fi
 
         if command -v selene &> /dev/null; then
-            # Run from the file's directory so selene picks up selene.toml.
-            (cd "$(dirname "$FILE_PATH")" && selene "$FILE_PATH") 2>&1 || {
+            # selene 0.25+ only reads selene.toml from CWD (no upward search).
+            # Walk up from the file's directory to locate the nearest selene.toml.
+            SELENE_DIR=$(dirname "$FILE_PATH")
+            while [ "$SELENE_DIR" != "/" ] && [ ! -f "$SELENE_DIR/selene.toml" ]; do
+                SELENE_DIR=$(dirname "$SELENE_DIR")
+            done
+            (cd "$SELENE_DIR" && selene "$FILE_PATH") 2>&1 || {
                 echo "❌ selene failed for $FILENAME"
                 exit 1
             }

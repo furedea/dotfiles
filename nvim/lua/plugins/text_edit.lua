@@ -5,8 +5,22 @@ return {
     event = "VeryLazy",
     opts = {},
     keys = {
-      { "<leader>s", mode = { "n", "x", "o" }, function() require("flash").jump() end, desc = "Flash" },
-      { "<leader>S", mode = { "n", "x", "o" }, function() require("flash").treesitter() end, desc = "Flash Treesitter" },
+      {
+        "<leader>s",
+        mode = { "n", "x", "o" },
+        function()
+          require("flash").jump()
+        end,
+        desc = "Flash",
+      },
+      {
+        "<leader>S",
+        mode = { "n", "x", "o" },
+        function()
+          require("flash").treesitter()
+        end,
+        desc = "Flash Treesitter",
+      },
     },
   },
 
@@ -61,8 +75,16 @@ return {
     build = ":TSUpdate",
     config = function()
       require("nvim-treesitter").install({
-        "lua", "python", "javascript", "typescript",
-        "json", "yaml", "markdown", "nix", "vim", "vimdoc",
+        "lua",
+        "python",
+        "javascript",
+        "typescript",
+        "json",
+        "yaml",
+        "markdown",
+        "nix",
+        "vim",
+        "vimdoc",
       })
     end,
   },
