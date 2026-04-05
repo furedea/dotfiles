@@ -42,6 +42,13 @@ in
     # TODO: replace with dprint once https://github.com/dprint/dprint-plugin-markdown/pull/176 merges.
     prettierd
 
+    # Nix tools
+    nixd
+    nixfmt-rfc-style
+    statix
+    deadnix
+    vulnix
+
     # Python tools
     uv
 

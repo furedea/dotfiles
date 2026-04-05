@@ -13,6 +13,7 @@ return {
         formatters_by_ft = {
           -- Text files: CJK spacing then structure formatting
           markdown = { "autocorrect", "prettierd" },
+          nix      = { "nixfmt" },
           text     = { "autocorrect" },
           -- Programming languages: each ecosystem's de facto formatter
           python   = { "ruff_format" },

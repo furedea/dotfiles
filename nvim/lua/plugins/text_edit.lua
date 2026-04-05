@@ -62,7 +62,7 @@ return {
     config = function()
       require("nvim-treesitter").install({
         "lua", "python", "javascript", "typescript",
-        "json", "yaml", "markdown", "vim", "vimdoc",
+        "json", "yaml", "markdown", "nix", "vim", "vimdoc",
       })
     end,
   },
