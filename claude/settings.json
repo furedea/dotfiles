@@ -35,6 +35,7 @@
       "Bash(mongod:*)"
     ]
   },
+  "model": "opus",
   "enableAllProjectMcpServers": false,
   "hooks": {
     "UserPromptSubmit": [
@@ -181,7 +182,7 @@
       "watchman"
     ]
   },
-  "effortLevel": "low",
+  "effortLevel": "high",
   "autoMemoryEnabled": false,
   "feedbackSurveyState": {
     "lastShownTime": 1754030513973
