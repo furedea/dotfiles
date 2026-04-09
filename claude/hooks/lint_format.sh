@@ -232,6 +232,30 @@ case "$EXTENSION" in
             echo "⚠️  selene not found, skipping Lua linting"
         fi
         ;;
+    "tex"|"bib"|"cls"|"sty")
+        echo "Running tex-fmt and chktex on TeX file..."
+        if command -v tex-fmt &> /dev/null; then
+            tex-fmt -w "$FILE_PATH" 2>&1 || {
+                echo "❌ tex-fmt failed for $FILENAME"
+                exit 1
+            }
+            echo "✅ tex-fmt formatting completed for $FILENAME"
+        else
+            echo "⚠️  tex-fmt not found, skipping TeX formatting"
+        fi
+
+        if [ "$EXTENSION" = "bib" ]; then
+            echo "ℹ️  chktex does not lint .$EXTENSION files, skipping TeX linting"
+        elif command -v chktex &> /dev/null; then
+            chktex -q -n22 -n30 "$FILE_PATH" 2>&1 || {
+                echo "❌ chktex failed for $FILENAME"
+                exit 1
+            }
+            echo "✅ chktex linting completed for $FILENAME"
+        else
+            echo "⚠️  chktex not found, skipping TeX linting"
+        fi
+        ;;
     *)
         echo "ℹ️  No formatter/linter configured for .$EXTENSION files"
         ;;

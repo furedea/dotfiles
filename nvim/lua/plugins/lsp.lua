@@ -7,6 +7,17 @@ return {
       vim.lsp.config("nixd", {})
       vim.lsp.config("ruff", {})
       vim.lsp.config("ty", {})
+      vim.lsp.config("texlab", {})
+      vim.lsp.config("ltex", {
+        cmd = { "ltex-ls" },
+        filetypes = { "tex", "plaintex", "bib" },
+        root_markers = { ".git" },
+        settings = {
+          ltex = {
+            language = "en-US",
+          },
+        },
+      })
       vim.lsp.config("rust_analyzer", {
         settings = {
           ["rust-analyzer"] = {
@@ -32,6 +43,8 @@ return {
       vim.lsp.enable("nixd")
       vim.lsp.enable("ruff")
       vim.lsp.enable("ty")
+      vim.lsp.enable("texlab")
+      vim.lsp.enable("ltex")
       vim.lsp.enable("rust_analyzer")
       vim.lsp.enable("lua_ls")
 

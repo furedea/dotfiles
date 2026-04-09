@@ -8,6 +8,8 @@ return {
       lint.linters_by_ft = {
         nix = { "statix", "deadnix" },
         lua = { "selene" },
+        tex = { "chktex" },
+        plaintex = { "chktex" },
       }
 
       -- nvim-lint no-ops on filetypes missing from linters_by_ft, so a single

@@ -15,6 +15,8 @@ return {
           markdown = { "autocorrect", "prettierd" },
           nix = { "nixfmt" },
           lua = { "stylua" },
+          tex = { "tex-fmt" },
+          plaintex = { "tex-fmt" },
           text = { "autocorrect" },
           -- Programming languages: each ecosystem's de facto formatter
           python = { "ruff_format" },

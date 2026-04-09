@@ -249,6 +249,7 @@
       "obsidian"
       "orbstack"
       "raycast"
+      "skim"
       "slack"
       "steam"
       "vimr"

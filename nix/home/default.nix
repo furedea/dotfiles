@@ -45,6 +45,11 @@ in
     tree-sitter
     just
 
+    # AI Coding Agent
+    claude-code
+    unstable.codex
+    unstable.github-copilot-cli
+
     # General Formatters
     autocorrect
     dprint
@@ -66,20 +71,20 @@ in
     # Rust tools
     rustup
 
-    # Lua tools
-    stylua
-    selene
-    lua-language-server
-
     # TypeScript tools
     nodejs
     pnpm
     nodePackages."@antfu/ni"
 
-    # AI Coding Agent
-    claude-code
-    unstable.codex
-    unstable.github-copilot-cli
+    # Lua tools
+    stylua
+    selene
+    lua-language-server
+
+    # LaTeX tools
+    texlab
+    tex-fmt
+    ltex-ls
 
     # macOS-specific
     mas
