@@ -134,4 +134,5 @@ abbr --quiet -S ob="cd ~/Library/Mobile\ Documents/iCloud\~md\~obsidian/Document
 
 eval "$(zoxide init zsh --cmd j)"
 eval "$(starship init zsh)"
+eval "$(direnv hook zsh)"
 eval "$(atuin init zsh --disable-up-arrow)"

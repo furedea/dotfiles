@@ -21,6 +21,7 @@ in
     # Shell utilities
     home-manager
     carapace
+    direnv
     zoxide
     zsh-abbr
     zsh-autosuggestions
@@ -173,6 +174,12 @@ in
         prompt = "enabled";
         aliases.co = "pr checkout";
       };
+    };
+
+    direnv = {
+      enable = true;
+      enableZshIntegration = false; # .zshrc is a dotfile symlink; hook manually there
+      nix-direnv.enable = true;
     };
 
     atuin = {
