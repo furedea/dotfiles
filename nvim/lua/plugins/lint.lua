@@ -4,6 +4,9 @@ return {
     event = { "BufReadPost", "BufWritePost", "InsertLeave" },
     config = function()
       local lint = require("lint")
+      lint.linters.chktex = vim.tbl_extend("force", lint.linters.chktex or {}, {
+        ignore_exitcode = true,
+      })
 
       lint.linters_by_ft = {
         nix = { "statix", "deadnix" },
