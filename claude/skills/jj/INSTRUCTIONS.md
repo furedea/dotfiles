@@ -52,7 +52,7 @@ jj git init --colocate      # Coexist with existing Git repo
 | --- | --- |
 | `jj status` | Show working copy and parent commit info |
 | `jj log [-r <rev>]` | Show commit graph (optionally filtered) |
-| `jj diff` | Show working copy diff (syntax-aware via difftastic) |
+| `jj diff` | Show working copy diff (rendered through delta pager) |
 | `jj show <rev>` | Show diff of a specific revision |
 | `jj describe -m "<msg>"` | Set commit message on working copy |
 | `jj new [-m "<msg>"]` | Finalize working copy, create new change on top |

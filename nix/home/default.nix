@@ -37,9 +37,6 @@ in
     fzf
     ripgrep
 
-    # Text / data
-    difftastic
-
     # Dev tools
     neovim
     tree-sitter
@@ -152,6 +149,36 @@ in
     delta = {
       enable = true;
       enableGitIntegration = true;
+      options = {
+        side-by-side = true;
+        navigate = true;
+        hyperlinks = true;
+        true-color = "always";
+        syntax-theme = "ansi";
+        line-numbers = true;
+        features = "decorations unobtrusive-line-numbers";
+        plus-style = "#a6e3a1";
+        plus-emph-style = "bold #a6e3a1";
+        minus-style = "#f38ba8";
+        minus-emph-style = "bold #f38ba8";
+        zero-style = "normal";
+        hunk-header-style = "bold #89b4fa";
+        decorations = {
+          commit-decoration-style = "bold #f9e2af box ul";
+          file-style = "bold #89b4fa ul";
+          file-decoration-style = "none";
+          hunk-header-decoration-style = "#94e2d5 box ul";
+        };
+        unobtrusive-line-numbers = {
+          line-numbers-left-format = "{nm:>4}┊";
+          line-numbers-right-format = "{np:>4}│";
+          line-numbers-left-style = "#6c7086";
+          line-numbers-right-style = "#6c7086";
+          line-numbers-minus-style = "#6c7086";
+          line-numbers-zero-style = "#6c7086";
+          line-numbers-plus-style = "#6c7086";
+        };
+      };
     };
 
     jujutsu = {
@@ -161,14 +188,9 @@ in
         user.email = "132188853+furedea@users.noreply.github.com";
         ui = {
           "diff-editor" = ":builtin";
-          "diff.tool" = [
-            "difft"
-            "--color=always"
-            "$left"
-            "$right"
-          ];
-          pager = "less -FRX";
+          pager = "delta --paging=never";
         };
+        ui.diff.format = "git";
       };
     };
 
