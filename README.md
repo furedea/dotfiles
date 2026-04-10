@@ -94,9 +94,10 @@ dotfiles/
 
 | Category | Tools |
 | --- | --- |
-| Shell | carapace, zoxide, zsh-abbr, zsh-autosuggestions, zsh-fast-syntax-highlighting |
+| Shell | bash-language-server, bats, carapace, shellcheck, shfmt, zoxide, zsh-abbr, zsh-autosuggestions, zsh-fast-syntax-highlighting |
 | File ops | bat, dust, eza, fd, fzf, ripgrep |
-| Dev | just, neovim, starship, tree-sitter, difftastic |
+| Dev | just, neovim, starship, tree-sitter |
+| CI | actionlint |
 | Formatters | autocorrect, dprint, prettierd (markdown only — see [note](#markdown-formatter)) |
 | VCS | git (programs.git), delta, jujutsu, gh |
 | Language runtimes | nodejs, pnpm, ni, rustup (Rust), uv (Python) |
@@ -170,6 +171,32 @@ Some directories are kept as **plain copies for backup/reference** only. They ar
 `dprint-plugin-markdown` hardcodes list indent to 2 spaces (CommonMark minimum) with no configuration option. `prettierd` is used instead with `tabWidth: 4` in `~/.prettierrc` to get 4-space list nesting matching Obsidian.
 
 > **TODO:** switch back to dprint once [dprint-plugin-markdown#176](https://github.com/dprint/dprint-plugin-markdown/pull/176) merges.
+
+## GitHub Actions Workflow Linting
+
+`actionlint` is installed via Nix and integrated with Neovim through `nvim-lint`.
+It only runs for files under `.github/workflows/*.yml` and `.github/workflows/*.yaml`
+by assigning those paths the compound filetype `yaml.ghaction`.
+
+## GitHub Workflow Starters
+
+Starter workflows for commonly used GitHub automation and security checks live in
+`templates/github/`.
+
+Included templates:
+
+- `templates/github/.github/workflows/gha_hygiene.yml`
+  - `actionlint` + `zizmor`
+- `templates/github/.github/workflows/dependency_review.yml`
+  - Dependency Review for pull requests
+- `templates/github/.github/workflows/codeql.yml`
+  - CodeQL advanced setup starter
+- `templates/github/.github/workflows/release_please.yml`
+  - Release Please starter
+
+GitHub-native features such as Renovate, Push Protection, Secret Scanning, and
+Rulesets are documented in `templates/github/README.md` instead of being stored
+as workflow files.
 
 ## Post-rebuild Checklist
 
