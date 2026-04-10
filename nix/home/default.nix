@@ -199,9 +199,9 @@ in
         user.email = "132188853+furedea@users.noreply.github.com";
         ui = {
           "diff-editor" = ":builtin";
+          "diff-formatter" = ":git";
           pager = "delta --paging=never";
         };
-        ui.diff.format = "git";
       };
     };
 
