@@ -5,7 +5,7 @@ set -euo pipefail
 
 # No-op if not running inside cmux
 if [[ -z "${CMUX_WORKSPACE_ID:-}" ]]; then
-    exit 0
+	exit 0
 fi
 
 # Step 1: Bring the cmux macOS window to the front
