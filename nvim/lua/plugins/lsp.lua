@@ -4,9 +4,30 @@ return {
     "neovim/nvim-lspconfig",
     event = { "BufReadPre", "BufNewFile" },
     config = function()
+      local function find_workspace_binary(root_dir, binary_name)
+        if not root_dir then
+          return binary_name
+        end
+
+        local local_binary = vim.fs.joinpath(root_dir, "node_modules", ".bin", binary_name)
+        if vim.fn.executable(local_binary) == 1 then
+          return local_binary
+        end
+
+        return binary_name
+      end
+
       vim.lsp.config("nixd", {})
+      vim.lsp.config("bashls", {})
       vim.lsp.config("ruff", {})
       vim.lsp.config("ty", {})
+      vim.lsp.config("ts_ls", {
+        init_options = { hostInfo = "neovim" },
+        cmd = function(dispatchers, config)
+          local command = find_workspace_binary(config.root_dir, "typescript-language-server")
+          return vim.lsp.rpc.start({ command, "--stdio" }, dispatchers)
+        end,
+      })
       vim.lsp.config("texlab", {})
       vim.lsp.config("ltex", {
         cmd = { "ltex-ls" },
@@ -41,8 +62,10 @@ return {
         },
       })
       vim.lsp.enable("nixd")
+      vim.lsp.enable("bashls")
       vim.lsp.enable("ruff")
       vim.lsp.enable("ty")
+      vim.lsp.enable("ts_ls")
       vim.lsp.enable("texlab")
       vim.lsp.enable("ltex")
       vim.lsp.enable("rust_analyzer")

@@ -75,6 +75,7 @@ return {
     build = ":TSUpdate",
     config = function()
       require("nvim-treesitter").install({
+        "bash",
         "lua",
         "python",
         "javascript",

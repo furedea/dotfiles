@@ -7,10 +7,31 @@ return {
       lint.linters.chktex = vim.tbl_extend("force", lint.linters.chktex or {}, {
         ignore_exitcode = true,
       })
+      lint.linters.oxlint = vim.tbl_extend("force", lint.linters.oxlint or {}, {
+        cwd = function()
+          return vim.fs.root(0, {
+            ".oxlintrc.json",
+            ".oxlintrc.jsonc",
+            "package.json",
+            "pnpm-lock.yaml",
+            ".git",
+          })
+        end,
+      })
 
       lint.linters_by_ft = {
+        ghaction = { "actionlint" },
         nix = { "statix", "deadnix" },
         lua = { "selene" },
+        sh = { "shellcheck" },
+        bash = { "shellcheck" },
+        javascript = { "oxlint" },
+        javascriptreact = { "oxlint" },
+        typescript = { "oxlint" },
+        typescriptreact = { "oxlint" },
+        vue = { "oxlint" },
+        svelte = { "oxlint" },
+        astro = { "oxlint" },
         tex = { "chktex" },
         plaintex = { "chktex" },
       }

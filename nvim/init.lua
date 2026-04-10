@@ -13,6 +13,22 @@ vim.opt.clipboard = "unnamedplus"
 vim.opt.splitright = true
 vim.opt.splitbelow = true
 
+vim.filetype.add({
+  extension = {
+    zsh = "zsh",
+  },
+  filename = {
+    [".zprofile"] = "zsh",
+    [".zshenv"] = "zsh",
+    [".zshrc"] = "zsh",
+  },
+  pattern = {
+    [".*/%.config/zsh/.*%.zsh"] = "zsh",
+    [".*/%.github/workflows/.*%.yml"] = "yaml.ghaction",
+    [".*/%.github/workflows/.*%.yaml"] = "yaml.ghaction",
+  },
+})
+
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
   vim.fn.system({

@@ -41,6 +41,7 @@ in
     neovim
     tree-sitter
     just
+    actionlint
 
     # AI Coding Agent
     claude-code
@@ -62,6 +63,12 @@ in
     deadnix
     vulnix
 
+    # ShellScript tools(bash)
+    shellcheck
+    shfmt
+    bash-language-server
+    bats
+
     # Python tools
     uv
 
@@ -72,6 +79,11 @@ in
     nodejs
     pnpm
     nodePackages."@antfu/ni"
+    typescript
+    typescript-language-server
+    unstable.oxfmt
+    unstable.oxlint
+    unstable.tsgolint
 
     # Lua tools
     stylua
@@ -114,7 +126,6 @@ in
           colorMoved = "plain";
           mnemonicPrefix = true;
           renames = true;
-          external = "difft";
         };
         push = {
           default = "simple";
