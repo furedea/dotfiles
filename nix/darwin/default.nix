@@ -245,6 +245,8 @@
       "homerow"
       "karabiner-elements"
       "mactex"
+      "microsoft-excel"
+      "microsoft-word"
       "nani"
       "obsidian"
       "orbstack"
