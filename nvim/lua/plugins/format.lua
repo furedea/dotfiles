@@ -4,6 +4,7 @@ return {
     event = { "BufReadPre", "BufNewFile" },
     config = function()
       require("conform").setup({
+        format_on_save = { timeout_ms = 1000, lsp_format = "fallback" },
         formatters = {
           -- Use PRETTIERD_DEFAULT_CONFIG so prettierd finds ~/.prettierrc for files outside ~
           prettierd = {
@@ -17,6 +18,7 @@ return {
           lua = { "stylua" },
           tex = { "tex-fmt" },
           plaintex = { "tex-fmt" },
+          bib = { "tex-fmt" },
           text = { "autocorrect" },
           -- Programming languages: each ecosystem's de facto formatter
           sh = { "shfmt" },
@@ -38,6 +40,11 @@ return {
         callback = function(args)
           local bufnr = args.buf
           if not vim.api.nvim_buf_is_valid(bufnr) or not vim.bo[bufnr].modifiable then
+            return
+          end
+          -- tex buffers are handled via :update in tex.lua so latexmk recompiles
+          local ft = vim.bo[bufnr].filetype
+          if ft == "tex" or ft == "plaintex" then
             return
           end
 

@@ -35,6 +35,7 @@ return {
         root_markers = { ".git" },
         settings = {
           ltex = {
+            checkFrequency = "save",
             language = "en-US",
           },
         },
