@@ -118,10 +118,26 @@ function eep() {
     _esa_edit "$post"
 }
 
-# es: ship the last edited post (unwip with notice)
+# es: ship the last edited post (unwip with optional notice)
 function es() {
+    local notice_flag="--notice"
+
+    case "$1" in
+        "" )
+            ;;
+        -q | --quiet | --no-notice )
+            notice_flag="--no-notice"
+            shift
+            ;;
+        * )
+            echo "usage: es [-q|--quiet]"
+            return 1
+            ;;
+    esac
+
+    [[ -n "$1" ]] && echo "usage: es [-q|--quiet]" && return 1
     [[ -z "$_ESA_LAST_POST" ]] && echo "es: no post to ship (edit something first)" && return 1
-    kasa unwip -f --notice "$_ESA_LAST_POST" && _ESA_LAST_POST=""
+    kasa unwip -f "$notice_flag" "$_ESA_LAST_POST" && _ESA_LAST_POST=""
 }
 
 # Abbreviations: new shortcuts that don't shadow existing commands.
