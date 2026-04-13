@@ -158,15 +158,6 @@
             "command": "dotenvx run -f $HOME/dotfiles/claude/.env -- $HOME/.claude/hooks/bark_notify.sh 'タスクが完了しました'"
           }
         ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$HOME/.claude/hooks/focus_workspace.sh"
-          }
-        ]
       }
     ],
     "Notification": [
@@ -185,15 +176,6 @@
           {
             "type": "command",
             "command": "dotenvx run -f $HOME/dotfiles/claude/.env -- $HOME/.claude/hooks/bark_notify.sh '確認が必要です'"
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$HOME/.claude/hooks/focus_workspace.sh"
           }
         ]
       }
