@@ -7,17 +7,23 @@ return {
       lint.linters.chktex = vim.tbl_extend("force", lint.linters.chktex or {}, {
         ignore_exitcode = true,
       })
-      lint.linters.oxlint = vim.tbl_extend("force", lint.linters.oxlint or {}, {
-        cwd = function()
-          return vim.fs.root(0, {
-            ".oxlintrc.json",
-            ".oxlintrc.jsonc",
-            "package.json",
-            "pnpm-lock.yaml",
-            ".git",
-          })
-        end,
-      })
+
+      local oxlint_filetypes = {
+        javascript = true,
+        javascriptreact = true,
+        typescript = true,
+        typescriptreact = true,
+        vue = true,
+        svelte = true,
+        astro = true,
+      }
+      local oxlint_root_markers = {
+        ".oxlintrc.json",
+        ".oxlintrc.jsonc",
+        "package.json",
+        "pnpm-lock.yaml",
+        ".git",
+      }
 
       lint.linters_by_ft = {
         ghaction = { "actionlint" },
@@ -45,7 +51,15 @@ return {
           if vim.bo[args.buf].buftype ~= "" then
             return
           end
-          lint.try_lint()
+
+          local opts = nil
+          if oxlint_filetypes[vim.bo[args.buf].filetype] then
+            opts = {
+              cwd = vim.fs.root(args.buf, oxlint_root_markers),
+            }
+          end
+
+          lint.try_lint(nil, opts)
         end,
       })
     end,
