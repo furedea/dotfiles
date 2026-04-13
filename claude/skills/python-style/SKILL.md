@@ -1,7 +1,7 @@
 ---
 name: python-style
 description: >
-    Python coding conventions: uv package management, pytest + pytest-mock testing, pyright type checking, src/ layout, dataclass Value Objects (frozen=True, slots=True), structured dict logging, import rules (avoid from-import except self-explanatory names), file naming (domain nouns not -er suffix), fixture vs helper, autospec mocking, parametrize, conftest, whitespace rules, and docstring formats. Load whenever writing, reviewing, or refactoring any Python code — new files, tests, bug fixes, class design, project setup. Also load when PLANNING or DISCUSSING Python implementation, even before any code is written, even in plan mode. Without this skill, you will use wrong conventions (pip instead of uv, unittest.mock instead of pytest-mock, wrong class patterns, wrong file names) that this user explicitly does not want.
+    Python coding conventions: uv commands (sync/add/run), pytest-mock with autospec, pyright, src/ layout, dataclass Value Objects (frozen=True, slots=True), naming, imports, docstrings. Load whenever writing, reviewing, refactoring, or PLANNING Python code — even in plan mode, before any code exists. Do NOT use for project bootstrap (`uv init`, flake.nix, initial `pyproject.toml` scaffolding) — that is `nix-dev-init`'s job. Without this skill, Claude falls back to pip, unittest.mock, and wrong class patterns this user rejects.
 ---
 
 Read `INSTRUCTIONS.md` (in this skill's directory) for the full reference before proceeding.

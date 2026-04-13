@@ -1,9 +1,18 @@
 # Python Coding Style Guidelines
 
+## Scope
+
+This skill governs **code written inside an already-bootstrapped Python project** — class design, test authoring, refactoring, code review, naming, imports, docstrings.
+
+Project bootstrap (flake.nix, direnv, `uv init`, initial `pyproject.toml` merge) belongs to the `nix-dev-init` skill. If the project is not yet bootstrapped, defer to `nix-dev-init` first and return here once `direnv allow` succeeds and the shell has `uv` on PATH.
+
+### Why the split
+
+Keeping bootstrap out of this skill has two benefits: (1) when Claude is triggered to write or refactor Python code in an existing project, it does not read a long bootstrap procedure it does not need; (2) the nix `flake.nix` → `direnv` → `uv init` → `pyproject.toml` ordering is an invariant owned by `nix-dev-init` — duplicating a shortcut here would let it drift.
+
 ## Package Management
 
 - Use only `uv` for package management, don't use `pip`
-- Initialize a new project with `uv init`, then copy the template files from `~/dotfiles/templates/uv/` into the project and merge the template configuration into `pyproject.toml`
 - Install dependencies using `uv sync`
 - Install packages using `uv add {package}`
 - Run tools using `uv run {tool}`
