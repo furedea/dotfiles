@@ -21,24 +21,28 @@ furedea's macOS dotfiles — managed with [Nix](https://nixos.org/), [nix-darwin
 
 ## Setup (new Mac)
 
-```sh
-# 1. Install Nix (Determinate Systems installer — enables flakes by default)
-curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
-```
+1. Install Nix using the official installer (defaults to multi-user on macOS):
 
-> **Official installer only:** flakes are not enabled by default. Add the following to `/etc/nix/nix.conf` before proceeding:
->
-> ```
-> experimental-features = nix-command flakes
-> ```
+    ```sh
+    curl -L https://nixos.org/nix/install | sh
+    ```
 
-```sh
-# 2. Clone dotfiles
-git clone https://github.com/furedea/dotfiles ~/dotfiles
+    After the installer finishes, open a new shell so `nix` is on `PATH`.
 
-# 3. Bootstrap nix-darwin (first time — darwin-rebuild is not yet available)
-nix run nix-darwin -- switch --flake "$HOME/dotfiles#mba"
-```
+2. Clone dotfiles:
+
+    ```sh
+    git clone https://github.com/furedea/dotfiles ~/dotfiles
+    ```
+
+3. Bootstrap nix-darwin. Enable flakes on this first run only — nix-darwin makes it permanent afterwards via `nix.settings.experimental-features` in `nix/darwin/default.nix`:
+
+    ```sh
+    sudo nix --extra-experimental-features 'nix-command flakes' \
+      run nix-darwin -- switch --flake "$HOME/dotfiles#mba"
+    ```
+
+> **Do not use the Determinate Systems installer** (`install.determinate.systems/nix`). Current versions install Determinate Nix by default, whose `determinate-nixd` daemon conflicts with nix-darwin's native Nix management (`nix.settings`, `nix.gc`). If you need to recover from this, run `/nix/nix-installer uninstall` and reinstall with the official installer above.
 
 > Subsequent system updates use `darwin-rebuild` directly (installed by the step above):
 >
@@ -174,36 +178,32 @@ Some directories are kept as **plain copies for backup/reference** only. They ar
 
 ## GitHub Actions Workflow Linting
 
-`actionlint` is installed via Nix and integrated with Neovim through `nvim-lint`.
-It only runs for files under `.github/workflows/*.yml` and `.github/workflows/*.yaml`
-by assigning those paths the compound filetype `yaml.ghaction`.
+`actionlint` is installed via Nix and integrated with Neovim through `nvim-lint`. It only runs for files under `.github/workflows/*.yml` and `.github/workflows/*.yaml` by assigning those paths the compound filetype `yaml.ghaction`.
 
 ## GitHub Workflow Starters
 
-Starter workflows for commonly used GitHub automation and security checks live in
-`templates/github/`.
+Starter workflows for commonly used GitHub automation and security checks live in `templates/github/`.
 
 Included templates:
 
 - `templates/github/.github/workflows/gha_hygiene.yml`
-  - `actionlint` + `zizmor`
+    - `actionlint` + `zizmor`
 - `templates/github/.github/workflows/dependency_review.yml`
-  - Dependency Review for pull requests
+    - Dependency Review for pull requests
 - `templates/github/.github/workflows/codeql.yml`
-  - CodeQL advanced setup starter
+    - CodeQL advanced setup starter
 - `templates/github/.github/workflows/release_please.yml`
-  - Release Please starter
+    - Release Please starter
 
-GitHub-native features such as Renovate, Push Protection, Secret Scanning, and
-Rulesets are documented in `templates/github/README.md` instead of being stored
-as workflow files.
+GitHub-native features such as Renovate, Push Protection, Secret Scanning, and Rulesets are documented in `templates/github/README.md` instead of being stored as workflow files.
 
 ## Post-rebuild Checklist
 
-Run these after `darwin-rebuild switch` if needed:
+Run these after `darwin-rebuild switch` if needed.
+
+Update dprint plugin checksums (first time only, or after changing plugin versions):
 
 ```sh
-# Update dprint plugin checksums (first time only, or after changing plugin versions)
 dprint config update
 ```
 
@@ -227,18 +227,21 @@ These settings cannot be automated:
 
 ## Update
 
+Update all packages and apply system + user changes:
+
 ```sh
-# Update all packages and apply system + user changes
 sudo darwin-rebuild switch --flake "$HOME/dotfiles#mba"
 ```
 
+Update user packages and home-manager config only:
+
 ```sh
-# Update user packages and home-manager config only
 home-manager switch --flake "$HOME/dotfiles#kaito"
 ```
 
+Update codex from nixpkgs-unstable, then apply only home-manager changes:
+
 ```sh
-# Update codex from nixpkgs-unstable, then apply only home-manager changes
 nix flake lock --update-input nixpkgs-unstable
 home-manager switch --flake "$HOME/dotfiles#kaito"
 ```
