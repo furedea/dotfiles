@@ -84,58 +84,58 @@
         "hooks": [
           {
             "type": "command",
-            "if": "Write(*.py)|Edit(*.py)|MultiEdit(*.py)",
-            "command": "$HOME/.claude/hooks/lint_format_py.sh"
+            "command": "$HOME/.claude/hooks/lint_format_py.sh",
+            "if": "Write(*.py)|Edit(*.py)|MultiEdit(*.py)"
           },
           {
             "type": "command",
-            "if": "Write(*.sh)|Edit(*.sh)|MultiEdit(*.sh)",
-            "command": "$HOME/.claude/hooks/lint_format_sh.sh"
+            "command": "$HOME/.claude/hooks/lint_format_sh.sh",
+            "if": "Write(*.sh)|Edit(*.sh)|MultiEdit(*.sh)"
           },
           {
             "type": "command",
-            "if": "Write(*.js)|Edit(*.js)|MultiEdit(*.js)|Write(*.ts)|Edit(*.ts)|MultiEdit(*.ts)|Write(*.jsx)|Edit(*.jsx)|MultiEdit(*.jsx)|Write(*.tsx)|Edit(*.tsx)|MultiEdit(*.tsx)",
-            "command": "$HOME/.claude/hooks/lint_format_js.sh"
+            "command": "$HOME/.claude/hooks/lint_format_js.sh",
+            "if": "Write(*.js)|Edit(*.js)|MultiEdit(*.js)|Write(*.ts)|Edit(*.ts)|MultiEdit(*.ts)|Write(*.jsx)|Edit(*.jsx)|MultiEdit(*.jsx)|Write(*.tsx)|Edit(*.tsx)|MultiEdit(*.tsx)"
           },
           {
             "type": "command",
-            "if": "Write(*.rs)|Edit(*.rs)|MultiEdit(*.rs)",
-            "command": "$HOME/.claude/hooks/lint_format_rs.sh"
+            "command": "$HOME/.claude/hooks/lint_format_rs.sh",
+            "if": "Write(*.rs)|Edit(*.rs)|MultiEdit(*.rs)"
           },
           {
             "type": "command",
-            "if": "Write(*.nix)|Edit(*.nix)|MultiEdit(*.nix)",
-            "command": "$HOME/.claude/hooks/lint_format_nix.sh"
+            "command": "$HOME/.claude/hooks/lint_format_nix.sh",
+            "if": "Write(*.nix)|Edit(*.nix)|MultiEdit(*.nix)"
           },
           {
             "type": "command",
-            "if": "Write(*.md)|Edit(*.md)|MultiEdit(*.md)|Write(*.markdown)|Edit(*.markdown)|MultiEdit(*.markdown)",
-            "command": "$HOME/.claude/hooks/lint_format_md.sh"
+            "command": "$HOME/.claude/hooks/lint_format_md.sh",
+            "if": "Write(*.md)|Edit(*.md)|MultiEdit(*.md)|Write(*.markdown)|Edit(*.markdown)|MultiEdit(*.markdown)"
           },
           {
             "type": "command",
-            "if": "Write(*.json)|Edit(*.json)|MultiEdit(*.json)|Write(*.toml)|Edit(*.toml)|MultiEdit(*.toml)",
-            "command": "$HOME/.claude/hooks/lint_format_json_toml.sh"
+            "command": "$HOME/.claude/hooks/lint_format_json_toml.sh",
+            "if": "Write(*.json)|Edit(*.json)|MultiEdit(*.json)|Write(*.toml)|Edit(*.toml)|MultiEdit(*.toml)"
           },
           {
             "type": "command",
-            "if": "Write(*.yml)|Edit(*.yml)|MultiEdit(*.yml)|Write(*.yaml)|Edit(*.yaml)|MultiEdit(*.yaml)",
-            "command": "$HOME/.claude/hooks/lint_format_gha.sh"
+            "command": "$HOME/.claude/hooks/lint_format_gha.sh",
+            "if": "Write(*.yml)|Edit(*.yml)|MultiEdit(*.yml)|Write(*.yaml)|Edit(*.yaml)|MultiEdit(*.yaml)"
           },
           {
             "type": "command",
-            "if": "Write(*.txt)|Edit(*.txt)|MultiEdit(*.txt)",
-            "command": "$HOME/.claude/hooks/lint_format_txt.sh"
+            "command": "$HOME/.claude/hooks/lint_format_txt.sh",
+            "if": "Write(*.txt)|Edit(*.txt)|MultiEdit(*.txt)"
           },
           {
             "type": "command",
-            "if": "Write(*.lua)|Edit(*.lua)|MultiEdit(*.lua)",
-            "command": "$HOME/.claude/hooks/lint_format_lua.sh"
+            "command": "$HOME/.claude/hooks/lint_format_lua.sh",
+            "if": "Write(*.lua)|Edit(*.lua)|MultiEdit(*.lua)"
           },
           {
             "type": "command",
-            "if": "Write(*.tex)|Edit(*.tex)|MultiEdit(*.tex)|Write(*.bib)|Edit(*.bib)|MultiEdit(*.bib)|Write(*.cls)|Edit(*.cls)|MultiEdit(*.cls)|Write(*.sty)|Edit(*.sty)|MultiEdit(*.sty)",
-            "command": "$HOME/.claude/hooks/lint_format_tex.sh"
+            "command": "$HOME/.claude/hooks/lint_format_tex.sh",
+            "if": "Write(*.tex)|Edit(*.tex)|MultiEdit(*.tex)|Write(*.bib)|Edit(*.bib)|MultiEdit(*.bib)|Write(*.cls)|Edit(*.cls)|MultiEdit(*.cls)|Write(*.sty)|Edit(*.sty)|MultiEdit(*.sty)"
           }
         ]
       }
@@ -215,7 +215,7 @@
       "watchman"
     ]
   },
-  "effortLevel": "medium",
+  "effortLevel": "high",
   "autoMemoryEnabled": false,
   "feedbackSurveyState": {
     "lastShownTime": 1754030513973
