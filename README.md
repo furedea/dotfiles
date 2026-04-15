@@ -21,10 +21,10 @@ furedea's macOS dotfiles — managed with [Nix](https://nixos.org/), [nix-darwin
 
 ## Setup (new Mac)
 
-1. Install Nix using the official installer (defaults to multi-user on macOS):
+1. Install Nix using the [NixOS nix-installer](https://github.com/NixOS/nix-installer). The `--enable-flakes` flag turns on the `nix-command` and `flakes` experimental features so nix-darwin can be bootstrapped without extra arguments below:
 
     ```sh
-    curl -L https://nixos.org/nix/install | sh
+    curl -sSfL https://artifacts.nixos.org/nix-installer | sh -s -- install --enable-flakes
     ```
 
     After the installer finishes, open a new shell so `nix` is on `PATH`.
@@ -35,14 +35,13 @@ furedea's macOS dotfiles — managed with [Nix](https://nixos.org/), [nix-darwin
     git clone https://github.com/furedea/dotfiles ~/dotfiles
     ```
 
-3. Bootstrap nix-darwin. Enable flakes on this first run only — nix-darwin makes it permanent afterwards via `nix.settings.experimental-features` in `nix/darwin/default.nix`:
+3. Bootstrap nix-darwin:
 
     ```sh
-    sudo nix --extra-experimental-features 'nix-command flakes' \
-      run nix-darwin -- switch --flake "$HOME/dotfiles#mba"
+    sudo nix run nix-darwin -- switch --flake "$HOME/dotfiles#mba"
     ```
 
-> **Do not use the Determinate Systems installer** (`install.determinate.systems/nix`). Current versions install Determinate Nix by default, whose `determinate-nixd` daemon conflicts with nix-darwin's native Nix management (`nix.settings`, `nix.gc`). If you need to recover from this, run `/nix/nix-installer uninstall` and reinstall with the official installer above.
+> **Do not use the Determinate Systems installer** (`install.determinate.systems/nix`). Despite sharing a Rust codebase with the NixOS nix-installer above, current versions install Determinate Nix by default, whose `determinate-nixd` daemon conflicts with nix-darwin's native Nix management (`nix.settings`, `nix.gc`). If you need to recover from this, run `/nix/nix-installer uninstall` and reinstall using the command in step 1.
 
 > Subsequent system updates use `darwin-rebuild` directly (installed by the step above):
 >
