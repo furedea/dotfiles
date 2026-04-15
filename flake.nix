@@ -8,6 +8,7 @@
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
     home-manager.url = "github:nix-community/home-manager/release-25.11";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
+    nix-homebrew.url = "github:zhaofengli/nix-homebrew";
   };
 
   outputs =
@@ -17,6 +18,7 @@
       nixpkgs,
       nixpkgs-unstable,
       home-manager,
+      nix-homebrew,
     }:
     let
       username = "kaito";
@@ -42,6 +44,7 @@
         specialArgs = { inherit username; };
         modules = [
           ./nix/darwin/default.nix
+          nix-homebrew.darwinModules.nix-homebrew
           home-manager.darwinModules.home-manager
           {
             # Allowlist for packages with non-free licenses (nixpkgs blocks unfree by default).

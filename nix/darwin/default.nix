@@ -234,6 +234,12 @@
     # System Settings > Accessibility > Display
   '';
 
+  nix-homebrew = {
+    enable = true;
+    user = username;
+    autoMigrate = true;
+  };
+
   homebrew = {
     enable = true;
     onActivation = {
