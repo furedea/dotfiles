@@ -205,6 +205,21 @@
   # ──────────────────────────────────────────────────────
   # Activation scripts (run on every darwin-rebuild switch)
   # ──────────────────────────────────────────────────────
+
+  # Back up Apple-provided /etc files before nix-darwin's hash check.
+  # nix-darwin refuses to overwrite /etc/bashrc, /etc/zshrc, /etc/zshenv,
+  # /etc/zprofile unless the SHA256 matches a known Apple default, and the
+  # hash list lags behind macOS point releases — aborting the first
+  # darwin-rebuild on a fresh Mac with "Unexpected files in /etc". Moving
+  # non-symlink copies aside lets nix-darwin install its symlinks cleanly.
+  system.activationScripts.preActivation.text = ''
+    for f in /etc/bashrc /etc/zshrc /etc/zshenv /etc/zprofile; do
+      if [ -e "$f" ] && [ ! -L "$f" ] && [ ! -e "$f.before-nix-darwin" ]; then
+        mv "$f" "$f.before-nix-darwin"
+      fi
+    done
+  '';
+
   system.activationScripts.postActivation.text = ''
     # Stop Apple Music (rcd) from auto-launching
     launchctl unload -w /System/Library/LaunchAgents/com.apple.rcd.plist 2>/dev/null || true
