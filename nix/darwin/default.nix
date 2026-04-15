@@ -285,9 +285,5 @@
     brews = [
       "winebarrel/kasa/kasa"
     ];
-
-    masApps = {
-      LINE = 539883307;
-    };
   };
 }

@@ -96,7 +96,6 @@ in
     ltex-ls
 
     # macOS-specific
-    mas
     xcodes
     dotenvx
     marp-cli

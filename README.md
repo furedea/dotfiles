@@ -60,7 +60,7 @@ furedea's macOS dotfiles — managed with [Nix](https://nixos.org/), [nix-darwin
 `darwin-rebuild switch` automatically:
 
 - Installs all CLI tools via Nix
-- Installs GUI apps via Homebrew Cask + Mac App Store
+- Installs GUI apps via Homebrew Cask
 - Applies all macOS system settings
 - Generates `~/.config/zsh/nix-plugins.zsh` (zsh plugin paths)
 - Runs `rustup toolchain install stable`, `uv python install`
@@ -105,7 +105,7 @@ dotfiles/
 | VCS | git (programs.git), delta, jujutsu, gh |
 | Language runtimes | nodejs, pnpm, ni, rustup (Rust), uv (Python) |
 | AI / CLI | claude-code, codex |
-| macOS | mas, xcodes, dotenvx, marp-cli |
+| macOS | xcodes, dotenvx, marp-cli |
 
 ### GUI Apps (Homebrew Cask)
 
@@ -113,7 +113,7 @@ appcleaner, arc, bitwarden, chatgpt, claude, cmux, discord, firefox, font-jetbra
 
 ### Mac App Store
 
-LINE
+LINE is installed manually via the App Store app. Automated `masApps` management is not used because Apple hardened `installd` on macOS 15.7.2+ (CVE-2025-43411 mitigation), which makes `mas install` unable to run under the `sudo darwin-rebuild` root context — see [mas-cli#1221](https://github.com/mas-cli/mas/issues/1221).
 
 ### macOS System Settings
 
