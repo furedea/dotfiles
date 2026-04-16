@@ -149,15 +149,6 @@
             "command": "$HOME/.claude/hooks/macos_notify_done.sh"
           }
         ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "dotenvx run -f $HOME/dotfiles/claude/.env -- $HOME/.claude/hooks/bark_notify.sh 'タスクが完了しました'"
-          }
-        ]
       }
     ],
     "Notification": [
