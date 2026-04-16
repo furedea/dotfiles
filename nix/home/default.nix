@@ -44,7 +44,7 @@ in
     actionlint
 
     # AI Coding Agent
-    claude-code
+    unstable.claude-code
     unstable.codex
     unstable.github-copilot-cli
 
