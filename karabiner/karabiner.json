@@ -43,6 +43,16 @@
           }
         ]
       },
+      "devices": [
+        {
+          "identifiers": {
+            "is_keyboard": true,
+            "product_id": 615,
+            "vendor_id": 76
+          },
+          "manipulate_caps_lock_led": false
+        }
+      ],
       "name": "Default profile",
       "selected": true,
       "simple_modifications": [
