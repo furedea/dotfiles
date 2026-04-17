@@ -1,2 +1,1 @@
-export PATH=$HOME/.gem/bin:$PATH
-. "$HOME/.cargo/env"
+export PATH=$HOME/.gem/bin:$HOME/.cargo/bin:$PATH
