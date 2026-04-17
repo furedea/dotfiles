@@ -12,7 +12,6 @@
 - When writing commit messages, follow Conventional Commits rules, and write it in English
 - For new projects, use flake.nix + `.envrc (use flake)` + `direnv allow` + language init (in that order). See `skills/nix-dev-init`.
 - Don't perform the following tasks without user instructions:
-    - Use Agent Teams (TeamCreate): only when the user explicitly requests "agent team" or "parallel"
     - Push (jj)
 
 ## Project Context
