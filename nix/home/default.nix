@@ -4,6 +4,8 @@
   lib,
   username,
   unstable,
+  nix-claude-code,
+  system,
   ...
 }:
 let
@@ -44,7 +46,7 @@ in
     actionlint
 
     # AI Coding Agent
-    unstable.claude-code
+    nix-claude-code.packages.${system}.default
     unstable.codex
     unstable.github-copilot-cli
 

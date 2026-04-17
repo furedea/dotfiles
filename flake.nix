@@ -9,6 +9,7 @@
     home-manager.url = "github:nix-community/home-manager/release-25.11";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
+    nix-claude-code.url = "github:ryoppippi/nix-claude-code";
   };
 
   outputs =
@@ -19,6 +20,7 @@
       nixpkgs-unstable,
       home-manager,
       nix-homebrew,
+      nix-claude-code,
     }:
     let
       username = "kaito";
@@ -27,7 +29,7 @@
         pkg:
         builtins.elem pkg.pname [
           "zsh-abbr"
-          "claude-code"
+          "claude"
           "github-copilot-cli"
         ];
       pkgs = import nixpkgs {
@@ -51,7 +53,7 @@
             # Use allowUnfreePredicate instead of allowUnfree = true to avoid
             # accidentally permitting other proprietary packages.
             #   zsh-abbr         : CC-BY-NC-SA-4.0 + Hippocratic License v3.0 (both free=false)
-            #   claude-code      : Anthropic proprietary
+            #   claude           : Anthropic proprietary (via ryoppippi/nix-claude-code)
             #   github-copilot-cli: GitHub proprietary
             nixpkgs.config.allowUnfreePredicate = allowUnfreePredicate;
 
@@ -59,7 +61,7 @@
               useGlobalPkgs = true;
               useUserPackages = true;
               backupFileExtension = "bak";
-              extraSpecialArgs = { inherit username unstable; };
+              extraSpecialArgs = { inherit username unstable nix-claude-code system; };
               users.${username} = import ./nix/home/default.nix;
             };
           }
@@ -68,7 +70,7 @@
 
       homeConfigurations.${username} = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
-        extraSpecialArgs = { inherit username unstable; };
+        extraSpecialArgs = { inherit username unstable nix-claude-code system; };
         modules = [
           ./nix/home/default.nix
         ];
