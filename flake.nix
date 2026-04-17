@@ -24,7 +24,7 @@
     }:
     let
       username = "kaito";
-      system = "aarch64-apple-darwin";
+      system = "aarch64-darwin";
       allowUnfreePredicate =
         pkg:
         builtins.elem pkg.pname [
