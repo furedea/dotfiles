@@ -270,6 +270,7 @@
       "bitwarden"
       "chatgpt"
       "claude"
+      "codex-app"
       "cmux"
       "deepl"
       "discord"
