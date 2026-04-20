@@ -5,6 +5,7 @@
   username,
   unstable,
   nix-claude-code,
+  codex-cli-nix,
   system,
   ...
 }:
@@ -47,7 +48,7 @@ in
 
     # AI Coding Agent
     nix-claude-code.packages.${system}.default
-    unstable.codex
+    codex-cli-nix.packages.${system}.default
     unstable.github-copilot-cli
 
     # General Formatters

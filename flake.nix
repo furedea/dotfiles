@@ -10,6 +10,7 @@
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
     nix-claude-code.url = "github:ryoppippi/nix-claude-code";
+    codex-cli-nix.url = "github:sadjow/codex-cli-nix";
   };
 
   outputs =
@@ -21,6 +22,7 @@
       home-manager,
       nix-homebrew,
       nix-claude-code,
+      codex-cli-nix,
     }:
     let
       username = "kaito";
@@ -61,7 +63,7 @@
               useGlobalPkgs = true;
               useUserPackages = true;
               backupFileExtension = "bak";
-              extraSpecialArgs = { inherit username unstable nix-claude-code system; };
+              extraSpecialArgs = { inherit username unstable nix-claude-code codex-cli-nix system; };
               users.${username} = import ./nix/home/default.nix;
             };
           }
@@ -70,7 +72,7 @@
 
       homeConfigurations.${username} = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
-        extraSpecialArgs = { inherit username unstable nix-claude-code system; };
+        extraSpecialArgs = { inherit username unstable nix-claude-code codex-cli-nix system; };
         modules = [
           ./nix/home/default.nix
         ];

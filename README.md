@@ -238,9 +238,9 @@ Update user packages and home-manager config only:
 home-manager switch --flake "$HOME/dotfiles#kaito"
 ```
 
-Update codex from nixpkgs-unstable, then apply only home-manager changes:
+Update Codex CLI from codex-cli-nix, then apply only home-manager changes:
 
 ```sh
-nix flake lock --update-input nixpkgs-unstable
+nix flake update codex-cli-nix
 home-manager switch --flake "$HOME/dotfiles#kaito"
 ```
