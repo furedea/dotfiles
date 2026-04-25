@@ -2,21 +2,31 @@
 
 - Think in English, but generate responses in Japanese
 - Use "，" and "．" in writing in Japanese, instead of "。" and "、"
-- Implement based on Test-Spec Driven Development (TSDD) and Kent Beck's TDD:
-    - TSDD: [@~/.claude/skills/tsdd/SKILL.md](./skills/tsdd/SKILL.md)
-    - Coding guideline: [@~/.claude/rules/coding_guideline.md](./rules/coding_guideline.md)
-    - Requirements live in executable tests; durable prose carries only Why.
 - Directory names: Use hyphens (-) as separators (ex: claude-scripts)
 - File names: Use underscores (\_) as separators (ex: lint_format.sh)
-- Write code comments in English
+- Write documentation, code comments, and commit messages in English for public repositories
+- When writing commit messages, follow Conventional Commits rules
+- Implement based on Test-Spec Driven Development (TSDD)
 - Prefer jj (Jujutsu) over Git for all VCS operations
-- When writing commit messages, follow Conventional Commits rules, and write it in English
-- For new projects, use flake.nix + `.envrc (use flake)` + `direnv allow` + language init (in that order). See `skills/nix-dev-init`.
-- Don't perform the following tasks without user instructions:
-    - Push (jj)
 
-## Project Context
+# Coding Guidelines
 
-- Product overview, features, and use cases: @./.kiro/steering/product.md
-- Architecture, technology stack, and development environment: @./.kiro/steering/tech.md
-- Directory structure, coding conventions, and naming rules: @./.kiro/steering/structure.md
+Existing project style takes precedence over these rules.
+
+- Keep files focused: prefer 80-120 columns, roughly 200-500 lines, high-level code before lower-level details, and related concepts close together.
+- Separate object creation/configuration from execution logic.
+- Keep classes and modules single-purpose, cohesive, loosely coupled, and minimally public.
+- Name classes by responsibility; order methods public-to-private; use DTOs at component boundaries.
+- Keep domain-specific enums and exception classes near their owning class; use one exception class per domain failure concept unless it is shared across modules.
+- Keep functions small and single-purpose: prefer 0-3 arguments, one abstraction level, 2-4 lines when practical, short variable lifetimes, guard clauses, and at most one indentation level; split only when the extracted name clarifies intent.
+- Split duplicated logic, control structures, mixed responsibilities, and command/query behavior into named functions or objects.
+- Name one concept with one word; name command functions for their side effects and query functions for the value they return.
+- Let name length match scope size; include units, trust/safety attributes, and boolean prefixes where they clarify meaning.
+- Minimize comments and docstrings; use them for public APIs, TODOs, non-obvious constraints, and intent that code cannot express.
+- Prefer DRY, YAGNI, and Law of Demeter.
+- Apply SOLID pragmatically; introduce interfaces, polymorphism, or dependency inversion only at meaningful boundaries.
+- Separate policy from details; delay database, framework, and external-service decisions behind abstractions when doing so reduces coupling.
+- Prefer Value Objects over raw primitives for values with validation, invariants, or domain behavior
+- Prefer Collection Objects for domain collections with invariants; do not expose mutable raw collections
+- Use Entities only when stable identity matters across state changes
+- Use classification objects/enums when categories or state transitions have domain rules

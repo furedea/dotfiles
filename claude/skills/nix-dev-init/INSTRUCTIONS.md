@@ -13,13 +13,15 @@ The whole reason Phase 1 runs before Phase 2 is so the language's init command s
 
 ## Mandatory Order (Phase 1)
 
-1. `flake.nix` — write the devShell with the language toolchain
-2. `.envrc` — single line: `use flake`
-3. `direnv allow` — trust the .envrc once, per repo
-4. Proceed to Phase 2 via the relevant `references/lang-<name>.md`
+1. VCS init — `jj git init` (new repo), `jj git init --colocate` (existing Git repo), or `jj git clone <url>` (clone remote)
+2. `flake.nix` — write the devShell with the language toolchain
+3. `.envrc` — single line: `use flake`
+4. `direnv allow` — trust the .envrc once, per repo
+5. Proceed to Phase 2 via the relevant `references/lang-<name>.md`
 
 ### Why this order
 
+- **VCS before flake**: `.gitignore` must exist before `nix flake update` creates `flake.lock`, so the VCS repo needs to be initialized first. jj reads `.gitignore` natively.
 - **Toolchain before init**: running `uv init` on the host shell first picks up the host's `python3`, whose version leaks into `pyproject.toml`'s `requires-python` and lockfiles. On another machine (or in CI) this silently breaks reproducibility.
 - **Commit `.envrc` before `direnv allow`**: direnv's trust state is keyed by file hash. Allowing first and editing after immediately invalidates the allow, forcing a re-allow.
 
@@ -91,6 +93,12 @@ After `direnv allow` and a clean `cd` into the repo, hand off to the language-sp
 | Unlisted languages | `references/lang-fallback.md` | — |
 
 Read only the ref that matches the project's primary language — the files are intentionally standalone so Phase 2 loads one language's context, not all of them.
+
+## After Setup
+
+- Ask the user whether to set up CI with github-ci-init
+- Development follows TSDD, detailed in the tsdd skill
+- Language conventions are in the corresponding *-style skill
 
 ## Anti-Patterns
 
