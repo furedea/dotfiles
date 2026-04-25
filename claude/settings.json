@@ -35,7 +35,7 @@
     ],
     "defaultMode": "auto"
   },
-  "model": "opus",
+  "model": "claude-opus-4-6",
   "enableAllProjectMcpServers": false,
   "hooks": {
     "UserPromptSubmit": [
@@ -204,10 +204,10 @@
       "watchman"
     ]
   },
-  "effortLevel": "max",
+  "effortLevel": "xhigh",
   "autoMemoryEnabled": false,
+  "skipAutoPermissionPrompt": true,
   "feedbackSurveyState": {
     "lastShownTime": 1754030513973
-  },
-  "skipAutoPermissionPrompt": true
+  }
 }
