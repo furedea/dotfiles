@@ -1,90 +1,108 @@
 #!/bin/bash
+set -euxCo pipefail
+cd "$(dirname "$0")"
+set +x
 
-# Sensitive information scanner for Claude Code hooks
-# Usage: scan_sensitive_info.sh <mode>
-# Modes: prompt, read, write
+function usage() {
+	cat <<EOF >&2
+Description:
+    Scan Claude Code hook input for sensitive information.
 
-set -euo pipefail
+Usage:
+    $0 <prompt|read|write>
 
-MODE="${1:-}"
-PATTERNS_FILE="$HOME/.claude/hooks/rules/sensitive_patterns.json"
-INPUT=$(cat)
+Options:
+    --help, -h: print this
+EOF
+	exit 1
+}
 
-# Validate mode
-if [[ -z "$MODE" ]]; then
-    echo "Error: mode argument required (prompt|read|write)" >&2
-    exit 1
-fi
+readonly MODE="${1:-}"
+readonly PATTERNS_FILE="$HOME/.claude/hooks/rules/sensitive_patterns.json"
 
-# Check patterns file exists
-if [[ ! -f "$PATTERNS_FILE" ]]; then
-    exit 0
-fi
+function scan_text_from_input() {
+	local _input="$1"
 
-# Extract text to scan based on mode
-scan_text=""
-case "$MODE" in
-prompt)
-    scan_text=$(echo "$INPUT" | jq -r '.prompt // empty')
-    ;;
-read)
-    file_path=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
-    if [[ -n "$file_path" && -f "$file_path" ]]; then
-        scan_text=$(head -c 100000 "$file_path" 2>/dev/null || echo "")
-    fi
-    ;;
-write)
-    # Check content (Write tool) and new_string (Edit/MultiEdit tool)
-    content=$(echo "$INPUT" | jq -r '.tool_input.content // empty')
-    new_string=$(echo "$INPUT" | jq -r '.tool_input.new_string // empty')
-    scan_text="${content}${new_string}"
-    ;;
-*)
-    exit 0
-    ;;
-esac
+	case "$MODE" in
+	prompt)
+		jq -r '.prompt // empty' <<<"$_input"
+		;;
+	read)
+		local _file_path
+		_file_path="$(jq -r '.tool_input.file_path // empty' <<<"$_input")"
+		if [[ -n "$_file_path" && -f "$_file_path" ]]; then
+			head -c 100000 "$_file_path" 2>/dev/null || true
+		fi
+		;;
+	write)
+		local _content
+		_content="$(jq -r '.tool_input.content // empty' <<<"$_input")"
+		local _new_string
+		_new_string="$(jq -r '.tool_input.new_string // empty' <<<"$_input")"
+		printf '%s%s' "$_content" "$_new_string"
+		;;
+	*)
+		usage
+		;;
+	esac
+}
 
-# Nothing to scan
-if [[ -z "$scan_text" ]]; then
-    exit 0
-fi
+function block_output() {
+	local _reason="$1"
 
-# Scan text against each pattern
-# NOTE: Use while/read to preserve rule names that contain spaces
-# (e.g. "AWS Access Key") — `for x in $list` word-splits on whitespace
-# and would break multi-word keys, causing jq to return the literal
-# string "null" which then matches any file containing that word.
-while IFS= read -r rule_name; do
-    pattern=$(jq -r --arg k "$rule_name" '.[$k].pattern // empty' "$PATTERNS_FILE")
-    message=$(jq -r --arg k "$rule_name" '.[$k].message // empty' "$PATTERNS_FILE")
-    [[ -z "$pattern" ]] && continue
+	case "$MODE" in
+	prompt)
+		jq -n --arg reason "$_reason. Prompt contains sensitive information." \
+			'{
+				decision: "block",
+				reason: $reason
+			}'
+		;;
+	read | write)
+		jq -n --arg reason "$_reason" \
+			'{
+				hookSpecificOutput: {
+					hookEventName: "PreToolUse",
+					permissionDecision: "deny",
+					permissionDecisionReason: $reason
+				}
+			}'
+		;;
+	esac
+}
 
-    if echo "$scan_text" | grep -qP "$pattern" 2>/dev/null; then
-        # Sensitive info detected - output block response based on mode
-        case "$MODE" in
-        prompt)
-            jq -n \
-                --arg reason "⚠ BLOCKED: $message ($rule_name). Prompt contains sensitive information." \
-                '{
-            decision: "block",
-            reason: $reason
-          }'
-            ;;
-        read | write)
-            jq -n \
-                --arg reason "⚠ BLOCKED: $message ($rule_name)" \
-                '{
-            hookSpecificOutput: {
-              hookEventName: "PreToolUse",
-              permissionDecision: "deny",
-              permissionDecisionReason: $reason
-            }
-          }'
-            ;;
-        esac
-        exit 0
-    fi
-done < <(jq -r 'keys[]' "$PATTERNS_FILE")
+function main() {
+	if [[ "$MODE" == "--help" || "$MODE" == "-h" || -z "$MODE" ]]; then
+		usage
+	fi
 
-# No sensitive info found
-exit 0
+	local _input
+	_input="$(cat)"
+
+	if [[ ! -f "$PATTERNS_FILE" ]]; then
+		exit 0
+	fi
+
+	local _scan_text
+	_scan_text="$(scan_text_from_input "$_input")"
+
+	if [[ -z "$_scan_text" ]]; then
+		exit 0
+	fi
+
+	local _rule_name
+	while IFS= read -r _rule_name; do
+		local _pattern
+		_pattern="$(jq -r --arg k "$_rule_name" '.[$k].pattern // empty' "$PATTERNS_FILE")"
+		local _message
+		_message="$(jq -r --arg k "$_rule_name" '.[$k].message // empty' "$PATTERNS_FILE")"
+		[[ -z "$_pattern" ]] && continue
+
+		if rg --pcre2 -q "$_pattern" - <<<"$_scan_text" 2>/dev/null; then
+			block_output "BLOCKED: $_message ($_rule_name)"
+			exit 0
+		fi
+	done < <(jq -r 'keys[]' "$PATTERNS_FILE")
+}
+
+main "$@"

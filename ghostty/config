@@ -6,6 +6,7 @@ window-padding-balance = true
 window-theme = ghostty
 background-opacity = 1.0
 background-blur-radius = 0
+bell-features = system,attention,title
 macos-titlebar-style = tabs
 font-feature = -calt
 font-feature = -liga

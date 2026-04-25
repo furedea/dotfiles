@@ -318,6 +318,8 @@ in
     # Codex (shares the same global instructions and skills as Claude Code)
     ".codex/AGENTS.md".source = link "claude/CLAUDE.md";
     ".codex/skills".source = link "claude/skills";
+    ".codex/hooks".source = link "codex/hooks";
+    ".codex/hooks.json".source = link "codex/hooks.json";
 
     # Claude Code
     ".claude/agents".source = link "claude/agents";
