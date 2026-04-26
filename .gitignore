@@ -19,6 +19,7 @@ desktop.ini
 
 # Logs / cache
 *.log
+logs/
 .cache/
 
 # Nix vim undo files in nvim config
