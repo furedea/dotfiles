@@ -18,7 +18,7 @@ EOF
 }
 
 readonly MODE="${1:-}"
-readonly PATTERNS_FILE="$HOME/.claude/hooks/rules/secret_content_patterns.json"
+readonly PATTERNS_FILE="$PWD/rules/secret_content_patterns.json"
 
 function scan_text_from_input() {
   local _input="$1"
