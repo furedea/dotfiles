@@ -1,0 +1,30 @@
+pre-commit:
+  parallel: true
+  commands:
+    shfmt:
+      glob: "*.sh"
+      run: shfmt -i 2 -d {staged_files}
+    shellcheck:
+      glob: "*.sh"
+      run: shellcheck -x --source-path=SCRIPTDIR {staged_files}
+    nixfmt:
+      glob: "*.nix"
+      run: nixfmt --check {staged_files}
+    statix:
+      glob: "*.nix"
+      run: statix check {staged_files}
+    stylua:
+      glob: "*.lua"
+      run: stylua --check {staged_files}
+    actionlint:
+      glob: ".github/workflows/*.yml"
+      run: actionlint {staged_files}
+    autocorrect:
+      glob: "*.{md,txt}"
+      run: autocorrect --lint {staged_files}
+
+pre-push:
+  commands:
+    bats:
+      glob: "*.{sh,bats}"
+      run: bats tests/ --recursive
