@@ -45,6 +45,9 @@ in
     tree-sitter
     just
     actionlint
+    lazygit
+    lefthook
+    commitlint
 
     # AI Coding Agent
     nix-claude-code.packages.${system}.default
@@ -116,8 +119,14 @@ in
     git = {
       enable = true;
       settings = {
-        user.name = "furedea";
-        user.email = "132188853+furedea@users.noreply.github.com";
+        user = {
+          name = "furedea";
+          email = "132188853+furedea@users.noreply.github.com";
+          signingkey = "~/.ssh/id_ed25519.pub";
+        };
+        gpg.format = "ssh";
+        commit.gpgsign = true;
+        tag.gpgsign = true;
         init.defaultBranch = "main";
         credential.helper = "osxkeychain";
         column.ui = "auto";
@@ -129,6 +138,7 @@ in
           mnemonicPrefix = true;
           renames = true;
         };
+        pull.rebase = true;
         push = {
           default = "simple";
           autoSetupRemote = true;
@@ -146,7 +156,6 @@ in
           autoupdate = true;
         };
         core = {
-          excludesfile = "~/.gitignore";
           fsmonitor = true;
           untrackedCache = true;
         };
@@ -156,6 +165,12 @@ in
           updateRefs = true;
         };
         merge.conflictstyle = "zdiff3";
+        transfer.fsckObjects = true;
+        fetch.fsckObjects = true;
+        receive.fsckObjects = true;
+        status.short = true;
+        status.branch = true;
+        alias.cc = "!f() { tmpf=$(mktemp) && codex exec --full-auto -o \"$tmpf\" 'Review the staged diff and generate a Conventional Commits message. Output ONLY the commit message, nothing else.' && git commit -F \"$tmpf\"; rm -f \"$tmpf\"; }; f";
       };
     };
 
@@ -194,25 +209,25 @@ in
       };
     };
 
-    jujutsu = {
-      enable = true;
-      settings = {
-        user.name = "furedea";
-        user.email = "132188853+furedea@users.noreply.github.com";
-        ui = {
-          "diff-editor" = ":builtin";
-          "diff-formatter" = ":git";
-          pager = "delta --paging=never";
-        };
-      };
-    };
-
     gh = {
       enable = true;
       settings = {
         git_protocol = "https";
         prompt = "enabled";
         aliases.co = "pr checkout";
+      };
+    };
+
+    gh-dash = {
+      enable = true;
+      settings = {
+        defaults.refetchIntervalMinutes = 5;
+        keybindings.prs = [
+          {
+            key = "m";
+            command = "gh pr merge --squash --auto -d {{.PrNumber}} -R {{.RepoName}}";
+          }
+        ];
       };
     };
 
@@ -281,6 +296,12 @@ in
     uvPythonInstall = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       ${pkgs.uv}/bin/uv python install 2>/dev/null || true
     '';
+    sshKeyGen = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      if [ ! -f ~/.ssh/id_ed25519 ]; then
+        mkdir -p ~/.ssh
+        ssh-keygen -t ed25519 -C "132188853+furedea@users.noreply.github.com" -f ~/.ssh/id_ed25519 -N ""
+      fi
+    '';
   };
 
   home.file = {
@@ -300,7 +321,6 @@ in
 
     # Starship
     ".config/starship.toml".source = link "starship/starship.toml";
-    ".config/starship/jj_prompt.sh".source = link "starship/jj_prompt.sh";
 
     # Vim
     ".vimrc".source = link "vim/.vimrc";
@@ -310,6 +330,9 @@ in
 
     # prettierd (global formatter config)
     ".prettierrc".source = link "prettier/.prettierrc";
+
+    # EditorConfig (global fallback for projects without their own)
+    ".editorconfig".source = link ".editorconfig";
 
     # macOS GUI 設定
     ".config/ghostty/config".source = link "ghostty/config";
@@ -325,9 +348,8 @@ in
     ".claude/agents".source = link "claude/agents";
     ".claude/commands".source = link "claude/commands";
     ".claude/hooks".source = link "claude/hooks";
-    ".claude/statuslines".source = link "claude/statuslines";
+    ".claude/statusline".source = link "claude/statusline";
     ".claude/skills".source = link "claude/skills";
-    ".claude/rules".source = link "claude/rules";
     ".claude/CLAUDE.md".source = link "claude/CLAUDE.md";
     ".claude/settings.json".source = link "claude/settings.json";
   };
