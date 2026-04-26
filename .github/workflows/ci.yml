@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions: {}
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hook-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Setup Bats
+        uses: bats-core/bats-action@77d6fb60505b4d0d1d73e48bd035b55074bbfb43 # v4.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run hook tests
+        run: bats --recursive tests/
+
+  shell-lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # 2.0.0
+        with:
+          scandir: claude/hooks
+          additional_files: >-
+            claude/statusline/statusline.sh
+            codex/hooks/adapt_block_secret_content.sh
+            codex/hooks/adapt_lint_format.sh
+
+      - name: Setup shfmt
+        uses: mfinelli/setup-shfmt@a25fda4c1fe115aec0f85e04126610841bc3141d # v4.0.1
+
+      - name: Run shfmt
+        run: shfmt -d -i 2 -ci claude/hooks/ claude/statusline/ codex/hooks/
+
+  lua-lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install selene
+        run: |
+          curl -fsSL "https://github.com/Kampfkarren/selene/releases/download/0.30.1/selene-0.30.1-linux.zip" -o "$TMPDIR/selene.zip"
+          unzip -o "$TMPDIR/selene.zip" -d "$TMPDIR"
+          sudo install "$TMPDIR/selene" /usr/local/bin/
+
+      - name: Run selene
+        run: selene nvim/
+
+      - name: Run stylua
+        uses: JohnnyMorganz/stylua-action@76fd70c03e6340ceaf673366712db9b20560b402 # v5.0.0
+        with:
+          args: --check nvim/
+
+  nix-lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@ab739621df7a23f52766f9ccc97f38da6b7af14f # v31.10.5
+
+      - name: Run statix
+        run: nix run nixpkgs#statix -- check flake.nix nix/
+
+      - name: Run deadnix
+        run: nix run nixpkgs#deadnix -- --fail flake.nix nix/
+
+      - name: Run nixfmt
+        run: nix run nixpkgs#nixfmt-rfc-style -- --check flake.nix nix/
+
+  format-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Run dprint
+        uses: dprint/check@9cb3a2b17a8e606d37aae341e49df3654933fc23 # v2.3
+
+      - name: Run autocorrect
+        uses: huacnlee/autocorrect-action@ecfab7cbe52ead55514356c1322636fab42e060a # v2.5.4
