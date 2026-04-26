@@ -1,9 +1,9 @@
 # Completion
 autoload -Uz compinit
 if [[ -n ~/.zcompdump(#qN.mh+24) ]]; then
-    compinit
+  compinit
 else
-    compinit -C
+  compinit -C
 fi
 
 zstyle ":completion:*" format $'\e[2;37mCompleting %d\e[m'
@@ -46,23 +46,25 @@ alias python3="python"
 
 # yazi: change cwd on exit
 function y() {
-    local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
-    yazi "$@" --cwd-file="$tmp"
-    if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
-        builtin cd -- "$cwd"
-    fi
-    rm -f -- "$tmp"
+  local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+  yazi "$@" --cwd-file="$tmp"
+  if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
+    builtin cd -- "$cwd"
+  fi
+  rm -f -- "$tmp"
 }
 
 # Auto-open files with vi when command not found and file exists
-command_not_found_handler() {
-    if [[ -f "$1" ]]; then
-        vi "$1"
-    else
-        echo "zsh: command not found: $1"
-        return 127
-    fi
+function command_not_found_handler() {
+  if [[ -f "$1" ]]; then
+    vi "$1"
+  else
+    echo "zsh: command not found: $1"
+    return 127
+  fi
 }
+
+DOTFILES="$HOME/dotfiles"
 
 export EDITOR="nvim"
 export VISUAL="nvim"
@@ -75,69 +77,103 @@ export ESA_TEAM="posl"
 export ESA_TOKEN=$(security find-generic-password -s "esa-token" -a "$USER" -w)
 
 # Plugins
-source "$HOME/.config/zsh/nix-plugins.zsh"
+source "$XDG_CONFIG_HOME/zsh/nix-plugins.zsh"
 
 # esa helpers — always saves as WIP; use `es` to explicitly ship
 _ESA_LAST_POST=""
 
 # _esa_edit: open editor and remember post for `es`
 function _esa_edit() {
-    local post="$1"
-    local editor="${EDITOR:-vim}"
-    echo "editor: $editor"
-    if EDITOR="$editor" kasa edit --no-notice "$post"; then
-        _ESA_LAST_POST="$post"
-    fi
+  local post="$1"
+  local editor="${EDITOR:-vim}"
+  echo "editor: $editor"
+  if EDITOR="$editor" kasa edit --no-notice "$post"; then
+    _ESA_LAST_POST="$post"
+  fi
 }
 
 # en: create new post under Members/k-shigyo/; errors if already exists (typo guard)
 function en() {
-    [[ -z "$1" ]] && echo "usage: en <title>" && return 1
-    local url
-    url=$(kasa touch --no-notice "Members/k-shigyo/$1") || return 1
-    _esa_edit "$url"
+  [[ -z "$1" ]] && echo "usage: en <title>" && return 1
+  local url
+  url=$(kasa touch --no-notice "Members/k-shigyo/$1") || return 1
+  _esa_edit "$url"
 }
 
 # ee: edit post under Members/k-shigyo/ — direct name if arg given, fzf picker if no arg
 function ee() {
-    local post
-    if [[ -n "$1" ]]; then
-        post="Members/k-shigyo/$1"
-    else
-        post=$(kasa ls "Members/k-shigyo/" | awk '{print $NF}' | fzf --prompt="esa > ")
-        [[ -z "$post" ]] && return
-    fi
-    kasa wip -f --no-notice "$post" >/dev/null 2>&1 || true
-    _esa_edit "$post"
+  local post
+  if [[ -n "$1" ]]; then
+    post="Members/k-shigyo/$1"
+  else
+    post=$(kasa ls "Members/k-shigyo/" | awk '{print $NF}' | fzf --prompt="esa > ")
+    [[ -z "$post" ]] && return
+  fi
+  kasa wip -f --no-notice "$post" >/dev/null 2>&1 || true
+  _esa_edit "$post"
 }
 
 # eep: edit daily progress post; ensures WIP state before editing
 function eep() {
-    local post="議事録/2026年度配属/shigyo"
-    kasa wip -f --no-notice "$post" >/dev/null 2>&1 || true
-    _esa_edit "$post"
+  local post="議事録/2026年度配属/shigyo"
+  kasa wip -f --no-notice "$post" >/dev/null 2>&1 || true
+  _esa_edit "$post"
 }
 
 # es: ship the last edited post (unwip with optional notice)
 function es() {
-    local notice_flag="--notice"
+  local notice_flag="--notice"
 
-    case "$1" in
-        "" )
-            ;;
-        -q | --quiet | --no-notice )
-            notice_flag="--no-notice"
-            shift
-            ;;
-        * )
-            echo "usage: es [-q|--quiet]"
-            return 1
-            ;;
-    esac
+  case "$1" in
+    "" )
+      ;;
+    -q | --quiet | --no-notice )
+      notice_flag="--no-notice"
+      shift
+      ;;
+    * )
+      echo "usage: es [-q|--quiet]"
+      return 1
+      ;;
+  esac
 
-    [[ -n "$1" ]] && echo "usage: es [-q|--quiet]" && return 1
-    [[ -z "$_ESA_LAST_POST" ]] && echo "es: no post to ship (edit something first)" && return 1
-    kasa unwip -f "$notice_flag" "$_ESA_LAST_POST" && _ESA_LAST_POST=""
+  [[ -n "$1" ]] && echo "usage: es [-q|--quiet]" && return 1
+  [[ -z "$_ESA_LAST_POST" ]] && echo "es: no post to ship (edit something first)" && return 1
+  kasa unwip -f "$notice_flag" "$_ESA_LAST_POST" && _ESA_LAST_POST=""
+}
+
+# GitHub: create repo with rulesets
+function ghcreate() {
+  [[ -z "$1" ]] && echo "usage: ghcreate <name> [gh repo create flags...]" && return 1
+  gh repo create "$1" "${@:2}" --clone || return 1
+  builtin cd "$1" || return 1
+
+  local template="" prev="" setup_args=()
+  for arg in "${@:2}"; do
+    if [[ "$prev" == "--template" ]]; then template="$arg"; fi
+    prev="$arg"
+  done
+
+  case "$template" in
+    *template-python*)
+      sed -i '' "s/^name = \"template-python\"/name = \"$1\"/" pyproject.toml
+      setup_args+=(-t python)
+      ;;
+    *template-typescript*)
+      jq --arg n "$1" '.name = $n' package.json > package.json.tmp && mv package.json.tmp package.json
+      setup_args+=(-t typescript)
+      ;;
+    *template-rust*)
+      sed -i '' "s/^name = \"template-rust\"/name = \"$1\"/" Cargo.toml
+      setup_args+=(-t rust)
+      ;;
+    *template-tex*)
+      setup_args+=(-t tex)
+      ;;
+  esac
+
+  "$DOTFILES/github/setup_repo.sh" "${setup_args[@]}"
+  lefthook install
 }
 
 # Abbreviations: new shortcuts that don't shadow existing commands.
