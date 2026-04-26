@@ -1,25 +1,28 @@
 # Phase 2: TeX / LaTeX
 
-Prerequisite: Phase 1 complete with `templates/tex/flake.nix` **and** `templates/tex/flake.lock` — the TeX template is the only one where the lock is copied in alongside the flake. Verify `which latexmk` or `which xelatex` resolves under `/nix/store/` before proceeding.
+Prerequisite: repo created via `ghcreate <name> --private --template furedea/template-tex`. The template provides `flake.nix`, `flake.lock`, `.envrc`, `lefthook.yml`, `.commitlintrc.yml`, CI workflows (tex-fmt lint + chktex), and `.gitignore`. The TeX template is the only one that ships `flake.lock` — see INSTRUCTIONS.md for why.
 
 TeX does not have an `init` command in the usual sense; Phase 2 here is about project scaffolding and verifying the typesetting chain, not a package manager bootstrap.
 
 ## Steps
 
-1. Create the source entry point — typically `main.tex` — or `cp` an existing project skeleton if one is available.
-2. Decide on a build driver:
+1. `direnv allow` — the template already includes `.envrc` (`use flake`).
+2. Verify `which xelatex` resolves under `/nix/store/`.
+3. Create the source entry point — typically `main.tex` — or `cp` an existing project skeleton if one is available.
+4. Decide on a build driver:
    - `latexmk` (recommended, handles bib / rerun automatically)
    - or a thin `Makefile` / `just` recipe wrapping `xelatex` + `biber`
-3. Copy `templates/tex/gitignore` to the project `.gitignore` — covers `.direnv/`, `result*`, and all TeX build artifacts in one shot. Mirrored from `~/dev/tex/shigyo/.gitignore`.
-4. Test-build once: `latexmk -xelatex main.tex` (or equivalent). First build may take noticeable time because `texlive.combined.scheme-full` is large.
+5. Test-build once: `latexmk -xelatex main.tex` (or equivalent). First build may take noticeable time because `texlive.combined.scheme-full` is large.
 
-## Why `flake.lock` is checked in here (and nowhere else)
+CI is already scaffolded by the template — skip that offer in the "After Setup" step.
+
+## Why `flake.lock` is checked in (and nowhere else)
 
 TeX Live output is exquisitely sensitive to package versions — a single `tlpdb` update can silently change kerning, font metrics, or break `chktex` / `tex-fmt`. For most languages "track a stable channel" is good enough because the toolchain is semver-disciplined; TeX is not.
 
-Consequence: the TeX template pins to `nixpkgs-unstable` (because TeX Live lands on unstable first) **and** ships a `flake.lock` so "unstable + reproducible" is coherent. The two together are load-bearing — dropping either one breaks the guarantee.
+The template pins to `nixpkgs-unstable` (because TeX Live lands on unstable first) **and** ships a `flake.lock` so "unstable + reproducible" is coherent. The two together are load-bearing — dropping either one breaks the guarantee.
 
-**Mirror rule**: `templates/tex/flake.lock` and `templates/tex/gitignore` both mirror `~/dev/tex/shigyo/`. If `shigyo` runs `nix flake update` or edits its `.gitignore`, re-copy those files here so freshly-initialized TeX projects stay aligned with the primary one. Do not `nix flake update` the skill template in isolation.
+**Mirror rule**: the canonical `flake.lock` lives in `~/dev/tex/shigyo/`. If `shigyo` runs `nix flake update`, also update `furedea/template-tex`'s `flake.lock` so freshly-initialized TeX projects stay aligned.
 
 ## Why `scheme-full`
 
@@ -34,5 +37,5 @@ Consequence: the TeX template pins to `nixpkgs-unstable` (because TeX Live lands
 ## What NOT to do
 
 - Do not drop `flake.lock` "to match the other templates". TeX is the exception for the reason above.
-- Do not switch the TeX template from `nixpkgs-unstable` to `nixpkgs-25.11-darwin` without also re-evaluating whether the lock still makes sense.
+- Do not switch the TeX template from `nixpkgs-unstable` to a stable channel without also re-evaluating whether the lock still makes sense.
 - Do not install TeX Live via `brew` / `tlmgr` on the side. That reintroduces two sources of truth for packages.

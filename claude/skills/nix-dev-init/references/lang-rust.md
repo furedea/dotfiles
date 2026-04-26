@@ -1,17 +1,18 @@
 # Phase 2: Rust (cargo)
 
-Prerequisite: Phase 1 complete with `templates/rust/flake.nix` (ships `cargo`, `rustc`, `rustfmt`, `clippy`). Verify `which cargo` and `which rustc` resolve under `/nix/store/` before proceeding.
+Prerequisite: repo created via `ghcreate <name> --private --template furedea/template-rust`. The template provides `flake.nix`, `.envrc`, `Cargo.toml`, `src/main.rs`, `lefthook.yml`, `.commitlintrc.yml`, CI workflows (lint, format, test, CodeQL), and `.gitignore`. `ghcreate` also patches `Cargo.toml`'s `name` field and applies GitHub rulesets.
 
 ## Steps
 
-1. `cargo init` — generates `Cargo.toml`, `src/main.rs` (or `src/lib.rs` with `--lib`), and an initial `.gitignore`.
-2. Merge `templates/rust/Cargo.toml` (in this skill's directory) into the generated `Cargo.toml`. Keep the generated `[package]` name/version; bring in `[profile.*]`, `[lints.*]`, and any shared dependency pins from the template.
-3. Ensure the project `.gitignore` also has `.direnv/` and `result*` from Phase 1 (cargo's generated `.gitignore` only covers `/target`).
-4. `cargo build` — confirms the nix-provided `rustc` + `cargo` chain works end to end.
+1. `direnv allow` — the template already includes `.envrc` (`use flake`).
+2. Verify `which cargo` and `which rustc` resolve under `/nix/store/`.
+3. `cargo build` — confirms the nix-provided toolchain works end to end.
+
+CI is already scaffolded by the template — skip that offer in the "After Setup" step.
 
 ## Why not `rust-overlay` / `fenix` by default
 
-The user's default Rust template uses nixpkgs' `cargo` + `rustc` (currently stable, roughly matching what `nixpkgs-25.11-darwin` ships). This is deliberate:
+The template uses nixpkgs' `cargo` + `rustc` (stable). This is deliberate:
 
 - Nixpkgs stable is good enough for 95% of projects and avoids an extra flake input.
 - `rust-overlay` / `fenix` add a significant first-build cost (the toolchain derivation is large) and lock you to a fresh evaluation every time.
@@ -23,12 +24,13 @@ Do **not** add `rust-analyzer` to the devShell. The globally-installed `rust-ana
 
 ## Common first-run checks
 
-- `cargo --version` and `rustc --version` should print versions matching `nixpkgs-25.11-darwin`.
+- `cargo --version` and `rustc --version` should resolve under `/nix/store/`.
 - `cargo build` should succeed on the starter `main.rs`.
 - `cargo clippy` should run without needing extra installs.
 
 ## What NOT to do
 
+- Do not run `cargo init` — the template repo already provides `Cargo.toml` and `src/main.rs`. Running `cargo init` overwrites them.
 - Do not add `cargo` / `rustc` to `~/dotfiles/nix/home/default.nix`. Per-project pinning is the whole point.
 - Do not commit `target/`. It is a machine-specific build cache.
 - Do not run `rustup` inside the direnv shell. Nix owns the toolchain; rustup would install a second one into `~/.rustup/` and silently shadow it via `cargo`'s PATH lookup.

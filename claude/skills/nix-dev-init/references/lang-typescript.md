@@ -1,28 +1,15 @@
 # Phase 2: TypeScript / Node (pnpm)
 
-Prerequisite: Phase 1 complete with `templates/typescript/flake.nix` (ships `nodejs_22` + `pnpm`). Verify `which node` and `which pnpm` resolve under `/nix/store/` before proceeding.
+Prerequisite: repo created via `ghcreate <name> --private --template furedea/template-typescript`. The template provides `flake.nix`, `.envrc`, `package.json`, `tsconfig.json`, `.oxlintrc.json`, `.oxfmtrc.json`, `vitest.config.ts`, `pnpm-workspace.yaml`, `lefthook.yml`, `.commitlintrc.yml`, CI workflows (lint, format, typecheck, test, CodeQL), and `.gitignore`. `ghcreate` also patches `package.json`'s `name` field and applies GitHub rulesets.
 
-This ref covers both plain Node and TypeScript. Start from the Node section and then do the TypeScript additions if the project is TS.
+## Steps
 
-All paths below are relative to this skill's directory. The templates store dotfiles without the leading dot (`gitignore`, `oxlintrc.json`, `oxfmtrc.json`) to avoid macOS hidden-file gotchas in the template folder; **rename them back on copy** into the target project.
+1. `direnv allow` — the template already includes `.envrc` (`use flake`).
+2. Verify `which node` and `which pnpm` resolve under `/nix/store/`.
+3. `pnpm install` — resolves dependencies and creates `node_modules/` + `pnpm-lock.yaml`.
+4. Hand off to relevant downstream conventions if applicable.
 
-## Node (pnpm) core steps
-
-1. `pnpm init` — generates a minimal `package.json`.
-2. Copy `templates/typescript/pnpm-workspace.yaml` to the project root. Even single-package projects benefit: it lets you later split into packages without reshuffling lockfiles, and keeps `pnpm` consistent with the user's other repos.
-3. Copy `templates/typescript/gitignore` to the project root as `.gitignore` (in addition to the `.direnv/` / `result*` lines from Phase 1).
-
-## TypeScript additions
-
-After the Node steps, also copy from `templates/typescript/`:
-
-- `package.json` — merge into the generated one (keep the project name; bring in `devDependencies`, `scripts`, and `"type": "module"` if present).
-- `tsconfig.json` — drop in as-is; it encodes the user's chosen module/target.
-- `oxlintrc.json` → copy as `.oxlintrc.json` — oxlint config for fast linting.
-- `oxfmtrc.json` → copy as `.oxfmtrc.json` — oxfmt config for formatting.
-- `vitest.config.ts` — test runner setup.
-
-Then run `pnpm install` to materialize `node_modules/` and `pnpm-lock.yaml`.
+CI is already scaffolded by the template — skip that offer in the "After Setup" step.
 
 ## Why pnpm instead of npm / yarn
 
@@ -30,16 +17,17 @@ pnpm's content-addressable store (`~/.local/share/pnpm/store/`) pairs naturally 
 
 ## Why oxlint / oxfmt instead of eslint / prettier
 
-They are Rust-based, orders of magnitude faster than the JS-native equivalents, and the user's dotfiles already pin their configs. Do not swap them out for eslint / prettier unless the project has a concrete reason (e.g., a shared config from upstream).
+They are Rust-based, orders of magnitude faster than the JS-native equivalents, and the template already includes their configs. Do not swap them out for eslint / prettier unless the project has a concrete reason (e.g., a shared config from upstream).
 
 ## Common first-run checks
 
 - `node --version` should print `v22.x` and resolve under `/nix/store/`.
 - `pnpm install` should succeed without network access to a non-pnpm registry.
-- For TS: `pnpm exec tsc --noEmit` should type-check the starter files cleanly.
+- `pnpm run lint` and `pnpm run format:check` should run cleanly.
 
 ## What NOT to do
 
+- Do not run `pnpm init` — the template repo already provides `package.json`. Running `pnpm init` overwrites it and loses the curated config.
 - Do not add `nodejs` or `pnpm` to `~/dotfiles/nix/home/default.nix`. Project-level pinning is the whole point of Phase 1.
 - Do not commit `node_modules/`. pnpm's lockfile + nix's `nodejs_22` pin is what makes the build reproducible.
 - Do not mix package managers (npm install + pnpm install in the same repo). pnpm's lockfile format is not interchangeable with npm's.

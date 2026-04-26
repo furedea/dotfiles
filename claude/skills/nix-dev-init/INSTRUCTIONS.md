@@ -6,38 +6,47 @@ Setting up a **per-project** dev environment — not global dotfiles. For home-m
 
 The workflow has two phases, and the split is load-bearing:
 
-- **Phase 1 — Nix shell** (this file): `flake.nix` → `.envrc` → `direnv allow`. Language-agnostic.
-- **Phase 2 — Language init** (see `references/lang-<name>.md`): `uv init` / `pnpm init` / `cargo init` / ... **inside the direnv-activated shell**.
+- **Phase 1 — Nix shell** (this file): `ghcreate --template` (or manual `flake.nix` → `.envrc`) → `direnv allow`. Language-agnostic.
+- **Phase 2 — Language init** (see `references/lang-<name>.md`): verify toolchain, run language-specific sync/build **inside the direnv-activated shell**.
 
-The whole reason Phase 1 runs before Phase 2 is so the language's init command sees the nix-provided toolchain on PATH, not the host's. Do not collapse or reorder the phases.
+The whole reason Phase 1 runs before Phase 2 is so the language's commands see the nix-provided toolchain on PATH, not the host's. Do not collapse or reorder the phases.
 
 ## Mandatory Order (Phase 1)
 
-1. VCS init — `jj git init` (new repo), `jj git init --colocate` (existing Git repo), or `jj git clone <url>` (clone remote)
-2. `flake.nix` — write the devShell with the language toolchain
-3. `.envrc` — single line: `use flake`
+1. VCS init — pick one:
+   - **New repo from template** (preferred for supported languages):
+     ```
+     ghcreate <name> --private --template furedea/template-<lang>
+     ```
+     The `ghcreate` shell function (`~/.zshrc`) handles cloning, `cd`, ruleset application, and config file name substitution. The template provides `flake.nix`, `.envrc`, `.gitignore`, `lefthook.yml`, `.commitlintrc.yml`, CI workflows, and language-specific config — **skip steps 2-3**.
+   - New repo (public, no template): `gh repo create <name> --public --clone --license MIT` → `cd <name>`
+   - New repo (private, no template): `gh repo create <name> --private --clone` → `cd <name>`
+   - Clone: `git clone <url>` → `cd <name>`
+   - Existing project with git: skip this step
+2. `flake.nix` — write the devShell with the language toolchain (skipped for template-repo projects)
+3. `.envrc` — single line: `use flake` (skipped for template-repo projects)
 4. `direnv allow` — trust the .envrc once, per repo
 5. Proceed to Phase 2 via the relevant `references/lang-<name>.md`
 
 ### Why this order
 
-- **VCS before flake**: `.gitignore` must exist before `nix flake update` creates `flake.lock`, so the VCS repo needs to be initialized first. jj reads `.gitignore` natively.
-- **Toolchain before init**: running `uv init` on the host shell first picks up the host's `python3`, whose version leaks into `pyproject.toml`'s `requires-python` and lockfiles. On another machine (or in CI) this silently breaks reproducibility.
+- **VCS before flake**: the git repo must exist before `nix flake update` creates `flake.lock`. Use `gh repo create --clone` instead of `git init` — it sets up remote, default branch, and license in one shot. Private repos skip `--license` because an accidental visibility flip with MIT attached grants everyone usage rights.
+- **Toolchain before init**: running language init commands (e.g. `pnpm install`) on the host shell picks up the host's toolchain, whose version leaks into lockfiles. On another machine (or in CI) this silently breaks reproducibility.
 - **Commit `.envrc` before `direnv allow`**: direnv's trust state is keyed by file hash. Allowing first and editing after immediately invalidates the allow, forcing a re-allow.
 
-## Flake Templates
+## Template Repos
 
-Pick the template that matches the project's primary language. All templates live under `<this skill's directory>/templates/`. Copy the chosen `flake.nix` (and `flake.lock` where noted) to the project root, then edit `devShells.<system>.default.packages` to add anything the project needs beyond the defaults.
+All supported languages have a GitHub template repo under `furedea/`. Use `ghcreate --template` to create new projects — it clones, applies rulesets, and patches the project name in config files automatically.
 
-| Project type | Template | devShell packages | Ship `flake.lock`? |
+| Project type | Template repo | ghcreate post-processing | Ship `flake.lock`? |
 | --- | --- | --- | --- |
-| Python (uv, nix-managed interpreter) | `templates/python/flake.nix` | `uv`, `python3` | no |
-| TypeScript / Node (pnpm) | `templates/typescript/flake.nix` | `nodejs_22`, `pnpm` | no |
-| Rust | `templates/rust/flake.nix` | `cargo`, `rustc`, `rustfmt`, `clippy` | no |
-| TeX / LaTeX | `templates/tex/flake.nix` | `texlive.combined.scheme-full`, `tex-fmt`, `texlivePackages.chktex` | **yes** (copy `templates/tex/flake.lock` too) |
-| Fallback (unlisted languages) | `templates/flake.nix` | empty list — fill in manually | no |
+| Python (uv) | `furedea/template-python` | `pyproject.toml` name sub + `ruleset_python` | no |
+| TypeScript / Node (pnpm) | `furedea/template-typescript` | `package.json` name sub + `ruleset_typescript` | no |
+| Rust | `furedea/template-rust` | `Cargo.toml` name sub + `ruleset_rust` | no |
+| TeX / LaTeX | `furedea/template-tex` | `ruleset_tex` only (no name sub) | **yes** (in repo) |
+| Fallback (unlisted languages) | `furedea/template-minimal` | base ruleset only | no |
 
-Non-tex templates intentionally omit `flake.lock`: run `nix flake update` once in the new project to resolve a fresh `nixpkgs` commit. Shipping a skill-side lock for general templates would silently rot.
+Non-TeX templates intentionally omit `flake.lock`: `nix flake update` runs on first `direnv allow` to resolve a fresh `nixpkgs` commit. The TeX template includes `flake.lock` for reasons explained below.
 
 Do not preemptively generalize to multi-system (`forAllSystems`, `flake-utils`) unless the project actually needs Linux CI. YAGNI.
 
@@ -47,42 +56,40 @@ Editor-side tooling (`rust-analyzer`, `pyright`, `typescript-language-server`, �
 
 ### Why the Python template pins uv to the nix interpreter
 
-The Python devShell sets two env vars:
+The `furedea/template-python` flake sets two env vars:
 
     UV_PYTHON_DOWNLOADS = "never";
     UV_PYTHON_PREFERENCE = "only-system";
 
-These force uv to use the `python3` that nix puts on PATH instead of silently downloading a `python-build-standalone` binary from GitHub into `~/.local/share/uv/python/`. Nix stays the single source of truth for the interpreter; uv is reduced to package resolution, lockfile, and venv management. If nix's `python3` is too old for `requires-python` in `pyproject.toml`, uv fails loudly — that is the correct failure mode (better than a silent fallback that leaks a non-nix interpreter into the project).
-
-Because of this coupling, remember to relax `requires-python` in any copied `pyproject.toml` so it matches whatever major version the current `nixpkgs-25.11-darwin` channel ships as `python3` (typically 3.13 in late 2025).
+These force uv to use the `python314` that nix puts on PATH instead of silently downloading a `python-build-standalone` binary from GitHub into `~/.local/share/uv/python/`. Nix stays the single source of truth for the interpreter; uv is reduced to package resolution, lockfile, and venv management. If nix's Python is too old for `requires-python` in `pyproject.toml`, uv fails loudly — that is the correct failure mode (better than a silent fallback that leaks a non-nix interpreter into the project).
 
 ### TeX: `flake.lock` is checked in on purpose
 
-`templates/tex/` is the only template that ships a `flake.lock`. TeX Live output is sensitive to package versions — a tlpdb update can silently change typeset output or break `chktex` / `tex-fmt` — so TeX projects pin to an exact `nixpkgs` commit rather than a branch ref. Note that the tex template tracks `nixpkgs-unstable` (not `nixpkgs-25.11-darwin` like the others) because TeX Live updates land on unstable first; the lock is what makes "unstable + reproducible" coherent.
+TeX Live output is sensitive to package versions — a tlpdb update can silently change typeset output or break `chktex` / `tex-fmt` — so TeX projects pin to an exact `nixpkgs` commit rather than a branch ref. The `furedea/template-tex` repo tracks `nixpkgs-unstable` (not `nixpkgs-25.11-darwin` like the others) because TeX Live updates land on unstable first; the lock is what makes "unstable + reproducible" coherent.
 
-This skill's `templates/tex/flake.lock` mirrors `~/dev/tex/shigyo/flake.lock`. If you ever run `nix flake update` in `shigyo`, re-copy its `flake.lock` here so freshly-initialized TeX projects stay aligned with the primary one.
+The canonical `flake.lock` lives in `~/dev/tex/shigyo/`. If you ever run `nix flake update` in `shigyo`, also update `furedea/template-tex`'s `flake.lock` so freshly-initialized TeX projects stay aligned.
 
 ## .envrc
 
-Copy the template from `<this skill's directory>/templates/envrc` to `./.envrc`.
+All template repos include `.envrc` with a single line: `use flake`. For non-template projects (fallback path), create `.envrc` manually with the same content.
 
-The template is exactly one line: `use flake`. Rationale: the devShell in `flake.nix` is the single source of truth for PATH and env. Adding `dotenv`, `PATH_add`, or inline exports to `.envrc` fragments that truth — a week later you will not remember whether a var came from flake or envrc, and reproducing the env elsewhere means diffing two files.
+The devShell in `flake.nix` is the single source of truth for PATH and env. Adding `dotenv`, `PATH_add`, or inline exports to `.envrc` fragments that truth — a week later you will not remember whether a var came from flake or envrc, and reproducing the env elsewhere means diffing two files.
 
 If the project genuinely needs secrets, put them in a separate `.env` (ignored) and add a single `dotenv .env` line. Keep the shell definition in flake regardless.
 
 ## Ignore Rules
 
-Add the direnv cache and nix build outputs to the repo's ignore file:
+All template repos include `.gitignore` with direnv cache and nix build outputs:
 
     .direnv/
     result
     result-*
 
-`.direnv/` is direnv's per-project cache (env dumps derived from nix). `result*` are symlinks created by `nix build`. jj-managed repos read `.gitignore` by default, so a single `.gitignore` covers both.
+plus language-specific entries. For non-template projects (fallback path), add these lines manually.
 
 ## Phase 2: Language Init
 
-After `direnv allow` and a clean `cd` into the repo, hand off to the language-specific reference. Each ref owns its own steps, non-obvious rationale, first-run checks, and language-specific anti-patterns.
+After `direnv allow`, hand off to the language-specific reference. Each ref covers verification, sync/build, and language-specific anti-patterns.
 
 | Project type | Reference | Downstream skill |
 | --- | --- | --- |
@@ -96,20 +103,22 @@ Read only the ref that matches the project's primary language — the files are 
 
 ## After Setup
 
-- Ask the user whether to set up CI with github-ci-init
+- CI is already scaffolded by the template — skip the `github-ci-init` offer for template-repo projects
 - Development follows TSDD, detailed in the tsdd skill
 - Language conventions are in the corresponding *-style skill
 
 ## Anti-Patterns
 
-- Running `uv init` / `pnpm init` on the host shell before `direnv allow` → host toolchain leaks into the project.
+- Using `git init` instead of `gh repo create --clone` (or `ghcreate`) for new projects → remote URL hand-typing, branch name mismatch (`master` vs `main`), missing license/gitignore.
+- Running `uv init` / `pnpm install` / `cargo build` on the host shell before `direnv allow` → host toolchain leaks into the project.
 - Adding project-only tooling to `~/dotfiles/nix/home/default.nix` → bloats the global user env; keep project tooling in the project's own flake.
 - Running `darwin-rebuild switch` after editing a project's `flake.nix` → unnecessary. `darwin-rebuild` only reads `~/dotfiles/flake.nix` + the nix-darwin modules.
 - Editing files under `.direnv/` by hand → it is a cache; change `flake.nix` instead and let direnv rebuild it on next `cd`.
+- Manually scaffolding files that the template repo already provides (e.g. running `pnpm init` when `template-typescript` already has `package.json`).
 
 ## Verification
 
-After step 3, `cd` into the repo should print:
+After `direnv allow`, `cd` into the repo should print:
 
     direnv: loading ~/project/.envrc
     direnv: using flake
