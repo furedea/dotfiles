@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euxCo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "${BASH_SOURCE[0]}")"
 set +x
 
 function usage() {
