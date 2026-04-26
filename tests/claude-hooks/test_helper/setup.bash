@@ -27,8 +27,8 @@ create_temp_git_repo() {
   git -C "$TEMP_REPO" init --quiet
   git -C "$TEMP_REPO" config user.email "test@test.com"
   git -C "$TEMP_REPO" config user.name "Test"
-  # Disable GPG signing in test repos
   git -C "$TEMP_REPO" config commit.gpgsign false
+  git -C "$TEMP_REPO" config core.fsmonitor false
   # Create an initial commit so HEAD exists
   touch "$TEMP_REPO/.gitkeep"
   git -C "$TEMP_REPO" add .gitkeep
