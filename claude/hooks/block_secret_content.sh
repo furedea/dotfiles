@@ -24,26 +24,26 @@ function scan_text_from_input() {
   local _input="$1"
 
   case "$MODE" in
-  prompt)
-    jq -r '.prompt // empty' <<<"$_input"
-    ;;
-  read)
-    local _file_path
-    _file_path="$(jq -r '.tool_input.file_path // empty' <<<"$_input")"
-    if [[ -n "$_file_path" && -f "$_file_path" ]]; then
-      head -c 100000 "$_file_path" 2>/dev/null || true
-    fi
-    ;;
-  write)
-    local _content
-    _content="$(jq -r '.tool_input.content // empty' <<<"$_input")"
-    local _new_string
-    _new_string="$(jq -r '.tool_input.new_string // empty' <<<"$_input")"
-    printf '%s%s' "$_content" "$_new_string"
-    ;;
-  *)
-    usage
-    ;;
+    prompt)
+      jq -r '.prompt // empty' <<<"$_input"
+      ;;
+    read)
+      local _file_path
+      _file_path="$(jq -r '.tool_input.file_path // empty' <<<"$_input")"
+      if [[ -n "$_file_path" && -f "$_file_path" ]]; then
+        head -c 100000 "$_file_path" 2>/dev/null || true
+      fi
+      ;;
+    write)
+      local _content
+      _content="$(jq -r '.tool_input.content // empty' <<<"$_input")"
+      local _new_string
+      _new_string="$(jq -r '.tool_input.new_string // empty' <<<"$_input")"
+      printf '%s%s' "$_content" "$_new_string"
+      ;;
+    *)
+      usage
+      ;;
   esac
 }
 
@@ -51,23 +51,23 @@ function block_output() {
   local _reason="$1"
 
   case "$MODE" in
-  prompt)
-    jq -n --arg reason "$_reason. Prompt contains sensitive information." \
-      '{
+    prompt)
+      jq -n --arg reason "$_reason. Prompt contains sensitive information." \
+        '{
 				decision: "block",
 				reason: $reason
 			}'
-    ;;
-  read | write)
-    jq -n --arg reason "$_reason" \
-      '{
+      ;;
+    read | write)
+      jq -n --arg reason "$_reason" \
+        '{
 				hookSpecificOutput: {
 					hookEventName: "PreToolUse",
 					permissionDecision: "deny",
 					permissionDecisionReason: $reason
 				}
 			}'
-    ;;
+      ;;
   esac
 }
 

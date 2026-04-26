@@ -39,24 +39,24 @@ function main() {
   _input="$(cat)"
 
   case "$MODE" in
-  prompt)
-    printf '%s' "$_input" | "$SHARED_SCANNER" prompt
-    ;;
-  apply-patch)
-    local _content
-    _content="$(added_patch_text "$_input")"
-    jq -n --arg content "$_content" \
-      '{
+    prompt)
+      printf '%s' "$_input" | "$SHARED_SCANNER" prompt
+      ;;
+    apply-patch)
+      local _content
+      _content="$(added_patch_text "$_input")"
+      jq -n --arg content "$_content" \
+        '{
 				tool_name: "Edit",
 				tool_input: {
 					content: $content
 				}
 			}' |
-      "$SHARED_SCANNER" write
-    ;;
-  *)
-    usage
-    ;;
+        "$SHARED_SCANNER" write
+      ;;
+    *)
+      usage
+      ;;
   esac
 }
 
