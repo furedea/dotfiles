@@ -108,7 +108,7 @@ section.lead h2 {
   margin: 0 auto 100px;
 }
 
-/* toc: 目次(Table Of Content) */
+/* toc: 目次 (Table Of Content) */
 
 section strong {
   font-weight: var(--font-weight-bold);
@@ -152,7 +152,7 @@ section::after {
   content: attr(data-marpit-pagination) " / " attr(data-marpit-pagination-total);
 }
 
-/* 1枚だけ上半分を空ける用 */
+/* 1 枚だけ上半分を空ける用 */
 section.photo-reserve {
   display: flex;
   flex-direction: column;
@@ -162,7 +162,7 @@ section.photo-reserve {
 /* 上半分の“予約領域” */
 section.photo-reserve .photo-area {
   flex: 0 0 50%;                 /* 高さをだいたい半分確保 */
-  border: 2px dashed rgba(0,0,0,.25); /* 枠いらなければ消してOK */
+  border: 2px dashed rgba(0,0,0,.25); /* 枠いらなければ消して OK */
   border-radius: var(--normal-border-radius);
   margin-bottom: 16px;
 }
