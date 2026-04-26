@@ -8,30 +8,83 @@
   },
   "permissions": {
     "allow": [
-      "Bash(afplay:*)"
+      "Bash(actionlint:*)",
+      "Bash(autocorrect:*)",
+      "Bash(bats:*)",
+      "Bash(cargo:*)",
+      "Bash(commitlint:*)",
+      "Bash(deadnix:*)",
+      "Bash(dprint:*)",
+      "Bash(gh api:*)",
+      "Bash(gh issue:*)",
+      "Bash(gh label:*)",
+      "Bash(gh pr:*)",
+      "Bash(gh run:*)",
+      "Bash(git add:*)",
+      "Bash(git branch:*)",
+      "Bash(git commit:*)",
+      "Bash(git pull:*)",
+      "Bash(git push:*)",
+      "Bash(nixfmt:*)",
+      "Bash(npm run:*)",
+      "Bash(npm test:*)",
+      "Bash(oxfmt:*)",
+      "Bash(oxlint:*)",
+      "Bash(pnpm:*)",
+      "Bash(prettierd:*)",
+      "Bash(selene:*)",
+      "Bash(shellcheck:*)",
+      "Bash(shfmt:*)",
+      "Bash(statix:*)",
+      "Bash(stylua:*)",
+      "Bash(tex-fmt:*)",
+      "Bash(tsgolint:*)",
+      "Bash(uv run:*)",
+      "Skill(lock-settings)",
+      "Skill(report-hook-block)",
+      "Skill(report-doc-conflict)"
     ],
     "deny": [
-      "Bash(sudo:*)",
+      "Bash(curl:*)",
+      "Bash(defaults write:*)",
+      "Bash(docker push:*)",
+      "Bash(kubectl apply:*)",
+      "Bash(kubectl delete:*)",
+      "Bash(mongod:*)",
+      "Bash(mysql:*)",
+      "Bash(nc:*)",
+      "Bash(npm publish:*)",
+      "Bash(npm remove:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(open:*)",
+      "Bash(osascript:*)",
+      "Bash(pip:*)",
+      "Bash(psql:*)",
       "Bash(rm:*)",
       "Bash(rm -rf:*)",
-      "Read(.env*)",
-      "Read(id_rsa)",
-      "Read(id_ed25519)",
-      "Read(**/*token*)",
-      "Read(**/*key*)",
-      "Write(.env*)",
-      "Write(**/secrets/**)",
-      "Bash(curl:*)",
-      "Bash(wget:*)",
-      "Bash(nc:*)",
-      "Bash(pip:*)",
+      "Bash(rsync:*)",
+      "Bash(scp:*)",
+      "Bash(ssh:*)",
+      "Bash(sudo:*)",
+      "Bash(terraform apply:*)",
+      "Bash(terraform destroy:*)",
       "Bash(uv remove:*)",
       "Bash(uv uninstall:*)",
-      "Bash(npm uninstall:*)",
-      "Bash(npm remove:*)",
-      "Bash(psql:*)",
-      "Bash(mysql:*)",
-      "Bash(mongod:*)"
+      "Bash(wget:*)",
+      "Read(.env*)",
+      "Read(**/*key*)",
+      "Read(**/*token*)",
+      "Read(~/.aws/**)",
+      "Read(~/.bash_history)",
+      "Read(~/.docker/config.json)",
+      "Read(~/.kube/**)",
+      "Read(~/.zsh_history)",
+      "Read(credentials.json)",
+      "Read(id_ed25519)",
+      "Read(id_rsa)",
+      "Read(service-account*.json)",
+      "Write(.env*)",
+      "Write(**/secrets/**)"
     ],
     "defaultMode": "auto"
   },
@@ -44,7 +97,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$HOME/.claude/hooks/scan_sensitive_info.sh prompt"
+            "command": "$HOME/.claude/hooks/block_secret_content.sh prompt"
           }
         ]
       }
@@ -55,7 +108,23 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$HOME/.claude/hooks/check_prohibited_commands.sh"
+            "command": "$HOME/.claude/hooks/prevent_secret_commit.sh"
+          },
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/block_no_verify.sh"
+          },
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/block_add_all.sh"
+          },
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/block_dangerous_git.sh"
+          },
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/command_allowlist.sh"
           }
         ]
       },
@@ -64,7 +133,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$HOME/.claude/hooks/scan_sensitive_info.sh read"
+            "command": "$HOME/.claude/hooks/block_secret_content.sh read"
           }
         ]
       },
@@ -73,7 +142,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$HOME/.claude/hooks/scan_sensitive_info.sh write"
+            "command": "$HOME/.claude/hooks/block_secret_content.sh write"
           }
         ]
       }
@@ -138,6 +207,15 @@
             "if": "Write(*.tex)|Edit(*.tex)|MultiEdit(*.tex)|Write(*.bib)|Edit(*.bib)|MultiEdit(*.bib)|Write(*.cls)|Edit(*.cls)|MultiEdit(*.cls)|Write(*.sty)|Edit(*.sty)|MultiEdit(*.sty)"
           }
         ]
+      },
+      {
+        "matcher": "Bash|Edit|Write|WebFetch|Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/log_tool_call.sh"
+          }
+        ]
       }
     ],
     "Stop": [
@@ -161,11 +239,21 @@
           }
         ]
       }
+    ],
+    "PermissionDenied": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/log_permission_denied.sh"
+          }
+        ]
+      }
     ]
   },
   "statusLine": {
     "type": "command",
-    "command": "$HOME/.claude/statuslines/statusline.sh"
+    "command": "$HOME/.claude/statusline/statusline.sh"
   },
   "enabledPlugins": {
     "skill-creator@claude-plugins-official": true,
