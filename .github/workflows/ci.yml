@@ -78,7 +78,7 @@ jobs:
 
       - name: Install selene
         run: |
-          curl -fsSL "https://github.com/Kampfkarren/selene/releases/download/0.30.1/selene-0.30.1-linux.zip" -o "$RUNNER_TEMP/selene.zip"
+          curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "https://github.com/Kampfkarren/selene/releases/download/0.30.1/selene-0.30.1-linux.zip" -o "$RUNNER_TEMP/selene.zip"
           unzip -o "$RUNNER_TEMP/selene.zip" -d "$RUNNER_TEMP"
           sudo install "$RUNNER_TEMP/selene" /usr/local/bin/
 
