@@ -29,7 +29,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup Bats
-        uses: bats-core/bats-action@5b1e60c2ee94cb1b44a616ea4b1f466f9d6e38ef # 4.0.0
+        uses: bats-core/bats-action@77d6fb60505b4d0d1d73e48bd035b55074bbfb43 # 4.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -83,7 +83,7 @@ jobs:
           sudo install "$RUNNER_TEMP/selene" /usr/local/bin/
 
       - name: Run selene
-        run: selene nvim/
+        run: selene --config nvim/selene.toml nvim/
 
       - name: Run stylua
         uses: JohnnyMorganz/stylua-action@76fd70c03e6340ceaf673366712db9b20560b402 # v5.0.0
@@ -105,13 +105,15 @@ jobs:
         uses: cachix/install-nix-action@ab739621df7a23f52766f9ccc97f38da6b7af14f # v31.10.5
 
       - name: Run statix
-        run: nix run nixpkgs#statix -- check flake.nix nix/
+        run: |
+          nix run nixpkgs#statix -- check flake.nix
+          nix run nixpkgs#statix -- check nix/
 
       - name: Run deadnix
-        run: nix run nixpkgs#deadnix -- --fail flake.nix nix/
+        run: nix run nixpkgs#deadnix -- --fail flake.nix nix/darwin/default.nix nix/home/default.nix
 
       - name: Run nixfmt
-        run: nix run nixpkgs#nixfmt-rfc-style -- --check flake.nix nix/
+        run: nix run nixpkgs#nixfmt-rfc-style -- --check flake.nix nix/darwin/default.nix nix/home/default.nix
 
   format-check:
     runs-on: ubuntu-latest
