@@ -70,7 +70,7 @@ Follow Kent Beck's Red → Green → Refactor, one test at a time. The rhythm is
 3. **Write the minimum code to pass.** Obvious implementation if the path is clear; "fake it" (hardcode the answer) or triangulate with a second example if it is not.
 4. **Run the verification gate and confirm Green.** Prefer the full suite; otherwise run the narrow suite plus the project's agreed quality gates, and explicitly report any pre-existing failures that remain.
 5. **Refactor with the suite green.** Remove duplication, rename for clarity, extract functions / types. Re-run the suite after each small change.
-6. **Record the change as one coherent VCS unit.** In jj-managed repos, describe or split the working-copy change so each Red → Green → Refactor cycle remains reviewable as one logical unit. In git-managed repos, commit the cycle.
+6. **Record the change as one coherent VCS unit.** Commit each Red → Green → Refactor cycle so it remains reviewable as one logical unit.
 
 ### Test quality rules (methodology-level)
 
@@ -112,7 +112,7 @@ docs/
 - **Sequential four-digit IDs.** Never reuse or delete — the history is the point.
 - **Past ADRs are immutable.** To reverse a decision, write a new ADR with `Supersedes: ADR-NNNN` and flip the old one's `Status` to `Superseded`.
 - **Status values**: `Proposed` | `Accepted` | `Superseded` | `Deprecated`.
-- **Record ADRs with the code change they justify.** ADR and code travel in the same reviewable VCS unit, whether that is a jj change or a git commit.
+- **Record ADRs with the code change they justify.** ADR and code travel in the same commit.
 
 ### Preferred format: Y-Statement
 
