@@ -33,6 +33,24 @@ SENSITIVE_PATTERNS=(
   '\.gcp/'
 )
 
+ALLOWLISTED_SENSITIVE_PATHS=(
+  'claude/hooks/block_secret_content.sh'
+  'claude/hooks/prevent_secret_commit.sh'
+  'codex/hooks/adapt_block_secret_content.sh'
+  'tests/claude-hooks/prevent_secret_commit.bats'
+)
+
+is_allowlisted_sensitive_path() {
+  local _file="$1"
+
+  local _allowed
+  for _allowed in "${ALLOWLISTED_SENSITIVE_PATHS[@]}"; do
+    [ "$_file" = "$_allowed" ] && return 0
+  done
+
+  return 1
+}
+
 # Get staged files
 STAGED_FILES=$(git diff --cached --name-only 2>/dev/null)
 
@@ -46,6 +64,7 @@ for pattern in "${SENSITIVE_PATTERNS[@]}"; do
   MATCHES=$(echo "$STAGED_FILES" | grep -iE "$pattern" || true)
   if [ -n "$MATCHES" ]; then
     while IFS= read -r file; do
+      is_allowlisted_sensitive_path "$file" && continue
       BLOCKED_FILES+=("$file")
     done <<<"$MATCHES"
   fi
