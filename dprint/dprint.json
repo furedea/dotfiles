@@ -1,14 +1,11 @@
 {
   "$schema": "https://dprint.dev/schemas/v0.json",
-  "markdown": {
-    "textWrap": "never"
-  },
   "json": {
     "indentWidth": 2
   },
   "toml": {},
   "includes": [
-    "**/*.{md,json,toml}"
+    "**/*.{json,toml}"
   ],
   "excludes": [
     "**/node_modules",
@@ -16,7 +13,6 @@
     "**/target"
   ],
   "plugins": [
-    "https://plugins.dprint.dev/markdown-0.21.1.wasm",
     "https://plugins.dprint.dev/json-0.21.3.wasm",
     "https://plugins.dprint.dev/toml-0.7.0.wasm"
   ]
