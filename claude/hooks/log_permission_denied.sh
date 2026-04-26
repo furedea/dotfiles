@@ -31,18 +31,18 @@ SESSION=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null || true)
 REASON=$(echo "$INPUT" | jq -r '.reason // empty' 2>/dev/null || true)
 
 case "$TOOL" in
-Bash)
-  SUMMARY=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || true)
-  ;;
-Edit | Write | MultiEdit | NotebookEdit)
-  SUMMARY=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null || true)
-  ;;
-WebFetch)
-  SUMMARY=$(echo "$INPUT" | jq -r '.tool_input.url // empty' 2>/dev/null || true)
-  ;;
-*)
-  SUMMARY=$(echo "$INPUT" | jq -rc '.tool_input // {}' 2>/dev/null | head -c 200 || true)
-  ;;
+  Bash)
+    SUMMARY=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || true)
+    ;;
+  Edit | Write | MultiEdit | NotebookEdit)
+    SUMMARY=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null || true)
+    ;;
+  WebFetch)
+    SUMMARY=$(echo "$INPUT" | jq -r '.tool_input.url // empty' 2>/dev/null || true)
+    ;;
+  *)
+    SUMMARY=$(echo "$INPUT" | jq -rc '.tool_input // {}' 2>/dev/null | head -c 200 || true)
+    ;;
 esac
 
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$PWD}"

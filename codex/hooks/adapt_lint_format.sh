@@ -40,18 +40,18 @@ function hook_for_path() {
   local _file_path="$1"
 
   case "$_file_path" in
-  *.py) echo "$CLAUDE_HOOKS_DIR/lint_format_py.sh" ;;
-  *.sh) echo "$CLAUDE_HOOKS_DIR/lint_format_sh.sh" ;;
-  *.js | *.ts | *.jsx | *.tsx) echo "$CLAUDE_HOOKS_DIR/lint_format_js.sh" ;;
-  *.rs) echo "$CLAUDE_HOOKS_DIR/lint_format_rs.sh" ;;
-  *.nix) echo "$CLAUDE_HOOKS_DIR/lint_format_nix.sh" ;;
-  *.md | *.markdown) echo "$CLAUDE_HOOKS_DIR/lint_format_md.sh" ;;
-  *.json | *.toml) echo "$CLAUDE_HOOKS_DIR/lint_format_json_toml.sh" ;;
-  *.yml | *.yaml) echo "$CLAUDE_HOOKS_DIR/lint_format_gha.sh" ;;
-  *.txt) echo "$CLAUDE_HOOKS_DIR/lint_format_txt.sh" ;;
-  *.lua) echo "$CLAUDE_HOOKS_DIR/lint_format_lua.sh" ;;
-  *.tex | *.bib | *.cls | *.sty) echo "$CLAUDE_HOOKS_DIR/lint_format_tex.sh" ;;
-  *) return 1 ;;
+    *.py) echo "$CLAUDE_HOOKS_DIR/lint_format_py.sh" ;;
+    *.sh) echo "$CLAUDE_HOOKS_DIR/lint_format_sh.sh" ;;
+    *.js | *.ts | *.jsx | *.tsx) echo "$CLAUDE_HOOKS_DIR/lint_format_js.sh" ;;
+    *.rs) echo "$CLAUDE_HOOKS_DIR/lint_format_rs.sh" ;;
+    *.nix) echo "$CLAUDE_HOOKS_DIR/lint_format_nix.sh" ;;
+    *.md | *.markdown) echo "$CLAUDE_HOOKS_DIR/lint_format_md.sh" ;;
+    *.json | *.toml) echo "$CLAUDE_HOOKS_DIR/lint_format_json_toml.sh" ;;
+    *.yml | *.yaml) echo "$CLAUDE_HOOKS_DIR/lint_format_gha.sh" ;;
+    *.txt) echo "$CLAUDE_HOOKS_DIR/lint_format_txt.sh" ;;
+    *.lua) echo "$CLAUDE_HOOKS_DIR/lint_format_lua.sh" ;;
+    *.tex | *.bib | *.cls | *.sty) echo "$CLAUDE_HOOKS_DIR/lint_format_tex.sh" ;;
+    *) return 1 ;;
   esac
 }
 
