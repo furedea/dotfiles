@@ -2,19 +2,18 @@
 
 ## Scope
 
-This skill owns the **initial scaffolding** of GitHub Actions CI for a repository — which workflow files ship, where they go, and when to skip CI entirely.
+This skill adds **optional, project-specific** GitHub Actions CI workflows to a repository. It complements the `furedea/template-minimal` GitHub template, which already ships the baseline workflows (`gha_lint.yml`, `dependency_review.yml`, `dependency_review_config.yml`, `renovate.json`).
 
 It does NOT own **writing or editing the YAML contents of individual workflow files** — that belongs to the `gha-style` skill (permissions minimization, action version pinning, script injection prevention, etc.).
 
 ## When to apply vs skip
 
-Not every project benefits from the default set. Applying it to a throwaway repo creates maintenance noise (CodeQL alerts, dependency review blocks on every PR, release-please commits) that outweighs the payoff.
+Not every project benefits from these optional workflows. Applying them to a throwaway repo creates maintenance noise (CodeQL alerts on every PR, release-please commits) that outweighs the payoff.
 
 ### Apply when
 
 - The project has a plausible long-term lifetime (weeks to years)
 - PRs are expected (from others, or from yourself via feature branches)
-- Dependency vulnerability monitoring is worth having
 - The project is public, or likely to become public
 
 ### Skip when
@@ -25,21 +24,25 @@ Not every project benefits from the default set. Applying it to a throwaway repo
 
 When in doubt, **skip**. CI can always be added later by running this skill again on the existing repo — that is exactly the retrofit case it is designed for.
 
-## The default adopted set
+## What templates already provide
 
-See `references/default-set.md` for the full rationale: what each shipped workflow does, which GitHub-side features (Renovate, Push Protection, Secret Scanning, Rulesets) are recommended but not templated here because they live in repo/org settings, and what is intentionally excluded from the default (e.g. artifact attestation).
+These files are already in GitHub templates and should NOT be added by this skill:
+
+- `gha_lint.yml` — actionlint + zizmor (in `template-minimal` and all derived templates)
+- `dependency_review.yml` + `dependency_review_config.yml` — dependency vulnerability review (same)
+- `renovate.json` — automated dependency updates (same)
+- `codeql.yml` — CodeQL analysis (in language-specific templates: `template-rust`, `template-python`, `template-typescript`)
 
 ## Steps
 
 1. **Confirm the project passes the "apply" criteria**. If it does not, stop and explain why CI would be net-negative for this project.
 2. **Create `.github/workflows/`** in the project root if it does not already exist.
-3. **Copy the workflow files** from `templates/` (in this skill's directory) into the project's `.github/workflows/`:
-   - `gha_hygiene.yml` — runs `actionlint` and `zizmor` on every PR; ship in every repo.
-   - `dependency_review.yml` — blocks PRs that introduce vulnerable dependencies above a severity threshold; ship in every repo.
-   - `codeql.yml` — runs CodeQL on push/PR/weekly; ship in every repo, **but edit the language matrix** before committing (the template is language-agnostic and will no-op until the matrix matches the project's languages).
+3. **Copy the relevant workflow files** from `templates/` (in this skill's directory) into the project's `.github/workflows/`:
    - `release_please.yml` — opens release PRs from Conventional Commits; ship when the project will have versioned releases. **Replace `release-type: simple`** with a repo-specific strategy (e.g. `python`, `node`, `rust`) if needed.
-4. **Copy** `templates/dependency_review_config.yml` into the project's `.github/`.
-5. **Remind the user** about the GitHub-side features not templated here (Renovate / Push Protection / Secret Scanning / Rulesets). These live in repo or org settings, not in `.github/workflows/`, so this skill cannot install them. Point at `references/default-set.md` for the short-list.
+   - `claude.yml` — responds to `@claude` mentions in issues, PRs, and review comments via Claude Code Action (OAuth). Requires the `CLAUDE_CODE_OAUTH_TOKEN` repository secret.
+   - `claude_code_review.yml` — runs automated Claude Code Review on every PR via the `code-review` plugin. Requires the same `CLAUDE_CODE_OAUTH_TOKEN` secret.
+   - `artifact_attestation.yml` — generates SLSA build provenance attestations on release via Sigstore. Ship when the project publishes binaries, packages, or container images. **Replace the build steps and `subject-path`** to match the project's actual build outputs.
+4. **Remind the user** about the GitHub-side features (Push Protection / Secret Scanning / Rulesets). These live in repo or org settings, not in `.github/workflows/`, so this skill cannot install them.
 
 ## Handoff to `gha-style`
 
@@ -54,7 +57,7 @@ Duplicating either side into the other would let the two drift. Keep them separa
 
 ## Anti-patterns
 
-- **Applying the full default set to a throwaway experiment**. CodeQL/dependency review/release-please on a 1-commit repo is pure maintenance noise.
+- **Applying the full set to a throwaway experiment**. CodeQL/release-please on a 1-commit repo is pure maintenance noise.
 - **Editing workflow YAML inside this skill's flow**. Redirect to `gha-style`. Even "just tuning one permission" should go through that skill so the conventions stay consistent.
-- **Copying `references/default-set.md` into the project**. It is documentation of this skill, not project content.
-- **Skipping the CodeQL language-matrix edit** in step 3. Committing the unmodified template means CodeQL silently never runs anything.
+- **Deploying Claude Code Action without the `CLAUDE_CODE_OAUTH_TOKEN` secret** configured in the repository. The workflows will fail silently on every trigger.
+- **Re-adding workflows that templates already provide** (gha_lint, dependency_review, renovate, codeql). These are maintained in the GitHub templates — duplicating them here causes drift.
