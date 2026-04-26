@@ -7,7 +7,6 @@
 - Write documentation, code comments, and commit messages in English for public repositories
 - When writing commit messages, follow Conventional Commits rules
 - Implement based on Test-Spec Driven Development (TSDD)
-- Prefer jj (Jujutsu) over Git for all VCS operations
 
 # Coding Guidelines
 

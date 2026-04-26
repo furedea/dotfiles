@@ -1,8 +1,9 @@
 "$schema" = 'https://starship.rs/config-schema.json'
 add_newline = true
-command_timeout = 1000
+command_timeout = 5000
 format = """$directory\
-${custom.jj}\
+$git_branch\
+$git_status\
 $docker_context\
 $all\
 $character"""
@@ -17,19 +18,11 @@ min_time = 3000
 [directory]
 truncation_length = 3
 
-[custom.jj]
-when = "jj root 2>/dev/null || git rev-parse --git-dir 2>/dev/null"
-command = "$HOME/.config/starship/jj_prompt.sh"
-format = "$output "
-
 [git_branch]
-disabled = true
-
-[git_commit]
-disabled = true
+format = "[$branch(:$remote_branch)]($style) "
 
 [git_status]
-disabled = true
+format = '([\[$all_status$ahead_behind\]]($style) )'
 
 # --- Modules (alphabetical) ---
 
