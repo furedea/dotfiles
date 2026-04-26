@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$HOME/.codex/hooks/scan_sensitive_info.sh prompt",
+            "command": "$HOME/.codex/hooks/adapt_block_secret_content.sh prompt",
             "statusMessage": "Scanning prompt for sensitive information",
             "timeout": 30
           }
@@ -18,7 +18,31 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$HOME/.claude/hooks/check_prohibited_commands.sh",
+            "command": "$HOME/.claude/hooks/prevent_secret_commit.sh",
+            "statusMessage": "Checking staged files for secrets",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/block_no_verify.sh",
+            "statusMessage": "Checking for --no-verify bypass",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/block_add_all.sh",
+            "statusMessage": "Checking for bulk git add",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/block_dangerous_git.sh",
+            "statusMessage": "Checking for dangerous git operations",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/command_allowlist.sh",
             "statusMessage": "Checking command policy",
             "timeout": 30
           }
@@ -29,7 +53,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$HOME/.codex/hooks/scan_sensitive_info.sh apply-patch",
+            "command": "$HOME/.codex/hooks/adapt_block_secret_content.sh apply-patch",
             "statusMessage": "Scanning patch for sensitive information",
             "timeout": 30
           }
@@ -42,9 +66,20 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$HOME/.codex/hooks/post_apply_patch_lint_format.sh",
+            "command": "$HOME/.codex/hooks/adapt_lint_format.sh",
             "statusMessage": "Running lint/format hooks",
             "timeout": 120
+          }
+        ]
+      },
+      {
+        "matcher": ".",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/log_tool_call.sh",
+            "statusMessage": "Logging tool call",
+            "timeout": 10
           }
         ]
       }
