@@ -88,7 +88,7 @@
     ],
     "defaultMode": "auto"
   },
-  "model": "claude-opus-4-6",
+  "model": "opus",
   "enableAllProjectMcpServers": false,
   "hooks": {
     "UserPromptSubmit": [
