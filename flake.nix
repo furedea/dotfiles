@@ -14,8 +14,7 @@
   };
 
   outputs =
-    inputs@{
-      self,
+    {
       nix-darwin,
       nixpkgs,
       nixpkgs-unstable,
@@ -63,7 +62,15 @@
               useGlobalPkgs = true;
               useUserPackages = true;
               backupFileExtension = "bak";
-              extraSpecialArgs = { inherit username unstable nix-claude-code codex-cli-nix system; };
+              extraSpecialArgs = {
+                inherit
+                  username
+                  unstable
+                  nix-claude-code
+                  codex-cli-nix
+                  system
+                  ;
+              };
               users.${username} = import ./nix/home/default.nix;
             };
           }
@@ -72,7 +79,15 @@
 
       homeConfigurations.${username} = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
-        extraSpecialArgs = { inherit username unstable nix-claude-code codex-cli-nix system; };
+        extraSpecialArgs = {
+          inherit
+            username
+            unstable
+            nix-claude-code
+            codex-cli-nix
+            system
+            ;
+        };
         modules = [
           ./nix/home/default.nix
         ];
