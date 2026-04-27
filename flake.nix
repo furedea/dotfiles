@@ -22,6 +22,7 @@
       nix-homebrew,
       nix-claude-code,
       codex-cli-nix,
+      ...
     }:
     let
       username = "kaito";
