@@ -53,6 +53,7 @@ in
     nix-claude-code.packages.${system}.default
     codex-cli-nix.packages.${system}.default
     unstable.github-copilot-cli
+    unstable.opencode
 
     # General Formatters
     autocorrect
