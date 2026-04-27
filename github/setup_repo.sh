@@ -1,28 +1,22 @@
 #!/bin/bash
 set -euxCo pipefail
 cd "$(dirname "$0")"
+GITHUB_DIR="$(pwd)"
+readonly GITHUB_DIR
 
 function usage() {
   cat <<EOF >&2
 Description:
-    Apply standard repository settings and rulesets to a GitHub repository.
-    If <owner/repo> is omitted, detects from the current directory via gh repo view.
+    Apply standard repository settings and ruleset to a GitHub repository.
+    Idempotent: existing ruleset with the same name is updated in place.
 
 Usage:
-    $0 [OPTIONS] [<owner/repo>]
+    $0 <owner/repo>
 
 Options:
-    -t, --template <name>: apply language-specific ruleset (python|typescript|rust|tex)
     --help, -h: print this
 EOF
   exit 1
-}
-
-GITHUB_DIR="$(pwd)"
-readonly GITHUB_DIR
-
-function detect_repo() {
-  gh repo view --json nameWithOwner -q .nameWithOwner
 }
 
 function apply_settings() {
@@ -31,52 +25,37 @@ function apply_settings() {
   echo "Applied repo settings to $_repo"
 }
 
-function apply_base_ruleset() {
+function apply_ruleset() {
   local _repo="$1"
-  gh api "repos/$_repo/rulesets" -X POST --input "$GITHUB_DIR/ruleset_base.json" >/dev/null
-  echo "Applied base ruleset to $_repo"
-}
-
-function apply_lang_ruleset() {
-  local _repo="$1"
-  local _lang="$2"
-  local _ruleset_file="$GITHUB_DIR/ruleset_${_lang}.json"
-  if [[ ! -f "$_ruleset_file" ]]; then
-    echo "Unknown language: $_lang" >&2
-    return 1
+  local _name _id
+  _name=$(jq -r .name "$GITHUB_DIR/ruleset.json")
+  _id=$(gh api "repos/$_repo/rulesets" --jq ".[] | select(.name == \"$_name\") | .id")
+  if [[ -n "$_id" ]]; then
+    gh api "repos/$_repo/rulesets/$_id" -X PUT --input "$GITHUB_DIR/ruleset.json" >/dev/null
+    echo "Updated ruleset $_id on $_repo"
+  else
+    gh api "repos/$_repo/rulesets" -X POST --input "$GITHUB_DIR/ruleset.json" >/dev/null
+    echo "Created ruleset on $_repo"
   fi
-  gh api "repos/$_repo/rulesets" -X POST --input "$_ruleset_file" >/dev/null
-  echo "Applied $_lang ruleset to $_repo"
 }
 
 function main() {
   local _repo=""
-  local _template=""
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
-    -t | --template)
-      _template="$2"
-      shift 2
-      ;;
-    -h | --help) usage ;;
-    *)
-      _repo="$1"
-      shift
-      ;;
+      -h | --help) usage ;;
+      *)
+        _repo="$1"
+        shift
+        ;;
     esac
   done
 
-  if [[ -z "$_repo" ]]; then
-    _repo=$(detect_repo)
-  fi
+  [[ -z "$_repo" ]] && usage
 
   apply_settings "$_repo"
-  apply_base_ruleset "$_repo"
-
-  if [[ -n "$_template" ]]; then
-    apply_lang_ruleset "$_repo" "$_template"
-  fi
+  apply_ruleset "$_repo"
 }
 
 main "$@"

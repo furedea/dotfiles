@@ -148,32 +148,15 @@ function ghcreate() {
   gh repo create "$1" "${@:2}" --clone || return 1
   builtin cd "$1" || return 1
 
-  local template="" prev="" setup_args=()
-  for arg in "${@:2}"; do
-    if [[ "$prev" == "--template" ]]; then template="$arg"; fi
-    prev="$arg"
-  done
+  local _full
+  _full=$(gh repo view --json nameWithOwner -q .nameWithOwner) || return 1
 
-  case "$template" in
-    *template-python*)
-      sed -i '' "s/^name = \"template-python\"/name = \"$1\"/" pyproject.toml
-      setup_args+=(-t python)
-      ;;
-    *template-typescript*)
-      jq --arg n "$1" '.name = $n' package.json > package.json.tmp && mv package.json.tmp package.json
-      setup_args+=(-t typescript)
-      ;;
-    *template-rust*)
-      sed -i '' "s/^name = \"template-rust\"/name = \"$1\"/" Cargo.toml
-      setup_args+=(-t rust)
-      ;;
-    *template-tex*)
-      setup_args+=(-t tex)
-      ;;
-  esac
+  [[ -f pyproject.toml ]] && sed -i '' "s/^name = \"template-[a-z]*\"/name = \"$1\"/" pyproject.toml
+  [[ -f Cargo.toml ]] && sed -i '' "s/^name = \"template-[a-z]*\"/name = \"$1\"/" Cargo.toml
+  [[ -f package.json ]] && { jq --arg n "$1" '.name = $n' package.json > package.json.tmp && mv package.json.tmp package.json; }
 
-  "$DOTFILES/github/setup_repo.sh" "${setup_args[@]}"
-  lefthook install
+  "$DOTFILES/github/setup_repo.sh" "$_full" || return 1
+  [[ -f lefthook.yml ]] && command -v lefthook >/dev/null && lefthook install
 }
 
 # Abbreviations: new shortcuts that don't shadow existing commands.
