@@ -88,12 +88,14 @@ jobs:
       - name: Run selene
         run: selene --config nvim/selene.toml nvim/
 
+      - name: Install stylua
+        run: |
+          curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "https://github.com/JohnnyMorganz/StyLua/releases/download/v2.3.1/stylua-linux-x86_64.zip" -o "$RUNNER_TEMP/stylua.zip"
+          unzip -o "$RUNNER_TEMP/stylua.zip" -d "$RUNNER_TEMP"
+          sudo install "$RUNNER_TEMP/stylua" /usr/local/bin/
+
       - name: Run stylua
-        uses: JohnnyMorganz/stylua-action@76fd70c03e6340ceaf673366712db9b20560b402 # v5.0.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          version: 2.3.1
-          args: --check nvim/
+        run: stylua --check nvim/
 
   nix-lint:
     runs-on: ubuntu-latest
