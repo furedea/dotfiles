@@ -12,7 +12,7 @@ pre-commit:
       run: nixfmt --check {staged_files}
     statix:
       glob: "*.nix"
-      run: statix check {staged_files}
+      run: bash -c 'for f in "$@"; do statix check "$f" || exit 1; done' bash {staged_files}
     stylua:
       glob: "*.lua"
       run: stylua --check {staged_files}
