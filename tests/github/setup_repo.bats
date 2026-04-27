@@ -20,83 +20,41 @@ setup() {
   [[ "$output" == *"Usage:"* ]]
 }
 
-# --- Explicit repo argument ---
+@test "shows usage when no argument is given" {
+  run bash "$SCRIPT"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Usage:"* ]]
+}
 
-@test "applies settings and base ruleset to explicit repo" {
+# --- Create path (no existing ruleset) ---
+
+@test "applies settings and creates ruleset for a new repo" {
   run bash "$SCRIPT" "owner/myrepo"
   [ "$status" -eq 0 ]
   [[ "$output" == *"Applied repo settings to owner/myrepo"* ]]
-  [[ "$output" == *"Applied base ruleset to owner/myrepo"* ]]
+  [[ "$output" == *"Created ruleset on owner/myrepo"* ]]
 
   local calls
   calls="$(gh_calls)"
   [[ "$calls" == *"repos/owner/myrepo -X PATCH --input"*"repo_settings.json"* ]]
-  [[ "$calls" == *"repos/owner/myrepo/rulesets -X POST --input"*"ruleset_base.json"* ]]
+  [[ "$calls" == *"repos/owner/myrepo/rulesets -X POST --input"*"ruleset.json"* ]]
 }
 
-@test "gh api called exactly twice without --template" {
+@test "gh api is called 3 times when creating a new ruleset" {
   run bash "$SCRIPT" "owner/myrepo"
-  [ "$status" -eq 0 ]
-  [ "$(gh_call_count)" -eq 2 ]
-}
-
-# --- Auto-detect repo ---
-
-@test "detects repo via gh repo view when no argument given" {
-  run bash "$SCRIPT"
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"Applied repo settings to detected/repo"* ]]
-  [[ "$output" == *"Applied base ruleset to detected/repo"* ]]
-
-  local calls
-  calls="$(gh_calls)"
-  [[ "$calls" == *"repo view --json nameWithOwner"* ]]
-}
-
-# --- Language-specific rulesets ---
-
-@test "--template python applies python ruleset" {
-  run bash "$SCRIPT" -t python "owner/myrepo"
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"Applied python ruleset to owner/myrepo"* ]]
-
-  local calls
-  calls="$(gh_calls)"
-  [[ "$calls" == *"ruleset_python.json"* ]]
-}
-
-@test "--template typescript applies typescript ruleset" {
-  run bash "$SCRIPT" --template typescript "owner/myrepo"
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"Applied typescript ruleset to owner/myrepo"* ]]
-
-  local calls
-  calls="$(gh_calls)"
-  [[ "$calls" == *"ruleset_typescript.json"* ]]
-}
-
-@test "--template rust applies rust ruleset" {
-  run bash "$SCRIPT" -t rust "owner/myrepo"
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"Applied rust ruleset to owner/myrepo"* ]]
-}
-
-@test "--template tex applies tex ruleset" {
-  run bash "$SCRIPT" -t tex "owner/myrepo"
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"Applied tex ruleset to owner/myrepo"* ]]
-}
-
-@test "gh api called 3 times with --template" {
-  run bash "$SCRIPT" -t python "owner/myrepo"
   [ "$status" -eq 0 ]
   [ "$(gh_call_count)" -eq 3 ]
 }
 
-# --- Error cases ---
+# --- Update path (existing ruleset, idempotent) ---
 
-@test "fails for unknown language template" {
-  run bash "$SCRIPT" -t golang "owner/myrepo"
-  [ "$status" -ne 0 ]
-  [[ "$output" == *"Unknown language: golang"* ]]
+@test "updates existing ruleset by id when one with the same name exists" {
+  setup_gh_stub_with_existing_ruleset 42
+  run bash "$SCRIPT" "owner/myrepo"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Updated ruleset 42 on owner/myrepo"* ]]
+
+  local calls
+  calls="$(gh_calls)"
+  [[ "$calls" == *"repos/owner/myrepo/rulesets/42 -X PUT --input"*"ruleset.json"* ]]
 }

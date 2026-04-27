@@ -23,6 +23,23 @@ STUB
   export GH_LOG
 }
 
+# Replace the default stub with one that reports an existing ruleset id
+# for the list query, exercising the PUT (update) path.
+setup_gh_stub_with_existing_ruleset() {
+  local _id="$1"
+  cat > "$GH_STUB_DIR/gh" <<STUB
+#!/bin/bash
+echo "\$*" >> "${GH_LOG}"
+if [[ "\$1" == "repo" && "\$2" == "view" ]]; then
+  echo "detected/repo"
+fi
+if [[ "\$*" == *"/rulesets --jq"* ]]; then
+  echo "${_id}"
+fi
+STUB
+  chmod +x "$GH_STUB_DIR/gh"
+}
+
 # Read all gh calls from the log.
 gh_calls() {
   cat "$GH_LOG" 2>/dev/null || true
