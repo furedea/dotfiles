@@ -47,6 +47,7 @@ in
     actionlint
     lazygit
     lefthook
+    ghq
     commitlint
 
     # AI Coding Agent
