@@ -18,7 +18,7 @@ error_symbol = "[\\$](red bold)"
 min_time = 3000
 
 [directory]
-truncation_length = 3
+truncation_length = 1
 
 [git_branch]
 format = "[$branch(:$remote_branch)]($style) "

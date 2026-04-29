@@ -64,11 +64,12 @@ MINIMAL_INPUT='{"model":{"display_name":"Opus 4.6"},"cwd":"/tmp/test","context_w
 # CWD shortening
 # ============================================================
 
-@test "shortens long CWD to last 3 segments" {
+@test "shortens long CWD to current directory name" {
   local input='{"model":{"display_name":"Opus"},"cwd":"/a/b/c/d/e","context_window":{"used_percentage":0}}'
   run bash "$STATUSLINE" <<< "$input"
   [ "$status" -eq 0 ]
-  [[ "${lines[0]}" == *"c/d/e"* ]]
+  [[ "${lines[0]}" == *"e"* ]]
+  [[ "${lines[0]}" != *"c/d/e"* ]]
 }
 
 # ============================================================

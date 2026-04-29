@@ -114,17 +114,11 @@ eval "$(printf '%s' "$INPUT" | $JQ -r '
     "RESET_7D="+ (.rate_limits.seven_day.resets_at // "" | tostring | @sh)
 ' 2>/dev/null)" || exit 0
 
-# --- CWD: last 3 segments, with ~ substitution ---
+# --- CWD: current directory name only ---
 SHORT_CWD="$CWD"
-case "$CWD" in "$HOME"*)
-  SHORT_CWD="~${CWD#"$HOME"}"
-  ;;
-esac
-SHORT_CWD=$(printf '%s' "$SHORT_CWD" | awk -F/ '{
-    n = NF
-    if (n <= 3) { print; next }
-    printf "%s/%s/%s", $(n-2), $(n-1), $n
-}')
+if [ -n "$CWD" ]; then
+  SHORT_CWD="$(basename "$CWD")"
+fi
 
 # --- VCS branch ---
 VCS_BRANCH=""
