@@ -142,6 +142,13 @@ function es() {
   kasa unwip -f "$notice_flag" "$_ESA_LAST_POST" && _ESA_LAST_POST=""
 }
 
+# gr: cd to git repository root
+function gr() {
+  local root
+  root=$(git rev-parse --show-toplevel 2>/dev/null) || { echo "not in a git repo"; return 1 }
+  builtin cd "$root"
+}
+
 # GitHub: create repo with rulesets
 function ghcreate() {
   [[ -z "$1" ]] && echo "usage: ghcreate <name> [gh repo create flags...]" && return 1
