@@ -167,7 +167,8 @@ Some directories are kept as **plain copies for backup/reference** only. They ar
 | Dir | Source | Notes |
 | --- | --- | --- |
 | `kawasemi4/` | `~/Library/Mobile Documents/com~apple~CloudDocs/Kawasemi4/` | Kawasemi4 key settings and dictionary. Synced via iCloud on new Mac; copy here is for version control backup. Update manually when settings change. |
-| `templates/` | — | Project starter templates (Cargo.toml, pyproject.toml, etc.). Copy manually to new projects as needed. |
+| `templates/` | — | Small starter snippets (e.g. `pyproject_pyright.toml`) copied manually into new projects. Full project scaffolds live separately in `~/dev/templates/template-*`. |
+| `github/` | — | Standard GitHub repo settings, branch ruleset, and `setup_repo.sh` applier. See `github/README.md`. |
 
 ## Markdown Formatter
 
@@ -181,20 +182,12 @@ Some directories are kept as **plain copies for backup/reference** only. They ar
 
 ## GitHub Workflow Starters
 
-Starter workflows for commonly used GitHub automation and security checks live in `templates/github/`.
+Starter workflows for new projects come from two places:
 
-Included templates:
+- **Project scaffolds** at `~/dev/templates/template-{minimal,python,typescript,rust,tex}` — instantiated with `ghcreate --template`. Each ships with `ci.yml` (language-specific jobs plus an `all-green` aggregator), `codeql.yml`, `dependency_review.yml`, and `gha_lint.yml` (`actionlint` + `zizmor`).
+- **Optional CI add-ons** at `claude/skills/github-ci-init/templates/`: `release_please.yml`, `claude.yml`, `claude_code_review.yml`, `artifact_attestation.yml`. The `github-ci-init` Claude Code skill copies the curated default adopted set into a new repo on demand.
 
-- `templates/github/.github/workflows/gha_hygiene.yml`
-    - `actionlint` + `zizmor`
-- `templates/github/.github/workflows/dependency_review.yml`
-    - Dependency Review for pull requests
-- `templates/github/.github/workflows/codeql.yml`
-    - CodeQL advanced setup starter
-- `templates/github/.github/workflows/release_please.yml`
-    - Release Please starter
-
-GitHub-native features such as Renovate, Push Protection, Secret Scanning, and Rulesets are documented in `templates/github/README.md` instead of being stored as workflow files.
+Standard repo settings and the `main` branch ruleset live in `github/` and are applied via `github/setup_repo.sh <owner>/<repo>`. The ruleset requires a status check named `all-green`, which the project scaffolds satisfy via the aggregator job in `ci.yml`. See [`github/README.md`](github/README.md) for the contract and the caveat on which repos to apply it to.
 
 ## Post-rebuild Checklist
 
