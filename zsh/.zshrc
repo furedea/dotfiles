@@ -167,6 +167,7 @@ abbr --quiet -S lt="eza --tree --level=2"
 abbr --quiet -S arm="exec arch -arch arm64e /bin/zsh --login"
 abbr --quiet -S x64="exec arch -arch x86_64 /bin/zsh --login"
 abbr --quiet -S ob="cd ~/Library/Mobile\ Documents/iCloud\~md\~obsidian/Documents/furedea"
+abbr --quiet -S czg="npx --yes czg@1.13.0"
 
 eval "$(zoxide init zsh --cmd j)"
 eval "$(starship init zsh)"
