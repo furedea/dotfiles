@@ -4,6 +4,8 @@ command_timeout = 5000
 format = """$directory\
 $git_branch\
 $git_status\
+$container\
+$nix_shell\
 $docker_context\
 $all\
 $character"""
@@ -130,7 +132,8 @@ format = '[$symbol($version)]($style) '
 format = '[$symbol($version)]($style) '
 
 [nix_shell]
-format = '[$symbol$state(\($name\))]($style) '
+symbol = "❄️"
+format = '[$symbol]($style) '
 
 [nodejs]
 format = '[$symbol($version)]($style) '
@@ -142,7 +145,7 @@ format = '[$symbol($version)]($style) '
 format = '[$symbol($version)]($style) '
 
 [package]
-format = '[$symbol$version]($style) '
+disabled = true
 
 [perl]
 format = '[$symbol($version)]($style) '
