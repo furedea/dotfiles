@@ -45,10 +45,9 @@ in
     tree-sitter
     just
     actionlint
-    lazygit
     lefthook
-    ghq
     commitlint
+    ghq
 
     # AI Coding Agent
     nix-claude-code.packages.${system}.default
@@ -233,6 +232,39 @@ in
       };
     };
 
+    lazygit = {
+      enable = true;
+      settings = {
+        gui = {
+          nerdFontsVersion = "3";
+          showIcons = true;
+          expandFocusedSidePanel = true;
+          showRandomTip = false;
+        };
+        git = {
+          pagers = [
+            {
+              colorArg = "always";
+              pager = "delta --paging=never";
+            }
+          ];
+          branchLogCmd = "git log --graph --color=always --pretty='%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' {{branchName}} --";
+          allBranchesLogCmds = [
+            "git log --graph --color=always --pretty='%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --all"
+          ];
+        };
+        customCommands = [
+          {
+            key = "C";
+            command = ''npx --yes --package czg@1.13.0 --package @commitlint/config-conventional --call 'NODE_PATH="$(dirname "$(dirname "$(command -v czg)")")''${NODE_PATH:+:$NODE_PATH}" czg' '';
+            context = "files";
+            loadingText = "Opening czg";
+            output = "terminal";
+          }
+        ];
+      };
+    };
+
     direnv = {
       enable = true;
       enableZshIntegration = false; # .zshrc is a dotfile symlink; hook manually there
@@ -305,6 +337,12 @@ in
       fi
     '';
   };
+
+  # lazygit reads XDG_CONFIG_HOME/lazygit/config.yml first when XDG_CONFIG_HOME is set
+  # in the shell, but home-manager writes to ~/Library/Application Support/lazygit/ on macOS.
+  # Mirror to the XDG path so the home-manager-generated config is actually used.
+  xdg.configFile."lazygit/config.yml".source =
+    config.home.file."Library/Application Support/lazygit/config.yml".source;
 
   home.file = {
     # Zsh（dotfileに実ファイル，直接編集可能）
