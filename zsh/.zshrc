@@ -161,6 +161,7 @@ function ghcreate() {
 
 # Abbreviations: new shortcuts that don't shadow existing commands.
 # Using -S (session scope) so definitions stay in this file, not in a separate file.
+abbr --quiet -S lg="lazygit"
 abbr --quiet -S ll="eza -la --git"
 abbr --quiet -S lt="eza --tree --level=2"
 abbr --quiet -S arm="exec arch -arch arm64e /bin/zsh --login"
