@@ -28,6 +28,6 @@ They are Rust-based, orders of magnitude faster than the JS-native equivalents, 
 ## What NOT to do
 
 - Do not run `pnpm init` — the template repo already provides `package.json`. Running `pnpm init` overwrites it and loses the curated config.
-- Do not add `nodejs` or `pnpm` to `~/dotfiles/nix/home/default.nix`. Project-level pinning is the whole point of Phase 1.
+- Do not add `nodejs` or `pnpm` to `~/ghq/github.com/furedea/dotfiles/nix/home/default.nix`. Project-level pinning is the whole point of Phase 1.
 - Do not commit `node_modules/`. pnpm's lockfile + nix's `nodejs_22` pin is what makes the build reproducible.
 - Do not mix package managers (npm install + pnpm install in the same repo). pnpm's lockfile format is not interchangeable with npm's.

@@ -64,7 +64,7 @@ function command_not_found_handler() {
   fi
 }
 
-DOTFILES="$HOME/dotfiles"
+DOTFILES="$HOME/ghq/github.com/furedea/dotfiles"
 
 export EDITOR="nvim"
 export VISUAL="nvim"

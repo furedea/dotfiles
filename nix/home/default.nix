@@ -3,6 +3,7 @@
   pkgs,
   lib,
   username,
+  dotfilesDir,
   unstable,
   nix-claude-code,
   codex-cli-nix,
@@ -10,8 +11,7 @@
   ...
 }:
 let
-  dotfiles = "${config.home.homeDirectory}/dotfiles";
-  link = path: config.lib.file.mkOutOfStoreSymlink "${dotfiles}/${path}";
+  link = path: config.lib.file.mkOutOfStoreSymlink "${dotfilesDir}/${path}";
 in
 {
   home = {

@@ -27,6 +27,7 @@
     let
       username = "kaito";
       system = "aarch64-darwin";
+      dotfilesDir = "/Users/${username}/ghq/github.com/furedea/dotfiles";
       allowUnfreePredicate =
         pkg:
         builtins.elem pkg.pname [
@@ -66,6 +67,7 @@
               extraSpecialArgs = {
                 inherit
                   username
+                  dotfilesDir
                   unstable
                   nix-claude-code
                   codex-cli-nix
@@ -83,6 +85,7 @@
         extraSpecialArgs = {
           inherit
             username
+            dotfilesDir
             unstable
             nix-claude-code
             codex-cli-nix

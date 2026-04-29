@@ -18,9 +18,9 @@ The goal of this ref is to keep the fallback path **principled**, not to enumera
 
 Everything in Phase 1 still holds regardless of language:
 
-- **Toolchain before init**: run the init command *after* `direnv allow`, never before. The whole reason Phase 1 exists is to prevent the host toolchain from leaking into project lockfiles / manifests.
+- **Toolchain before init**: run the init command _after_ `direnv allow`, never before. The whole reason Phase 1 exists is to prevent the host toolchain from leaking into project lockfiles / manifests.
 - **One source of truth**: the devShell in `flake.nix` is the only place the toolchain version should live. Do not duplicate it in `.envrc` via `PATH_add` or inline exports.
-- **No LSPs in the devShell**: globally-installed LSPs (in `~/dotfiles`) discover the project toolchain via PATH once direnv activates. Per-project LSPs bloat the closure for no benefit.
+- **No LSPs in the devShell**: globally-installed LSPs (in `~/ghq/github.com/furedea/dotfiles`) discover the project toolchain via PATH once direnv activates. Per-project LSPs bloat the closure for no benefit.
 - **No host-shell escape hatches**: if "just brew install it" is tempting, stop — that reintroduces the exact host-leak problem this skill exists to prevent.
 
 ## When to promote a fallback into a template repo
@@ -29,7 +29,7 @@ If the same fallback recipe is repeated across ≥3 projects with only trivial v
 
 1. Create `furedea/template-<lang>` from `furedea/template-minimal` via `ghcreate`.
 2. Add language-specific `flake.nix`, config files, CI workflows, and `.gitignore` entries.
-3. Create `~/dotfiles/github/ruleset_<lang>.json` with the required CI status checks.
+3. Create `~/ghq/github.com/furedea/dotfiles/github/ruleset_<lang>.json` with the required CI status checks.
 4. Add a case to `ghcreate` in `~/.zshrc` for name substitution and ruleset application.
 5. Create `references/lang-<lang>.md` following the structure of the existing language refs.
 6. Update `INSTRUCTIONS.md`'s template table and this skill's description.
@@ -38,6 +38,6 @@ Do not do this for a single project. The overhead of maintaining a template repo
 
 ## What NOT to do
 
-- Do not add the language's toolchain to `~/dotfiles/nix/home/default.nix` "temporarily". Temporary global installs have a way of becoming permanent.
+- Do not add the language's toolchain to `~/ghq/github.com/furedea/dotfiles/nix/home/default.nix` "temporarily". Temporary global installs have a way of becoming permanent.
 - Do not create a new template repo on the first use of a language. Wait for the pattern.
 - Do not skip Phase 1 and go straight to `go mod init` / `mix new` on the host shell "because it's a quick experiment". Experiments that aren't worth a flake aren't worth committing either — use `nix shell nixpkgs#go` as a throwaway instead.

@@ -20,7 +20,7 @@ The template uses nixpkgs' `cargo` + `rustc` (stable). This is deliberate:
 
 ## LSP / rust-analyzer
 
-Do **not** add `rust-analyzer` to the devShell. The globally-installed `rust-analyzer` (from `~/dotfiles`) discovers the project's toolchain via `rustc --print sysroot`, and because direnv has put the nix-store `rustc` on PATH, the global LSP automatically uses the correct sysroot per project. Adding a per-project `rust-analyzer` bloats the closure for no benefit.
+Do **not** add `rust-analyzer` to the devShell. The globally-installed `rust-analyzer` (from `~/ghq/github.com/furedea/dotfiles`) discovers the project's toolchain via `rustc --print sysroot`, and because direnv has put the nix-store `rustc` on PATH, the global LSP automatically uses the correct sysroot per project. Adding a per-project `rust-analyzer` bloats the closure for no benefit.
 
 ## Common first-run checks
 
@@ -31,6 +31,6 @@ Do **not** add `rust-analyzer` to the devShell. The globally-installed `rust-ana
 ## What NOT to do
 
 - Do not run `cargo init` — the template repo already provides `Cargo.toml` and `src/main.rs`. Running `cargo init` overwrites them.
-- Do not add `cargo` / `rustc` to `~/dotfiles/nix/home/default.nix`. Per-project pinning is the whole point.
+- Do not add `cargo` / `rustc` to `~/ghq/github.com/furedea/dotfiles/nix/home/default.nix`. Per-project pinning is the whole point.
 - Do not commit `target/`. It is a machine-specific build cache.
 - Do not run `rustup` inside the direnv shell. Nix owns the toolchain; rustup would install a second one into `~/.rustup/` and silently shadow it via `cargo`'s PATH lookup.

@@ -3,7 +3,7 @@
 ## Architecture
 
 ```
-~/dotfiles/
+~/ghq/github.com/furedea/dotfiles/
 ├── flake.nix                        # entry point: inputs + outputs
 │   ├── darwinConfigurations."mba"   # full system (nix-darwin + home-manager)
 │   └── homeConfigurations."kaito"   # standalone home-manager (no sudo)
@@ -42,10 +42,11 @@ Two build paths exist — pick the right one for the change being made.
 ### `darwin-rebuild switch` (full system)
 
 ```bash
-sudo darwin-rebuild switch --flake "$HOME/dotfiles#mba"
+sudo darwin-rebuild switch --flake "$HOME/ghq/github.com/furedea/dotfiles/#mba"
 ```
 
 Rebuilds **both** nix-darwin (system.defaults, homebrew, activationScripts) and home-manager (packages, programs, dotfile symlinks). Requires `sudo` because nix-darwin writes to `/etc/` and `/Library/Preferences/`. Use this for:
+
 - Changes to `nix/darwin/default.nix` (macOS defaults, homebrew casks/brews, activation scripts)
 - Changes to `flake.nix` (inputs, overlays, unfree list)
 - Any change that touches both layers
@@ -53,11 +54,12 @@ Rebuilds **both** nix-darwin (system.defaults, homebrew, activationScripts) and 
 ### `home-manager switch` (user only, no sudo)
 
 ```bash
-home-manager switch --flake "$HOME/dotfiles#kaito"
+home-manager switch --flake "$HOME/ghq/github.com/furedea/dotfiles/#kaito"
 ```
 
 Rebuilds **only** home-manager (packages, programs, dotfile symlinks, activation hooks). Does not touch nix-darwin or require `sudo`. Use this for:
-- Changes to `nix/home/default.nix` only (adding packages, editing programs.*, updating dotfile symlinks, activation hooks)
+
+- Changes to `nix/home/default.nix` only (adding packages, editing programs.\*, updating dotfile symlinks, activation hooks)
 - Faster iteration when the darwin layer is unchanged
 
 The `homeConfigurations."kaito"` output in `flake.nix` makes this possible — it imports `nix/home/default.nix` directly without going through nix-darwin.
@@ -138,8 +140,7 @@ All programs with shell integration have `enableZshIntegration = false` because 
 
 ```nix
 let
-  dotfiles = "${config.home.homeDirectory}/dotfiles";
-  link = path: config.lib.file.mkOutOfStoreSymlink "${dotfiles}/${path}";
+  link = path: config.lib.file.mkOutOfStoreSymlink "${dotfilesDir}/${path}";
 in
 {
   home.file = {
@@ -249,5 +250,5 @@ homebrew = {
 | `link "path"` | Helper for `mkOutOfStoreSymlink` (defined in `let` block) |
 | `${pkgs.xxx}` in `.text` | Embeds Nix store paths into generated files |
 | `enableZshIntegration = false` | All programs — `.zshrc` is a symlink, hook manually |
-| `|| true` in activation | Prevents non-fatal errors from aborting rebuild |
+| `\|\| true` in activation | Prevents non-fatal errors from aborting rebuild |
 | `homebrew.onActivation.cleanup = "uninstall"` | Declarative cask management |
