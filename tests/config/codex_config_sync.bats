@@ -4,15 +4,7 @@
 setup() {
   REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
   SCRIPT="$REPO_ROOT/codex/sync_config.py"
-  PYTHON="$(
-    # shellcheck disable=SC2016
-    nix eval --impure --raw --expr '
-      let
-        pkgs = import <nixpkgs> {};
-      in
-        "${pkgs.python3}/bin/python"
-    '
-  )"
+  PYTHON="$(nix build --no-link --print-out-paths "$REPO_ROOT#python3")/bin/python"
 }
 
 @test "sync preserves trusted projects and marketplace timestamps" {

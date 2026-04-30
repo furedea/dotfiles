@@ -3,29 +3,15 @@
 
 setup() {
   REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
-  GENERATED_NIX="$REPO_ROOT/nix/agents/claude_settings.nix"
-  POLICY="$REPO_ROOT/nix/agents/command_policy.nix"
   HOME_NIX="$REPO_ROOT/nix/home/default.nix"
 }
 
-eval_policy_attr() {
-  local attr="$1"
-
-  nix eval --impure --raw --expr "
-    let
-      pkgs = import <nixpkgs> {};
-      policy = import $POLICY { lib = pkgs.lib; };
-    in
-      policy.$attr
-  "
-}
-
 codex_rules() {
-  eval_policy_attr codexRules
+  nix eval --raw "$REPO_ROOT#lib.codexRules"
 }
 
 policy_rules_json() {
-  eval_policy_attr rulesJson
+  nix eval --json "$REPO_ROOT#lib.policyRules"
 }
 
 check_rule() {
@@ -44,17 +30,12 @@ check_rule() {
 settings_bash_prefixes() {
   local decision="$1"
 
-  nix eval --impure --json --expr "
-    let
-      pkgs = import <nixpkgs> {};
-      settings = import $GENERATED_NIX { lib = pkgs.lib; };
-    in
-      settings.generatedSettings
-  " | jq -r --arg decision "$decision" '
-    .permissions[$decision][] |
-    select(startswith("Bash(")) |
-    capture("^Bash\\((?<prefix>[^:]+):\\*\\)$").prefix
-  '
+  nix eval --json "$REPO_ROOT#lib.generatedSettings" |
+    jq -r --arg decision "$decision" '
+      .permissions[$decision][] |
+      select(startswith("Bash(")) |
+      capture("^Bash\\((?<prefix>[^:]+):\\*\\)$").prefix
+    '
 }
 
 policy_covers_prefix() {

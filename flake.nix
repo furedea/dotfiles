@@ -98,8 +98,9 @@
         ];
       };
 
-      # Re-export codex CLI per system so CI (and local users) can `nix shell .#codex`
-      # without hard-coding the upstream flake URL. Versions stay pinned via flake.lock.
+      # Re-export codex CLI and python3 per system so CI (and local users)
+      # can `nix shell .#codex` / `nix build .#python3` without hard-coding
+      # upstream flake URLs. Versions stay pinned via flake.lock.
       packages =
         nixpkgs.lib.genAttrs
           [
@@ -110,6 +111,22 @@
           ]
           (sys: {
             codex = codex-cli-nix.packages.${sys}.default;
+            inherit (nixpkgs.legacyPackages.${sys}) python3;
           });
+
+      # Pure data outputs consumed by bats tests. Going through the flake (and
+      # flake.lock) keeps tests reproducible: no `<nixpkgs>` channel lookup,
+      # no `--impure`, and the same nixpkgs revision as the dev environment.
+      lib =
+        let
+          libSet = nixpkgs.lib;
+          agentSettings = import ./nix/agents/claude_settings.nix { lib = libSet; };
+          agentPolicy = import ./nix/agents/command_policy.nix { lib = libSet; };
+        in
+        {
+          inherit (agentSettings) generatedSettings;
+          inherit (agentPolicy) codexRules;
+          policyRules = map (entry: { inherit (entry) decision pattern; }) agentPolicy.rules;
+        };
     };
 }

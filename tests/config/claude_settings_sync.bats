@@ -3,17 +3,10 @@
 
 setup() {
   REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
-  GENERATED_NIX="$REPO_ROOT/nix/agents/claude_settings.nix"
 }
 
 generated_settings() {
-  nix eval --impure --json --expr "
-    let
-      pkgs = import <nixpkgs> {};
-      settings = import $GENERATED_NIX { lib = pkgs.lib; };
-    in
-      settings.generatedSettings
-  "
+  nix eval --json "$REPO_ROOT#lib.generatedSettings"
 }
 
 @test "generated settings are valid JSON" {

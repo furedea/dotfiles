@@ -10,18 +10,11 @@
 
 setup() {
   load test_helper/setup
-  GENERATED_NIX="$REPO_ROOT/nix/agents/claude_settings.nix"
   ALLOWLIST="$REPO_ROOT/agents/hooks/command_allowlist.sh"
 }
 
 read_settings() {
-  nix eval --impure --json --expr "
-    let
-      pkgs = import <nixpkgs> {};
-      settings = import $GENERATED_NIX { lib = pkgs.lib; };
-    in
-      settings.generatedSettings
-  " | jq "$@"
+  nix eval --json "$REPO_ROOT#lib.generatedSettings" | jq "$@"
 }
 
 # Extract Bash allow prefixes from generated settings.
