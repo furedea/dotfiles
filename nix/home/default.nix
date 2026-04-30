@@ -12,6 +12,8 @@
 }:
 let
   link = path: config.lib.file.mkOutOfStoreSymlink "${dotfilesDir}/${path}";
+  agentCommandPolicy = import ../agents/command_policy.nix { inherit lib; };
+  claudeSettings = import ../agents/claude_settings.nix { inherit lib; };
 in
 {
   home = {
@@ -391,9 +393,10 @@ in
     ".claude/agents".source = link "claude/agents";
     ".claude/commands".source = link "claude/commands";
     ".claude/hooks".source = link "agents/hooks";
+    ".codex/rules/default.rules".text = agentCommandPolicy.codexRules;
     ".claude/statusline".source = link "claude/statusline";
     ".claude/skills".source = link "agents/skills";
     ".claude/CLAUDE.md".source = link "agents/CLAUDE.md";
-    ".claude/settings.json".source = link "claude/settings.json";
+    ".claude/settings.json".text = claudeSettings.generatedSettingsJson;
   };
 }
