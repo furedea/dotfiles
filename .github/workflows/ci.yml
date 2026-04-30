@@ -19,7 +19,7 @@ concurrency:
 jobs:
   hook-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     permissions:
       contents: read
     steps:
@@ -27,6 +27,9 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@ab739621df7a23f52766f9ccc97f38da6b7af14f # v31.10.5
 
       - name: Setup Bats
         uses: bats-core/bats-action@77d6fb60505b4d0d1d73e48bd035b55074bbfb43 # 4.0.0
@@ -37,7 +40,7 @@ jobs:
         run: sudo apt-get install -y --no-install-recommends ripgrep
 
       - name: Run hook tests
-        run: bats --recursive tests/
+        run: nix shell .#codex --command bats --recursive tests/
 
   shell-lint:
     runs-on: ubuntu-latest

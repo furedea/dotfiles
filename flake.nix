@@ -97,5 +97,19 @@
           ./nix/home/default.nix
         ];
       };
+
+      # Re-export codex CLI per system so CI (and local users) can `nix shell .#codex`
+      # without hard-coding the upstream flake URL. Versions stay pinned via flake.lock.
+      packages =
+        nixpkgs.lib.genAttrs
+          [
+            "aarch64-darwin"
+            "x86_64-darwin"
+            "aarch64-linux"
+            "x86_64-linux"
+          ]
+          (sys: {
+            codex = codex-cli-nix.packages.${sys}.default;
+          });
     };
 }
