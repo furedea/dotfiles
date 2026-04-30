@@ -1,8 +1,11 @@
 ---
 name: git-commit-split
+argument-hint: "{direct | pr-per-feature}"
 description: >
     Split pending git changes (modified, untracked, and already-staged) into multiple feature-grained commits with Conventional Commits messages, optionally pairing each commit with its own branch and draft PR. Use whenever the user asks to "commit", "コミットして", "make commits", "split into commits", "1 機能 1commit", "1 コミット 1 機能", "commit unstaged files", "未ステージを commit", "branch 切って PR", "PR 分けて", "1 機能 1PR", "stack PR", "draft PR", "ドラフト PR", or any phrasing that implies organizing pending git changes into well-structured commits. Supports two modes: `direct` (commit on the current branch) and `pr-per-feature` (one branch + one draft PR per commit, independent or stacked). The user must set the mode explicitly; never auto-detect it. Present commit grouping and branch/PR strategy as one plan for approval before any branch or commit lands. Prevent vague "update files" commits, direct pushes to protected main, and missing Conventional Commits formatting.
 ---
+
+Mode argument from slash-command invocation (empty if none was passed): $ARGUMENTS
 
 Read `INSTRUCTIONS.md` first; it owns Phase 0-2 (mode / inspect / plan) and the Phase 3 router. The other files here are **read on demand**, not all at once — that's how the skill keeps the working context tight even though it covers multiple modes.
 

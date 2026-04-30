@@ -27,12 +27,15 @@ The first decision is _where_ the commits will live. There are exactly two deliv
 
 Resolve the mode in this order:
 
-1. If the user's prompt explicitly names the mode (e.g., "PR に分けて", "branch 切って PR", "1 機能 1PR", "draft PR", "stack PR" → `pr-per-feature`; "main に直接", "ここで commit", "この branch に commit" → `direct`), use that.
-2. Otherwise ask **one** short question and wait. Example phrasing:
+1. If `SKILL.md` surfaced a non-empty slash-command argument and it equals `direct` or `pr-per-feature`, use that as the mode. Sub-strategy (`independent` / `stack`) is **not** taken from the argument — keep it for the dialog in step 3. If the argument is something else (typo, unrelated text), ignore it and fall through.
+2. Otherwise, if the user's prompt explicitly names the mode (e.g., "PR に分けて", "branch 切って PR", "1 機能 1PR", "draft PR", "stack PR" → `pr-per-feature`; "main に直接", "ここで commit", "この branch に commit" → `direct`), use that.
+3. Otherwise ask **one** short question and wait. Example phrasing:
 
     > この commit 分割は (a) 現在の branch に直接 commit する `direct` モードと，(b) 1 機能ごとに branch を切って draft PR を出す `pr-per-feature` モード のどちらで進めますか？ `pr-per-feature` の場合は，各 PR を独立に base から切る `independent` か，順番に積む `stack` かも併せて教えてください（迷う場合は `independent` が無難です）．
 
-3. Do not proceed until the user answers. Treat silence/ambiguity as "ask again", not "default to direct".
+   When step 1 already settled the mode as `pr-per-feature`, ask only the sub-strategy half (`independent` / `stack`) instead of repeating the mode question.
+
+4. Do not proceed until the user answers (or step 1 already resolved everything needed). Treat silence/ambiguity as "ask again", not "default to direct".
 
 For `pr-per-feature`, also confirm prerequisites _before_ inspecting:
 
