@@ -6,6 +6,18 @@
 #   - git push ... +refspec                          (force push via + prefix)
 #   - git push to main/master (explicit or implicit via current branch)
 #   - gh pr merge --admin                            (bypasses review)
+#   - git rm / git clean / git stash drop|clear      (always destructive)
+#   - git branch -D                                  (force branch delete)
+#   - git worktree remove                            (worktree delete)
+#   - git filter-branch / filter-repo / replace      (history rewrite)
+#   - git reflog delete | expire                     (loses recovery records)
+#   - git symbolic-ref --delete | -d                 (HEAD/ref delete)
+#   - git update-ref -d                              (plumbing ref delete)
+#   - git gc --prune                                 (forces unreachable cleanup)
+#   - git reset --hard | --keep | --merge            (working-tree destruction)
+#   - git checkout with -f / --force / -B / -- / .   (working-tree destruction)
+#   - git restore <file> without sole --staged       (working-tree destruction)
+#   - git switch -f / --force / -C / --discard-changes
 #
 # Exit code 0 = allow, exit code 2 = block.
 
@@ -29,7 +41,7 @@ function wrapper_unsafe() {
   if ! printf '%s\n' "$_seg" | grep -qE '(^|[[:space:]])((/bin/|/usr/bin/)?(ba|z)?sh[[:space:]]+-[^[:space:]]*c[^[:space:]]*([[:space:]]|$)|eval([[:space:]]|$))'; then
     return 1
   fi
-  if printf '%s\n' "$_seg" | grep -qE '(git[[:space:]]+push|gh[[:space:]]+pr[[:space:]]+merge|--force|--force-with-lease|[[:space:]]\+?(main|master)([[:space:]]|$)|--admin)'; then
+  if printf '%s\n' "$_seg" | grep -qE '(git[[:space:]]+push|gh[[:space:]]+pr[[:space:]]+merge|--force|--force-with-lease|[[:space:]]\+?(main|master)([[:space:]]|$)|--admin|git[[:space:]]+(rm|clean|filter-branch|filter-repo|replace|update-ref|symbolic-ref|restore|reflog|worktree|checkout)([[:space:]]|$)|git[[:space:]]+stash[[:space:]]+(drop|clear)([[:space:]]|$)|git[[:space:]]+branch[[:space:]]+(.*[[:space:]])?-D([[:space:]]|$)|git[[:space:]]+gc([[:space:]]|$)|(--hard|--keep|--discard-changes|--prune)([[:space:]]|=|$)|[[:space:]]-B([[:space:]]|$))'; then
     return 0
   fi
   return 1
@@ -187,6 +199,143 @@ ERRMSG
   return 0
 }
 
+# Emit a block message for a destructive non-push git operation.
+function _emit_destroy_block() {
+  local _seg="$1"
+  local _why="$2"
+  cat >&2 <<ERRMSG
+BLOCKED: destructive git operation.
+
+Segment: $_seg
+
+Why: $_why.
+
+What to do:
+  Claude Code: Stop and ask the user, or pick a non-destructive alternative
+               (e.g., 'git restore --staged <file>' to unstage, 'git switch
+               <branch>' for branch changes, 'git stash push' to save WIP).
+  User: Run the destructive command manually if you decide it is needed.
+ERRMSG
+}
+
+# Analyze a segment for non-push destructive git operations. The push path is
+# handled separately by analyze_git_push because its risk model is different
+# (force / protected branches) and the parser there is heavier. Here we cover
+# the local-state destruction surface: working-tree wipes, ref deletions,
+# stash drops, history rewrites, and reflog/gc operations that erase the
+# recovery path. Returns 2 if dangerous, 0 otherwise.
+function analyze_git_destroy() {
+  local _seg="$1"
+
+  # --- Always-destructive verbs (any argv shape) ---
+  # These operations destroy local state regardless of how they're invoked,
+  # so prefix detection is sufficient. We deliberately also block dry-run
+  # forms (e.g. 'git clean -n') to keep this surface uniformly off-limits;
+  # if a user wants to inspect what *would* be removed, they can run it
+  # manually.
+  local -a _always_destructive=(
+    '^git[[:space:]]+rm([[:space:]]|$)'
+    '^git[[:space:]]+clean([[:space:]]|$)'
+    '^git[[:space:]]+filter-branch([[:space:]]|$)'
+    '^git[[:space:]]+filter-repo([[:space:]]|$)'
+    '^git[[:space:]]+replace([[:space:]]|$)'
+    '^git[[:space:]]+stash[[:space:]]+(drop|clear)([[:space:]]|$)'
+    '^git[[:space:]]+branch[[:space:]]+(.*[[:space:]])?-D([[:space:]]|$)'
+    '^git[[:space:]]+worktree[[:space:]]+remove([[:space:]]|$)'
+    '^git[[:space:]]+reflog[[:space:]]+(delete|expire)([[:space:]]|$)'
+    '^git[[:space:]]+symbolic-ref[[:space:]]+(.*[[:space:]])?(--delete|-d)([[:space:]]|=|$)'
+    '^git[[:space:]]+gc[[:space:]]+(.*[[:space:]])?--prune([[:space:]]|=|$)'
+  )
+  local _pat
+  for _pat in "${_always_destructive[@]}"; do
+    if printf '%s\n' "$_seg" | grep -qE "$_pat"; then
+      _emit_destroy_block "$_seg" \
+        "this verb / flag combination is always destructive (rm, clean, filter-*, replace, stash drop|clear, branch -D, worktree remove, reflog delete|expire, symbolic-ref --delete, gc --prune)"
+      return 2
+    fi
+  done
+
+  # --- git reset --hard / --keep / --merge ---
+  # --soft (HEAD only) and --mixed (default; HEAD + index) preserve the
+  # working tree, so they are safe to allow. The destructive trio is detected
+  # regardless of position because users sometimes write 'git reset HEAD~1
+  # --hard' with the flag trailing.
+  if printf '%s\n' "$_seg" | grep -qE '^git[[:space:]]+reset([[:space:]]|$)'; then
+    if printf '%s\n' "$_seg" | grep -qE '(^|[[:space:]])(--hard|--keep|--merge)([[:space:]]|=|$)'; then
+      _emit_destroy_block "$_seg" \
+        "git reset --hard / --keep / --merge can destroy uncommitted work in the working tree; use --soft or --mixed instead, or ask the user"
+      return 2
+    fi
+  fi
+
+  # --- git restore: only sole --staged is allowed ---
+  # 'git restore --staged <file>' just unstages and is the inverse of
+  # 'git add'. Any other form ('git restore <file>', '--worktree',
+  # '--source=<commit>') overwrites uncommitted work.
+  if printf '%s\n' "$_seg" | grep -qE '^git[[:space:]]+restore([[:space:]]|$)'; then
+    local _has_staged=false _has_worktree=false _has_source=false
+    if printf '%s\n' "$_seg" | grep -qE '(^|[[:space:]])(--staged|-S)([[:space:]]|=|$)'; then
+      _has_staged=true
+    fi
+    if printf '%s\n' "$_seg" | grep -qE '(^|[[:space:]])(--worktree|-W)([[:space:]]|=|$)'; then
+      _has_worktree=true
+    fi
+    if printf '%s\n' "$_seg" | grep -qE '(^|[[:space:]])(--source|-s)([[:space:]]|=|$)'; then
+      _has_source=true
+    fi
+    if ! { [ "$_has_staged" = true ] && [ "$_has_worktree" = false ] && [ "$_has_source" = false ]; }; then
+      _emit_destroy_block "$_seg" \
+        "git restore <file> overwrites uncommitted work; only 'git restore --staged <file>' (alone, without --worktree / --source) is allowed"
+      return 2
+    fi
+  fi
+
+  # --- git switch -f / --force / -C / --discard-changes ---
+  # 'git switch <branch>' and '-c <new>' are safe (git refuses to clobber
+  # working-tree changes). The destructive variants drop those guards.
+  if printf '%s\n' "$_seg" | grep -qE '^git[[:space:]]+switch([[:space:]]|$)'; then
+    if printf '%s\n' "$_seg" | grep -qE '(^|[[:space:]])(-f|--force|-C|--discard-changes)([[:space:]]|=|$)'; then
+      _emit_destroy_block "$_seg" \
+        "git switch -f / --force / -C / --discard-changes overwrites uncommitted work or branch refs"
+      return 2
+    fi
+  fi
+
+  # --- git checkout: branch-switch only; refuse -f / --force / -B / -- / . ---
+  # 'git checkout' overloads branch switching with file restore. Without
+  # branch-name probing, we can't disambiguate 'git checkout foo' (branch
+  # vs. file). We therefore allow simple forms and refuse the syntactic
+  # markers that *guarantee* working-tree destruction:
+  #   -f / --force        : drops working-tree changes
+  #   -B                  : overwrites an existing branch ref
+  #   --                  : the path-spec marker — anything after is files
+  #   .                   : restore everything in CWD
+  # Users wanting file restore should use 'git restore --staged' (unstage)
+  # or run the destructive form manually.
+  if printf '%s\n' "$_seg" | grep -qE '^git[[:space:]]+checkout([[:space:]]|$)'; then
+    if printf '%s\n' "$_seg" | grep -qE '(^|[[:space:]])(-f|--force|-B)([[:space:]]|=|$)' ||
+      printf '%s\n' "$_seg" | grep -qE '(^|[[:space:]])--([[:space:]]|$)' ||
+      printf '%s\n' "$_seg" | grep -qE '(^|[[:space:]])\.([[:space:]]|$)'; then
+      _emit_destroy_block "$_seg" \
+        "destructive 'git checkout' (-f / --force / -B / -- <file> / .); use 'git switch <branch>' for branch changes and 'git restore --staged <file>' for unstaging"
+      return 2
+    fi
+  fi
+
+  # --- git update-ref -d / --delete (any position) ---
+  # Plumbing-level ref deletion. Equivalent to 'git branch -D' but bypasses
+  # the merge-ahead check that 'git branch -d' performs.
+  if printf '%s\n' "$_seg" | grep -qE '^git[[:space:]]+update-ref([[:space:]]|$)'; then
+    if printf '%s\n' "$_seg" | grep -qE '(^|[[:space:]])(-d|--delete)([[:space:]]|=|$)'; then
+      _emit_destroy_block "$_seg" \
+        "git update-ref -d deletes refs at the plumbing layer, equivalent to a forced branch deletion that bypasses the merge-ahead check that 'git branch -d' performs"
+      return 2
+    fi
+  fi
+
+  return 0
+}
+
 # Per-segment analysis. Returns 2 if segment is dangerous, 0 otherwise.
 function analyze_segment() {
   local _seg="$1"
@@ -202,8 +351,12 @@ BLOCKED: shell wrapper (bash -c / sh -c / the e-v-a-l builtin) with destructive 
 Segment: $_trimmed
 
 Why: This hook cannot statically analyze commands run through a shell wrapper,
-     and the segment carries tokens suggesting a git push / gh pr merge with
-     --force, --admin, main, or master. Failing closed.
+     and the segment carries tokens suggesting a destructive operation
+     (force / admin push, push to main|master, git rm / clean / filter-* /
+     replace / update-ref / symbolic-ref / restore / reflog / worktree /
+     checkout, git stash drop|clear, git branch -D, git gc, or destructive
+     flags such as --hard / --keep / --discard-changes / --prune / -B).
+     Failing closed.
 
 What to do:
   Claude Code: Rewrite without the shell wrapper so the command is directly
@@ -238,7 +391,9 @@ ERRMSG
     return $?
   fi
 
-  return 0
+  # --- destructive non-push git operations ---
+  analyze_git_destroy "$_trimmed"
+  return $?
 }
 
 # Iterate over segments; block on first dangerous match.

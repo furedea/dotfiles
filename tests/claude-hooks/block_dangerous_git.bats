@@ -237,3 +237,284 @@ setup() {
   [[ "$output" == *"Segment:"* ]]
   [[ "$output" == *"git push --force origin feature/foo"* ]]
 }
+
+# --- Blocked: destructive verbs (always-destructive, regardless of args) ---
+
+@test "blocks git rm" {
+  run bash "$HOOK" <<< "$(make_input 'git rm foo.py')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks git rm --cached" {
+  run bash "$HOOK" <<< "$(make_input 'git rm --cached foo.py')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks git rm -r" {
+  run bash "$HOOK" <<< "$(make_input 'git rm -r dir/')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks git clean -fd" {
+  run bash "$HOOK" <<< "$(make_input 'git clean -fd')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks git clean -n (dry-run also blocked for symmetry)" {
+  run bash "$HOOK" <<< "$(make_input 'git clean -n')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks git stash drop" {
+  run bash "$HOOK" <<< "$(make_input 'git stash drop')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks git stash clear" {
+  run bash "$HOOK" <<< "$(make_input 'git stash clear')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks git branch -D" {
+  run bash "$HOOK" <<< "$(make_input 'git branch -D feature/foo')"
+  [ "$status" -eq 2 ]
+}
+
+@test "allows git branch -d (safe delete)" {
+  run bash "$HOOK" <<< "$(make_input 'git branch -d feature/foo')"
+  [ "$status" -eq 0 ]
+}
+
+@test "blocks git worktree remove" {
+  run bash "$HOOK" <<< "$(make_input 'git worktree remove ../foo')"
+  [ "$status" -eq 2 ]
+}
+
+@test "allows git worktree list" {
+  run bash "$HOOK" <<< "$(make_input 'git worktree list')"
+  [ "$status" -eq 0 ]
+}
+
+@test "blocks git filter-branch" {
+  run bash "$HOOK" <<< "$(make_input 'git filter-branch --env-filter foo HEAD')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks git filter-repo" {
+  run bash "$HOOK" <<< "$(make_input 'git filter-repo --invert-paths --path foo')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks git replace" {
+  run bash "$HOOK" <<< "$(make_input 'git replace abc def')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks git reflog delete" {
+  run bash "$HOOK" <<< "$(make_input 'git reflog delete refs/heads/foo@{0}')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks git reflog expire" {
+  run bash "$HOOK" <<< "$(make_input 'git reflog expire --expire=now --all')"
+  [ "$status" -eq 2 ]
+}
+
+@test "allows git reflog (default subcommand show)" {
+  run bash "$HOOK" <<< "$(make_input 'git reflog')"
+  [ "$status" -eq 0 ]
+}
+
+@test "blocks git symbolic-ref --delete HEAD" {
+  run bash "$HOOK" <<< "$(make_input 'git symbolic-ref --delete HEAD')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks git symbolic-ref -d HEAD" {
+  run bash "$HOOK" <<< "$(make_input 'git symbolic-ref -d HEAD')"
+  [ "$status" -eq 2 ]
+}
+
+@test "allows git symbolic-ref HEAD (read)" {
+  run bash "$HOOK" <<< "$(make_input 'git symbolic-ref HEAD')"
+  [ "$status" -eq 0 ]
+}
+
+@test "blocks git gc --prune=now" {
+  run bash "$HOOK" <<< "$(make_input 'git gc --prune=now')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks git gc --prune now (separate token)" {
+  run bash "$HOOK" <<< "$(make_input 'git gc --prune now')"
+  [ "$status" -eq 2 ]
+}
+
+@test "allows plain git gc" {
+  run bash "$HOOK" <<< "$(make_input 'git gc')"
+  [ "$status" -eq 0 ]
+}
+
+# --- Blocked: argv-aware destructive variants ---
+
+@test "blocks git reset --hard" {
+  run bash "$HOOK" <<< "$(make_input 'git reset --hard HEAD')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks git reset HEAD~1 --hard (flag at end)" {
+  run bash "$HOOK" <<< "$(make_input 'git reset HEAD~1 --hard')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks git reset --keep" {
+  run bash "$HOOK" <<< "$(make_input 'git reset --keep HEAD~1')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks git reset --merge" {
+  run bash "$HOOK" <<< "$(make_input 'git reset --merge')"
+  [ "$status" -eq 2 ]
+}
+
+@test "allows git reset --soft" {
+  run bash "$HOOK" <<< "$(make_input 'git reset --soft HEAD~1')"
+  [ "$status" -eq 0 ]
+}
+
+@test "allows git reset --mixed" {
+  run bash "$HOOK" <<< "$(make_input 'git reset --mixed HEAD~1')"
+  [ "$status" -eq 0 ]
+}
+
+@test "allows git reset HEAD <file> (default --mixed unstage)" {
+  run bash "$HOOK" <<< "$(make_input 'git reset HEAD foo.py')"
+  [ "$status" -eq 0 ]
+}
+
+@test "blocks git checkout -- foo.py" {
+  run bash "$HOOK" <<< "$(make_input 'git checkout -- foo.py')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks git checkout ." {
+  run bash "$HOOK" <<< "$(make_input 'git checkout .')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks git checkout -f main" {
+  run bash "$HOOK" <<< "$(make_input 'git checkout -f main')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks git checkout --force main" {
+  run bash "$HOOK" <<< "$(make_input 'git checkout --force main')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks git checkout -B existing" {
+  run bash "$HOOK" <<< "$(make_input 'git checkout -B existing')"
+  [ "$status" -eq 2 ]
+}
+
+@test "allows plain git checkout main" {
+  run bash "$HOOK" <<< "$(make_input 'git checkout main')"
+  [ "$status" -eq 0 ]
+}
+
+@test "allows git checkout -b new" {
+  run bash "$HOOK" <<< "$(make_input 'git checkout -b new')"
+  [ "$status" -eq 0 ]
+}
+
+@test "blocks git restore foo.py" {
+  run bash "$HOOK" <<< "$(make_input 'git restore foo.py')"
+  [ "$status" -eq 2 ]
+}
+
+@test "allows git restore --staged foo.py" {
+  run bash "$HOOK" <<< "$(make_input 'git restore --staged foo.py')"
+  [ "$status" -eq 0 ]
+}
+
+@test "blocks git restore --staged --worktree foo.py" {
+  run bash "$HOOK" <<< "$(make_input 'git restore --staged --worktree foo.py')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks git restore --source HEAD~1 foo.py" {
+  run bash "$HOOK" <<< "$(make_input 'git restore --source HEAD~1 foo.py')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks git switch --discard-changes main" {
+  run bash "$HOOK" <<< "$(make_input 'git switch --discard-changes main')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks git switch -f main" {
+  run bash "$HOOK" <<< "$(make_input 'git switch -f main')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks git switch --force main" {
+  run bash "$HOOK" <<< "$(make_input 'git switch --force main')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks git switch -C feature/foo" {
+  run bash "$HOOK" <<< "$(make_input 'git switch -C feature/foo')"
+  [ "$status" -eq 2 ]
+}
+
+@test "allows plain git switch" {
+  run bash "$HOOK" <<< "$(make_input 'git switch main')"
+  [ "$status" -eq 0 ]
+}
+
+@test "allows git switch -c new" {
+  run bash "$HOOK" <<< "$(make_input 'git switch -c feature/foo')"
+  [ "$status" -eq 0 ]
+}
+
+@test "blocks git update-ref -d refs/heads/foo" {
+  run bash "$HOOK" <<< "$(make_input 'git update-ref -d refs/heads/foo')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks git update-ref --no-deref -d refs/heads/foo (flag interleaved)" {
+  run bash "$HOOK" <<< "$(make_input 'git update-ref --no-deref -d refs/heads/foo')"
+  [ "$status" -eq 2 ]
+}
+
+@test "allows git update-ref refs/heads/foo SHA (non-delete write)" {
+  run bash "$HOOK" <<< "$(make_input 'git update-ref refs/heads/foo abc123')"
+  [ "$status" -eq 0 ]
+}
+
+# --- Wrapper / chain coverage for destroy ---
+
+@test "blocks bash -c with git rm" {
+  run bash "$HOOK" <<< "$(make_input 'bash -c "git rm foo.py"')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks chained git clean" {
+  run bash "$HOOK" <<< "$(make_input 'cd /tmp && git clean -fd')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks chained git reset --hard" {
+  run bash "$HOOK" <<< "$(make_input 'git status; git reset --hard HEAD')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks bash -c with git update-ref -d" {
+  run bash "$HOOK" <<< "$(make_input 'bash -c "git update-ref -d refs/heads/foo"')"
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks chained git checkout -- after cd" {
+  run bash "$HOOK" <<< "$(make_input 'cd /tmp && git checkout -- foo.py')"
+  [ "$status" -eq 2 ]
+}
