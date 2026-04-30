@@ -57,8 +57,13 @@ generated_settings() {
   missing=()
 
   while IFS= read -r cmd; do
-    resolved="${cmd/\$HOME\/.claude\//$REPO_ROOT/claude/}"
+    resolved="${cmd/\$HOME\/.claude\//$REPO_ROOT/agents/}"
     script="$(echo "$resolved" | awk '{print $1}')"
+
+    if [ ! -f "$script" ]; then
+      resolved="${cmd/\$HOME\/.claude\//$REPO_ROOT/claude/}"
+      script="$(echo "$resolved" | awk '{print $1}')"
+    fi
 
     if [ ! -f "$script" ]; then
       missing+=("$cmd -> $script")
