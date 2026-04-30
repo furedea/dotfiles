@@ -14,35 +14,35 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "^Bash$",
+        "matcher": "^(Bash|exec_command|functions\\.exec_command)$",
         "hooks": [
           {
             "type": "command",
-            "command": "$HOME/.claude/hooks/prevent_secret_commit.sh",
+            "command": "$HOME/.codex/hooks/adapt_shell_command.sh $HOME/.claude/hooks/prevent_secret_commit.sh",
             "statusMessage": "Checking staged files for secrets",
             "timeout": 30
           },
           {
             "type": "command",
-            "command": "$HOME/.claude/hooks/block_no_verify.sh",
+            "command": "$HOME/.codex/hooks/adapt_shell_command.sh $HOME/.claude/hooks/block_no_verify.sh",
             "statusMessage": "Checking for --no-verify bypass",
             "timeout": 30
           },
           {
             "type": "command",
-            "command": "$HOME/.claude/hooks/block_add_all.sh",
+            "command": "$HOME/.codex/hooks/adapt_shell_command.sh $HOME/.claude/hooks/block_add_all.sh",
             "statusMessage": "Checking for bulk git add",
             "timeout": 30
           },
           {
             "type": "command",
-            "command": "$HOME/.claude/hooks/block_dangerous_git.sh",
+            "command": "$HOME/.codex/hooks/adapt_shell_command.sh $HOME/.claude/hooks/block_dangerous_git.sh",
             "statusMessage": "Checking for dangerous git operations",
             "timeout": 30
           },
           {
             "type": "command",
-            "command": "$HOME/.claude/hooks/command_allowlist.sh",
+            "command": "$HOME/.codex/hooks/adapt_shell_command.sh $HOME/.claude/hooks/command_allowlist.sh",
             "statusMessage": "Checking command policy",
             "timeout": 30
           }

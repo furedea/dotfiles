@@ -38,6 +38,7 @@
       pkgs = import nixpkgs {
         inherit system;
         config = { inherit allowUnfreePredicate; };
+        overlays = import ./nix/overlays.nix;
       };
       unstable = import nixpkgs-unstable {
         inherit system;

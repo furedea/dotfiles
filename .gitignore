@@ -21,6 +21,7 @@ desktop.ini
 *.log
 logs/
 .cache/
+__pycache__/
 
 # Nix vim undo files in nvim config
 nvim/.undo/

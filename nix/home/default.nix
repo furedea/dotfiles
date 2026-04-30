@@ -341,6 +341,11 @@ in
         ssh-keygen -t ed25519 -C "132188853+furedea@users.noreply.github.com" -f ~/.ssh/id_ed25519 -N ""
       fi
     '';
+    codexConfigSync = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      ${pkgs.python3}/bin/python ${dotfilesDir}/codex/sync_config.py \
+        ${dotfilesDir}/codex/config.toml \
+        "$HOME/.codex/config.toml"
+    '';
   };
 
   # lazygit reads XDG_CONFIG_HOME/lazygit/config.yml first when XDG_CONFIG_HOME is set
@@ -388,12 +393,12 @@ in
     ".codex/skills".source = link "agents/skills";
     ".codex/hooks".source = link "codex/hooks";
     ".codex/hooks.json".source = link "codex/hooks.json";
+    ".codex/rules/default.rules".text = agentCommandPolicy.codexRules;
 
     # Claude Code
     ".claude/agents".source = link "claude/agents";
     ".claude/commands".source = link "claude/commands";
     ".claude/hooks".source = link "agents/hooks";
-    ".codex/rules/default.rules".text = agentCommandPolicy.codexRules;
     ".claude/statusline".source = link "claude/statusline";
     ".claude/skills".source = link "agents/skills";
     ".claude/CLAUDE.md".source = link "agents/CLAUDE.md";
