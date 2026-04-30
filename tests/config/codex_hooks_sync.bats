@@ -17,7 +17,7 @@ setup() {
   while IFS= read -r cmd; do
     local resolved
     resolved=$(echo "$cmd" |
-      sed "s|\\\$HOME/.claude/hooks/|$REPO_ROOT/claude/hooks/|" |
+      sed "s|\\\$HOME/.claude/hooks/|$REPO_ROOT/agents/hooks/|" |
       sed "s|\\\$HOME/.codex/hooks/|$REPO_ROOT/codex/hooks/|")
 
     local script

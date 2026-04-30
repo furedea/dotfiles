@@ -34,8 +34,8 @@ SENSITIVE_PATTERNS=(
 )
 
 ALLOWLISTED_SENSITIVE_PATHS=(
-  'claude/hooks/block_secret_content.sh'
-  'claude/hooks/prevent_secret_commit.sh'
+  'agents/hooks/block_secret_content.sh'
+  'agents/hooks/prevent_secret_commit.sh'
   'codex/hooks/adapt_block_secret_content.sh'
   'tests/claude-hooks/prevent_secret_commit.bats'
 )

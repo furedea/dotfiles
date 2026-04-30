@@ -80,10 +80,10 @@ run_hook() {
   run_hook "actionlint .github/workflows/ci.yml"
   [ "$status" -eq 0 ]
 
-  run_hook "shellcheck claude/hooks/command_allowlist.sh"
+  run_hook "shellcheck agents/hooks/command_allowlist.sh"
   [ "$status" -eq 0 ]
 
-  run_hook "shfmt -w claude/hooks/command_allowlist.sh"
+  run_hook "shfmt -w agents/hooks/command_allowlist.sh"
   [ "$status" -eq 0 ]
 
   run_hook "dprint check"

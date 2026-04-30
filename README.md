@@ -185,7 +185,7 @@ Some directories are kept as **plain copies for backup/reference** only. They ar
 Starter workflows for new projects come from two places:
 
 - **Project scaffolds** at `~/dev/templates/template-{minimal,python,typescript,rust,tex}` — instantiated with `ghcreate --template`. Each ships with `ci.yml` (language-specific jobs plus an `all-green` aggregator), `codeql.yml`, `dependency_review.yml`, and `gha_lint.yml` (`actionlint` + `zizmor`).
-- **Optional CI add-ons** at `claude/skills/github-ci-init/templates/`: `release_please.yml`, `claude.yml`, `claude_code_review.yml`, `artifact_attestation.yml`. The `github-ci-init` Claude Code skill copies the curated default adopted set into a new repo on demand.
+  - **Optional CI add-ons** at `agents/skills/github-ci-init/templates/`: `release_please.yml`, `claude.yml`, `claude_code_review.yml`, `artifact_attestation.yml`. The `github-ci-init` Claude Code skill copies the curated default adopted set into a new repo on demand.
 
 Standard repo settings and the `main` branch ruleset live in `github/` and are applied via `github/setup_repo.sh <owner>/<repo>`. The ruleset requires a status check named `all-green`, which the project scaffolds satisfy via the aggregator job in `ci.yml`. See [`github/README.md`](github/README.md) for the contract and the caveat on which repos to apply it to.
 

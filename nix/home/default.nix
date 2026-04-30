@@ -382,18 +382,18 @@ in
     ".config/karabiner/karabiner.json".source = link "karabiner/karabiner.json";
     ".config/cmux/settings.json".source = link "cmux/settings.json";
     # Codex (shares the same global instructions and skills as Claude Code)
-    ".codex/AGENTS.md".source = link "claude/CLAUDE.md";
-    ".codex/skills".source = link "claude/skills";
+    ".codex/AGENTS.md".source = link "agents/CLAUDE.md";
+    ".codex/skills".source = link "agents/skills";
     ".codex/hooks".source = link "codex/hooks";
     ".codex/hooks.json".source = link "codex/hooks.json";
 
     # Claude Code
     ".claude/agents".source = link "claude/agents";
     ".claude/commands".source = link "claude/commands";
-    ".claude/hooks".source = link "claude/hooks";
+    ".claude/hooks".source = link "agents/hooks";
     ".claude/statusline".source = link "claude/statusline";
-    ".claude/skills".source = link "claude/skills";
-    ".claude/CLAUDE.md".source = link "claude/CLAUDE.md";
+    ".claude/skills".source = link "agents/skills";
+    ".claude/CLAUDE.md".source = link "agents/CLAUDE.md";
     ".claude/settings.json".source = link "claude/settings.json";
   };
 }

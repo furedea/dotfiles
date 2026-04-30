@@ -55,7 +55,7 @@ jobs:
         env:
           SHELLCHECK_OPTS: -x --source-path=SCRIPTDIR
         with:
-          scandir: claude/hooks
+          scandir: agents/hooks
           format: gcc
           additional_files: >-
             claude/statusline/statusline.sh
@@ -66,7 +66,7 @@ jobs:
         uses: mfinelli/setup-shfmt@a25fda4c1fe115aec0f85e04126610841bc3141d # v4.0.1
 
       - name: Run shfmt
-        run: shfmt -d -i 2 -ci claude/hooks/ claude/statusline/ codex/hooks/
+        run: shfmt -d -i 2 -ci agents/hooks/ claude/statusline/ codex/hooks/
 
   lua-lint:
     runs-on: ubuntu-latest

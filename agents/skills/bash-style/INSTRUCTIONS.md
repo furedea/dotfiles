@@ -285,7 +285,7 @@ Put shared fixtures in `test_helper/setup.bash`. Common patterns:
 
 ```bash
 REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
-HOOK_DIR="$REPO_ROOT/claude/hooks"
+HOOK_DIR="$REPO_ROOT/agents/hooks"
 
 make_input() {
   jq -n --arg cmd "$1" '{"tool_input":{"command":$cmd}}'

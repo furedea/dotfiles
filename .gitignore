@@ -30,4 +30,4 @@ nvim/lazy-lock.json
 .env*
 
 # Codex auto-generated system skills
-claude/skills/.system/
+agents/skills/.system/
