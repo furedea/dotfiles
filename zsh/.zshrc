@@ -200,6 +200,7 @@ function _ghcreate_apply_template() {
 # Abbreviations: new shortcuts that don't shadow existing commands.
 # Using -S (session scope) so definitions stay in this file, not in a separate file.
 abbr --quiet -S lg="lazygit"
+abbr --quiet -S gwt="git wt"
 abbr --quiet -S ll="eza -la --git"
 abbr --quiet -S lt="eza --tree --level=2"
 abbr --quiet -S arm="exec arch -arch arm64e /bin/zsh --login"
@@ -212,28 +213,29 @@ eval "$(starship init zsh)"
 eval "$(direnv hook zsh)"
 eval "$(atuin init zsh --disable-up-arrow)"
 
-# ghq + fzf: Ctrl-G to fuzzy-cd into a managed repository
+# ghq + roots + fzf: Ctrl-G to fuzzy-cd into a managed repository, monorepo
+# subproject, or worktree. `roots` expands each ghq path to all detected
+# project markers (.git/config, go.mod, package.json, Cargo.toml).
 function ghq-fzf() {
-  local root selected
-  root=$(ghq root)
-  selected=$(ghq list | fzf \
+  local selected
+  selected=$(ghq list -p | roots | fzf \
     --height=80% \
     --reverse \
     --preview "
-      eza -la --git --icons --color=always ${root}/{} 2>/dev/null | head -20
+      eza -la --git --icons --color=always {} 2>/dev/null | head -20
       echo
       echo '--- README ---'
       echo
       bat --color=always --style=plain --line-range=:80 \
-        ${root}/{}/README.md \
-        ${root}/{}/README.rst \
-        ${root}/{}/README \
-        ${root}/{}/README.txt \
-        ${root}/{}/readme.md \
+        {}/README.md \
+        {}/README.rst \
+        {}/README \
+        {}/README.txt \
+        {}/readme.md \
         2>/dev/null || echo '(no README)'
     " \
     --preview-window=right:60%:wrap) || return
-  BUFFER="builtin cd ${root}/${selected}"
+  BUFFER="builtin cd ${selected}"
   zle accept-line
   zle reset-prompt
 }

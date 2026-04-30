@@ -48,6 +48,8 @@ in
     lefthook
     commitlint
     ghq
+    roots
+    git-wt
 
     # AI Coding Agent
     nix-claude-code.packages.${system}.default
@@ -172,6 +174,7 @@ in
         status.short = true;
         status.branch = true;
         alias.cc = "!f() { tmpf=$(mktemp) && codex exec --full-auto -o \"$tmpf\" 'Review the staged diff and generate a Conventional Commits message. Output ONLY the commit message, nothing else.' && git commit -F \"$tmpf\"; rm -f \"$tmpf\"; }; f";
+        alias.wtd = "wt -D";
       };
     };
 
