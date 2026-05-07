@@ -1,6 +1,6 @@
 # Phase 2: TeX / LaTeX
 
-Prerequisite: repo created via `ghcreate <name> --private --template furedea/template-tex`. The template provides `flake.nix`, `flake.lock`, `.envrc`, `lefthook.yml`, `.commitlintrc.yml`, CI workflows (tex-fmt lint + chktex), and `.gitignore`. The TeX template is the only one that ships `flake.lock` — see INSTRUCTIONS.md for why.
+Prerequisite: repo created via `ghcreate <name> --private --template furedea/template-tex`. The template provides `flake.nix`, `flake.lock`, `.envrc`, `lefthook.yml`, `.commitlintrc.yml`, CI workflows (tex-fmt lint + chktex), and `.gitignore`. The TeX template is the only one that ships `flake.lock` — see this skill's main workflow for why.
 
 TeX does not have an `init` command in the usual sense; Phase 2 here is about project scaffolding and verifying the typesetting chain, not a package manager bootstrap.
 
@@ -10,8 +10,8 @@ TeX does not have an `init` command in the usual sense; Phase 2 here is about pr
 2. Verify `which xelatex` resolves under `/nix/store/`.
 3. Create the source entry point — typically `main.tex` — or `cp` an existing project skeleton if one is available.
 4. Decide on a build driver:
-   - `latexmk` (recommended, handles bib / rerun automatically)
-   - or a thin `Makefile` / `just` recipe wrapping `xelatex` + `biber`
+    - `latexmk` (recommended, handles bib / rerun automatically)
+    - or a thin `Makefile` / `just` recipe wrapping `xelatex` + `biber`
 5. Test-build once: `latexmk -xelatex main.tex` (or equivalent). First build may take noticeable time because `texlive.combined.scheme-full` is large.
 
 CI is already scaffolded by the template — skip that offer in the "After Setup" step.

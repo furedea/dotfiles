@@ -32,7 +32,7 @@ If the same fallback recipe is repeated across ≥3 projects with only trivial v
 3. Create `~/ghq/github.com/furedea/dotfiles/github/ruleset_<lang>.json` with the required CI status checks.
 4. Add a case to `ghcreate` in `~/.zshrc` for name substitution and ruleset application.
 5. Create `references/lang-<lang>.md` following the structure of the existing language refs.
-6. Update `INSTRUCTIONS.md`'s template table and this skill's description.
+6. Update the template table in `SKILL.md` and this skill's description.
 
 Do not do this for a single project. The overhead of maintaining a template repo that only has one caller is worse than the fallback path.
 
