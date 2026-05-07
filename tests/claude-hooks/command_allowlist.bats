@@ -17,7 +17,7 @@ setup() {
 }
 
 run_hook() {
-  run bash "$HOOK_DIR/command_allowlist.sh" <<< "$(make_input "$1")"
+  run bash "$HOOK_DIR/command_allowlist.sh" <<<"$(make_input "$1")"
 }
 
 # ============================================================
@@ -35,7 +35,7 @@ run_hook() {
 }
 
 @test "passes through empty command" {
-  run bash "$HOOK_DIR/command_allowlist.sh" <<< '{"tool_input":{"command":""}}'
+  run bash "$HOOK_DIR/command_allowlist.sh" <<<'{"tool_input":{"command":""}}'
   [ "$status" -eq 0 ]
 }
 
@@ -68,6 +68,14 @@ run_hook() {
   [ "$status" -eq 0 ]
 
   run_hook "uv run python scripts/run_audit.py prepare --provider codex --days 14"
+  [ "$status" -eq 0 ]
+}
+
+@test "allows git commit messages with single or double quotes" {
+  run_hook "git commit -m 'feat(test): allow single quoted messages'"
+  [ "$status" -eq 0 ]
+
+  run_hook 'git commit -m "feat(test): allow double quoted messages"'
   [ "$status" -eq 0 ]
 }
 
@@ -174,6 +182,14 @@ run_hook() {
   [ "$status" -eq 2 ]
 
   run_hook 'uv run python -c "print(1)"'
+  [ "$status" -eq 2 ]
+}
+
+@test "blocks command substitution in double quoted git commit messages" {
+  run_hook 'git commit -m "feat(test): $(touch /tmp/blocked)"'
+  [ "$status" -eq 2 ]
+
+  run_hook 'git commit -m "feat(test): `touch /tmp/blocked`"'
   [ "$status" -eq 2 ]
 }
 
@@ -365,7 +381,7 @@ run_hook() {
   # Shell: -f body='it'\''s great'  →  the '\'' sequence ends quote, adds literal ', reopens quote
   local input
   input=$(jq -n --arg cmd "gh api repos/owner/repo/pulls/1/comments/99/replies -f body='it'\\''s great'" '{tool_input:{command:$cmd}}')
-  run bash "$HOOK_DIR/command_allowlist.sh" <<< "$input"
+  run bash "$HOOK_DIR/command_allowlist.sh" <<<"$input"
   [ "$status" -eq 0 ]
 }
 
@@ -388,7 +404,7 @@ run_hook() {
 # ============================================================
 
 @test "handles invalid JSON gracefully" {
-  run bash "$HOOK_DIR/command_allowlist.sh" <<< "not json"
+  run bash "$HOOK_DIR/command_allowlist.sh" <<<"not json"
   [ "$status" -eq 2 ]
   [[ "$output" == *"failed to parse"* ]]
 }

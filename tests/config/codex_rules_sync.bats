@@ -99,6 +99,7 @@ policy_covers_prefix() {
   check_rule allow uv run python scripts/run_audit.py prepare --provider codex
   check_rule allow gh pr list
   check_rule allow git add path/to/file
+  check_rule allow git commit -m "feat(test): allow double quotes"
 }
 
 @test "codex execpolicy forbids representative dangerous commands" {
