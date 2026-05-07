@@ -180,6 +180,8 @@ ALLOWED_PATTERNS=(
   '^uv run --frozen ruff (check|format)( --(fix|quiet|check))*( [^;&|<>$`]+)?$'
   '^uv run (--frozen )?ty check$'
   '^uv run (--frozen )?pytest( [^;&|<>$`]+)?$'
+  '^uv run --with pytest pytest( [^;&|<>$`]+)?$'
+  '^uv run python scripts/(collect_transcripts|collect_skills|generate_report|apply_patches|run_audit)\.py( [^;&|<>$`]+)?$'
 
 )
 

@@ -63,6 +63,12 @@ run_hook() {
 
   run_hook "uv run --frozen pytest tests/test_main.py"
   [ "$status" -eq 0 ]
+
+  run_hook "uv run --with pytest pytest tests/test_main.py -k test_main"
+  [ "$status" -eq 0 ]
+
+  run_hook "uv run python scripts/run_audit.py prepare --provider codex --days 14"
+  [ "$status" -eq 0 ]
 }
 
 @test "allows Python style frozen ruff commands" {
@@ -159,6 +165,15 @@ run_hook() {
   [ "$status" -eq 2 ]
 
   run_hook "uv run pytest > /tmp/blocked"
+  [ "$status" -eq 2 ]
+
+  run_hook 'uv run --with pytest pytest $(touch /tmp/blocked)'
+  [ "$status" -eq 2 ]
+
+  run_hook 'uv run --with ruff ruff check'
+  [ "$status" -eq 2 ]
+
+  run_hook 'uv run python -c "print(1)"'
   [ "$status" -eq 2 ]
 }
 

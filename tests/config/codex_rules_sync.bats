@@ -95,6 +95,8 @@ policy_covers_prefix() {
 
 @test "codex execpolicy allows representative development commands" {
   check_rule allow uv run pytest
+  check_rule allow uv run --with pytest pytest tests
+  check_rule allow uv run python scripts/run_audit.py prepare --provider codex
   check_rule allow gh pr list
   check_rule allow git add path/to/file
 }
