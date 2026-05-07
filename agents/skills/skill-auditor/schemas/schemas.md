@@ -49,7 +49,7 @@ Output of `collect_transcripts.py`.
 
 ---
 
-## skill-manifest.json
+## skill_manifest.json
 
 Output of `collect_skills.py`. Includes attention budget data.
 
@@ -100,7 +100,7 @@ Output of `collect_skills.py`. Includes attention budget data.
 
 ---
 
-## audit-report.json
+## audit_report.json
 
 Output of routing-analyst sub-agent(s). Per-skill routing health report.
 
@@ -175,7 +175,7 @@ Output of routing-analyst sub-agent(s). Per-skill routing health report.
 
 ---
 
-## portfolio-analysis.json
+## portfolio_analysis.json
 
 Output of portfolio-analyst sub-agent.
 
@@ -221,9 +221,9 @@ Output of portfolio-analyst sub-agent.
 
 ---
 
-## improvement-proposals.json
+## improvement_proposals.json
 
-Output of improvement-planner sub-agent.
+Output of improvement_planner sub-agent.
 
 ```json
 {
@@ -294,7 +294,7 @@ Each file defines a proposed change to one skill's description.
 
 ---
 
-## health-history.json
+## health_history.json
 
 Append-only array of audit snapshots. One entry per run.
 

@@ -1,0 +1,154 @@
+[project]
+name = "skill-auditor"
+version = "0.1.0"
+description = "Portfolio-level skill routing analysis for Claude Code and Codex."
+requires-python = "== 3.14.*"
+dependencies = []
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.uv]
+managed = true
+default-groups = ["lint", "typecheck", "test"]
+exclude-newer = "1 week"
+
+[dependency-groups]
+lint = [
+  "ruff==0.15.11",
+]
+typecheck = [
+  "ty==0.0.31",
+]
+test = [
+  "pytest==9.0.3",
+  "pytest-cov==7.1.0",
+  "pytest-mock==3.15.1",
+  "tiktoken==0.12.0",
+]
+
+[tool.ruff]
+target-version = "py314"
+src = ["scripts", "tests"]
+line-length = 119
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = [
+  "AIR",
+  "FAST",
+  "YTT",
+  "ANN",
+  "ASYNC",
+  "B",
+  "A",
+  "C4",
+  "CPY",
+  "DTZ",
+  "T10",
+  "DJ",
+  "FIX",
+  "FA",
+  "INT",
+  "LOG",
+  "G",
+  "PIE",
+  "PYI",
+  "Q",
+  "SLOT",
+  "TID",
+  "TD",
+  "ARG",
+  "PTH",
+  "FLY",
+  "I",
+  "NPY",
+  "PD",
+  "PERF",
+  "E",
+  "W",
+  "DOC",
+  "F",
+  "PGH",
+  "PLC",
+  "PLE",
+  "PLR",
+  "PLW",
+  "UP",
+  "FURB",
+  "RUF",
+  "INP",
+]
+ignore = [
+  "G004",
+  "PLC1901",
+  "PLR2004",
+  "ANN401",
+  "ARG002",
+  "INP001",
+  "PGH004",
+  "B008",
+  "A002",
+  "A003",
+  "PLR0913",
+  "W191",
+  "E111",
+  "E114",
+  "E117",
+  "ANN201", # Existing scripts expose CLI main functions without public API semantics
+  "ANN202", # Existing nested script helpers are intentionally lightweight
+  "ARG001", # Patch schema keeps current_description for compatibility
+  "B007", # os.walk tuple names document positional contents in existing code
+  "C401", # Existing aggregation code favors explicit generator layout
+  "DTZ005", # Timestamped local workspace names intentionally use local time
+  "E402", # run_audit adjusts sys.path before importing sibling scripts
+  "E501", # Embedded HTML/JS templates intentionally preserve long source strings
+  "F541", # Existing report/changelog writes include harmless f-string literals
+  "FURB110", # Existing JSON output code keeps explicit empty-list fallback branches
+  "FURB162", # Existing timestamp parser normalizes trailing Z explicitly
+  "FURB171", # Existing message-type checks use tuple style consistently
+  "FURB122", # Existing changelog writes favor straightforward loops
+  "I001", # Keep script import blocks stable while sys.path bootstrapping is present
+  "PERF401", # Existing batching code favors stepwise mutation for readability
+  "PLR0911", # Existing CLI parsers use direct guard-return style
+  "PLR0912", # Existing transcript parser keeps schema branches colocated
+  "PTH", # Legacy scripts use os.path; Path migration is a separate refactor
+  "PLW2901", # Existing JSONL parser reuses line after stripping whitespace
+  "RUF005", # Existing path reconstruction code is clearer with list concatenation
+  "UP015", # Explicit read/write modes are kept for CLI-script clarity
+  "UP017", # Existing code imports timezone explicitly
+]
+
+[tool.ty.src]
+include = ["scripts", "tests"]
+
+[tool.ty.analysis]
+respect-type-ignore-comments = true
+
+[tool.ty.rules]
+deprecated = "warn"
+
+invalid-argument-type = "error"
+invalid-assignment = "error"
+invalid-attribute-access = "error"
+invalid-method-override = "error"
+invalid-parameter-default = "error"
+invalid-return-type = "error"
+invalid-type-arguments = "error"
+
+missing-argument = "error"
+no-matching-overload = "error"
+not-subscriptable = "error"
+
+unresolved-attribute = "error"
+unresolved-import = "error"
+unresolved-reference = "error"
+
+possibly-missing-attribute = "warn"
+possibly-missing-import = "warn"
+possibly-unresolved-reference = "warn"

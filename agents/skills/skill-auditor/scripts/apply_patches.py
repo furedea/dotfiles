@@ -15,12 +15,14 @@ Options:
     --output PATH    Write changelog to this path
 """
 
+from __future__ import annotations
+
+import argparse
 import json
 import os
 import re
-import sys
 import shutil
-import argparse
+import sys
 from datetime import datetime, timezone
 
 
@@ -85,9 +87,9 @@ def apply_description_patch(
                 new_desc_block = f"description: >\n{wrapped_lines}\n"
 
                 new_content = (
-                    content[:frontmatter_match.start(2) + match.start()]
+                    content[: frontmatter_match.start(2) + match.start()]
                     + new_desc_block
-                    + content[frontmatter_match.start(2) + match.end():]
+                    + content[frontmatter_match.start(2) + match.end() :]
                 )
 
                 if dry_run:
@@ -125,11 +127,10 @@ def _wrap_text(text: str, width: int = 76, indent: str = "  ") -> str:
         if len(current_line) + len(word) + 1 > width:
             lines.append(current_line)
             current_line = indent + word
+        elif current_line == indent:
+            current_line += word
         else:
-            if current_line == indent:
-                current_line += word
-            else:
-                current_line += " " + word
+            current_line += " " + word
 
     if current_line.strip():
         lines.append(current_line)
@@ -138,23 +139,26 @@ def _wrap_text(text: str, width: int = 76, indent: str = "  ") -> str:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Apply skill description patches"
-    )
+    parser = argparse.ArgumentParser(description="Apply skill description patches")
     parser.add_argument(
-        "--patches", required=True,
+        "--patches",
+        required=True,
         help="Directory containing .patch.json files",
     )
     parser.add_argument(
-        "--confirm", action="store_true",
+        "--confirm",
+        action="store_true",
         help="Actually apply changes (default: dry-run)",
     )
     parser.add_argument(
-        "--backup", action="store_true", default=True,
+        "--backup",
+        action="store_true",
+        default=True,
         help="Create .bak files before modifying",
     )
     parser.add_argument(
-        "--output", default="./changelog.md",
+        "--output",
+        default="./changelog.md",
         help="Changelog output path",
     )
 
@@ -170,9 +174,9 @@ def main():
         sys.exit(1)
 
     mode = "APPLY" if args.confirm else "DRY RUN"
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  Skill Auditor — Patch Application ({mode})")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     changelog_entries = []
 
@@ -203,13 +207,15 @@ def main():
             print(f"  Preview:\n{result['preview']}")
         print()
 
-        changelog_entries.append({
-            "skill": skill_name,
-            "path": skill_path,
-            "status": result["status"],
-            "changes": patch.get("changes_made", []),
-            "fixes": patch.get("fixes_issues", []),
-        })
+        changelog_entries.append(
+            {
+                "skill": skill_name,
+                "path": skill_path,
+                "status": result["status"],
+                "changes": patch.get("changes_made", []),
+                "fixes": patch.get("fixes_issues", []),
+            }
+        )
 
     with open(args.output, "w", encoding="utf-8") as f:
         f.write(f"# Skill Auditor Changelog\n\n")
@@ -232,9 +238,7 @@ def main():
     print(f"Changelog written to: {args.output}")
 
     if not args.confirm:
-        print(
-            "\nThis was a dry run. To apply changes, re-run with --confirm"
-        )
+        print("\nThis was a dry run. To apply changes, re-run with --confirm")
 
 
 if __name__ == "__main__":

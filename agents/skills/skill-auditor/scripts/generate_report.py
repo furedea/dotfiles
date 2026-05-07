@@ -10,14 +10,16 @@ Usage:
 
 Options:
     --workspace DIR   Directory containing analysis JSON files
-    --output PATH     Output HTML file (default: <workspace>/skill-audit-report.html)
+    --output PATH     Output HTML file (default: <workspace>/skill_audit_report.html)
     --template PATH   HTML template file (default: auto-detect from skill dir)
 """
 
+from __future__ import annotations
+
+import argparse
 import json
 import os
 import sys
-import argparse
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -49,11 +51,11 @@ def generate_report(workspace: str, template_path: str | None = None) -> str:
     Returns the HTML string.
     """
     # Load all analysis results
-    audit_report = load_json_safe(os.path.join(workspace, "audit-report.json"))
-    portfolio = load_json_safe(os.path.join(workspace, "portfolio-analysis.json"))
-    proposals = load_json_safe(os.path.join(workspace, "improvement-proposals.json"))
-    manifest = load_json_safe(os.path.join(workspace, "skill-manifest.json"))
-    history = load_json_safe(os.path.join(workspace, "health-history.json"))
+    audit_report = load_json_safe(os.path.join(workspace, "audit_report.json"))
+    portfolio = load_json_safe(os.path.join(workspace, "portfolio_analysis.json"))
+    proposals = load_json_safe(os.path.join(workspace, "improvement_proposals.json"))
+    manifest = load_json_safe(os.path.join(workspace, "skill_manifest.json"))
+    history = load_json_safe(os.path.join(workspace, "health_history.json"))
 
     # Build embedded data object
     data = {
@@ -394,19 +396,20 @@ function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Generate HTML skill audit report"
-    )
+    parser = argparse.ArgumentParser(description="Generate HTML skill audit report")
     parser.add_argument(
-        "--workspace", required=True,
+        "--workspace",
+        required=True,
         help="Directory containing analysis JSON files",
     )
     parser.add_argument(
-        "--output", default=None,
-        help="Output HTML file (default: <workspace>/skill-audit-report.html)",
+        "--output",
+        default=None,
+        help="Output HTML file (default: <workspace>/skill_audit_report.html)",
     )
     parser.add_argument(
-        "--template", default=None,
+        "--template",
+        default=None,
         help="HTML template file (default: auto-detect)",
     )
 
@@ -420,7 +423,7 @@ def main():
     if args.output:
         output = args.output
     else:
-        output = os.path.join(args.workspace, "skill-audit-report.html")
+        output = os.path.join(args.workspace, "skill_audit_report.html")
 
     html = generate_report(args.workspace, template)
 

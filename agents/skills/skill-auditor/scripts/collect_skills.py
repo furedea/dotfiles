@@ -10,32 +10,40 @@ Usage:
 
 Options:
     --skill-dirs DIR [DIR ...]   Directories to scan (default: standard locations)
-    --output PATH                Output file path (default: ./skill-manifest.json)
+    --output PATH                Output file path (default: ./skill_manifest.json)
+    --provider NAME              claude or codex (default: claude)
     --verbose                    Print progress details
 """
 
+from __future__ import annotations
+
+import argparse
 import json
 import os
 import re
 import sys
-import argparse
 from pathlib import Path
 
 # Token counting: tiktoken preferred, character-based fallback
 try:
     import tiktoken
+
     _enc = tiktoken.get_encoding("cl100k_base")
 
     def count_tokens(text: str) -> int:
         return len(_enc.encode(text))
 except ImportError:
+
     def count_tokens(text: str) -> int:
         # Rough approximation: 1 token ~= 4 chars for English
         return max(1, len(text) // 4)
 
 
-# Standard skill locations in Claude Code
-DEFAULT_SKILL_DIRS = [
+DEFAULT_PROVIDER = "claude"
+DOTFILES_SKILL_DIR = "/Users/kaito/ghq/github.com/furedea/dotfiles/agents/skills"
+
+
+CLAUDE_SKILL_DIRS = [
     "/mnt/skills/public",
     "/mnt/skills/private",
     "/mnt/skills/examples",
@@ -43,6 +51,23 @@ DEFAULT_SKILL_DIRS = [
     os.path.expanduser("~/.claude/skills"),
     ".claude/skills",
 ]
+
+
+CODEX_SKILL_DIRS = [
+    "~/.codex/skills",
+    "~/.codex/plugins/cache",
+    "~/.codex/vendor_imports/skills",
+    DOTFILES_SKILL_DIR,
+]
+
+
+def default_skill_dirs(provider: str) -> list[str]:
+    """Return default global skill directories for a provider."""
+    if provider == "claude":
+        return list(CLAUDE_SKILL_DIRS)
+    if provider == "codex":
+        return list(CODEX_SKILL_DIRS)
+    raise ValueError(f"Unsupported provider: {provider}")
 
 
 def parse_skill_md(filepath: str) -> dict | None:
@@ -69,7 +94,7 @@ def parse_skill_md(filepath: str) -> dict | None:
     if frontmatter_match:
         fm_text = frontmatter_match.group(1)
         result.update(_parse_yaml_simple(fm_text))
-        body = content[frontmatter_match.end():]
+        body = content[frontmatter_match.end() :]
     else:
         body = content
 
@@ -88,7 +113,7 @@ def parse_skill_md(filepath: str) -> dict | None:
                 if heading_count >= 2:
                     break
             preview_lines.append(line)
-            if sum(len(l) for l in preview_lines) > 500:
+            if sum(len(preview_line) for preview_line in preview_lines) > 500:
                 break
         result["body_preview"] = "\n".join(preview_lines).strip()
 
@@ -99,7 +124,8 @@ def parse_skill_md(filepath: str) -> dict | None:
     result["disable_model_invocation"] = str(dmi).lower() in ("true", "yes", "1")
 
     # Token counting for attention budget analysis
-    desc = result.get("description", "") or ""
+    raw_desc = result.get("description", "")
+    desc = raw_desc if isinstance(raw_desc, str) else ""
     result["description_tokens"] = count_tokens(desc) if desc else 0
 
     return result
@@ -138,15 +164,21 @@ def _parse_yaml_simple(text: str) -> dict:
 
 def _finalize_value(lines: list[str], is_multiline: bool) -> str:
     if is_multiline:
-        return " ".join(l for l in lines if l).strip()
+        return " ".join(line for line in lines if line).strip()
     return lines[0] if lines else ""
 
 
-def discover_project_skill_dirs(verbose: bool = False) -> list[tuple[str, str]]:
+def discover_project_skill_dirs(
+    verbose: bool = False,
+    provider: str = DEFAULT_PROVIDER,
+) -> list[tuple[str, str]]:
     """Discover .claude/skills/ directories inside known project roots.
 
     Returns list of (skill_dir, project_root) tuples.
     """
+    if provider == "codex":
+        return []
+
     claude_projects = os.path.expanduser("~/.claude/projects")
     if not os.path.isdir(claude_projects):
         return []
@@ -168,7 +200,7 @@ def discover_project_skill_dirs(verbose: bool = False) -> list[tuple[str, str]]:
             continue
         # Try reconstructing dots (github-com -> github.com, etc.)
         for i in range(len(parts) - 1):
-            dotted = parts[:i] + [parts[i] + "." + parts[i + 1]] + parts[i + 2:]
+            dotted = parts[:i] + [parts[i] + "." + parts[i + 1]] + parts[i + 2 :]
             candidate = "/" + "/".join(dotted)
             skill_dir = os.path.join(candidate, ".claude", "skills")
             if os.path.isdir(skill_dir):
@@ -230,19 +262,26 @@ def find_skills(
     for base_dir in skill_dirs:
         _scan(base_dir, scope="global", project_path=None)
 
-    for pdir, project_root in (project_skill_dirs or []):
+    for pdir, project_root in project_skill_dirs or []:
         _scan(pdir, scope="project-local", project_path=project_root)
 
     return skills
 
 
-def collect(skill_dirs: list[str] | None = None, verbose: bool = False,
-            include_project_skills: bool = True) -> dict:
+def collect(
+    skill_dirs: list[str] | None = None,
+    verbose: bool = False,
+    include_project_skills: bool = True,
+    provider: str = DEFAULT_PROVIDER,
+) -> dict:
     """Main collection function. Returns structured manifest with attention budget."""
-    global_dirs = list(skill_dirs or DEFAULT_SKILL_DIRS)
+    global_dirs = list(skill_dirs or default_skill_dirs(provider))
     project_skill_dirs = []
     if include_project_skills:
-        project_skill_dirs = discover_project_skill_dirs(verbose=verbose)
+        project_skill_dirs = discover_project_skill_dirs(
+            verbose=verbose,
+            provider=provider,
+        )
     skills = find_skills(
         global_dirs,
         project_skill_dirs=project_skill_dirs,
@@ -265,19 +304,46 @@ def collect(skill_dirs: list[str] | None = None, verbose: bool = False,
             a, b = skill_names[i], skill_names[j]
             words_a = set(descriptions[a].split())
             words_b = set(descriptions[b].split())
-            stop = {"a", "an", "the", "is", "are", "for", "to", "of", "in",
-                    "and", "or", "this", "that", "with", "use", "when", "it",
-                    "not", "do", "be", "as", "on", "at", "by", "if", "any"}
+            stop = {
+                "a",
+                "an",
+                "the",
+                "is",
+                "are",
+                "for",
+                "to",
+                "of",
+                "in",
+                "and",
+                "or",
+                "this",
+                "that",
+                "with",
+                "use",
+                "when",
+                "it",
+                "not",
+                "do",
+                "be",
+                "as",
+                "on",
+                "at",
+                "by",
+                "if",
+                "any",
+            }
             words_a -= stop
             words_b -= stop
             shared = words_a & words_b
             if len(shared) >= 3:
-                overlaps.append({
-                    "skill_a": a,
-                    "skill_b": b,
-                    "shared_keywords": sorted(shared),
-                    "shared_count": len(shared),
-                })
+                overlaps.append(
+                    {
+                        "skill_a": a,
+                        "skill_b": b,
+                        "shared_keywords": sorted(shared),
+                        "shared_count": len(shared),
+                    }
+                )
 
     overlaps.sort(key=lambda o: o["shared_count"], reverse=True)
 
@@ -286,20 +352,15 @@ def collect(skill_dirs: list[str] | None = None, verbose: bool = False,
     total_tokens = sum(token_counts)
     mean_tokens = total_tokens / len(token_counts) if token_counts else 0
     sorted_counts = sorted(token_counts)
-    median_tokens = (
-        sorted_counts[len(sorted_counts) // 2]
-        if sorted_counts
-        else 0
-    )
+    median_tokens = sorted_counts[len(sorted_counts) // 2] if sorted_counts else 0
 
     # Per-project attention budget: each project sees global + its own local skills
     project_budgets = {}
     global_skills = [s for s in skills if s.get("scope") == "global"]
     global_tokens = sum(s.get("description_tokens", 0) for s in global_skills if s.get("description"))
-    project_paths = sorted(set(
-        s["project_path"] for s in skills
-        if s.get("scope") == "project-local" and s.get("project_path")
-    ))
+    project_paths = sorted(
+        set(s["project_path"] for s in skills if s.get("scope") == "project-local" and s.get("project_path"))
+    )
     for pp in project_paths:
         local_skills = [s for s in skills if s.get("project_path") == pp]
         local_tokens = sum(s.get("description_tokens", 0) for s in local_skills if s.get("description"))
@@ -313,18 +374,14 @@ def collect(skill_dirs: list[str] | None = None, verbose: bool = False,
     all_dirs = global_dirs + [d for d, _ in project_skill_dirs]
 
     return {
-        "collected_at": __import__("datetime").datetime.now(
-            __import__("datetime").timezone.utc
-        ).isoformat(),
+        "collected_at": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
         "skill_dirs_scanned": all_dirs,
         "skills": skills,
         "summary": {
             "total_skills": len(skills),
             "by_category": _count_by(skills, "category"),
             "by_scope": _count_by(skills, "scope"),
-            "skills_without_description": [
-                s["name"] for s in skills if not s.get("description")
-            ],
+            "skills_without_description": [s["name"] for s in skills if not s.get("description")],
         },
         "attention_budget": {
             "total_description_tokens": total_tokens,
@@ -334,9 +391,7 @@ def collect(skill_dirs: list[str] | None = None, verbose: bool = False,
             "max_tokens": max(token_counts) if token_counts else 0,
             "min_tokens": min(token_counts) if token_counts else 0,
             "skills_above_2x_median": [
-                s["name"] for s in skills
-                if s.get("description_tokens", 0) > median_tokens * 2
-                and median_tokens > 0
+                s["name"] for s in skills if s.get("description_tokens", 0) > median_tokens * 2 and median_tokens > 0
             ],
             "per_project": project_budgets,
         },
@@ -353,23 +408,32 @@ def _count_by(items: list[dict], key: str) -> dict:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Collect skill definitions into a structured manifest"
-    )
+    parser = argparse.ArgumentParser(description="Collect skill definitions into a structured manifest")
     parser.add_argument(
-        "--skill-dirs", nargs="+", default=None,
+        "--skill-dirs",
+        nargs="+",
+        default=None,
         help="Directories to scan for skills (default: standard locations)",
     )
     parser.add_argument(
-        "--output", default="./skill-manifest.json",
-        help="Output file path (default: ./skill-manifest.json)",
+        "--output",
+        default="./skill_manifest.json",
+        help="Output file path (default: ./skill_manifest.json)",
     )
     parser.add_argument(
-        "--verbose", action="store_true",
+        "--provider",
+        choices=("claude", "codex"),
+        default=DEFAULT_PROVIDER,
+        help="Skill provider to collect from (default: claude)",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
         help="Print progress details",
     )
     parser.add_argument(
-        "--no-project-skills", action="store_true",
+        "--no-project-skills",
+        action="store_true",
         help="Skip scanning project-local .claude/skills/ directories",
     )
 
@@ -378,6 +442,7 @@ def main():
         skill_dirs=args.skill_dirs,
         verbose=args.verbose,
         include_project_skills=not args.no_project_skills,
+        provider=args.provider,
     )
 
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
@@ -387,27 +452,30 @@ def main():
     summary = result["summary"]
     budget = result["attention_budget"]
     by_scope = summary.get("by_scope", {})
-    print(f"Found {summary['total_skills']} skills "
-          f"({by_scope.get('global', 0)} global, "
-          f"{by_scope.get('project-local', 0)} project-local)")
-    print(f"  Attention budget: {budget['total_description_tokens']} tokens total "
-          f"({budget.get('global_description_tokens', 0)} global), "
-          f"median {budget['median_tokens_per_skill']} per skill")
+    print(
+        f"Found {summary['total_skills']} skills "
+        f"({by_scope.get('global', 0)} global, "
+        f"{by_scope.get('project-local', 0)} project-local)"
+    )
+    print(
+        f"  Attention budget: {budget['total_description_tokens']} tokens total "
+        f"({budget.get('global_description_tokens', 0)} global), "
+        f"median {budget['median_tokens_per_skill']} per skill"
+    )
     for pp, pb in budget.get("per_project", {}).items():
-        print(f"  Project {os.path.basename(pp)}: "
-              f"{pb['total_tokens']} tokens ({pb['local_tokens']} local + "
-              f"{pb['global_tokens']} global), "
-              f"skills: {', '.join(pb['local_skill_names'])}")
+        print(
+            f"  Project {os.path.basename(pp)}: "
+            f"{pb['total_tokens']} tokens ({pb['local_tokens']} local + "
+            f"{pb['global_tokens']} global), "
+            f"skills: {', '.join(pb['local_skill_names'])}"
+        )
     if budget["skills_above_2x_median"]:
-        print(f"  Oversized descriptions (>2x median): "
-              f"{', '.join(budget['skills_above_2x_median'])}")
+        print(f"  Oversized descriptions (>2x median): {', '.join(budget['skills_above_2x_median'])}")
     if summary["skills_without_description"]:
-        print(f"  Warning: {len(summary['skills_without_description'])} skills "
-              f"have no description")
+        print(f"  Warning: {len(summary['skills_without_description'])} skills have no description")
     if result["description_overlaps"]:
         top = result["description_overlaps"][0]
-        print(f"  Highest keyword overlap: {top['skill_a']} <-> {top['skill_b']} "
-              f"({top['shared_count']} shared words)")
+        print(f"  Highest keyword overlap: {top['skill_a']} <-> {top['skill_b']} ({top['shared_count']} shared words)")
     print(f"Output: {args.output}")
 
 
