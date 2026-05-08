@@ -87,7 +87,9 @@ dotfiles/
 ├── atuin/                     # Shell history (via home-manager programs.atuin)
 ├── yazi/                      # File manager (via home-manager programs.yazi)
 ├── jj/                        # Jujutsu VCS root-level config
-├── claude/                    # Claude Code config (agents, hooks, skills, etc.)
+├── agents/                    # Provider-shared agent assets (CLAUDE.md, hooks, skills) — Claude Code + Codex
+├── claude/                    # Claude Code-only sources (agents/, commands/, settings.base.json, statusline/)
+├── codex/                     # Codex-only sources (config.toml, hooks/)
 └── ...
 ```
 
@@ -169,6 +171,22 @@ Some directories are kept as **plain copies for backup/reference** only. They ar
 | `kawasemi4/` | `~/Library/Mobile Documents/com~apple~CloudDocs/Kawasemi4/` | Kawasemi4 key settings and dictionary. Synced via iCloud on new Mac; copy here is for version control backup. Update manually when settings change. |
 | `templates/` | — | Small starter snippets (e.g. `pyproject_pyright.toml`) copied manually into new projects. Full project scaffolds live separately in `~/dev/templates/template-*`. |
 | `github/` | — | Standard GitHub repo settings, branch ruleset, and `setup_repo.sh` applier. See `github/README.md`. |
+
+## Claude Code & Codex Security Harness
+
+Provider-shared agent assets live under `agents/` and are wired into both Claude Code and Codex by `nix/home/default.nix`:
+
+| Path | Role |
+| --- | --- |
+| `agents/hooks/` | `PreToolUse` / `PostToolUse` shell hooks — command allowlist, secret blocking, audit logging |
+| `agents/skills/` | Skill sources rendered to `~/.claude/skills/` and `~/.codex/skills/` via `agents/scripts/render_skills.py` |
+| `agents/CLAUDE.md` | Global instructions linked into both agents |
+
+`nix/agents/claude_settings.nix` walks every file under `agents/hooks/` at evaluation time and emits matching `permissions.deny` (`Edit`/`Write`) entries plus `sandbox.filesystem.denyWrite` paths into the generated `~/.claude/settings.json`. `~/.claude/settings.json` and `~/.claude/CLAUDE.md` are also locked.
+
+- Adding a new file under `agents/hooks/` automatically extends the deny set on the next `darwin-rebuild switch` — no manual `settings.json` edit needed.
+- The harness is protected as a whole, including helper libraries (`lib/shell_parse.sh`) and JSON rule data (`rules/secret_content_patterns.json`), so the agent cannot weaken `command_allowlist.sh` or `block_secret_content.sh` by rewriting their dependencies.
+- Skill scripts under `agents/skills/` are deliberately excluded — they are workflow tools, not security boundaries.
 
 ## Markdown Formatter
 
