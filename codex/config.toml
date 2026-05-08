@@ -30,7 +30,7 @@ notification_method = "bel"
 "gpt-5.5" = 1
 
 [plugins."browser-use@openai-bundled"]
-enabled = true
+enabled = false
 
 [plugins."documents@openai-primary-runtime"]
 enabled = true
@@ -42,8 +42,9 @@ enabled = true
 enabled = true
 
 [plugins."computer-use@openai-bundled"]
-enabled = true
+enabled = false
 
 [features]
 hooks = true
 remote_connections = true
+external_migration = true
