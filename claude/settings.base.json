@@ -40,7 +40,6 @@
       "Bash(tex-fmt:*)",
       "Bash(tsgolint:*)",
       "Bash(uv run:*)",
-      "Skill(lock-settings)",
       "Skill(report-hook-block)",
       "Skill(report-doc-conflict)"
     ],
