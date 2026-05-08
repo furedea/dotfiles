@@ -8,7 +8,13 @@
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
     home-manager.url = "github:nix-community/home-manager/release-25.11";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
-    nix-homebrew.url = "github:zhaofengli/nix-homebrew";
+    nix-homebrew = {
+      url = "github:zhaofengli/nix-homebrew";
+      inputs.brew-src = {
+        url = "github:Homebrew/brew/5.1.10";
+        flake = false;
+      };
+    };
     nix-claude-code.url = "github:ryoppippi/nix-claude-code";
     codex-cli-nix.url = "github:sadjow/codex-cli-nix";
   };
