@@ -16,7 +16,7 @@ model = "gpt-5.5"
 sandbox_mode = "read-only"
 
 [features]
-codex_hooks = true
+hooks = true
 TOML
 
   cat >"$target_file" <<'TOML'
@@ -24,7 +24,7 @@ model = "gpt-5.4"
 sandbox_mode = "danger-full-access"
 
 [features]
-codex_hooks = false
+hooks = false
 
 [marketplaces.openai-bundled]
 last_updated = "2026-04-27T09:45:32Z"
@@ -44,7 +44,7 @@ import tomllib
 data = tomllib.loads(pathlib.Path(sys.argv[1]).read_text())
 assert data["model"] == "gpt-5.5"
 assert data["sandbox_mode"] == "read-only"
-assert data["features"]["codex_hooks"] is True
+assert data["features"]["hooks"] is True
 assert data["projects"]["/Users/kaito/project"]["trust_level"] == "trusted"
 assert data["marketplaces"]["openai-bundled"]["last_updated"] == "2026-04-27T09:45:32Z"
 PY
@@ -89,7 +89,7 @@ PY
 model = "gpt-5.5"
 
 [features]
-codex_hooks = true
+hooks = true
 TOML
 
   run "$PYTHON" "$SCRIPT" "$source_file" "$target_file"
@@ -103,6 +103,6 @@ import tomllib
 
 data = tomllib.loads(pathlib.Path(sys.argv[1]).read_text())
 assert data["model"] == "gpt-5.5"
-assert data["features"]["codex_hooks"] is True
+assert data["features"]["hooks"] is True
 PY
 }

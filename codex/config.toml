@@ -13,11 +13,12 @@ hide_rate_limit_model_nudge = true
 "gpt-5.3-codex" = "gpt-5.4"
 
 [tui]
+use_theme_colors = true
 status_line = [
-  "current-dir",
+  "project-root",
   "git-branch",
   "model-with-reasoning",
-  "context-remaining",
+  "context-used",
   "five-hour-limit",
   "weekly-limit",
 ]
@@ -44,5 +45,5 @@ enabled = true
 enabled = true
 
 [features]
-codex_hooks = true
+hooks = true
 remote_connections = true
