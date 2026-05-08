@@ -1,6 +1,12 @@
 from pathlib import Path
 
-from scripts import collect_skills
+from tests.python.conftest import load_script_module
+
+
+collect_skills = load_script_module(
+    "agents/skills/skill-auditor/scripts/collect_skills.py",
+    "skill_auditor_collect_skills",
+)
 
 
 def write_skill(path: Path, name: str) -> None:

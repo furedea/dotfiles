@@ -1,7 +1,13 @@
 import json
 from pathlib import Path
 
-from scripts import collect_transcripts
+from tests.python.conftest import load_script_module
+
+
+collect_transcripts = load_script_module(
+    "agents/skills/skill-auditor/scripts/collect_transcripts.py",
+    "skill_auditor_collect_transcripts",
+)
 
 
 def write_jsonl(path: Path, rows: list[dict]) -> None:

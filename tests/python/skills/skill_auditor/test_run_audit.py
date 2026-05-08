@@ -1,6 +1,12 @@
 from pathlib import Path
 
-from scripts import run_audit
+from tests.python.conftest import load_script_module
+
+
+run_audit = load_script_module(
+    "agents/skills/skill-auditor/scripts/run_audit.py",
+    "skill_auditor_run_audit",
+)
 
 
 def test_default_base_dir_uses_user_provider_store_with_project_slug(tmp_path: Path) -> None:
