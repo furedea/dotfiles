@@ -21,6 +21,7 @@ Exit codes:
     1  IO/parse error
     2  selection references an unknown file or hunk
 """
+
 from __future__ import annotations
 
 import json
@@ -83,8 +84,7 @@ def build_partial(files: list[dict], selection: list[dict]) -> str:
         path = entry["file"]
         if path not in by_path:
             print(
-                f"unknown file in selection: {path}\n"
-                f"available: {sorted(by_path)}",
+                f"unknown file in selection: {path}\navailable: {sorted(by_path)}",
                 file=sys.stderr,
             )
             sys.exit(2)

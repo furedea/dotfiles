@@ -71,16 +71,16 @@ Always quote the right-hand side — values may contain spaces or special charac
 
 - Quote all parameter expansions and string values to guard against word splitting and glob expansion (shellcheck SC2086 catches unquoted uses)
 - Use default values for variables that may be empty or undefined:
-  ```sh
-  readonly OUTPUT="${1:-output.txt}"   # default value
-  readonly NAME="${NAME:?NAME is required}"  # error if unset/empty
-  ```
+    ```sh
+    readonly OUTPUT="${1:-output.txt}"   # default value
+    readonly NAME="${NAME:?NAME is required}"  # error if unset/empty
+    ```
 - Define variables just before first use (minimize lifetime)
 
 ## Naming
 
 | Kind | Convention | Example |
-|---|---|---|
+| --- | --- | --- |
 | Constants | `SCREAMING_SNAKE_CASE` + `readonly` | `readonly MAX_RETRY=3` |
 | Variables | `snake_case` | `input_file="..."` |
 | Functions | `snake_case` | `function parse_args()` |
@@ -193,23 +193,24 @@ setup() {
 - One comment line describing the file's scope
 - `setup()` runs before each `@test` — wire fixtures and paths here, not assertions
 - When a category has no shared helpers, derive `REPO_ROOT` inline:
-  ```bash
-  setup() {
-    REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
-  }
-  ```
+    ```bash
+    setup() {
+      REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
+    }
+    ```
 
 ### Setup / Teardown Lifecycle
 
 bats provides four lifecycle hooks, from broadest to narrowest scope:
 
 | Hook | Scope | Defined in |
-|---|---|---|
+| --- | --- | --- |
 | `setup_suite` / `teardown_suite` | Entire test run | `setup_suite.bash` (auto-discovered at test root) |
 | `setup_file` / `teardown_file` | Per `.bats` file | The `.bats` file itself |
 | `setup` / `teardown` | Per `@test` | The `.bats` file itself |
 
 Use the narrowest scope that fits:
+
 - `setup` — default choice; cheap per-test wiring (variable assignment, path setup)
 - `setup_file` — expensive one-time setup shared across tests in a file (temp git repos, compiled fixtures)
 - `setup_suite` — global preconditions (tool availability checks, environment validation)
@@ -317,11 +318,11 @@ create_temp_git_repo() {
 
 bats provides auto-cleaned temp directories at three scopes:
 
-| Variable | Scope | Cleaned after |
-|---|---|---|
-| `BATS_TEST_TMPDIR` | Per `@test` | Each test |
-| `BATS_FILE_TMPDIR` | Per `.bats` file | Each file |
-| `BATS_SUITE_TMPDIR` | Per `bats` invocation | Entire run |
+| Variable            | Scope                 | Cleaned after |
+| ------------------- | --------------------- | ------------- |
+| `BATS_TEST_TMPDIR`  | Per `@test`           | Each test     |
+| `BATS_FILE_TMPDIR`  | Per `.bats` file      | Each file     |
+| `BATS_SUITE_TMPDIR` | Per `bats` invocation | Entire run    |
 
 Use the narrowest scope that fits. Prefer these over raw `mktemp` — bats handles cleanup.
 

@@ -29,6 +29,7 @@ Exit codes:
     1  git command failed while resolving collisions
     2  malformed subject (no recognized Conventional Commits type prefix)
 """
+
 from __future__ import annotations
 
 import re
@@ -38,16 +39,25 @@ import unicodedata
 
 # Conventional Commits types this skill recognizes. Keep aligned with the
 # table in ``references/conventional_commits.md``.
-_VALID_TYPES = frozenset({
-    "feat", "fix", "refactor", "perf", "docs", "test",
-    "build", "ci", "chore", "style", "revert",
-})
+_VALID_TYPES = frozenset(
+    {
+        "feat",
+        "fix",
+        "refactor",
+        "perf",
+        "docs",
+        "test",
+        "build",
+        "ci",
+        "chore",
+        "style",
+        "revert",
+    }
+)
 
 # `<type>(<scope>)?(!)?: <subject>` — scope and the breaking-change `!` are
 # optional and ignored for branch naming.
-_SUBJECT_RE = re.compile(
-    r"^(?P<type>[a-z]+)(?:\([^)]*\))?!?:\s*(?P<subject>.+?)\s*$"
-)
+_SUBJECT_RE = re.compile(r"^(?P<type>[a-z]+)(?:\([^)]*\))?!?:\s*(?P<subject>.+?)\s*$")
 
 # Branch slugs longer than this start to wrap in `gh pr list` and most CI
 # UIs. The cap is generous; real subjects rarely hit it.
@@ -63,10 +73,7 @@ def parse_subject(line: str) -> tuple[str, str]:
         )
     t = m.group("type")
     if t not in _VALID_TYPES:
-        raise ValueError(
-            f"unknown Conventional Commits type: {t!r}\n"
-            f"valid types: {sorted(_VALID_TYPES)}"
-        )
+        raise ValueError(f"unknown Conventional Commits type: {t!r}\nvalid types: {sorted(_VALID_TYPES)}")
     return t, m.group("subject")
 
 
@@ -84,9 +91,7 @@ def kebab(subject: str) -> str:
         cut = slug[:_MAX_SLUG_LEN].rstrip("-")
         slug = cut.rsplit("-", 1)[0] if "-" in cut else cut
     if not slug:
-        raise ValueError(
-            f"subject contains no ASCII alphanumeric characters: {subject!r}"
-        )
+        raise ValueError(f"subject contains no ASCII alphanumeric characters: {subject!r}")
     return slug
 
 
@@ -102,22 +107,23 @@ def _ref_in_use(name: str) -> bool:
     """
     local = subprocess.run(
         ["git", "branch", "--list", name],
-        capture_output=True, text=True, check=False,
+        capture_output=True,
+        text=True,
+        check=False,
     )
     if local.returncode != 0:
-        raise RuntimeError(
-            f"git branch --list failed: {local.stderr.strip()}"
-        )
+        raise RuntimeError(f"git branch --list failed: {local.stderr.strip()}")
     if local.stdout.strip():
         return True
     remote = subprocess.run(
         ["git", "ls-remote", "--heads", "origin", name],
-        capture_output=True, text=True, check=False,
+        capture_output=True,
+        text=True,
+        check=False,
     )
     if remote.returncode != 0:
         print(
-            f"warning: could not query origin (returncode {remote.returncode}); "
-            "checked local refs only",
+            f"warning: could not query origin (returncode {remote.returncode}); checked local refs only",
             file=sys.stderr,
         )
         return False
