@@ -14,6 +14,16 @@ let
   link = path: config.lib.file.mkOutOfStoreSymlink "${dotfilesDir}/${path}";
   agentCommandPolicy = import ../agents/command_policy.nix { inherit lib; };
   claudeSettings = import ../agents/claude_settings.nix { inherit lib; };
+  agentSkills = import ../agents/skills.nix { };
+  agentSkillsOverridesJson = pkgs.writeText "agent-skills-overrides.json" (
+    builtins.toJSON agentSkills.overrides
+  );
+  renderedAgentSkills = pkgs.runCommand "agent-skills" { } ''
+    ${pkgs.python3}/bin/python ${../../agents/scripts/render_skills.py} \
+      --source ${../../agents/skills} \
+      --overrides ${agentSkillsOverridesJson} \
+      --output "$out"
+  '';
 in
 {
   home = {
@@ -390,7 +400,7 @@ in
     ".config/cmux/settings.json".source = link "cmux/settings.json";
     # Codex (shares the same global instructions and skills as Claude Code)
     ".codex/AGENTS.md".source = link "agents/CLAUDE.md";
-    ".codex/skills".source = link "agents/skills";
+    ".codex/skills".source = "${renderedAgentSkills}/codex/skills";
     ".codex/hooks".source = link "codex/hooks";
     ".codex/hooks.json".source = link "codex/hooks.json";
     ".codex/rules/default.rules".text = agentCommandPolicy.codexRules;
@@ -400,7 +410,7 @@ in
     ".claude/commands".source = link "claude/commands";
     ".claude/hooks".source = link "agents/hooks";
     ".claude/statusline".source = link "claude/statusline";
-    ".claude/skills".source = link "agents/skills";
+    ".claude/skills".source = "${renderedAgentSkills}/claude/skills";
     ".claude/CLAUDE.md".source = link "agents/CLAUDE.md";
     ".claude/settings.json".text = claudeSettings.generatedSettingsJson;
   };

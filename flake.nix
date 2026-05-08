@@ -165,10 +165,12 @@
           libSet = nixpkgs.lib;
           agentSettings = import ./nix/agents/claude_settings.nix { lib = libSet; };
           agentPolicy = import ./nix/agents/command_policy.nix { lib = libSet; };
+          agentSkills = import ./nix/agents/skills.nix { };
         in
         {
           inherit (agentSettings) generatedSettings;
           inherit (agentPolicy) codexRules;
+          agentSkillOverrides = agentSkills.overrides;
           policyRules = map (entry: { inherit (entry) decision pattern; }) agentPolicy.rules;
         };
     };
