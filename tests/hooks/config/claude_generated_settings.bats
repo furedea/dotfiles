@@ -25,14 +25,16 @@ generated_settings() {
 @test "generated settings preserve non-Bash permissions" {
   generated="$(generated_settings)"
 
-  expected="$(
-    jq -r '.permissions.allow[], .permissions.deny[] | select(startswith("Bash(") | not)' "$SETTINGS" |
-      sort
-  )"
-  actual="$(
-    jq -r '.permissions.allow[], .permissions.deny[] | select(startswith("Bash(") | not)' <<<"$generated" |
-      sort
-  )"
+  # The harness in nix/agents/claude_settings.nix synthesizes Edit/Write deny
+  # entries for every file under agents/hooks/ plus settings.json/CLAUDE.md.
+  # That layer is verified separately; this test only checks that
+  # source-authored non-Bash permissions survive the generation pass.
+  filter='.permissions.allow[], .permissions.deny[]
+    | select(startswith("Bash(") | not)
+    | select(test("^(Edit|Write)\\(\\$HOME/\\.claude/") | not)'
+
+  expected="$(jq -r "$filter" "$SETTINGS" | sort)"
+  actual="$(jq -r "$filter" <<<"$generated" | sort)"
 
   [ "$actual" = "$expected" ]
 }
@@ -43,6 +45,41 @@ generated_settings() {
   jq -e '.permissions.allow[] | select(. == "Bash(uv run:*)")' <<<"$generated" >/dev/null
   jq -e '.permissions.deny[] | select(. == "Bash(rm:*)")' <<<"$generated" >/dev/null
   jq -e '.permissions.deny[] | select(. == "Bash(brew install:*)")' <<<"$generated" >/dev/null
+}
+
+@test "generated settings lock every file under agents/hooks/" {
+  generated="$(generated_settings)"
+
+  expected_paths="$(
+    {
+      cd "$REPO_ROOT/agents/hooks" && find . -type f -print |
+        sed 's|^\./|$HOME/.claude/hooks/|'
+      printf '%s\n' '$HOME/.claude/CLAUDE.md' '$HOME/.claude/settings.json'
+    } | sort -u
+  )"
+
+  edit_paths="$(
+    jq -r '.permissions.deny[] | select(startswith("Edit($HOME/.claude/")) | capture("^Edit\\((?<p>.*)\\)$").p' <<<"$generated" |
+      sort
+  )"
+  write_paths="$(
+    jq -r '.permissions.deny[] | select(startswith("Write($HOME/.claude/")) | capture("^Write\\((?<p>.*)\\)$").p' <<<"$generated" |
+      sort
+  )"
+  sandbox_paths="$(
+    jq -r '.sandbox.filesystem.denyWrite[]' <<<"$generated" | sort
+  )"
+
+  [ "$edit_paths" = "$expected_paths" ]
+  [ "$write_paths" = "$expected_paths" ]
+  [ "$sandbox_paths" = "$expected_paths" ]
+}
+
+@test "generated settings exclude agents/skills/ from auto-lock" {
+  generated="$(generated_settings)"
+
+  ! jq -e '.permissions.deny[] | select(test("\\$HOME/\\.claude/skills/"))' <<<"$generated" >/dev/null
+  ! jq -e '.sandbox.filesystem.denyWrite[] | select(test("\\$HOME/\\.claude/skills/"))' <<<"$generated" >/dev/null
 }
 
 @test "generated settings keep hook commands resolvable" {
