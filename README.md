@@ -87,7 +87,7 @@ dotfiles/
 ├── atuin/                     # Shell history (via home-manager programs.atuin)
 ├── yazi/                      # File manager (via home-manager programs.yazi)
 ├── jj/                        # Jujutsu VCS root-level config
-├── agents/                    # Provider-shared agent assets (CLAUDE.md, hooks, skills) — Claude Code + Codex
+├── agents/                    # Provider-shared agent assets (AGENTS.md, hooks, skills) — Claude Code + Codex
 ├── claude/                    # Claude Code-only sources (agents/, commands/, settings.base.json, statusline/)
 ├── codex/                     # Codex-only sources (config.toml, hooks/)
 └── ...
@@ -180,7 +180,7 @@ Provider-shared agent assets live under `agents/` and are wired into both Claude
 | --- | --- |
 | `agents/hooks/` | `PreToolUse` / `PostToolUse` shell hooks — command allowlist, secret blocking, audit logging |
 | `agents/skills/` | Skill sources rendered to `~/.claude/skills/` and `~/.codex/skills/` via `agents/scripts/render_skills.py` |
-| `agents/CLAUDE.md` | Global instructions linked into both agents |
+| `agents/AGENTS.md` | Global instructions linked into both agents |
 
 `nix/agents/claude_settings.nix` walks every file under `agents/hooks/` at evaluation time and emits matching `permissions.deny` (`Edit`/`Write`) entries plus `sandbox.filesystem.denyWrite` paths into the generated `~/.claude/settings.json`. `~/.claude/settings.json` and `~/.claude/CLAUDE.md` are also locked.
 
