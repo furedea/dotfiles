@@ -2,7 +2,7 @@
 # Tests for merging managed Codex config keys while preserving Codex-owned state.
 
 setup() {
-  REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
+  REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd)"
   SCRIPT="$REPO_ROOT/codex/sync_config.py"
   PYTHON="$(nix build --no-link --print-out-paths "$REPO_ROOT#python3")/bin/python"
 }

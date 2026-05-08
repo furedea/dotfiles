@@ -2,7 +2,7 @@
 # Tests for codex/hooks/adapt_block_secret_content.sh
 
 setup() {
-  REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
+  REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd)"
   HOOK="$REPO_ROOT/codex/hooks/adapt_block_secret_content.sh"
 }
 

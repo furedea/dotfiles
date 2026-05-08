@@ -2,7 +2,7 @@
 # Validate that generated Claude settings reference existing hook scripts.
 
 setup() {
-  REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
+  REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd)"
 }
 
 generated_settings() {

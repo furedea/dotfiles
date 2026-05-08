@@ -2,7 +2,7 @@
 # Validate that every regex pattern in secret_content_patterns.json compiles.
 
 setup() {
-  REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
+  REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd)"
   PATTERNS="$REPO_ROOT/agents/hooks/rules/secret_content_patterns.json"
 }
 

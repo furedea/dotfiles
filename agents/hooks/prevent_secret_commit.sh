@@ -37,7 +37,7 @@ ALLOWLISTED_SENSITIVE_PATHS=(
   'agents/hooks/block_secret_content.sh'
   'agents/hooks/prevent_secret_commit.sh'
   'codex/hooks/adapt_block_secret_content.sh'
-  'tests/claude-hooks/prevent_secret_commit.bats'
+  'tests/hooks/claude/prevent_secret_commit.bats'
 )
 
 is_allowlisted_sensitive_path() {

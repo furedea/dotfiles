@@ -2,7 +2,7 @@
 # Validate the shared Nix command policy and generated Codex rules.
 
 setup() {
-  REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
+  REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd)"
   HOME_NIX="$REPO_ROOT/nix/home/default.nix"
 }
 

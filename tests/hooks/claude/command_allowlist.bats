@@ -80,7 +80,13 @@ run_hook() {
 }
 
 @test "allows Python style frozen ruff commands" {
+  run_hook "uv run --frozen ruff check"
+  [ "$status" -eq 0 ]
+
   run_hook "uv run --frozen ruff check src/main.py"
+  [ "$status" -eq 0 ]
+
+  run_hook "uv run --frozen ruff format --check"
   [ "$status" -eq 0 ]
 
   run_hook "uv run --frozen ruff format tests/test_main.py"
@@ -88,7 +94,7 @@ run_hook() {
 }
 
 @test "allows local test lint and format tools from home packages" {
-  run_hook "bats tests/claude-hooks/command_allowlist.bats"
+  run_hook "bats tests/hooks/claude/command_allowlist.bats"
   [ "$status" -eq 0 ]
 
   run_hook "actionlint .github/workflows/ci.yml"

@@ -2,7 +2,7 @@
 # Validate that every hook command in codex/hooks.json references an existing script.
 
 setup() {
-  REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
+  REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd)"
   HOOKS_JSON="$REPO_ROOT/codex/hooks.json"
 }
 

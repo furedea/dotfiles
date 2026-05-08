@@ -1,8 +1,8 @@
 # Shared setup for hook tests.
 # Source this file from each .bats file's setup() function.
 
-# Absolute path to the repository root (two levels up from tests/claude-hooks/).
-REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
+# Absolute path to the repository root (three levels up from tests/hooks/claude/).
+REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd)"
 
 # Path to hook scripts under test.
 HOOK_DIR="$REPO_ROOT/agents/hooks"

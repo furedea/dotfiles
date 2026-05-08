@@ -2,7 +2,7 @@
 # Validate generated Claude settings used for command_policy migration.
 
 setup() {
-  REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
+  REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd)"
   SETTINGS="$REPO_ROOT/claude/settings.base.json"
 }
 

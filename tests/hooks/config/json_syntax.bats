@@ -2,7 +2,7 @@
 # Validate that every JSON file in the repository parses correctly.
 
 setup() {
-  REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
+  REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd)"
 }
 
 @test "all JSON files are valid" {

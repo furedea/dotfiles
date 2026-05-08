@@ -3,7 +3,7 @@
 # Focuses on patch_paths extraction and hook_for_path dispatch logic.
 
 setup() {
-  REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
+  REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd)"
   HOOK="$REPO_ROOT/codex/hooks/adapt_lint_format.sh"
 }
 

@@ -25,7 +25,7 @@ let
   allowRules = [
     (allow [ "actionlint" ] [ "actionlint .github/workflows/ci.yml" ])
     (allow [ "autocorrect" ] [ "autocorrect --lint README.md" ])
-    (allow [ "bats" ] [ "bats tests/claude-hooks/command_allowlist.bats" ])
+    (allow [ "bats" ] [ "bats tests/hooks/claude/command_allowlist.bats" ])
     (allow [ "cargo" ] [ "cargo test" "cargo fmt --check" "cargo clippy" "cargo check" ])
     (allow [ "commitlint" ] [ "commitlint --from HEAD~1 --to HEAD" ])
     (allow [ "deadnix" ] [ "deadnix nix" ])
