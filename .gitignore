@@ -1,34 +1,60 @@
-# Nix
-.claude/
-.jj/
+.direnv/
 result
 result-*
-*-workspace
+logs/
 
-# OS
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# Editor
+.env
+.env.*
+!.env.example
+
+.vscode/
+.idea/
 *.swp
 *.swo
 *.bak
-.idea/
-.vscode/
 
-# Logs / cache
-*.log
-logs/
-.cache/
+# Python
 __pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+dist/
+build/
+*.egg-info/
+*.egg
+.ruff_cache/
+.uv-cache/
+
+# Testing
+.coverage
+.coverage.*
+*.cover
+*.py,cover
+.pytest_cache/
+.hypothesis/
+htmlcov/
+coverage.xml
+.cache/
+.tox/
+.nox/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Agent-local state
+.claude/
+.jj/
+*-workspace
 
 # Nix vim undo files in nvim config
 nvim/.undo/
 nvim/lazy-lock.json
-
-# Secrets
-.env*
 
 # Codex auto-generated system skills
 agents/skills/.system/

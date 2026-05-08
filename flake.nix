@@ -120,6 +120,43 @@
             inherit (nixpkgs.legacyPackages.${sys}) python3;
           });
 
+      # devShell consumed by direnv (`use flake`) so contributors share the
+      # same uv / lefthook / commitlint pin while editing skill scripts and
+      # running tests/python locally. Mirrors template-python's layout.
+      devShells =
+        nixpkgs.lib.genAttrs
+          [
+            "aarch64-darwin"
+            "x86_64-darwin"
+            "aarch64-linux"
+            "x86_64-linux"
+          ]
+          (
+            sys:
+            let
+              shellPkgs = nixpkgs.legacyPackages.${sys};
+            in
+            {
+              default = shellPkgs.mkShell {
+                packages = with shellPkgs; [
+                  commitlint
+                  lefthook
+                  uv
+                ];
+
+                env = {
+                  UV_MANAGED_PYTHON = "1";
+                };
+
+                shellHook = ''
+                  if [ -d .venv/bin ]; then
+                    export PATH="$PWD/.venv/bin:$PATH"
+                  fi
+                '';
+              };
+            }
+          );
+
       # Pure data outputs consumed by bats tests. Going through the flake (and
       # flake.lock) keeps tests reproducible: no `<nixpkgs>` channel lookup,
       # no `--impure`, and the same nixpkgs revision as the dev environment.
