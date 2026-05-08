@@ -36,7 +36,7 @@ def test_codex_provider_collects_turns_and_skill_loads_for_matching_cwd(tmp_path
                 "payload": {
                     "type": "message",
                     "role": "user",
-                    "content": [{"type": "input_text", "text": "Python codeを書いて"}],
+                    "content": [{"type": "input_text", "text": "Python code を書いて"}],
                 },
             },
             {
@@ -89,7 +89,7 @@ def test_codex_provider_collects_turns_and_skill_loads_for_matching_cwd(tmp_path
     assert session["turn_skill_map"] == [
         {
             "turn_index": 0,
-            "user_message": "Python codeを書いて",
+            "user_message": "Python code を書いて",
             "skills_loaded_after": [str(skill_path)],
             "is_builtin_command": False,
         }
