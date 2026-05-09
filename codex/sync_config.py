@@ -22,6 +22,8 @@ MANAGED_KEYS = (
     "tui",
     "plugins",
     "features",
+    "default_permissions",
+    "permissions",
 )
 
 

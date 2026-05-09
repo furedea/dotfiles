@@ -13,7 +13,16 @@
 let
   link = path: config.lib.file.mkOutOfStoreSymlink "${dotfilesDir}/${path}";
   agentCommandPolicy = import ../agents/command_policy.nix { inherit lib; };
-  claudeSettings = import ../agents/claude_settings.nix { inherit lib; };
+  claudeSettings = import ../agents/claude_settings.nix { inherit lib dotfilesDir; };
+  codexSettings = import ../agents/codex_settings.nix { inherit lib dotfilesDir; };
+  # Concatenate the hand-written `codex/config.toml` with the Nix-generated
+  # `[permissions.guarded.filesystem]` fragment. `sync_config.py` then merges
+  # the union into `~/.codex/config.toml`, so hook auto-lock entries stay in
+  # lockstep with the files actually present in `agents/hooks/` and
+  # `codex/hooks/`.
+  codexConfigSource = pkgs.writeText "codex-config-source.toml" (
+    builtins.readFile ../../codex/config.toml + "\n" + codexSettings.configFragmentToml
+  );
   agentSkills = import ../agents/skills.nix { };
   agentSkillsOverridesJson = pkgs.writeText "agent-skills-overrides.json" (
     builtins.toJSON agentSkills.overrides
@@ -353,7 +362,7 @@ in
     '';
     codexConfigSync = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       ${pkgs.python3}/bin/python ${dotfilesDir}/codex/sync_config.py \
-        ${dotfilesDir}/codex/config.toml \
+        ${codexConfigSource} \
         "$HOME/.codex/config.toml"
     '';
   };

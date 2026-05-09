@@ -1,0 +1,77 @@
+{ lib, dotfilesDir }:
+let
+  filesUnder =
+    root:
+    let
+      prefix = toString root + "/";
+    in
+    map (path: lib.removePrefix prefix (toString path)) (lib.filesystem.listFilesRecursive root);
+
+  agentHookFiles = filesUnder ../../agents/hooks;
+  codexHookFiles = filesUnder ../../codex/hooks;
+
+  dotfilesName = baseNameOf dotfilesDir;
+
+  # Codex's `[permissions.<profile>.filesystem]` is the symmetric counterpart
+  # to Claude's `permissions.deny: Edit/Write` plus `sandbox.filesystem.denyWrite`:
+  # it applies uniformly to Edit / Write / apply_patch / shell I/O, so a single
+  # `"read"` entry blocks every write path. Listing each file (rather than the
+  # parent directory) preserves the ability to create new sibling files.
+  protectedHomePaths =
+    map (relative: "$HOME/.claude/hooks/${relative}") agentHookFiles
+    ++ map (relative: "$HOME/.codex/hooks/${relative}") codexHookFiles
+    ++ [
+      "$HOME/.claude/CLAUDE.md"
+      "$HOME/.claude/settings.json"
+      "$HOME/.codex/AGENTS.md"
+      "$HOME/.codex/hooks.json"
+      "$HOME/.codex/rules/default.rules"
+    ];
+
+  # Glob patterns covering the dotfiles checkout regardless of where it is
+  # cloned. Codex respects globs in filesystem permission keys.
+  protectedDotfilesGlobs =
+    map (relative: "**/${dotfilesName}/agents/hooks/${relative}") agentHookFiles
+    ++ map (relative: "**/${dotfilesName}/codex/hooks/${relative}") codexHookFiles
+    ++ [
+      "**/${dotfilesName}/agents/AGENTS.md"
+      "**/${dotfilesName}/codex/hooks.json"
+    ];
+
+  protectedPaths = protectedHomePaths ++ protectedDotfilesGlobs;
+
+  pathEntries = lib.listToAttrs (
+    map (path: {
+      name = path;
+      value = "read";
+    }) protectedPaths
+  );
+
+  globScanMaxDepth = 5;
+
+  filesystemPermissions = pathEntries // {
+    glob_scan_max_depth = globScanMaxDepth;
+  };
+
+  # Hand-written TOML so this module stays pure-`lib` (no `pkgs.formats.toml`,
+  # no import-from-derivation). The output is consumed both by the home-manager
+  # activation (concatenated with `codex/config.toml`) and by tests via
+  # `lib.codexConfigFragmentToml`.
+  tomlEscape = value: builtins.replaceStrings [ "\\" "\"" ] [ "\\\\" "\\\"" ] value;
+  pathLine = path: ''"${tomlEscape path}" = "read"'';
+
+  # `default_permissions = "guarded"` is intentionally NOT emitted here:
+  # appending a bare scalar after the existing `[features]` block in
+  # `codex/config.toml` would make the TOML parser fold it into that table.
+  # The scalar lives in the hand-written `codex/config.toml` instead, above
+  # all table headers, while this fragment only contributes the dynamic
+  # `[permissions.guarded.filesystem]` section.
+  configFragmentToml = ''
+    [permissions.guarded.filesystem]
+    ${lib.concatMapStringsSep "\n" pathLine protectedPaths}
+    glob_scan_max_depth = ${toString globScanMaxDepth}
+  '';
+in
+{
+  inherit filesystemPermissions configFragmentToml;
+}

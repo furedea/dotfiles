@@ -184,7 +184,9 @@ Provider-shared agent assets live under `agents/` and are wired into both Claude
 
 `nix/agents/claude_settings.nix` walks every file under `agents/hooks/` at evaluation time and emits matching `permissions.deny` (`Edit`/`Write`) entries plus `sandbox.filesystem.denyWrite` paths into the generated `~/.claude/settings.json`. `~/.claude/settings.json` and `~/.claude/CLAUDE.md` are also locked.
 
-- Adding a new file under `agents/hooks/` automatically extends the deny set on the next `darwin-rebuild switch` — no manual `settings.json` edit needed.
+`nix/agents/codex_settings.nix` is the symmetric counterpart for Codex. Codex's `default.rules` is `execpolicy` (shell argv only) and cannot express file-edit deny, so the harness emits a `[permissions.guarded.filesystem]` TOML fragment instead — `"path" = "read"` covers `Edit`, `Write`, `apply_patch`, and shell I/O in one rule. The fragment is concatenated with `codex/config.toml` and merged into `~/.codex/config.toml` by `codex/sync_config.py`. Protected paths cover both hook trees (`$HOME/.claude/hooks/**`, `$HOME/.codex/hooks/**`), shared instructions (`AGENTS.md`), and the dotfiles checkout (`**/<repo>/agents/hooks/**`, `**/<repo>/codex/hooks/**`).
+
+- Adding a new file under `agents/hooks/` or `codex/hooks/` automatically extends the deny set on the next `darwin-rebuild switch` — no manual `settings.json` or `config.toml` edit needed.
 - The harness is protected as a whole, including helper libraries (`lib/shell_parse.sh`) and JSON rule data (`rules/secret_content_patterns.json`), so the agent cannot weaken `command_allowlist.sh` or `block_secret_content.sh` by rewriting their dependencies.
 - Skill scripts under `agents/skills/` are deliberately excluded — they are workflow tools, not security boundaries.
 

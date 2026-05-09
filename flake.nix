@@ -163,13 +163,22 @@
       lib =
         let
           libSet = nixpkgs.lib;
-          agentSettings = import ./nix/agents/claude_settings.nix { lib = libSet; };
+          agentSettings = import ./nix/agents/claude_settings.nix {
+            lib = libSet;
+            inherit dotfilesDir;
+          };
+          codexSettings = import ./nix/agents/codex_settings.nix {
+            lib = libSet;
+            inherit dotfilesDir;
+          };
           agentPolicy = import ./nix/agents/command_policy.nix { lib = libSet; };
           agentSkills = import ./nix/agents/skills.nix { };
         in
         {
           inherit (agentSettings) generatedSettings;
           inherit (agentPolicy) codexRules;
+          codexFilesystemPermissions = codexSettings.filesystemPermissions;
+          codexConfigFragmentToml = codexSettings.configFragmentToml;
           agentSkillOverrides = agentSkills.overrides;
           policyRules = map (entry: { inherit (entry) decision pattern; }) agentPolicy.rules;
         };

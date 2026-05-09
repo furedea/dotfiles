@@ -26,12 +26,14 @@ generated_settings() {
   generated="$(generated_settings)"
 
   # The harness in nix/agents/claude_settings.nix synthesizes Edit/Write deny
-  # entries for every file under agents/hooks/ plus settings.json/CLAUDE.md.
-  # That layer is verified separately; this test only checks that
+  # entries for every file under agents/hooks/ plus settings.json/AGENTS.md,
+  # both as $HOME/.claude/ paths and as **/dotfiles/ globs covering the
+  # checkout. That layer is verified separately; this test only checks that
   # source-authored non-Bash permissions survive the generation pass.
   filter='.permissions.allow[], .permissions.deny[]
     | select(startswith("Bash(") | not)
-    | select(test("^(Edit|Write)\\(\\$HOME/\\.claude/") | not)'
+    | select(test("^(Edit|Write)\\(\\$HOME/\\.claude/") | not)
+    | select(test("^(Edit|Write)\\(\\*\\*/[^/]+/agents/") | not)'
 
   expected="$(jq -r "$filter" "$SETTINGS" | sort)"
   actual="$(jq -r "$filter" <<<"$generated" | sort)"
@@ -49,30 +51,39 @@ generated_settings() {
 
 @test "generated settings lock every file under agents/hooks/" {
   generated="$(generated_settings)"
+  dotfiles_name="$(basename "$REPO_ROOT")"
 
-  expected_paths="$(
+  expected_home_paths="$(
     {
       cd "$REPO_ROOT/agents/hooks" && find . -type f -print |
         sed 's|^\./|$HOME/.claude/hooks/|'
       printf '%s\n' '$HOME/.claude/CLAUDE.md' '$HOME/.claude/settings.json'
     } | sort -u
   )"
+  expected_dotfiles_globs="$(
+    {
+      cd "$REPO_ROOT/agents/hooks" && find . -type f -print |
+        sed "s|^\./|**/${dotfiles_name}/agents/hooks/|"
+      printf '%s\n' "**/${dotfiles_name}/agents/AGENTS.md"
+    } | sort -u
+  )"
+  expected_permission_paths="$(printf '%s\n%s\n' "$expected_home_paths" "$expected_dotfiles_globs" | sort -u)"
 
   edit_paths="$(
-    jq -r '.permissions.deny[] | select(startswith("Edit($HOME/.claude/")) | capture("^Edit\\((?<p>.*)\\)$").p' <<<"$generated" |
+    jq -r '.permissions.deny[] | select(test("^Edit\\((\\$HOME/\\.claude/|\\*\\*/[^/]+/agents/)")) | capture("^Edit\\((?<p>.*)\\)$").p' <<<"$generated" |
       sort
   )"
   write_paths="$(
-    jq -r '.permissions.deny[] | select(startswith("Write($HOME/.claude/")) | capture("^Write\\((?<p>.*)\\)$").p' <<<"$generated" |
+    jq -r '.permissions.deny[] | select(test("^Write\\((\\$HOME/\\.claude/|\\*\\*/[^/]+/agents/)")) | capture("^Write\\((?<p>.*)\\)$").p' <<<"$generated" |
       sort
   )"
   sandbox_paths="$(
     jq -r '.sandbox.filesystem.denyWrite[]' <<<"$generated" | sort
   )"
 
-  [ "$edit_paths" = "$expected_paths" ]
-  [ "$write_paths" = "$expected_paths" ]
-  [ "$sandbox_paths" = "$expected_paths" ]
+  [ "$edit_paths" = "$expected_permission_paths" ]
+  [ "$write_paths" = "$expected_permission_paths" ]
+  [ "$sandbox_paths" = "$expected_home_paths" ]
 }
 
 @test "generated settings exclude agents/skills/ from auto-lock" {
