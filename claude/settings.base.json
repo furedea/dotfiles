@@ -229,7 +229,7 @@
         ]
       },
       {
-        "matcher": "Bash|Edit|Write|WebFetch|Agent",
+        "matcher": "Bash|Edit|MultiEdit|Write|WebFetch|WebSearch|Task|Agent",
         "hooks": [
           {
             "type": "command",
@@ -239,6 +239,17 @@
       }
     ],
     "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/macos_notify_done.sh"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
       {
         "matcher": "",
         "hooks": [
