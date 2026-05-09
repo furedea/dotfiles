@@ -415,8 +415,6 @@ in
     ".codex/rules/default.rules".text = agentCommandPolicy.codexRules;
 
     # Claude Code
-    ".claude/agents".source = link "claude/agents";
-    ".claude/commands".source = link "claude/commands";
     ".claude/hooks".source = link "agents/hooks";
     ".claude/statusline".source = link "claude/statusline";
     ".claude/skills".source = "${renderedAgentSkills}/claude/skills";
