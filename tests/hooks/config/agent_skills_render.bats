@@ -49,10 +49,18 @@ PY
     "$BATS_TEST_TMPDIR/rendered/codex/skills/git-commit-split/SKILL.md"
   grep -q 'disable-model-invocation: true' \
     "$BATS_TEST_TMPDIR/rendered/claude/skills/skill-auditor/SKILL.md"
-  grep -q 'allowed-tools: \["Bash", "Read", "Glob"\]' \
-    "$BATS_TEST_TMPDIR/rendered/claude/skills/report-doc-conflict/SKILL.md"
-  ! grep -q 'allowed-tools:' \
-    "$BATS_TEST_TMPDIR/rendered/codex/skills/report-doc-conflict/SKILL.md"
+}
+
+@test "command-style skills disable auto-trigger on both providers" {
+  render_skills
+
+  for skill in git-commit-split github-ci-init nix-dev-init skill-auditor; do
+    grep -q 'disable-model-invocation: true' \
+      "$BATS_TEST_TMPDIR/rendered/claude/skills/$skill/SKILL.md"
+    grep -q 'allow_implicit_invocation: false' \
+      "$BATS_TEST_TMPDIR/rendered/codex/skills/$skill/agents/openai.yaml"
+    [ ! -e "$BATS_TEST_TMPDIR/rendered/claude/skills/$skill/agents/openai.yaml" ]
+  done
 }
 
 @test "home-manager uses rendered provider skill directories" {

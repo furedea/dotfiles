@@ -1,47 +1,43 @@
 _:
 
+let
+  # Codex disables auto-trigger only via `<skill>/agents/openai.yaml` with
+  # `policy.allow_implicit_invocation: false`. There is no equivalent
+  # frontmatter flag, no `~/.codex/config.toml` toggle that preserves explicit
+  # invocation, and `~/.codex/prompts/` is deprecated. Source:
+  # codex-rs/core-skills/src/loader.rs (SKILLS_METADATA_FILENAME = "openai.yaml")
+  # codex-rs/core-skills/src/model.rs (allow_implicit_invocation default true).
+  codexExplicitOnly = ''
+    policy:
+      allow_implicit_invocation: false
+  '';
+
+  # Pair both providers' explicit-only flags so a "command-style skill" stays
+  # symmetric across Claude and Codex.
+  explicitOnly = {
+    frontmatter.claude."disable-model-invocation" = true;
+    files.codex."agents/openai.yaml" = codexExplicitOnly;
+  };
+in
+
 {
   overrides = {
     git-commit-split = {
-      claude = {
+      frontmatter.claude = {
+        "disable-model-invocation" = true;
         "argument-hint" = "{direct | pr-per-feature}";
       };
-      codex = {
-        "argument-hint" = "{direct | pr-per-feature}";
-      };
+      frontmatter.codex."argument-hint" = "{direct | pr-per-feature}";
+      files.codex."agents/openai.yaml" = codexExplicitOnly;
     };
 
-    report-doc-conflict = {
-      claude = {
-        "allowed-tools" = [
-          "Bash"
-          "Read"
-          "Glob"
-        ];
-        "argument-hint" = "<description of the conflicting instructions>";
-      };
-      codex = {
-        "argument-hint" = "<description of the conflicting instructions>";
-      };
-    };
+    github-ci-init = explicitOnly;
 
-    report-hook-block = {
-      claude = {
-        "allowed-tools" = [
-          "Bash"
-          "Read"
-        ];
-        "argument-hint" = "<what you were trying to do (optional)>";
-      };
-      codex = {
-        "argument-hint" = "<what you were trying to do (optional)>";
-      };
-    };
+    nix-dev-init = explicitOnly;
 
     skill-auditor = {
-      claude = {
-        "disable-model-invocation" = true;
-      };
+      frontmatter.claude."disable-model-invocation" = true;
+      files.codex."agents/openai.yaml" = codexExplicitOnly;
     };
   };
 }
