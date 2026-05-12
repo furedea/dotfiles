@@ -178,17 +178,27 @@ Provider-shared agent assets live under `agents/` and are wired into both Claude
 
 | Path | Role |
 | --- | --- |
-| `agents/hooks/` | `PreToolUse` / `PostToolUse` shell hooks — command allowlist, secret blocking, audit logging |
+| `agents/hooks/` | `PreToolUse` / `PostToolUse` / `Stop` shell hooks — command policy, secret blocking, lint/format feedback, audit logging |
+| `agents/hooks/rules/` | JSON rule data consumed by hooks, including secret-content patterns and completion-gate test selection rules |
 | `agents/skills/` | Skill sources rendered to `~/.claude/skills/` and `~/.codex/skills/` via `agents/scripts/render_skills.py` |
 | `agents/AGENTS.md` | Global instructions linked into both agents |
 
-`nix/agents/claude_settings.nix` walks every file under `agents/hooks/` at evaluation time and emits matching `permissions.deny` (`Edit`/`Write`) entries plus `sandbox.filesystem.denyWrite` paths into the generated `~/.claude/settings.json`. `~/.claude/settings.json` and `~/.claude/CLAUDE.md` are also locked.
+`nix/agents/hooks.nix` is the source of truth for Claude and Codex hook registration. `nix/agents/command_policy.nix` is the source of truth for Bash command permissions: it generates Claude `permissions.allow` / `permissions.deny`, Codex `default.rules`, and the `forbidden_commands.json` runtime rule file read by `guard_forbidden_commands.sh`. `claude/settings.base.json` keeps only non-Bash Claude settings and permissions such as `Skill(...)`, `Read(...)`, and `Write(...)`.
 
-`nix/agents/codex_settings.nix` is the symmetric counterpart for Codex. Codex's `default.rules` is `execpolicy` (shell argv only) and cannot express file-edit deny, so the harness emits a `[permissions.guarded.filesystem]` TOML fragment instead — `"path" = "read"` covers `Edit`, `Write`, `apply_patch`, and shell I/O in one rule. The fragment is concatenated with `codex/config.toml` and merged into `~/.codex/config.toml` by `codex/sync_config.py`. Protected paths cover both hook trees (`$HOME/.claude/hooks/**`, `$HOME/.codex/hooks/**`), shared instructions (`AGENTS.md`), and the dotfiles checkout (`**/<repo>/agents/hooks/**`, `**/<repo>/codex/hooks/**`).
+`guard_allowed_commands.sh` is the detailed policy for broad allowed command families such as `git add`, `git commit`, `gh api`, and `uv run`; bulk `git add` and `git commit --no-verify` are denied there. `guard_forbidden_commands.sh` is the runtime mirror of shared forbidden command prefixes such as `rm`, `sudo`, and shell wrappers. Semantic guards that are not simple allowlist shape checks, such as dangerous git pushes, stay in dedicated hooks.
+
+`nix/agents/claude_settings.nix` merges generated hooks with `claude/settings.base.json`, then walks every file under `agents/hooks/` at evaluation time and emits matching `permissions.deny` (`Edit`/`Write`) entries plus `sandbox.filesystem.denyWrite` paths into the generated `~/.claude/settings.json`. Protected paths cover both the symlinked Claude view (`~/.claude/hooks/**`, `~/.claude/settings.json`, `~/.claude/CLAUDE.md`, `~/.claude/rules/forbidden_commands.json`) and the real dotfiles checkout (`~/ghq/.../dotfiles/agents/hooks/**`, `~/ghq/.../dotfiles/agents/AGENTS.md`).
+
+`nix/agents/codex_settings.nix` is the symmetric counterpart for Codex. Codex's `default.rules` is `execpolicy` (shell argv only) and cannot express file-edit deny, so the harness emits a `[permissions.guarded.filesystem]` TOML fragment instead — `"path" = "read"` covers `Edit`, `Write`, `apply_patch`, and shell I/O in one rule. The fragment is concatenated with `codex/config.toml` and merged into `~/.codex/config.toml` by `codex/sync_config.py`, while `~/.codex/hooks.json` is generated directly from `nix/agents/hooks.nix`. Protected paths cover both hook trees (`~/.claude/hooks/**`, `~/.codex/hooks/**`), generated bindings (`~/.codex/AGENTS.md`, `~/.codex/hooks.json`, `~/.codex/rules/default.rules`), and the real dotfiles checkout (`~/ghq/.../dotfiles/agents/hooks/**`, `~/ghq/.../dotfiles/codex/hooks/**`).
 
 - Adding a new file under `agents/hooks/` or `codex/hooks/` automatically extends the deny set on the next `darwin-rebuild switch` — no manual `settings.json` or `config.toml` edit needed.
-- The harness is protected as a whole, including helper libraries (`lib/shell_parse.sh`) and JSON rule data (`rules/secret_content_patterns.json`), so the agent cannot weaken `command_allowlist.sh` or `block_secret_content.sh` by rewriting their dependencies.
+- The harness is protected as a whole, including helper libraries (`lib/shell_parse.sh`) and JSON rule data (`rules/*.json`), so the agent cannot weaken `guard_allowed_commands.sh`, `run_related_tests.sh`, or `guard_secret_content.sh` by rewriting their dependencies.
 - Skill scripts under `agents/skills/` are deliberately excluded — they are workflow tools, not security boundaries.
+
+`run_related_tests.sh` is a `Stop` hook that blocks completion by emitting `{ "decision": "block" }` JSON when relevant tests fail. Test selection combines two rule layers:
+
+- `agents/hooks/rules/related_test_defaults.json`: global default test-selection conventions for Bats, Python, JavaScript/TypeScript, and Rust. Bats and Python define executable test naming conventions; JS/TS records common `*.test.*` / `*.spec.*` names for future runner support; Rust runs `cargo test <stem>` for ordinary `src/<stem>.rs` changes and `cargo test --test <stem>` for matching `tests/<stem>.rs` integration targets, while skipping generic stems such as `lib`, `main`, and `mod`. Format/lint-only hook families stay out of related-test execution.
+- `agents/hooks/rules/related_test_extensions.json`: project-specific extensions that add fan-out beyond the defaults, such as helper libraries to consumer tests, Codex adapters, generated config sync tests, and grouped macOS notification tests.
 
 ## Markdown Formatter
 
@@ -205,7 +215,7 @@ Provider-shared agent assets live under `agents/` and are wired into both Claude
 Starter workflows for new projects come from two places:
 
 - **Project scaffolds** at `~/dev/templates/template-{minimal,python,typescript,rust,tex}` — instantiated with `ghcreate --template`. Each ships with `ci.yml` (language-specific jobs plus an `all-green` aggregator), `codeql.yml`, `dependency_review.yml`, and `gha_lint.yml` (`actionlint` + `zizmor`).
-  - **Optional CI add-ons** at `agents/skills/github-ci-init/templates/`: `release_please.yml`, `claude.yml`, `claude_code_review.yml`, `artifact_attestation.yml`. The `github-ci-init` Claude Code skill copies the curated default adopted set into a new repo on demand.
+    - **Optional CI add-ons** at `agents/skills/github-ci-init/templates/`: `release_please.yml`, `claude.yml`, `claude_code_review.yml`, `artifact_attestation.yml`. The `github-ci-init` Claude Code skill copies the curated default adopted set into a new repo on demand.
 
 Standard repo settings and the `main` branch ruleset live in `github/` and are applied via `github/setup_repo.sh <owner>/<repo>`. The ruleset requires a status check named `all-green`, which the project scaffolds satisfy via the aggregator job in `ci.yml`. See [`github/README.md`](github/README.md) for the contract and the caveat on which repos to apply it to.
 
