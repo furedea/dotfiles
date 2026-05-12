@@ -40,7 +40,7 @@
     };
   })
 
-  (final: prev: {
+  (_: prev: {
     git-wt = prev.buildGo126Module (finalAttrs: {
       pname = "git-wt";
       version = "0.25.0";

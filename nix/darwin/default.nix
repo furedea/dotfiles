@@ -116,8 +116,6 @@
         { app = "/Applications/Obsidian.app"; }
         { app = "/Applications/OrbStack.app"; }
         { app = "/Applications/Slack.app"; }
-        { app = "/Applications/Discord.app"; }
-        { app = "/Applications/LINE.app"; }
         { app = "/System/Applications/System Settings.app"; }
         { app = "/Applications/Nani.app"; }
       ];
