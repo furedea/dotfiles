@@ -107,7 +107,7 @@ EOF
   git add . && git commit --quiet -m i
   printf '#!/bin/bash\necho changed\n' > script.sh
   export PATH="$TEST_TMPDIR/bin:$PATH"
-  export COMPLETION_GATE_TIMEOUT_SECONDS=1
+  export RUN_RELATED_TESTS_TIMEOUT_SECONDS=1
 
   run bash "$HOOK" <<< "$(make_stop_input false)"
 

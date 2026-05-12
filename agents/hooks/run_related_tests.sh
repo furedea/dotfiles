@@ -163,8 +163,8 @@ find_language_tests() {
 FAILURES=""
 # Runner timeouts are opportunistic: GNU `timeout` (Linux) or `gtimeout`
 # (macOS coreutils) enables the cap; if neither exists, the gate keeps the
-# previous direct-run behavior. Override with COMPLETION_GATE_TIMEOUT_SECONDS.
-TIMEOUT_SECONDS="${COMPLETION_GATE_TIMEOUT_SECONDS:-120}"
+# previous direct-run behavior. Override with RUN_RELATED_TESTS_TIMEOUT_SECONDS.
+TIMEOUT_SECONDS="${RUN_RELATED_TESTS_TIMEOUT_SECONDS:-120}"
 
 timeout_bin() {
   if command -v timeout >/dev/null 2>&1; then

@@ -85,6 +85,7 @@ jobs:
             claude/statusline/statusline.sh
             codex/hooks/adapt_guard_secret_content.sh
             codex/hooks/adapt_lint_format.sh
+            codex/hooks/adapt_shell_command.sh
 
       - name: Setup shfmt
         uses: mfinelli/setup-shfmt@a25fda4c1fe115aec0f85e04126610841bc3141d # v4.0.1
