@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # lint_format_json_toml.sh
-# Format JSON and TOML files via dprint.
+# Quality Loop: format JSON/TOML via dprint, then emit residual diagnostics
+# as PostToolUse additionalContext JSON. Always exits 0.
 
 set -eo pipefail
 # shellcheck source=lib/lint_format.sh
@@ -17,8 +18,14 @@ FILE_BASE=$(basename "$FILE_PATH")
 (cd "$FILE_DIR" &&
   dprint fmt --config "$HOME/dprint.json" \
     --includes-override "$FILE_BASE" \
-    --allow-no-files) 2>&1 || {
-  echo "❌ dprint fmt failed for $FILENAME"
-  exit 1
-}
-echo "✅ dprint completed for $FILENAME"
+    --allow-no-files) >/dev/null 2>&1 || true
+
+VIOLATIONS=""
+if ! VIOLATIONS=$(
+  cd "$FILE_DIR" &&
+    dprint check --config "$HOME/dprint.json" \
+      --includes-override "$FILE_BASE" \
+      --allow-no-files 2>&1
+); then
+  emit_post_tool_context "dprint" "$VIOLATIONS"
+fi

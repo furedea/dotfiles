@@ -39,10 +39,21 @@ function find_project_root() {
   return 1
 }
 
-# Assert a command exists; print an error and exit 1 if not found.
+# Assert a command exists; emit agent-readable context and exit 0 if not found.
 function require_cmd() {
   command -v "$1" &>/dev/null || {
-    echo "❌ $1 not found in PATH"
-    exit 1
+    emit_post_tool_context "$1" "$1 not found in PATH."
+    exit 0
   }
+}
+
+# Emit a PostToolUse additionalContext JSON line for the agent's self-correction loop.
+# Args: <tool_label> <violations_text>
+# Outputs nothing when violations_text is empty (no-op). Returns 0 either way.
+function emit_post_tool_context() {
+  local _tool="$1"
+  local _violations="$2"
+  [ -z "$_violations" ] && return 0
+  jq -cn --arg ctx "$_tool: $_violations" \
+    '{hookSpecificOutput:{hookEventName:"PostToolUse",additionalContext:$ctx}}'
 }

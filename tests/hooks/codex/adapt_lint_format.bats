@@ -106,3 +106,86 @@ some content
   '
   [ "$status" -ne 0 ]
 }
+
+# ============================================================
+# JSON additionalContext translation (Claude format -> Codex plain text)
+# ============================================================
+
+@test "adapter extracts additionalContext from hook JSON output" {
+  local _tmp
+  _tmp="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/codex.XXXXXX")"
+  local _file="$_tmp/x.py"
+  printf 'x = 1\n' > "$_file"
+
+  # Stub hook directory: replace lint_format_py.sh with one that emits Claude-format JSON.
+  local _stub_dir="$_tmp/hooks"
+  mkdir -p "$_stub_dir"
+  cat > "$_stub_dir/lint_format_py.sh" <<EOF
+#!/bin/bash
+jq -cn '{hookSpecificOutput:{hookEventName:"PostToolUse",additionalContext:"ruff: F821 undefined name"}}'
+EOF
+  chmod +x "$_stub_dir/lint_format_py.sh"
+
+  # Patch input describing a change to x.py
+  local _input
+  _input=$(jq -n --arg cwd "$_tmp" --arg cmd "*** Update File: x.py" \
+    '{cwd:$cwd, tool_input:{command:$cmd}}')
+
+  run env HOME="$_tmp" bash -c "
+    ln -sf '$_stub_dir' '$_tmp/.claude'
+    mkdir -p '$_tmp/.claude'
+    cp '$_stub_dir/lint_format_py.sh' '$_tmp/.claude/'
+    mkdir -p '$_tmp/.claude/hooks'
+    cp '$_stub_dir/lint_format_py.sh' '$_tmp/.claude/hooks/'
+    echo '$_input' | '$HOOK' 2>/dev/null
+  "
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ruff: F821 undefined name"* ]]
+  ! [[ "$output" == *"hookSpecificOutput"* ]]
+}
+
+@test "adapter passes through non-JSON hook output unchanged" {
+  local _tmp
+  _tmp="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/codex.XXXXXX")"
+  local _file="$_tmp/x.sh"
+  printf '#!/bin/bash\necho hi\n' > "$_file"
+
+  local _stub_dir="$_tmp/.claude/hooks"
+  mkdir -p "$_stub_dir"
+  cat > "$_stub_dir/lint_format_sh.sh" <<'EOF'
+#!/bin/bash
+echo "plain-text hook output: SC2086 quote me"
+EOF
+  chmod +x "$_stub_dir/lint_format_sh.sh"
+
+  local _input
+  _input=$(jq -n --arg cwd "$_tmp" --arg cmd "*** Update File: x.sh" \
+    '{cwd:$cwd, tool_input:{command:$cmd}}')
+
+  run env HOME="$_tmp" bash -c "echo '$_input' | '$HOOK' 2>/dev/null"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"plain-text hook output"* ]]
+}
+
+@test "adapter emits nothing when hook is silent (clean lint)" {
+  local _tmp
+  _tmp="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/codex.XXXXXX")"
+  local _file="$_tmp/x.py"
+  printf 'x = 1\n' > "$_file"
+
+  local _stub_dir="$_tmp/.claude/hooks"
+  mkdir -p "$_stub_dir"
+  cat > "$_stub_dir/lint_format_py.sh" <<'EOF'
+#!/bin/bash
+# Clean: emit nothing
+EOF
+  chmod +x "$_stub_dir/lint_format_py.sh"
+
+  local _input
+  _input=$(jq -n --arg cwd "$_tmp" --arg cmd "*** Update File: x.py" \
+    '{cwd:$cwd, tool_input:{command:$cmd}}')
+
+  run env HOME="$_tmp" bash -c "echo '$_input' | '$HOOK' 2>/dev/null"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}

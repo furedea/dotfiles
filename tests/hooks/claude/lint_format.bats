@@ -115,11 +115,64 @@ teardown() {
   [ "$status" -eq 0 ]
 }
 
-@test "require_cmd fails for nonexistent command" {
+@test "require_cmd emits PostToolUse context for nonexistent command" {
   run bash -c "
     source '$LIB'
     require_cmd definitely_not_a_real_command_xyz
   "
-  [ "$status" -eq 1 ]
+  [ "$status" -eq 0 ]
   [[ "$output" == *"not found"* ]]
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.hookEventName')" = "PostToolUse" ]
+  local ctx
+  ctx="$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext')"
+  [[ "$ctx" == *"definitely_not_a_real_command_xyz"* ]]
+}
+
+# ============================================================
+# emit_post_tool_context
+# ============================================================
+
+@test "emit_post_tool_context produces JSON with PostToolUse event name when violations present" {
+  run bash -c "
+    source '$LIB'
+    emit_post_tool_context 'ruff' 'F401 unused import'
+  "
+  [ "$status" -eq 0 ]
+  [ "$(echo "$output" | jq -r '.hookSpecificOutput.hookEventName')" = "PostToolUse" ]
+}
+
+@test "emit_post_tool_context includes tool label and violations in additionalContext" {
+  run bash -c "
+    source '$LIB'
+    emit_post_tool_context 'ruff' 'F401 unused import'
+  "
+  [ "$status" -eq 0 ]
+  local ctx
+  ctx="$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext')"
+  [[ "$ctx" == *"ruff"* ]]
+  [[ "$ctx" == *"F401 unused import"* ]]
+}
+
+@test "emit_post_tool_context outputs nothing when violations are empty" {
+  run bash -c "
+    source '$LIB'
+    emit_post_tool_context 'ruff' ''
+  "
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "emit_post_tool_context preserves newlines in violations via jq escaping" {
+  local input
+  input="$(printf 'line1\nline2\nline3')"
+  run bash -c "
+    source '$LIB'
+    emit_post_tool_context 'oxlint' \"$input\"
+  "
+  [ "$status" -eq 0 ]
+  local ctx
+  ctx="$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext')"
+  [[ "$ctx" == *"line1"* ]]
+  [[ "$ctx" == *"line2"* ]]
+  [[ "$ctx" == *"line3"* ]]
 }

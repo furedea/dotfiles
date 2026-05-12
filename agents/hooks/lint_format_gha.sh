@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # lint_format_gha.sh
-# Lint GitHub Actions workflow files via actionlint.
+# Quality Loop: lint GitHub Actions workflows via actionlint; emit residual
+# diagnostics as PostToolUse additionalContext JSON. Always exits 0.
 
 set -eo pipefail
 # shellcheck source=lib/lint_format.sh
@@ -17,9 +18,7 @@ case "$FILE_PATH" in
 esac
 
 require_cmd actionlint
-
-actionlint -oneline "$FILE_PATH" 2>&1 || {
-  echo "❌ actionlint failed for $FILENAME"
-  exit 1
-}
-echo "✅ actionlint completed for $FILENAME"
+VIOLATIONS=""
+if ! VIOLATIONS=$(actionlint -oneline "$FILE_PATH" 2>&1); then
+  emit_post_tool_context "actionlint" "$VIOLATIONS"
+fi

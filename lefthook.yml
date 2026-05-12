@@ -3,32 +3,51 @@ commit-msg:
     commitlint:
       run: commitlint --edit {1}
 
+# pre-commit owns whole-project format check, lint, and typecheck. Test
+# execution is delegated to the Stop hook (agents/hooks/completion_gate.sh)
+# and CI. Per-file fast feedback during edits lives in PostToolUse hooks.
 pre-commit:
   parallel: true
   commands:
+    # ----- format check -----
     shfmt:
       glob: "*.sh"
-      run: shfmt -i 2 -ci -d {staged_files}
-    shellcheck:
-      glob: "*.sh"
-      run: shellcheck -x --source-path=SCRIPTDIR {staged_files}
+      run: shfmt -i 2 -ci -d {all_files}
     nixfmt:
       glob: "*.nix"
-      run: nixfmt --check {staged_files}
-    statix:
-      glob: "*.nix"
-      run: bash -c 'for f in "$@"; do statix check "$f" || exit 1; done' bash {staged_files}
+      run: nixfmt --check {all_files}
     stylua:
       glob: "*.lua"
-      run: stylua --check {staged_files}
-    actionlint:
-      glob: ".github/workflows/*.yml"
-      run: actionlint {staged_files}
+      run: stylua --check {all_files}
     autocorrect:
       glob: "*.{md,txt}"
-      run: autocorrect --lint {staged_files}
-
-pre-push:
-  commands:
-    bats:
-      run: bats tests/ --recursive
+      run: autocorrect --lint {all_files}
+    ruff-format:
+      glob: "*.py"
+      run: ruff format --check {all_files}
+    dprint:
+      glob: "*.{json,toml}"
+      run: dprint check --config ~/dprint.json {all_files}
+    # ----- lint -----
+    shellcheck:
+      glob: "*.sh"
+      run: shellcheck -x --source-path=SCRIPTDIR {all_files}
+    statix:
+      glob: "*.nix"
+      run: bash -c 'for f in "$@"; do statix check "$f" || exit 1; done' bash {all_files}
+    deadnix:
+      glob: "*.nix"
+      run: deadnix --fail {all_files}
+    actionlint:
+      glob: ".github/workflows/*.yml"
+      run: actionlint {all_files}
+    ruff-check:
+      glob: "*.py"
+      run: ruff check {all_files}
+    oxlint:
+      glob: "*.{js,ts,jsx,tsx}"
+      run: oxlint {all_files}
+    # ----- typecheck (cross-file) -----
+    ty:
+      glob: "*.py"
+      run: ty check

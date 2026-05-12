@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # lint_format_tex.sh
-# Format and lint TeX files via tex-fmt and chktex.
+# Quality Loop: tex-fmt -> capture residual chktex diagnostics as PostToolUse
+# additionalContext JSON. Always exits 0.
 # Handles .tex, .cls, .sty (format + lint) and .bib (format only).
 
 set -eo pipefail
@@ -13,18 +14,12 @@ load_file_path # sets FILE_PATH, FILENAME
 EXTENSION="${FILE_PATH##*.}"
 
 require_cmd tex-fmt
-tex-fmt "$FILE_PATH" 2>&1 || {
-  echo "❌ tex-fmt failed for $FILENAME"
-  exit 1
-}
-echo "✅ tex-fmt completed for $FILENAME"
+tex-fmt "$FILE_PATH" >/dev/null 2>&1 || true
 
 # chktex does not support .bib files.
 [ "$EXTENSION" = "bib" ] && exit 0
 
 require_cmd chktex
-chktex -q -n22 -n30 "$FILE_PATH" 2>&1 || {
-  echo "❌ chktex failed for $FILENAME"
-  exit 1
-}
-echo "✅ chktex completed for $FILENAME"
+# chktex exits 0 even with warnings; rely on non-empty stdout as the signal.
+VIOLATIONS=$(chktex -q -n22 -n30 "$FILE_PATH" 2>&1 || true)
+emit_post_tool_context "chktex" "$VIOLATIONS"

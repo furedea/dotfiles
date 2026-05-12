@@ -63,14 +63,26 @@ function run_file_hook() {
     return 0
   fi
 
-  jq -n --arg file_path "$_file_path" \
+  local _output
+  _output="$(jq -n --arg file_path "$_file_path" \
     '{
 			tool_name: "Edit",
 			tool_input: {
 				file_path: $file_path
 			}
 		}' |
-    "$_hook"
+    "$_hook" 2>&1)" || true
+
+  [[ -z "$_output" ]] && return 0
+
+  # Translate Claude PostToolUse JSON ({hookSpecificOutput.additionalContext})
+  # into plain text for Codex, which expects raw stdout/stderr.
+  local _ctx
+  if _ctx="$(jq -er '.hookSpecificOutput.additionalContext' <<<"$_output" 2>/dev/null)"; then
+    printf '%s\n' "$_ctx"
+  else
+    printf '%s\n' "$_output"
+  fi
 }
 
 function main() {

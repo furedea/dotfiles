@@ -127,6 +127,11 @@ setup() {
   [ "$status" -eq 0 ]
 }
 
+@test "lint_format_json_toml exits 0 when no file_path in input" {
+  run bash "$HOOK_DIR/lint_format_json_toml.sh" <<< '{"tool_input":{}}'
+  [ "$status" -eq 0 ]
+}
+
 @test "lint_format_gha exits 0 when no file_path in input" {
   run bash "$HOOK_DIR/lint_format_gha.sh" <<< '{"tool_input":{}}'
   [ "$status" -eq 0 ]
@@ -148,6 +153,14 @@ setup() {
 @test "lint_format_js references oxfmt and oxlint" {
   grep -q 'oxfmt' "$HOOK_DIR/lint_format_js.sh"
   grep -q 'oxlint' "$HOOK_DIR/lint_format_js.sh"
+}
+
+@test "lint_format_json_toml references dprint check" {
+  grep -q 'dprint check' "$HOOK_DIR/lint_format_json_toml.sh"
+}
+
+@test "lint_format_json_toml emits dprint diagnostics through PostToolUse context" {
+  grep -q 'emit_post_tool_context "dprint"' "$HOOK_DIR/lint_format_json_toml.sh"
 }
 
 @test "lint_format_rs references rustfmt" {
