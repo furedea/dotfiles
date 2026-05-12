@@ -65,9 +65,7 @@ assert "~/.codex/hooks/adapt_shell_command.sh" in filesystem
 }
 
 @test "generated codex fragment locks every file under agents/hooks/ and codex/hooks/" {
-  # The generated Nix settings are built for the managed macOS checkout path,
-  # independent of the temporary checkout path used by Linux CI runners.
-  tilde_dotfiles_home_path="~/ghq/github.com/furedea/dotfiles"
+  tilde_dotfiles_home_path="$(nix eval --raw "$REPO_ROOT#lib.dotfilesHomePath")"
 
   # Use git ls-files (not find) so the expected set matches what Nix's
   # flake-aware source path sees — gitignored runtime artifacts (e.g. audit

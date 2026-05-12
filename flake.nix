@@ -34,6 +34,7 @@
       username = "kaito";
       system = "aarch64-darwin";
       dotfilesDir = "/Users/${username}/ghq/github.com/furedea/dotfiles";
+      dotfilesHomePath = "~/" + nixpkgs.lib.removePrefix "/Users/${username}/" dotfilesDir;
       allowUnfreePredicate =
         pkg:
         builtins.elem pkg.pname [
@@ -117,28 +118,6 @@
           ]
           (sys: {
             codex = codex-cli-nix.packages.${sys}.default;
-            hook-test-tools =
-              let
-                stablePkgs = nixpkgs.legacyPackages.${sys};
-                unstablePkgs = import nixpkgs-unstable {
-                  system = sys;
-                  config = { inherit allowUnfreePredicate; };
-                };
-              in
-              stablePkgs.symlinkJoin {
-                name = "hook-test-tools";
-                paths = [
-                  codex-cli-nix.packages.${sys}.default
-                  stablePkgs.bats
-                  stablePkgs.dprint
-                  stablePkgs.oxlint
-                  stablePkgs.ruff
-                  stablePkgs.rustfmt
-                  stablePkgs.shellcheck
-                  stablePkgs.shfmt
-                  unstablePkgs.oxfmt
-                ];
-              };
             inherit (nixpkgs.legacyPackages.${sys}) python3;
           });
 
@@ -157,6 +136,10 @@
             sys:
             let
               shellPkgs = nixpkgs.legacyPackages.${sys};
+              shellUnstable = import nixpkgs-unstable {
+                system = sys;
+                config = { inherit allowUnfreePredicate; };
+              };
             in
             {
               default = shellPkgs.mkShell {
@@ -175,6 +158,23 @@
                     export PATH="$PWD/.venv/bin:$PATH"
                   fi
                 '';
+              };
+
+              hook-tests = shellPkgs.mkShell {
+                packages = [
+                  codex-cli-nix.packages.${sys}.default
+                  shellPkgs.bats
+                  shellPkgs.dprint
+                  shellPkgs.git
+                  shellPkgs.jq
+                  shellPkgs.oxlint
+                  shellPkgs.ripgrep
+                  shellPkgs.ruff
+                  shellPkgs.rustfmt
+                  shellPkgs.shellcheck
+                  shellPkgs.shfmt
+                  shellUnstable.oxfmt
+                ];
               };
             }
           );
@@ -198,6 +198,7 @@
           agentSkills = import ./nix/agents/skills.nix { };
         in
         {
+          inherit dotfilesHomePath;
           inherit (agentSettings) generatedSettings;
           inherit (agentPolicy) codexRules forbiddenRulesJson;
           inherit (agentHooks) codexHooks;
