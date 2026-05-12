@@ -5,8 +5,12 @@
 
 set -euCo pipefail
 
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/lib/audit_log.sh"
+
 INPUT=$(cat)
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
+SESSION=$(echo "$INPUT" | jq -r '.session_id // empty')
 
 # Only check git commit commands
 if ! echo "$COMMAND" | grep -qE '^\s*git\s+commit'; then
@@ -34,10 +38,10 @@ SENSITIVE_PATTERNS=(
 )
 
 ALLOWLISTED_SENSITIVE_PATHS=(
-  'agents/hooks/block_secret_content.sh'
-  'agents/hooks/prevent_secret_commit.sh'
-  'codex/hooks/adapt_block_secret_content.sh'
-  'tests/hooks/claude/prevent_secret_commit.bats'
+  'agents/hooks/guard_secret_content.sh'
+  'agents/hooks/guard_secret_commit.sh'
+  'codex/hooks/adapt_guard_secret_content.sh'
+  'tests/hooks/claude/guard_secret_commit.bats'
 )
 
 is_allowlisted_sensitive_path() {
@@ -71,6 +75,7 @@ for pattern in "${SENSITIVE_PATTERNS[@]}"; do
 done
 
 if [ ${#BLOCKED_FILES[@]} -gt 0 ]; then
+  log_blocked Bash "$COMMAND" "staged files match sensitive filename patterns: ${BLOCKED_FILES[*]}" guard_secret_commit.sh "$SESSION"
   echo "BLOCKED: Commit rejected — staged files may contain secrets." >&2
   echo "" >&2
   echo "The following files match sensitive filename patterns and must not be committed:" >&2

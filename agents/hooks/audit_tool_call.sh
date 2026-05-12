@@ -1,9 +1,15 @@
 #!/bin/bash
-# Claude Code PostToolUse hook: append allowed tool calls to the audit log.
+# Claude Code PreToolUse + PostToolUse hook: append every tool call to the audit log.
 #
 # Writes one JSONL line per call to docs/logs/audit/YYYY-MM-DD.jsonl.
-# Records: timestamp, tool, input summary (command / file path / URL), session.
-# Does NOT record: file contents, command stdout/stderr, Read/Grep/Glob calls.
+# The script is event-agnostic — it reads `.hook_event_name` from stdin and
+# stamps the same value into the `event` field, so the operator can tell
+# intent (PreToolUse) apart from result (PostToolUse) when reviewing the
+# audit log. Registering this hook FIRST in each PreToolUse matcher captures
+# intents that subsequent gating hooks short-circuit with exit 2.
+#
+# Records: timestamp, event, status, tool, input summary, reason, session.
+# Does NOT record: file contents, command stdout/stderr.
 #
 # Logging failures are silent (exit 0) — audit is observability, not enforcement.
 
@@ -14,6 +20,7 @@ INPUT=$(cat)
 # jq is required; if missing, silently skip.
 command -v jq >/dev/null 2>&1 || exit 0
 
+EVENT=$(echo "$INPUT" | jq -r '.hook_event_name // "PostToolUse"' 2>/dev/null || true)
 TOOL=$(echo "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null || true)
 SESSION=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null || true)
 [ -z "$TOOL" ] && exit 0
@@ -45,8 +52,8 @@ LOG_FILE="$LOG_DIR/$(date -u +%Y-%m-%d).jsonl"
 
 TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-jq -cn --arg ts "$TS" --arg tool "$TOOL" --arg input "$SUMMARY" --arg session "$SESSION" \
-  '{ts: $ts, tool: $tool, status: "allowed", input: $input, session: $session}' \
+jq -cn --arg ts "$TS" --arg event "$EVENT" --arg tool "$TOOL" --arg input "$SUMMARY" --arg session "$SESSION" \
+  '{ts: $ts, event: $event, status: "observed", tool: $tool, input: $input, reason: "", session: $session}' \
   >>"$LOG_FILE" 2>/dev/null || true
 
 exit 0

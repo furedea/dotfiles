@@ -343,7 +343,7 @@ This lets tests `source` the script and call functions in isolation.
 ```bash
 bats tests/                        # all tests
 bats tests/hooks/claude/           # one category
-bats tests/hooks/claude/block_dangerous_git.bats  # one file
+bats tests/hooks/claude/guard_dangerous_git.bats  # one file
 bats --filter "blocks" tests/      # only tests matching pattern
 bats --negative-filter "slow" tests/  # exclude tests matching pattern
 ```

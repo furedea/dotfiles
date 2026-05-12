@@ -18,7 +18,7 @@ EOF
 }
 
 readonly MODE="${1:-}"
-readonly SHARED_SCANNER="$HOME/.claude/hooks/block_secret_content.sh"
+readonly SHARED_SCANNER="$HOME/.claude/hooks/guard_secret_content.sh"
 
 function added_patch_text() {
   local _input="$1"

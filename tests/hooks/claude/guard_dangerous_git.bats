@@ -1,9 +1,9 @@
 #!/usr/bin/env bats
-# Tests for .claude/hooks/block_dangerous_git.sh
+# Tests for .claude/hooks/guard_dangerous_git.sh
 
 setup() {
   load test_helper/setup
-  HOOK="$HOOK_DIR/block_dangerous_git.sh"
+  HOOK="$HOOK_DIR/guard_dangerous_git.sh"
 }
 
 # --- Allowed: normal pushes ---

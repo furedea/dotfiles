@@ -1,9 +1,9 @@
 #!/usr/bin/env bats
-# Tests for codex/hooks/adapt_block_secret_content.sh
+# Tests for codex/hooks/adapt_guard_secret_content.sh
 
 setup() {
   REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd)"
-  HOOK="$REPO_ROOT/codex/hooks/adapt_block_secret_content.sh"
+  HOOK="$REPO_ROOT/codex/hooks/adapt_guard_secret_content.sh"
 }
 
 @test "exits non-zero without mode argument" {
@@ -38,12 +38,12 @@ setup() {
 @test "prompt mode delegates to shared scanner" {
   STUB_DIR="$(mktemp -d "$BATS_TEST_TMPDIR/stub.XXXXXX")"
   mkdir -p "$STUB_DIR/.claude/hooks"
-  cat > "$STUB_DIR/.claude/hooks/block_secret_content.sh" <<'STUB'
+  cat > "$STUB_DIR/.claude/hooks/guard_secret_content.sh" <<'STUB'
 #!/bin/bash
 echo "CALLED:$1"
 cat > /dev/null
 STUB
-  chmod +x "$STUB_DIR/.claude/hooks/block_secret_content.sh"
+  chmod +x "$STUB_DIR/.claude/hooks/guard_secret_content.sh"
 
   run bash -c "export HOME='$STUB_DIR'; echo '{\"prompt\":\"hello\"}' | '$HOOK' prompt"
   [ "$status" -eq 0 ]
@@ -53,12 +53,12 @@ STUB
 @test "apply-patch mode delegates to shared scanner with write arg" {
   STUB_DIR="$(mktemp -d "$BATS_TEST_TMPDIR/stub.XXXXXX")"
   mkdir -p "$STUB_DIR/.claude/hooks"
-  cat > "$STUB_DIR/.claude/hooks/block_secret_content.sh" <<'STUB'
+  cat > "$STUB_DIR/.claude/hooks/guard_secret_content.sh" <<'STUB'
 #!/bin/bash
 echo "CALLED:$1"
 cat > /dev/null
 STUB
-  chmod +x "$STUB_DIR/.claude/hooks/block_secret_content.sh"
+  chmod +x "$STUB_DIR/.claude/hooks/guard_secret_content.sh"
 
   INPUT='{"tool_input":{"command":"--- a/f\n+++ b/f\n+secret"}}'
   run bash -c "export HOME='$STUB_DIR'; echo '$INPUT' | '$HOOK' apply-patch"

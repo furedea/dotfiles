@@ -1,9 +1,9 @@
 #!/usr/bin/env bats
-# Tests for .claude/hooks/block_secret_content.sh
+# Tests for .claude/hooks/guard_secret_content.sh
 
 setup() {
   load test_helper/setup
-  HOOK="$HOOK_DIR/block_secret_content.sh"
+  HOOK="$HOOK_DIR/guard_secret_content.sh"
   PATTERNS_FILE="$HOOK_DIR/rules/secret_content_patterns.json"
 
   # Create a temp directory for test files

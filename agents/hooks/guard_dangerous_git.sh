@@ -25,9 +25,12 @@ set -euCo pipefail
 
 # shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/lib/shell_parse.sh"
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/lib/audit_log.sh"
 
 INPUT=$(cat)
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
+SESSION=$(echo "$INPUT" | jq -r '.session_id // empty')
 
 # Detect shell-wrapper commands that execute an arbitrary inner string
 # (bash -c, sh -c, zsh -c, the e-v-a-l builtin). This hook cannot statically
@@ -397,10 +400,17 @@ ERRMSG
 }
 
 # Iterate over segments; block on first dangerous match.
+# Capture analyze_segment's stderr so the audit log can record the first
+# "BLOCKED: ..." line as the reason; the captured text is then replayed to
+# the real stderr so the user-facing message is unchanged.
 while IFS= read -r segment; do
-  if ! analyze_segment "$segment"; then
-    exit 2
+  if err=$(analyze_segment "$segment" 2>&1); then
+    continue
   fi
+  reason=$(printf '%s\n' "$err" | head -n 1)
+  log_blocked Bash "$COMMAND" "$reason" guard_dangerous_git.sh "$SESSION"
+  printf '%s\n' "$err" >&2
+  exit 2
 done <<<"$(split_command_segments "$COMMAND")"
 
 exit 0

@@ -8,6 +8,8 @@ set -euCo pipefail
 
 # shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/lib/shell_parse.sh"
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/lib/audit_log.sh"
 
 # Require jq for JSON parsing.
 if ! command -v jq >/dev/null 2>&1; then
@@ -24,6 +26,7 @@ ERRMSG
 fi
 
 INPUT=$(cat)
+SESSION=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null || true)
 if ! RAW_COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null); then
   cat >&2 <<ERRMSG
 BLOCKED: failed to parse tool input JSON.
@@ -32,7 +35,7 @@ Why: The hook received invalid JSON input and cannot validate the command.
 
 What to do:
   Claude Code: Report this error to the user — it may indicate a Claude Code bug or misconfigured hook.
-  User: Check that .claude/hooks/command_allowlist.sh is correctly registered in settings.json.
+  User: Check that .claude/hooks/guard_allowed_commands.sh is correctly registered in settings.json.
 ERRMSG
   exit 2
 fi
@@ -166,6 +169,7 @@ ALLOWED_PATTERNS=(
   # Git commit
   "^git commit -m '[^']*('\\\\''[^']*)*'$"
   '^git commit -m "[^"$`\\]*"$'
+  '^git commit --amend -m [^;&|<>$`]+$'
 
   # Git pull
   '^git pull( --rebase)?( origin [a-zA-Z0-9_./-]+)?$'
@@ -186,12 +190,32 @@ ALLOWED_PATTERNS=(
 
 )
 
+# Denied patterns for commands that belong to a governed family but must never
+# be accepted by the broad positive regexes below.
+DENIED_PATTERNS=(
+  '^git[[:space:]]+add[[:space:]]+(\.|-A|--all)([[:space:]]|$)'
+  '(^|[[:space:]])git[[:space:]]+add[[:space:]]+(\.|-A|--all)([[:space:]]|$)'
+  '^git[[:space:]]+commit([[:space:]].*)?[[:space:]]+(--no-verify|-n)([[:space:]]|$)'
+  '(^|[[:space:]])git[[:space:]]+commit([[:space:]].*)?[[:space:]]+(--no-verify|-n)([[:space:]]|$)'
+)
+
 # Validate each segment of the pipeline independently.
 # Governed segments must match an allowed pattern; non-governed segments pass through.
 BLOCKED_SEGMENT=""
+BLOCKED_REASON=""
 while IFS= read -r segment; do
   segment=$(normalize_segment "$segment")
   [ -z "$segment" ] && continue
+
+  # Explicitly block known-bad forms before applying the positive allowlist.
+  for pattern in "${DENIED_PATTERNS[@]}"; do
+    if echo "$segment" | grep -qE -e "$pattern"; then
+      BLOCKED_SEGMENT="$segment"
+      BLOCKED_REASON="command denied by allowlist policy"
+      break
+    fi
+  done
+  [ -n "$BLOCKED_SEGMENT" ] && break
 
   # Check if this segment is governed
   segment_governed=false
@@ -215,6 +239,7 @@ while IFS= read -r segment; do
 
   if [ "$segment_allowed" = false ]; then
     BLOCKED_SEGMENT="$segment"
+    BLOCKED_REASON="command not in allowlist"
     break
   fi
 done <<<"$(split_command_segments "$RAW_COMMAND")"
@@ -225,17 +250,19 @@ if [ -z "$BLOCKED_SEGMENT" ]; then
 fi
 
 # A governed segment was not in the allowlist — block the entire command
+log_blocked Bash "$RAW_COMMAND" "$BLOCKED_REASON: $BLOCKED_SEGMENT" guard_allowed_commands.sh "$SESSION"
 cat >&2 <<ERRMSG
-BLOCKED: command not in allowlist.
+BLOCKED: $BLOCKED_REASON.
 
 Command: $BLOCKED_SEGMENT
 
 Why:
-  This command segment (for example, this gh api endpoint/flag combination) is not on the approved allowlist.
+  This command segment (for example, this gh api endpoint/flag combination) is not on the approved allowlist,
+  or it matches an explicitly denied form such as bulk git add.
 
 What to do:
   Claude Code: Try a different approach, or ask the user whether this command should be allowed.
-  User: To allow this command, add a regex pattern to .claude/hooks/command_allowlist.sh
+  User: To allow this command, add a regex pattern to .claude/hooks/guard_allowed_commands.sh
         or run the command manually in your terminal.
 ERRMSG
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env bats
-# Tests for .claude/hooks/log_permission_denied.sh
+# Tests for .claude/hooks/audit_permission_denied.sh
 
 setup() {
   load test_helper/setup
-  HOOK="$HOOK_DIR/log_permission_denied.sh"
+  HOOK="$HOOK_DIR/audit_permission_denied.sh"
   LOG_TMPDIR="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/denied.XXXXXX")"
 }
 
@@ -29,8 +29,17 @@ get_last_log() {
   local entry
   entry=$(get_last_log)
   [[ $(echo "$entry" | jq -r '.tool') == "Bash" ]]
+  [[ $(echo "$entry" | jq -r '.event') == "PermissionDenied" ]]
   [[ $(echo "$entry" | jq -r '.input') == "rm -rf /" ]]
   [[ $(echo "$entry" | jq -r '.status') == "denied" ]]
+}
+
+@test "preserves explicit hook event name when present" {
+  run_hook "$(make_denied_input Bash '{"command":"rm -rf /"}' "auto-mode denied" "sess-abc")"
+  [ "$status" -eq 0 ]
+  local entry
+  entry=$(get_last_log)
+  [[ $(echo "$entry" | jq -r '.event') == "PermissionDenied" ]]
 }
 
 @test "logs denial reason" {
@@ -122,4 +131,19 @@ get_last_log() {
   local entry
   entry=$(get_last_log)
   echo "$entry" | jq empty
+}
+
+@test "log entry follows tool-call audit schema with denial status" {
+  run_hook "$(make_denied_input Bash '{"command":"test"}' "denied")"
+  [ "$status" -eq 0 ]
+  local entry
+  entry=$(get_last_log)
+  echo "$entry" | jq -e '
+    has("ts") and
+    has("event") and
+    has("tool") and
+    has("input") and
+    has("session") and
+    .status == "denied"
+  ' >/dev/null
 }

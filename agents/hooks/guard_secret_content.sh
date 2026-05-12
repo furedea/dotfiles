@@ -3,6 +3,9 @@ set -euxCo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 set +x
 
+# shellcheck disable=SC1091
+source "$PWD/lib/audit_log.sh"
+
 function usage() {
   cat <<EOF >&2
 Description:
@@ -45,6 +48,43 @@ function scan_text_from_input() {
       usage
       ;;
   esac
+}
+
+function audit_block_secret() {
+  local _input="$1"
+  local _rule_name="$2"
+  local _message="$3"
+
+  local _session _tool _summary _file_path
+  _session="$(jq -r '.session_id // empty' <<<"$_input")"
+
+  case "$MODE" in
+    prompt)
+      _tool="UserPromptSubmit"
+      # NEVER log the prompt body — it may contain the secret that triggered
+      # the rule. Audit-log only the matched rule name.
+      _summary="<prompt body elided>"
+      ;;
+    read)
+      _tool="Read"
+      _file_path="$(jq -r '.tool_input.file_path // empty' <<<"$_input")"
+      _summary="$_file_path"
+      ;;
+    write)
+      # PreToolUse hook input does not always carry tool_name when the matcher
+      # is "Write|Edit|MultiEdit"; record file_path as the summary so the
+      # operator can still see which file the rule blocked.
+      _tool="$(jq -r '.tool_name // "Write"' <<<"$_input")"
+      _file_path="$(jq -r '.tool_input.file_path // empty' <<<"$_input")"
+      _summary="$_file_path"
+      ;;
+    *)
+      _tool="unknown"
+      _summary=""
+      ;;
+  esac
+
+  log_blocked "$_tool" "$_summary" "$_message ($_rule_name)" guard_secret_content.sh "$_session"
 }
 
 function block_output() {
@@ -99,6 +139,7 @@ function main() {
     [[ -z "$_pattern" ]] && continue
 
     if rg --pcre2 -q -e "$_pattern" - <<<"$_scan_text" 2>/dev/null; then
+      audit_block_secret "$_input" "$_rule_name" "$_message"
       block_output "BLOCKED: $_message ($_rule_name)"
       exit 0
     fi

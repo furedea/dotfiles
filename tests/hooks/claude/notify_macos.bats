@@ -1,50 +1,50 @@
 #!/usr/bin/env bats
-# Tests for .claude/hooks/macos_notify_done.sh and macos_notify_await.sh
+# Tests for .claude/hooks/notify_macos_done.sh and notify_macos_await.sh
 #
 # These hooks depend on macOS-specific commands (osascript, afplay).
 # Tests verify script structure and syntax rather than actual notification behavior.
 
 setup() {
   load test_helper/setup
-  DONE_HOOK="$HOOK_DIR/macos_notify_done.sh"
-  AWAIT_HOOK="$HOOK_DIR/macos_notify_await.sh"
+  DONE_HOOK="$HOOK_DIR/notify_macos_done.sh"
+  AWAIT_HOOK="$HOOK_DIR/notify_macos_await.sh"
 }
 
 # ============================================================
 # File structure
 # ============================================================
 
-@test "macos_notify_done.sh exists and is executable" {
+@test "notify_macos_done.sh exists and is executable" {
   [ -f "$DONE_HOOK" ]
   [ -x "$DONE_HOOK" ]
 }
 
-@test "macos_notify_await.sh exists and is executable" {
+@test "notify_macos_await.sh exists and is executable" {
   [ -f "$AWAIT_HOOK" ]
   [ -x "$AWAIT_HOOK" ]
 }
 
-@test "macos_notify_done.sh has set -euCo pipefail" {
+@test "notify_macos_done.sh has set -euCo pipefail" {
   grep -q 'set -euCo pipefail' "$DONE_HOOK"
 }
 
-@test "macos_notify_await.sh has set -euCo pipefail" {
+@test "notify_macos_await.sh has set -euCo pipefail" {
   grep -q 'set -euCo pipefail' "$AWAIT_HOOK"
 }
 
-@test "macos_notify_done.sh uses osascript" {
+@test "notify_macos_done.sh uses osascript" {
   grep -q 'osascript' "$DONE_HOOK"
 }
 
-@test "macos_notify_await.sh uses osascript" {
+@test "notify_macos_await.sh uses osascript" {
   grep -q 'osascript' "$AWAIT_HOOK"
 }
 
-@test "macos_notify_done.sh uses afplay" {
+@test "notify_macos_done.sh uses afplay" {
   grep -q 'afplay' "$DONE_HOOK"
 }
 
-@test "macos_notify_await.sh uses afplay" {
+@test "notify_macos_await.sh uses afplay" {
   grep -q 'afplay' "$AWAIT_HOOK"
 }
 
@@ -52,12 +52,12 @@ setup() {
 # Syntax validation
 # ============================================================
 
-@test "macos_notify_done.sh passes bash syntax check" {
+@test "notify_macos_done.sh passes bash syntax check" {
   run bash -n "$DONE_HOOK"
   [ "$status" -eq 0 ]
 }
 
-@test "macos_notify_await.sh passes bash syntax check" {
+@test "notify_macos_await.sh passes bash syntax check" {
   run bash -n "$AWAIT_HOOK"
   [ "$status" -eq 0 ]
 }
@@ -66,11 +66,11 @@ setup() {
 # Sound file references
 # ============================================================
 
-@test "macos_notify_done.sh references a system sound file" {
+@test "notify_macos_done.sh references a system sound file" {
   grep -qE '/System/Library/Sounds/.*\.aiff' "$DONE_HOOK"
 }
 
-@test "macos_notify_await.sh references a system sound file" {
+@test "notify_macos_await.sh references a system sound file" {
   grep -qE '/System/Library/Sounds/.*\.aiff' "$AWAIT_HOOK"
 }
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Shared helper: split a compound shell command on unquoted operators.
-# Sourced by .claude/hooks/command_allowlist.sh and block_dangerous_git.sh.
+# Sourced by .claude/hooks/guard_allowed_commands.sh and guard_dangerous_git.sh.
 #
 # Splits on `|`, `||`, `&&`, `;`, and background `&`, while respecting:
 #   - single-quoted strings

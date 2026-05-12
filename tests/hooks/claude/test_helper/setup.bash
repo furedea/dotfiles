@@ -47,35 +47,56 @@ stage_file() {
   git -C "$TEMP_REPO" add "$filepath"
 }
 
-# Build a JSON payload for block_secret_content.sh prompt mode.
+# Build a JSON payload for guard_secret_content.sh prompt mode.
 # Usage: make_prompt_input "some user prompt text"
 make_prompt_input() {
   jq -n --arg p "$1" '{"prompt":$p}'
 }
 
-# Build a JSON payload for block_secret_content.sh read mode.
+# Build a JSON payload for guard_secret_content.sh read mode.
 # Usage: make_read_input "/path/to/file"
 make_read_input() {
   jq -n --arg fp "$1" '{"tool_input":{"file_path":$fp}}'
 }
 
-# Build a JSON payload for block_secret_content.sh write mode.
+# Build a JSON payload for guard_secret_content.sh write mode.
 # Usage: make_write_input "content" "new_string"
 make_write_input() {
   jq -n --arg c "${1:-}" --arg ns "${2:-}" '{"tool_input":{"content":$c,"new_string":$ns}}'
 }
 
-# Build a JSON payload for log_tool_call.sh / log_permission_denied.sh.
-# Usage: make_log_input "Bash" '{"command":"ls"}' "session-123"
+# Build a JSON payload for audit_tool_call.sh / audit_permission_denied.sh.
+# Usage: make_log_input "Bash" '{"command":"ls"}' "session-123" "PreToolUse"
 make_log_input() {
   local tool="$1"
   local tool_input="$2"
   local session="${3:-test-session}"
-  jq -n --arg t "$tool" --argjson ti "$tool_input" --arg s "$session" \
-    '{"tool_name":$t,"tool_input":$ti,"session_id":$s}'
+  local event="${4:-PostToolUse}"
+  jq -n --arg t "$tool" --argjson ti "$tool_input" --arg s "$session" --arg e "$event" \
+    '{"hook_event_name":$e,"tool_name":$t,"tool_input":$ti,"session_id":$s}'
 }
 
-# Build a JSON payload for log_permission_denied.sh (includes reason).
+# Build a JSON payload for audit_compaction.sh (PreCompact event).
+# Usage: make_compact_input "manual" "session-123" "/path/to/transcript.jsonl"
+make_compact_input() {
+  local trigger="${1:-manual}"
+  local session="${2:-test-session}"
+  local transcript="${3:-}"
+  jq -n --arg trig "$trigger" --arg s "$session" --arg tp "$transcript" \
+    '{"hook_event_name":"PreCompact","trigger":$trig,"session_id":$s,"transcript_path":$tp}'
+}
+
+# Build a JSON payload for the SessionStart event (post-compaction probe).
+# Usage: make_session_start_input "compact" "session-123" "/path/to/transcript.jsonl"
+make_session_start_input() {
+  local source="${1:-startup}"
+  local session="${2:-test-session}"
+  local transcript="${3:-}"
+  jq -n --arg src "$source" --arg s "$session" --arg tp "$transcript" \
+    '{"hook_event_name":"SessionStart","source":$src,"session_id":$s,"transcript_path":$tp}'
+}
+
+# Build a JSON payload for audit_permission_denied.sh (includes reason).
 # Usage: make_denied_input "Bash" '{"command":"rm -rf /"}' "auto-mode denied" "session-123"
 make_denied_input() {
   local tool="$1"

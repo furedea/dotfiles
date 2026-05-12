@@ -1,9 +1,9 @@
 #!/usr/bin/env bats
-# Tests for .claude/hooks/log_tool_call.sh
+# Tests for .claude/hooks/audit_tool_call.sh
 
 setup() {
   load test_helper/setup
-  HOOK="$HOOK_DIR/log_tool_call.sh"
+  HOOK="$HOOK_DIR/audit_tool_call.sh"
   LOG_TMPDIR="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/log.XXXXXX")"
 }
 
@@ -20,6 +20,42 @@ get_last_log() {
 }
 
 # ============================================================
+# Event field — PreToolUse (intent) vs PostToolUse (result)
+# ============================================================
+
+@test "records PreToolUse event when invoked as PreToolUse" {
+  run_hook "$(make_log_input Bash '{"command":"git status"}' "test-session" "PreToolUse")"
+  [ "$status" -eq 0 ]
+  local entry
+  entry=$(get_last_log)
+  [[ $(echo "$entry" | jq -r '.event') == "PreToolUse" ]]
+}
+
+@test "records PostToolUse event when invoked as PostToolUse" {
+  run_hook "$(make_log_input Bash '{"command":"git status"}' "test-session" "PostToolUse")"
+  [ "$status" -eq 0 ]
+  local entry
+  entry=$(get_last_log)
+  [[ $(echo "$entry" | jq -r '.event') == "PostToolUse" ]]
+}
+
+@test "records observed status for tool calls" {
+  run_hook "$(make_log_input Bash '{"command":"git status"}')"
+  [ "$status" -eq 0 ]
+  local entry
+  entry=$(get_last_log)
+  [[ $(echo "$entry" | jq -r '.status') == "observed" ]]
+}
+
+@test "records empty reason for observed tool calls" {
+  run_hook "$(make_log_input Bash '{"command":"git status"}')"
+  [ "$status" -eq 0 ]
+  local entry
+  entry=$(get_last_log)
+  [[ $(echo "$entry" | jq -r '.reason') == "" ]]
+}
+
+# ============================================================
 # Bash tool logging
 # ============================================================
 
@@ -30,7 +66,6 @@ get_last_log() {
   entry=$(get_last_log)
   [[ $(echo "$entry" | jq -r '.tool') == "Bash" ]]
   [[ $(echo "$entry" | jq -r '.input') == "git status" ]]
-  [[ $(echo "$entry" | jq -r '.status') == "allowed" ]]
 }
 
 # ============================================================
@@ -154,4 +189,31 @@ get_last_log() {
   local entry
   entry=$(get_last_log)
   echo "$entry" | jq empty
+}
+
+@test "log entry follows shared audit schema" {
+  run_hook "$(make_log_input Bash '{"command":"echo hello"}')"
+  [ "$status" -eq 0 ]
+  local entry
+  entry=$(get_last_log)
+  echo "$entry" | jq -e '
+    has("ts") and
+    has("event") and
+    has("status") and
+    has("tool") and
+    has("input") and
+    has("reason") and
+    has("session")
+  ' >/dev/null
+}
+
+@test "defaults event to PostToolUse when hook_event_name is missing" {
+  # Older Claude Code versions did not send hook_event_name; keep behaviour
+  # stable so historic transcripts replayed against this hook still write
+  # to the audit log without dropping the entry.
+  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run bash "$HOOK" <<< '{"tool_name":"Bash","tool_input":{"command":"ls"}}'
+  [ "$status" -eq 0 ]
+  local entry
+  entry=$(get_last_log)
+  [[ $(echo "$entry" | jq -r '.event') == "PostToolUse" ]]
 }

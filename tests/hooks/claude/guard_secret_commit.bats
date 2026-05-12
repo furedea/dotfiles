@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# Tests for .claude/hooks/prevent_secret_commit.sh
+# Tests for .claude/hooks/guard_secret_commit.sh
 
 setup() {
   load test_helper/setup
@@ -9,7 +9,7 @@ setup() {
 # Helper: run the hook from within the temp repo so it picks up staged files.
 run_hook() {
   local cmd="${1:-git commit -m test}"
-  run bash -c "cd '$TEMP_REPO' && bash '$HOOK_DIR/prevent_secret_commit.sh'" <<<"$(make_input "$cmd")"
+  run bash -c "cd '$TEMP_REPO' && bash '$HOOK_DIR/guard_secret_commit.sh'" <<<"$(make_input "$cmd")"
 }
 
 # --- Blocked cases: sensitive filename patterns ---
@@ -145,8 +145,8 @@ run_hook() {
 }
 
 @test "allows tracked secret scanner hook scripts" {
-  stage_file "agents/hooks/block_secret_content.sh" "#!/bin/bash"
-  stage_file "codex/hooks/adapt_block_secret_content.sh" "#!/bin/bash"
+  stage_file "agents/hooks/guard_secret_content.sh" "#!/bin/bash"
+  stage_file "codex/hooks/adapt_guard_secret_content.sh" "#!/bin/bash"
   run_hook
   [ "$status" -eq 0 ]
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# Tests for .claude/hooks/command_allowlist.sh
+# Tests for .claude/hooks/guard_allowed_commands.sh
 #
 # Focus areas:
 # 1. Compound command splitting (|, ||, &&, ;, &)
@@ -17,7 +17,7 @@ setup() {
 }
 
 run_hook() {
-  run bash "$HOOK_DIR/command_allowlist.sh" <<<"$(make_input "$1")"
+  run bash "$HOOK_DIR/guard_allowed_commands.sh" <<<"$(make_input "$1")"
 }
 
 # ============================================================
@@ -35,7 +35,7 @@ run_hook() {
 }
 
 @test "passes through empty command" {
-  run bash "$HOOK_DIR/command_allowlist.sh" <<<'{"tool_input":{"command":""}}'
+  run bash "$HOOK_DIR/guard_allowed_commands.sh" <<<'{"tool_input":{"command":""}}'
   [ "$status" -eq 0 ]
 }
 
@@ -94,16 +94,16 @@ run_hook() {
 }
 
 @test "allows local test lint and format tools from home packages" {
-  run_hook "bats tests/hooks/claude/command_allowlist.bats"
+  run_hook "bats tests/hooks/claude/guard_allowed_commands.bats"
   [ "$status" -eq 0 ]
 
   run_hook "actionlint .github/workflows/ci.yml"
   [ "$status" -eq 0 ]
 
-  run_hook "shellcheck agents/hooks/command_allowlist.sh"
+  run_hook "shellcheck agents/hooks/guard_allowed_commands.sh"
   [ "$status" -eq 0 ]
 
-  run_hook "shfmt -w agents/hooks/command_allowlist.sh"
+  run_hook "shfmt -w agents/hooks/guard_allowed_commands.sh"
   [ "$status" -eq 0 ]
 
   run_hook "dprint check"
@@ -196,6 +196,64 @@ run_hook() {
   [ "$status" -eq 2 ]
 
   run_hook 'git commit -m "feat(test): `touch /tmp/blocked`"'
+  [ "$status" -eq 2 ]
+}
+
+@test "allows git add explicit paths" {
+  run_hook "git add bot/main.py"
+  [ "$status" -eq 0 ]
+
+  run_hook "git add bot/main.py tests/bot/test_main.py"
+  [ "$status" -eq 0 ]
+
+  run_hook "git add -- path/to/file"
+  [ "$status" -eq 0 ]
+}
+
+@test "blocks bulk git add forms" {
+  run_hook "git add ."
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"denied by allowlist policy"* ]]
+
+  run_hook "git add -A"
+  [ "$status" -eq 2 ]
+
+  run_hook "git add --all"
+  [ "$status" -eq 2 ]
+
+  run_hook "ls && git add ."
+  [ "$status" -eq 2 ]
+
+  run_hook "echo ok | xargs -I {} git add -A"
+  [ "$status" -eq 2 ]
+
+  run_hook "git   add   ."
+  [ "$status" -eq 2 ]
+
+  run_hook "git add --all --verbose"
+  [ "$status" -eq 2 ]
+}
+
+@test "allows normal git commit forms" {
+  run_hook 'git commit -m "hello world"'
+  [ "$status" -eq 0 ]
+
+  run_hook "git commit --amend -m fix"
+  [ "$status" -eq 0 ]
+}
+
+@test "blocks git commit no-verify bypass forms" {
+  run_hook "git commit --no-verify -m test"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"denied by allowlist policy"* ]]
+
+  run_hook "git commit -m test --no-verify"
+  [ "$status" -eq 2 ]
+
+  run_hook "git commit -n -m test"
+  [ "$status" -eq 2 ]
+
+  run_hook "git   commit   --no-verify"
   [ "$status" -eq 2 ]
 }
 
@@ -387,7 +445,7 @@ run_hook() {
   # Shell: -f body='it'\''s great'  →  the '\'' sequence ends quote, adds literal ', reopens quote
   local input
   input=$(jq -n --arg cmd "gh api repos/owner/repo/pulls/1/comments/99/replies -f body='it'\\''s great'" '{tool_input:{command:$cmd}}')
-  run bash "$HOOK_DIR/command_allowlist.sh" <<<"$input"
+  run bash "$HOOK_DIR/guard_allowed_commands.sh" <<<"$input"
   [ "$status" -eq 0 ]
 }
 
@@ -410,7 +468,7 @@ run_hook() {
 # ============================================================
 
 @test "handles invalid JSON gracefully" {
-  run bash "$HOOK_DIR/command_allowlist.sh" <<<"not json"
+  run bash "$HOOK_DIR/guard_allowed_commands.sh" <<<"not json"
   [ "$status" -eq 2 ]
   [[ "$output" == *"failed to parse"* ]]
 }

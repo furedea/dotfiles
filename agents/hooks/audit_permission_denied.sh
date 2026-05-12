@@ -26,6 +26,7 @@ ERRMSG
   exit 2
 fi
 
+EVENT=$(echo "$INPUT" | jq -r '.hook_event_name // "PermissionDenied"' 2>/dev/null || true)
 TOOL=$(echo "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null || true)
 SESSION=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null || true)
 REASON=$(echo "$INPUT" | jq -r '.reason // empty' 2>/dev/null || true)
@@ -52,9 +53,9 @@ LOG_FILE="$LOG_DIR/$(date -u +%Y-%m-%d).jsonl"
 
 TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-jq -cn --arg ts "$TS" --arg tool "$TOOL" --arg input "$SUMMARY" \
+jq -cn --arg ts "$TS" --arg event "$EVENT" --arg tool "$TOOL" --arg input "$SUMMARY" \
   --arg session "$SESSION" --arg reason "$REASON" \
-  '{ts: $ts, tool: $tool, status: "denied", input: $input, reason: $reason, session: $session}' \
+  '{ts: $ts, event: $event, tool: $tool, status: "denied", input: $input, reason: $reason, session: $session}' \
   >>"$LOG_FILE" 2>/dev/null || true
 
 exit 0
