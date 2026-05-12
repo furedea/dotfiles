@@ -34,7 +34,10 @@
       username = "kaito";
       system = "aarch64-darwin";
       dotfilesDir = "/Users/${username}/ghq/github.com/furedea/dotfiles";
-      dotfilesHomePath = "~/" + nixpkgs.lib.removePrefix "/Users/${username}/" dotfilesDir;
+      agentPaths = import ./nix/agents/paths.nix {
+        inherit (nixpkgs) lib;
+        inherit username dotfilesDir;
+      };
       allowUnfreePredicate =
         pkg:
         builtins.elem pkg.pname [
@@ -121,9 +124,10 @@
             inherit (nixpkgs.legacyPackages.${sys}) python3;
           });
 
-      # devShell consumed by direnv (`use flake`) so contributors share the
-      # same uv / lefthook / commitlint pin while editing skill scripts and
-      # running tests/python locally. Mirrors template-python's layout.
+      # Dev shells for everyday Python work and for CI-equivalent hook tests.
+      # The default shell is consumed by direnv (`use flake`); hook-tests keeps
+      # formatter/linter dependencies explicit so Bats does not depend on the
+      # caller's global PATH.
       devShells =
         nixpkgs.lib.genAttrs
           [
@@ -187,18 +191,18 @@
           libSet = nixpkgs.lib;
           agentSettings = import ./nix/agents/claude_settings.nix {
             lib = libSet;
-            inherit dotfilesDir;
+            inherit username dotfilesDir;
           };
           codexSettings = import ./nix/agents/codex_settings.nix {
             lib = libSet;
-            inherit dotfilesDir;
+            inherit username dotfilesDir;
           };
           agentHooks = import ./nix/agents/hooks.nix { };
           agentPolicy = import ./nix/agents/command_policy.nix { lib = libSet; };
           agentSkills = import ./nix/agents/skills.nix { };
         in
         {
-          inherit dotfilesHomePath;
+          inherit (agentPaths) dotfilesHomePath;
           inherit (agentSettings) generatedSettings;
           inherit (agentPolicy) codexRules forbiddenRulesJson;
           inherit (agentHooks) codexHooks;

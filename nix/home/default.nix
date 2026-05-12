@@ -13,8 +13,8 @@
 let
   link = path: config.lib.file.mkOutOfStoreSymlink "${dotfilesDir}/${path}";
   agentCommandPolicy = import ../agents/command_policy.nix { inherit lib; };
-  claudeSettings = import ../agents/claude_settings.nix { inherit lib dotfilesDir; };
-  codexSettings = import ../agents/codex_settings.nix { inherit lib dotfilesDir; };
+  claudeSettings = import ../agents/claude_settings.nix { inherit lib username dotfilesDir; };
+  codexSettings = import ../agents/codex_settings.nix { inherit lib username dotfilesDir; };
   agentHooks = import ../agents/hooks.nix { };
   # Concatenate the hand-written `codex/config.toml` with the Nix-generated
   # `[permissions.guarded.filesystem]` fragment. `sync_config.py` then merges

@@ -1,5 +1,11 @@
-{ lib, dotfilesDir }:
+{
+  lib,
+  username,
+  dotfilesDir,
+}:
 let
+  agentPaths = import ./paths.nix { inherit lib username dotfilesDir; };
+
   filesUnder =
     root:
     let
@@ -9,13 +15,6 @@ let
 
   agentHookFiles = filesUnder ../../agents/hooks;
   codexHookFiles = filesUnder ../../codex/hooks;
-
-  tildeDotfilesHomePath =
-    let
-      parts = lib.splitString "/" dotfilesDir;
-      relative = lib.concatStringsSep "/" (lib.drop 3 parts);
-    in
-    "~/${relative}";
 
   # Codex's `[permissions.<profile>.filesystem]` is the symmetric counterpart
   # to Claude's `permissions.deny: Edit/Write` plus `sandbox.filesystem.denyWrite`:
@@ -40,10 +39,10 @@ let
   # path the Edit/Write tool receives. Listing the literal `~/`-anchored
   # paths is username-free yet bypasses the glob behavior entirely.
   protectedDotfilesPaths =
-    map (relative: "${tildeDotfilesHomePath}/agents/hooks/${relative}") agentHookFiles
-    ++ map (relative: "${tildeDotfilesHomePath}/codex/hooks/${relative}") codexHookFiles
+    map (relative: "${agentPaths.dotfilesHomePath}/agents/hooks/${relative}") agentHookFiles
+    ++ map (relative: "${agentPaths.dotfilesHomePath}/codex/hooks/${relative}") codexHookFiles
     ++ [
-      "${tildeDotfilesHomePath}/agents/AGENTS.md"
+      "${agentPaths.dotfilesHomePath}/agents/AGENTS.md"
     ];
 
   protectedPaths = protectedHomePaths ++ protectedDotfilesPaths;
