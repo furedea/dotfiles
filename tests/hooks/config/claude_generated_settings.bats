@@ -53,9 +53,9 @@ generated_settings() {
 
 @test "generated settings lock every file under agents/hooks/" {
   generated="$(generated_settings)"
-  # The dotfiles checkout lives at /Users/<user>/<sub>/dotfiles; the harness
-  # rewrites this to ~/<sub>/dotfiles so deny entries stay portable.
-  dotfiles_home_path="~/$(printf '%s' "$REPO_ROOT" | sed -E 's|^/Users/[^/]+/||')"
+  # The generated Nix settings are built for the managed macOS checkout path,
+  # independent of the temporary checkout path used by Linux CI runners.
+  dotfiles_home_path="~/ghq/github.com/furedea/dotfiles"
 
   # Use git ls-files (not find) so the expected set matches what Nix's
   # flake-aware source path sees — gitignored runtime artifacts (e.g. audit

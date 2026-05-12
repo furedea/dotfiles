@@ -117,6 +117,28 @@
           ]
           (sys: {
             codex = codex-cli-nix.packages.${sys}.default;
+            hook-test-tools =
+              let
+                stablePkgs = nixpkgs.legacyPackages.${sys};
+                unstablePkgs = import nixpkgs-unstable {
+                  system = sys;
+                  config = { inherit allowUnfreePredicate; };
+                };
+              in
+              stablePkgs.symlinkJoin {
+                name = "hook-test-tools";
+                paths = [
+                  codex-cli-nix.packages.${sys}.default
+                  stablePkgs.bats
+                  stablePkgs.dprint
+                  stablePkgs.oxlint
+                  stablePkgs.ruff
+                  stablePkgs.rustfmt
+                  stablePkgs.shellcheck
+                  stablePkgs.shfmt
+                  unstablePkgs.oxfmt
+                ];
+              };
             inherit (nixpkgs.legacyPackages.${sys}) python3;
           });
 
