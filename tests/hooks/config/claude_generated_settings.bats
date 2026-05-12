@@ -19,7 +19,8 @@ generated_settings() {
 
   [ "$(jq -r '.model' <<<"$generated")" = "$(jq -r '.model' "$SETTINGS")" ]
   [ "$(jq -r '.language' <<<"$generated")" = "$(jq -r '.language' "$SETTINGS")" ]
-  [ "$(jq -r '.hooks.PreToolUse | length' <<<"$generated")" = "$(jq -r '.hooks.PreToolUse | length' "$SETTINGS")" ]
+  [ "$(jq -r 'has("hooks")' "$SETTINGS")" = "false" ]
+  jq -e '.hooks.PreToolUse | length > 0' <<<"$generated" >/dev/null
 }
 
 @test "generated settings preserve non-Bash permissions" {
@@ -27,13 +28,14 @@ generated_settings() {
 
   # The harness in nix/agents/claude_settings.nix synthesizes Edit/Write deny
   # entries for every file under agents/hooks/ plus settings.json/AGENTS.md,
-  # both as $HOME/.claude/ paths and as **/dotfiles/ globs covering the
-  # checkout. That layer is verified separately; this test only checks that
-  # source-authored non-Bash permissions survive the generation pass.
+  # both as ~/.claude/ paths and as ~/<checkout-subpath>/ literal paths
+  # covering the dotfiles checkout. That layer is verified separately; this
+  # test only checks that source-authored non-Bash permissions survive the
+  # generation pass.
   filter='.permissions.allow[], .permissions.deny[]
     | select(startswith("Bash(") | not)
-    | select(test("^(Edit|Write)\\(\\$HOME/\\.claude/") | not)
-    | select(test("^(Edit|Write)\\(\\*\\*/[^/]+/agents/") | not)'
+    | select(test("^(Edit|Write)\\(~/\\.claude/") | not)
+    | select(test("^(Edit|Write)\\(~/[^.][^/]*/") | not)'
 
   expected="$(jq -r "$filter" "$SETTINGS" | sort)"
   actual="$(jq -r "$filter" <<<"$generated" | sort)"
@@ -51,30 +53,36 @@ generated_settings() {
 
 @test "generated settings lock every file under agents/hooks/" {
   generated="$(generated_settings)"
-  dotfiles_name="$(basename "$REPO_ROOT")"
+  # The dotfiles checkout lives at /Users/<user>/<sub>/dotfiles; the harness
+  # rewrites this to ~/<sub>/dotfiles so deny entries stay portable.
+  dotfiles_home_path="~/$(printf '%s' "$REPO_ROOT" | sed -E 's|^/Users/[^/]+/||')"
 
+  # Use git ls-files (not find) so the expected set matches what Nix's
+  # flake-aware source path sees — gitignored runtime artifacts (e.g. audit
+  # logs under agents/hooks/docs/logs/) must not enter the lock list.
   expected_home_paths="$(
     {
-      cd "$REPO_ROOT/agents/hooks" && find . -type f -print |
-        sed 's|^\./|$HOME/.claude/hooks/|'
-      printf '%s\n' '$HOME/.claude/CLAUDE.md' '$HOME/.claude/settings.json'
+      cd "$REPO_ROOT" && git ls-files agents/hooks |
+        sed 's|^agents/hooks/|~/.claude/hooks/|'
+      printf '%s\n' '~/.claude/CLAUDE.md' '~/.claude/rules/forbidden_commands.json' '~/.claude/settings.json'
     } | sort -u
   )"
-  expected_dotfiles_globs="$(
+  expected_dotfiles_paths="$(
     {
-      cd "$REPO_ROOT/agents/hooks" && find . -type f -print |
-        sed "s|^\./|**/${dotfiles_name}/agents/hooks/|"
-      printf '%s\n' "**/${dotfiles_name}/agents/AGENTS.md"
+      cd "$REPO_ROOT" && git ls-files agents/hooks |
+        sed "s|^agents/hooks/|${dotfiles_home_path}/agents/hooks/|"
+      printf '%s\n' "${dotfiles_home_path}/agents/AGENTS.md"
     } | sort -u
   )"
-  expected_permission_paths="$(printf '%s\n%s\n' "$expected_home_paths" "$expected_dotfiles_globs" | sort -u)"
+  expected_permission_paths="$(printf '%s\n%s\n' "$expected_home_paths" "$expected_dotfiles_paths" | sort -u)"
+  expected_sandbox_paths="$expected_permission_paths"
 
   edit_paths="$(
-    jq -r '.permissions.deny[] | select(test("^Edit\\((\\$HOME/\\.claude/|\\*\\*/[^/]+/agents/)")) | capture("^Edit\\((?<p>.*)\\)$").p' <<<"$generated" |
+    jq -r '.permissions.deny[] | select(test("^Edit\\(~/")) | capture("^Edit\\((?<p>.*)\\)$").p' <<<"$generated" |
       sort
   )"
   write_paths="$(
-    jq -r '.permissions.deny[] | select(test("^Write\\((\\$HOME/\\.claude/|\\*\\*/[^/]+/agents/)")) | capture("^Write\\((?<p>.*)\\)$").p' <<<"$generated" |
+    jq -r '.permissions.deny[] | select(test("^Write\\(~/")) | capture("^Write\\((?<p>.*)\\)$").p' <<<"$generated" |
       sort
   )"
   sandbox_paths="$(
@@ -83,14 +91,28 @@ generated_settings() {
 
   [ "$edit_paths" = "$expected_permission_paths" ]
   [ "$write_paths" = "$expected_permission_paths" ]
-  [ "$sandbox_paths" = "$expected_home_paths" ]
+  [ "$sandbox_paths" = "$expected_sandbox_paths" ]
+}
+
+@test "generated sandbox merges base filesystem keys with synthesized denyWrite" {
+  generated="$(generated_settings)"
+
+  # The harness synthesizes `sandbox.filesystem.denyWrite` for hook auto-lock
+  # but must merge — not overwrite — author-declared `sandbox.filesystem.*`
+  # in `settings.base.json`. The test compares against the base file directly
+  # so adding/removing allowWrite entries needs no test edit.
+  expected="$(jq -S '.sandbox.filesystem // {}' "$SETTINGS")"
+  actual="$(jq -S '.sandbox.filesystem | del(.denyWrite)' <<<"$generated")"
+
+  [ "$expected" = "$actual" ]
+  jq -e '.sandbox.filesystem.denyWrite | length > 0' <<<"$generated" >/dev/null
 }
 
 @test "generated settings exclude agents/skills/ from auto-lock" {
   generated="$(generated_settings)"
 
-  ! jq -e '.permissions.deny[] | select(test("\\$HOME/\\.claude/skills/"))' <<<"$generated" >/dev/null
-  ! jq -e '.sandbox.filesystem.denyWrite[] | select(test("\\$HOME/\\.claude/skills/"))' <<<"$generated" >/dev/null
+  ! jq -e '.permissions.deny[] | select(test("~/\\.claude/skills/"))' <<<"$generated" >/dev/null
+  ! jq -e '.sandbox.filesystem.denyWrite[] | select(test("~/\\.claude/skills/"))' <<<"$generated" >/dev/null
 }
 
 @test "generated settings keep hook commands resolvable" {
@@ -116,4 +138,15 @@ generated_settings() {
     printf '  %s\n' "${missing[@]}" >&2
     return 1
   fi
+}
+
+@test "generated settings register harness mutation blocker for file edits" {
+  generated="$(generated_settings)"
+
+  jq -e '
+    .hooks.PreToolUse[]
+    | select(.matcher == "Write|Edit|MultiEdit")
+    | .hooks[]
+    | select(.command == "$HOME/.claude/hooks/guard_harness_files.sh")
+  ' <<<"$generated" >/dev/null
 }

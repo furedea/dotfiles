@@ -59,32 +59,37 @@ assert data["default_permissions"] == "guarded", data
 filesystem = data["permissions"]["guarded"]["filesystem"]
 assert filesystem["glob_scan_max_depth"] == 5
 assert all(v == "read" for k, v in filesystem.items() if k != "glob_scan_max_depth")
-assert "$HOME/.claude/hooks/command_allowlist.sh" in filesystem
-assert "$HOME/.codex/hooks/adapt_shell_command.sh" in filesystem
+assert "~/.claude/hooks/guard_allowed_commands.sh" in filesystem
+assert "~/.codex/hooks/adapt_shell_command.sh" in filesystem
 '
 }
 
 @test "generated codex fragment locks every file under agents/hooks/ and codex/hooks/" {
-  dotfiles_name="$(basename "$REPO_ROOT")"
+  # The dotfiles checkout lives at /Users/<user>/<sub>/dotfiles; the harness
+  # rewrites this to ~/<sub>/dotfiles so deny entries stay portable.
+  tilde_dotfiles_home_path="~/$(printf '%s' "$REPO_ROOT" | sed -E 's|^/Users/[^/]+/||')"
 
+  # Use git ls-files (not find) so the expected set matches what Nix's
+  # flake-aware source path sees — gitignored runtime artifacts (e.g. audit
+  # logs under agents/hooks/docs/logs/) must not enter the lock list.
   expected="$(
     {
-      cd "$REPO_ROOT/agents/hooks" && find . -type f -print |
-        sed 's|^\./|$HOME/.claude/hooks/|'
-      cd "$REPO_ROOT/codex/hooks" && find . -type f -print |
-        sed 's|^\./|$HOME/.codex/hooks/|'
-      cd "$REPO_ROOT/agents/hooks" && find . -type f -print |
-        sed "s|^\./|**/${dotfiles_name}/agents/hooks/|"
-      cd "$REPO_ROOT/codex/hooks" && find . -type f -print |
-        sed "s|^\./|**/${dotfiles_name}/codex/hooks/|"
+      cd "$REPO_ROOT" && git ls-files agents/hooks |
+        sed 's|^agents/hooks/|~/.claude/hooks/|'
+      cd "$REPO_ROOT" && git ls-files codex/hooks |
+        sed 's|^codex/hooks/|~/.codex/hooks/|'
+      cd "$REPO_ROOT" && git ls-files agents/hooks |
+        sed "s|^agents/hooks/|${tilde_dotfiles_home_path}/agents/hooks/|"
+      cd "$REPO_ROOT" && git ls-files codex/hooks |
+        sed "s|^codex/hooks/|${tilde_dotfiles_home_path}/codex/hooks/|"
       printf '%s\n' \
-        '$HOME/.claude/CLAUDE.md' \
-        '$HOME/.claude/settings.json' \
-        '$HOME/.codex/AGENTS.md' \
-        '$HOME/.codex/hooks.json' \
-        '$HOME/.codex/rules/default.rules' \
-        "**/${dotfiles_name}/agents/AGENTS.md" \
-        "**/${dotfiles_name}/codex/hooks.json"
+        '~/.claude/CLAUDE.md' \
+        '~/.claude/rules/forbidden_commands.json' \
+        '~/.claude/settings.json' \
+        '~/.codex/AGENTS.md' \
+        '~/.codex/hooks.json' \
+        '~/.codex/rules/default.rules' \
+        "${tilde_dotfiles_home_path}/agents/AGENTS.md"
     } | sort -u
   )"
 

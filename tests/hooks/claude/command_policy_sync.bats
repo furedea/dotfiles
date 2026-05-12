@@ -1,16 +1,16 @@
 #!/usr/bin/env bats
 # Tests that every Bash permission in generated settings has matching coverage
-# in command_allowlist.sh.
+# in guard_allowed_commands.sh.
 #
 # Invariant: each Bash(prefix:*) allow entry in generated settings must have
 # a corresponding GOVERNED_PREFIXES entry AND at least one ALLOWED_PATTERNS
-# entry in command_allowlist.sh.
+# entry in guard_allowed_commands.sh.
 #
 # This prevents auto-approved commands from bypassing the allowlist hook.
 
 setup() {
   load test_helper/setup
-  ALLOWLIST="$REPO_ROOT/agents/hooks/command_allowlist.sh"
+  ALLOWLIST="$REPO_ROOT/agents/hooks/guard_allowed_commands.sh"
 }
 
 read_settings() {
@@ -25,14 +25,14 @@ get_settings_bash_prefixes() {
     sed -E 's/^Bash\(([^:]+):\*\)$/\1/'
 }
 
-# Extract GOVERNED_PREFIXES entries from command_allowlist.sh.
+# Extract GOVERNED_PREFIXES entries from guard_allowed_commands.sh.
 get_governed_prefixes() {
   sed -n '/^GOVERNED_PREFIXES=(/,/^)/p' "$ALLOWLIST" |
     grep -E '^[[:space:]]+"' |
     sed -E 's/^[[:space:]]+"([^"]+)"$/\1/'
 }
 
-# Extract ALLOWED_PATTERNS entries from command_allowlist.sh (just the raw patterns).
+# Extract ALLOWED_PATTERNS entries from guard_allowed_commands.sh (just the raw patterns).
 get_allowed_patterns() {
   sed -n '/^ALLOWED_PATTERNS=(/,/^)/p' "$ALLOWLIST" |
     grep -E "^[[:space:]]+['\"]" |
@@ -59,7 +59,7 @@ get_allowed_patterns() {
     printf '  - %s\n' "${missing[@]}"
     echo ""
     echo "Fix: add the missing prefix(es) to GOVERNED_PREFIXES in"
-    echo "  .claude/hooks/command_allowlist.sh"
+    echo "  .claude/hooks/guard_allowed_commands.sh"
     return 1
   fi
 }
@@ -106,7 +106,7 @@ get_allowed_patterns() {
     printf '  - %s\n' "${missing[@]}"
     echo ""
     echo "Fix: add at least one allowed regex pattern for each prefix in"
-    echo "  .claude/hooks/command_allowlist.sh"
+    echo "  .claude/hooks/guard_allowed_commands.sh"
     return 1
   fi
 }

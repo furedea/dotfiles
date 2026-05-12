@@ -1,6 +1,7 @@
 { lib, dotfilesDir }:
 let
   commandPolicy = import ./command_policy.nix { inherit lib; };
+  agentHooks = import ./hooks.nix { };
 
   baseSettings = builtins.fromJSON (builtins.readFile ../../claude/settings.base.json);
 
@@ -22,35 +23,44 @@ let
 
   hookFiles = filesUnder ../../agents/hooks;
 
-  # Basename of the dotfiles checkout (e.g. `dotfiles`). Used to build glob
-  # patterns that match the same files regardless of where the repository
-  # is cloned, so deny rules don't carry username- or ghq-specific paths.
-  dotfilesName = baseNameOf dotfilesDir;
+  # Rewrite the absolute checkout path (`/Users/<user>/ghq/.../dotfiles`) into
+  # a `~/`-relative form so deny entries stay portable across machines
+  # without baking in the username. Stripping the `/Users/<user>` prefix
+  # yields `ghq/.../dotfiles`, which we re-anchor onto `~`. Tilde is the
+  # only home-relative form Claude Code's permission matcher expands —
+  # `$HOME` is treated as a literal string and silently fails to match.
+  dotfilesHomePath =
+    let
+      parts = lib.splitString "/" dotfilesDir;
+      relative = lib.concatStringsSep "/" (lib.drop 3 parts);
+    in
+    "~/${relative}";
 
   # Files Claude must never modify: the PreToolUse security harness plus
   # the configuration that binds it. Skill scripts are deliberately
   # excluded — they are workflow tooling, not security boundaries.
-  protectedHomePaths = map (relative: "$HOME/.claude/hooks/${relative}") hookFiles ++ [
-    "$HOME/.claude/settings.json"
-    "$HOME/.claude/CLAUDE.md"
+  protectedHomePaths = map (relative: "~/.claude/hooks/${relative}") hookFiles ++ [
+    "~/.claude/rules/forbidden_commands.json"
+    "~/.claude/settings.json"
+    "~/.claude/CLAUDE.md"
   ];
 
   # Each hook file is reachable through two routes — the symlinked view
-  # under `$HOME/.claude/hooks/` and the real source in the dotfiles
-  # checkout. `permissions.deny` accepts globs, so a `**/<repo>/...`
-  # pattern covers the checkout without hardcoding its absolute location.
-  # `sandbox.filesystem.denyWrite` is documented as literal paths only,
-  # so the dotfiles route is intentionally omitted there.
-  protectedDotfilesGlobs =
-    map (relative: "**/${dotfilesName}/agents/hooks/${relative}") hookFiles
-    ++ [ "**/${dotfilesName}/agents/AGENTS.md" ];
+  # under `~/.claude/hooks/` and the real source in the dotfiles checkout.
+  # Listing both literal `~/`-anchored paths keeps the rules username-free
+  # and avoids relying on glob matching, which has been observed to miss
+  # the absolute path the Edit/Write tool receives.
+  protectedDotfilesPaths =
+    map (relative: "${dotfilesHomePath}/agents/hooks/${relative}") hookFiles
+    ++ [ "${dotfilesHomePath}/agents/AGENTS.md" ];
 
-  permissionDenyPaths = protectedHomePaths ++ protectedDotfilesGlobs;
+  protectedPaths = protectedHomePaths ++ protectedDotfilesPaths;
 
   protectedDenyPermissions =
-    map (path: "Edit(${path})") permissionDenyPaths ++ map (path: "Write(${path})") permissionDenyPaths;
+    map (path: "Edit(${path})") protectedPaths ++ map (path: "Write(${path})") protectedPaths;
 
   generatedSettings = baseSettings // {
+    hooks = agentHooks.claudeHooks;
     permissions = baseSettings.permissions // {
       allow = nonBashPermissions baseSettings.permissions.allow ++ commandPolicy.claudeAllowPermissions;
       deny =
@@ -59,8 +69,8 @@ let
         ++ protectedDenyPermissions;
     };
     sandbox = baseSettings.sandbox // {
-      filesystem = {
-        denyWrite = protectedHomePaths;
+      filesystem = (baseSettings.sandbox.filesystem or { }) // {
+        denyWrite = protectedPaths;
       };
     };
   };

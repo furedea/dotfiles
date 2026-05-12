@@ -54,6 +54,10 @@ policy_covers_prefix() {
   grep -q '".codex/rules/default.rules".text = agentCommandPolicy.codexRules;' "$HOME_NIX"
 }
 
+@test "home-manager writes forbidden command hook rules from the shared policy" {
+  grep -q '".claude/rules/forbidden_commands.json".text = agentCommandPolicy.forbiddenRulesJson;' "$HOME_NIX"
+}
+
 @test "generated codex rules include representative allow and forbidden rules" {
   rules="$(codex_rules)"
   [[ "$rules" == *'decision = "allow"'* ]]

@@ -15,6 +15,7 @@ let
   agentCommandPolicy = import ../agents/command_policy.nix { inherit lib; };
   claudeSettings = import ../agents/claude_settings.nix { inherit lib dotfilesDir; };
   codexSettings = import ../agents/codex_settings.nix { inherit lib dotfilesDir; };
+  agentHooks = import ../agents/hooks.nix { };
   # Concatenate the hand-written `codex/config.toml` with the Nix-generated
   # `[permissions.guarded.filesystem]` fragment. `sync_config.py` then merges
   # the union into `~/.codex/config.toml`, so hook auto-lock entries stay in
@@ -411,11 +412,12 @@ in
     ".codex/AGENTS.md".source = link "agents/AGENTS.md";
     ".codex/skills".source = "${renderedAgentSkills}/codex/skills";
     ".codex/hooks".source = link "codex/hooks";
-    ".codex/hooks.json".source = link "codex/hooks.json";
+    ".codex/hooks.json".text = builtins.toJSON agentHooks.codexHooks;
     ".codex/rules/default.rules".text = agentCommandPolicy.codexRules;
 
     # Claude Code
     ".claude/hooks".source = link "agents/hooks";
+    ".claude/rules/forbidden_commands.json".text = agentCommandPolicy.forbiddenRulesJson;
     ".claude/statusline".source = link "claude/statusline";
     ".claude/skills".source = "${renderedAgentSkills}/claude/skills";
     ".claude/CLAUDE.md".source = link "agents/AGENTS.md";

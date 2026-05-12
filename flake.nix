@@ -171,12 +171,14 @@
             lib = libSet;
             inherit dotfilesDir;
           };
+          agentHooks = import ./nix/agents/hooks.nix { };
           agentPolicy = import ./nix/agents/command_policy.nix { lib = libSet; };
           agentSkills = import ./nix/agents/skills.nix { };
         in
         {
           inherit (agentSettings) generatedSettings;
-          inherit (agentPolicy) codexRules;
+          inherit (agentPolicy) codexRules forbiddenRulesJson;
+          inherit (agentHooks) codexHooks;
           codexFilesystemPermissions = codexSettings.filesystemPermissions;
           codexConfigFragmentToml = codexSettings.configFragmentToml;
           agentSkillOverrides = agentSkills.overrides;

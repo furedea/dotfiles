@@ -1,14 +1,17 @@
 #!/usr/bin/env bats
-# Validate that every hook command in codex/hooks.json references an existing script.
+# Validate generated Codex hook commands.
 
 setup() {
   REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd)"
-  HOOKS_JSON="$REPO_ROOT/codex/hooks.json"
+  HOOKS_JSON="$REPO_ROOT#lib.codexHooks"
 }
 
-@test "hooks.json exists and is valid JSON" {
-  [ -f "$HOOKS_JSON" ]
-  jq empty "$HOOKS_JSON"
+generated_hooks() {
+  nix eval --json "$HOOKS_JSON"
+}
+
+@test "generated hooks are valid JSON" {
+  generated_hooks | jq empty
 }
 
 @test "all hook commands reference existing scripts" {
@@ -26,7 +29,7 @@ setup() {
     if [ ! -f "$script" ]; then
       missing+=("$cmd -> $script")
     fi
-  done < <(jq -r '.. | objects | select(.command?) | .command' "$HOOKS_JSON")
+  done < <(generated_hooks | jq -r '.. | objects | select(.command?) | .command')
 
   if [ ${#missing[@]} -gt 0 ]; then
     printf 'Missing script:\n' >&2
@@ -37,7 +40,7 @@ setup() {
 
 @test "no duplicate hooks within the same event group" {
   local dupes
-  dupes=$(jq -r '
+  dupes=$(generated_hooks | jq -r '
     .hooks | to_entries[] |
     .value[] |
     [.hooks[]?.command] |
@@ -47,4 +50,8 @@ setup() {
   ' "$HOOKS_JSON" 2>/dev/null || true)
 
   [ -z "$dupes" ]
+}
+
+@test "home-manager writes generated Codex hooks JSON" {
+  grep -q '".codex/hooks.json".text = builtins.toJSON agentHooks.codexHooks;' "$REPO_ROOT/nix/home/default.nix"
 }

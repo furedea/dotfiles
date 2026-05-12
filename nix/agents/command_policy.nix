@@ -25,7 +25,7 @@ let
   allowRules = [
     (allow [ "actionlint" ] [ "actionlint .github/workflows/ci.yml" ])
     (allow [ "autocorrect" ] [ "autocorrect --lint README.md" ])
-    (allow [ "bats" ] [ "bats tests/hooks/claude/command_allowlist.bats" ])
+    (allow [ "bats" ] [ "bats tests/hooks/claude/guard_allowed_commands.bats" ])
     (allow [ "cargo" ] [ "cargo test" "cargo fmt --check" "cargo clippy" "cargo check" ])
     (allow [ "commitlint" ] [ "commitlint --from HEAD~1 --to HEAD" ])
     (allow [ "deadnix" ] [ "deadnix nix" ])
@@ -48,8 +48,8 @@ let
     (allow [ "pnpm" ] [ "pnpm test" "pnpm lint" ])
     (allow [ "prettierd" ] [ "prettierd README.md" ])
     (allow [ "selene" ] [ "selene nvim" ])
-    (allow [ "shellcheck" ] [ "shellcheck agents/hooks/command_allowlist.sh" ])
-    (allow [ "shfmt" ] [ "shfmt -w agents/hooks/command_allowlist.sh" ])
+    (allow [ "shellcheck" ] [ "shellcheck agents/hooks/guard_allowed_commands.sh" ])
+    (allow [ "shfmt" ] [ "shfmt -w agents/hooks/guard_allowed_commands.sh" ])
     (allow [ "statix" ] [ "statix check nix" ])
     (allow [ "stylua" ] [ "stylua --check nvim" ])
     (allow [ "tex-fmt" ] [ "tex-fmt --check docs/main.tex" ])
@@ -184,9 +184,6 @@ let
     (forbidden [ "git" "worktree" "remove" ] [ "git worktree remove ../worktree" ]
       "Do not remove worktrees from Codex."
     )
-    (forbidden [ "git" "add" "." ] [ "git add ." ] "Stage files explicitly by path.")
-    (forbidden [ "git" "add" "-A" ] [ "git add -A" ] "Stage files explicitly by path.")
-    (forbidden [ "git" "add" "--all" ] [ "git add --all" ] "Stage files explicitly by path.")
   ];
 
   rules = allowRules ++ forbiddenRules;
@@ -203,6 +200,12 @@ in
     map (entry: {
       inherit (entry) decision pattern;
     }) rules
+  );
+
+  forbiddenRulesJson = builtins.toJSON (
+    map (entry: {
+      inherit (entry) justification pattern;
+    }) forbiddenRules
   );
 
   codexRules = ''

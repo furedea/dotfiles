@@ -10,7 +10,12 @@ let
   agentHookFiles = filesUnder ../../agents/hooks;
   codexHookFiles = filesUnder ../../codex/hooks;
 
-  dotfilesName = baseNameOf dotfilesDir;
+  tildeDotfilesHomePath =
+    let
+      parts = lib.splitString "/" dotfilesDir;
+      relative = lib.concatStringsSep "/" (lib.drop 3 parts);
+    in
+    "~/${relative}";
 
   # Codex's `[permissions.<profile>.filesystem]` is the symmetric counterpart
   # to Claude's `permissions.deny: Edit/Write` plus `sandbox.filesystem.denyWrite`:
@@ -18,27 +23,30 @@ let
   # `"read"` entry blocks every write path. Listing each file (rather than the
   # parent directory) preserves the ability to create new sibling files.
   protectedHomePaths =
-    map (relative: "$HOME/.claude/hooks/${relative}") agentHookFiles
-    ++ map (relative: "$HOME/.codex/hooks/${relative}") codexHookFiles
+    map (relative: "~/.claude/hooks/${relative}") agentHookFiles
+    ++ map (relative: "~/.codex/hooks/${relative}") codexHookFiles
     ++ [
-      "$HOME/.claude/CLAUDE.md"
-      "$HOME/.claude/settings.json"
-      "$HOME/.codex/AGENTS.md"
-      "$HOME/.codex/hooks.json"
-      "$HOME/.codex/rules/default.rules"
+      "~/.claude/CLAUDE.md"
+      "~/.claude/rules/forbidden_commands.json"
+      "~/.claude/settings.json"
+      "~/.codex/AGENTS.md"
+      "~/.codex/hooks.json"
+      "~/.codex/rules/default.rules"
     ];
 
-  # Glob patterns covering the dotfiles checkout regardless of where it is
-  # cloned. Codex respects globs in filesystem permission keys.
-  protectedDotfilesGlobs =
-    map (relative: "**/${dotfilesName}/agents/hooks/${relative}") agentHookFiles
-    ++ map (relative: "**/${dotfilesName}/codex/hooks/${relative}") codexHookFiles
+  # Earlier revisions used `/**/<repo>/...` globs here to stay independent
+  # of where the dotfiles checkout lived, but Claude Code's permission
+  # evaluator was observed not to match those globs against the absolute
+  # path the Edit/Write tool receives. Listing the literal `~/`-anchored
+  # paths is username-free yet bypasses the glob behavior entirely.
+  protectedDotfilesPaths =
+    map (relative: "${tildeDotfilesHomePath}/agents/hooks/${relative}") agentHookFiles
+    ++ map (relative: "${tildeDotfilesHomePath}/codex/hooks/${relative}") codexHookFiles
     ++ [
-      "**/${dotfilesName}/agents/AGENTS.md"
-      "**/${dotfilesName}/codex/hooks.json"
+      "${tildeDotfilesHomePath}/agents/AGENTS.md"
     ];
 
-  protectedPaths = protectedHomePaths ++ protectedDotfilesGlobs;
+  protectedPaths = protectedHomePaths ++ protectedDotfilesPaths;
 
   pathEntries = lib.listToAttrs (
     map (path: {
