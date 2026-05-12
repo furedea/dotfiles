@@ -4,7 +4,7 @@ commit-msg:
       run: commitlint --edit {1}
 
 # pre-commit owns whole-project format check, lint, and typecheck. Test
-# execution is delegated to the Stop hook (agents/hooks/completion_gate.sh)
+# execution is delegated to the Stop hook (agents/hooks/run_related_tests.sh)
 # and CI. Per-file fast feedback during edits lives in PostToolUse hooks.
 pre-commit:
   parallel: true

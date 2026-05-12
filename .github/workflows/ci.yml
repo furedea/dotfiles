@@ -83,7 +83,7 @@ jobs:
           format: gcc
           additional_files: >-
             claude/statusline/statusline.sh
-            codex/hooks/adapt_block_secret_content.sh
+            codex/hooks/adapt_guard_secret_content.sh
             codex/hooks/adapt_lint_format.sh
 
       - name: Setup shfmt
