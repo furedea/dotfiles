@@ -69,6 +69,7 @@ in
     actionlint
     lefthook
     commitlint
+    ls-lint
     ghq
     roots
     git-wt

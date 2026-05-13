@@ -47,6 +47,8 @@ pre-commit:
     oxlint:
       glob: "*.{js,ts,jsx,tsx}"
       run: oxlint {all_files}
+    ls-lint:
+      run: git ls-files -z | xargs -0 ls_lint
     # ----- typecheck (cross-file) -----
     ty:
       glob: "*.py"
