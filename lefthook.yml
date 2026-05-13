@@ -15,7 +15,7 @@ pre-commit:
       run: shfmt -i 2 -ci -d {all_files}
     nixfmt:
       glob: "*.nix"
-      run: nixfmt --check {all_files}
+      run: bash -c 'mapfile -t files < <(git ls-files "*.nix"); ((${#files[@]} == 0)) || nixfmt --check "${files[@]}"'
     stylua:
       glob: "*.lua"
       run: stylua --check {all_files}
@@ -34,10 +34,10 @@ pre-commit:
       run: shellcheck -x --source-path=SCRIPTDIR {all_files}
     statix:
       glob: "*.nix"
-      run: bash -c 'for f in "$@"; do statix check "$f" || exit 1; done' bash {all_files}
+      run: statix check .
     deadnix:
       glob: "*.nix"
-      run: deadnix --fail {all_files}
+      run: deadnix --fail .
     actionlint:
       glob: ".github/workflows/*.yml"
       run: actionlint {all_files}

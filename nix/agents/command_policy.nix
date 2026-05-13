@@ -38,6 +38,7 @@ let
     (allow [ "git" "add" ] [ "git add path/to/file" ])
     (allow [ "git" "branch" ] [ "git branch" "git branch feature/example" ])
     (allow [ "git" "commit" ] [ "git commit -m 'test: update policy'" ])
+    (allow [ "git" "ls-files" ] [ "git ls-files \"*.nix\"" ])
     (allow [ "git" "pull" ] [ "git pull --rebase origin main" ])
     (allow [ "git" "push" ] [ "git push origin feature/example" ])
     (allow [ "nixfmt" ] [ "nixfmt nix/home/default.nix" ])

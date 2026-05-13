@@ -63,6 +63,7 @@ GOVERNED_PREFIXES=(
   "git add"
   "git branch"
   "git commit"
+  "git ls-files"
   "git pull"
   "git push"
   "nixfmt"
@@ -155,6 +156,9 @@ ALLOWED_PATTERNS=(
   # blocked by permissions.deny in settings.json)
   '^git add [A-Za-z0-9._/-]+( [A-Za-z0-9._/-]+)*$'
   '^git add -- [A-Za-z0-9._/-]+( [A-Za-z0-9._/-]+)*$'
+
+  # Git file listing — read-only file discovery for hooks and CI scripts.
+  '^git ls-files "\*\.[A-Za-z0-9_-]+"$'
 
   # Git branch operations
   # Raw git branch

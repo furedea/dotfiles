@@ -210,6 +210,25 @@ run_hook() {
   [ "$status" -eq 0 ]
 }
 
+@test "allows git ls-files extension globs" {
+  run_hook 'git ls-files "*.nix"'
+  [ "$status" -eq 0 ]
+
+  run_hook 'git ls-files "*.ts"'
+  [ "$status" -eq 0 ]
+}
+
+@test "blocks broad git ls-files forms" {
+  run_hook "git ls-files"
+  [ "$status" -eq 2 ]
+
+  run_hook 'git ls-files "."'
+  [ "$status" -eq 2 ]
+
+  run_hook 'git ls-files "*.nix" --others'
+  [ "$status" -eq 2 ]
+}
+
 @test "blocks bulk git add forms" {
   run_hook "git add ."
   [ "$status" -eq 2 ]
