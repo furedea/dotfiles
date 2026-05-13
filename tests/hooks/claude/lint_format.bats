@@ -2,7 +2,7 @@
 # Tests for .claude/hooks/lib/lint_format.sh (shared utilities)
 
 setup() {
-  load test_helper/setup
+  load test-helper/setup
   LIB="$HOOK_DIR/lib/lint_format.sh"
   TEST_TMPDIR="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/lint.XXXXXX")"
 }

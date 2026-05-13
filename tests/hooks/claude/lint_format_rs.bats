@@ -3,7 +3,7 @@
 # format only (rustfmt). Cargo clippy is cross-file and lives at pre-commit / CI.
 
 setup() {
-  load test_helper/setup
+  load test-helper/setup
   HOOK="$HOOK_DIR/lint_format_rs.sh"
   TEST_TMPDIR="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/lintrs.XXXXXX")"
 }

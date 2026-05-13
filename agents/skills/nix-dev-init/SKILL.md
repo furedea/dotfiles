@@ -99,11 +99,11 @@ After `direnv allow`, hand off to the language-specific reference. Each ref cove
 
 | Project type | Reference | Downstream skill |
 | --- | --- | --- |
-| Python (uv) | `references/lang-python.md` | `python-style` |
-| TypeScript / Node (pnpm) | `references/lang-typescript.md` | — |
-| Rust | `references/lang-rust.md` | — |
-| TeX / LaTeX | `references/lang-tex.md` | — |
-| Unlisted languages | `references/lang-fallback.md` | — |
+| Python (uv) | `references/lang_python.md` | `python-style` |
+| TypeScript / Node (pnpm) | `references/lang_typescript.md` | — |
+| Rust | `references/lang_rust.md` | — |
+| TeX / LaTeX | `references/lang_tex.md` | — |
+| Unlisted languages | `references/lang_fallback.md` | — |
 
 Read only the ref that matches the project's primary language — the files are intentionally standalone so Phase 2 loads one language's context, not all of them.
 

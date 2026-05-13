@@ -2,7 +2,7 @@
 # Tests for .claude/hooks/audit_compaction.sh
 
 setup() {
-  load test_helper/setup
+  load test-helper/setup
   HOOK="$HOOK_DIR/audit_compaction.sh"
   LOG_TMPDIR="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/log.XXXXXX")"
 }

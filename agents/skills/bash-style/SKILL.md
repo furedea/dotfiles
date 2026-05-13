@@ -1,7 +1,7 @@
 ---
 name: bash-style
 description: >
-    Bash script coding conventions and bats testing: shebang (#!/bin/bash), set -euxCo pipefail, cd "$(dirname "$0")", usage function with heredoc, readonly constants, SCREAMING_SNAKE_CASE constants, snake_case variables/functions, _snake_case local variables, bats test structure (test_helper/, setup/teardown lifecycle, run/status/output assertions). Load whenever writing, reviewing, or refactoring any Bash script (.sh files, shell scripts) or bats test (.bats files) — new files, bug fixes, function design, project setup, writing tests. Also load when PLANNING or DISCUSSING Bash/shell script implementation or test design, even before any code is written. Without this skill, you will use wrong conventions (missing set flags, wrong naming, no usage function, no readonly, wrong test directory structure) that this user explicitly does not want.
+    Bash script coding conventions and bats testing: shebang (#!/bin/bash), set -euxCo pipefail, cd "$(dirname "$0")", usage function with heredoc, readonly constants, SCREAMING_SNAKE_CASE constants, snake_case variables/functions, _snake_case local variables, bats test structure (test-helper/, setup/teardown lifecycle, run/status/output assertions). Load whenever writing, reviewing, or refactoring any Bash script (.sh files, shell scripts) or bats test (.bats files) — new files, bug fixes, function design, project setup, writing tests. Also load when PLANNING or DISCUSSING Bash/shell script implementation or test design, even before any code is written. Without this skill, you will use wrong conventions (missing set flags, wrong naming, no usage function, no readonly, wrong test directory structure) that this user explicitly does not want.
 ---
 
 # Shell Script Coding Style Guidelines
@@ -154,20 +154,20 @@ Test shell scripts with [bats](https://github.com/bats-core/bats-core) (Bash Aut
 ```
 tests/
 ├── <category>/
-│   ├── test_helper/
+│   ├── test-helper/
 │   │   └── setup.bash          # shared fixtures and helpers for this category
 │   ├── feature_a.bats
 │   └── feature_b.bats
 └── <category>/
-    ├── test_helper/
+    ├── test-helper/
     │   └── setup.bash
     └── another.bats
 ```
 
-- `test_helper/` is the bats-conventional directory name for helper libraries
-- Each category gets its own `test_helper/` because helpers are domain-specific (hook input builders differ from CLI stubs)
+- `test-helper/` is the project-standard directory name for helper libraries
+- Each category gets its own `test-helper/` because helpers are domain-specific (hook input builders differ from CLI stubs)
 - Test files: `.bats` extension, `snake_case` naming
-- Helper files: `.bash` extension, loaded via `load test_helper/setup`
+- Helper files: `.bash` extension, loaded via `load test-helper/setup`
 
 ### File Structure
 
@@ -178,7 +178,7 @@ Every `.bats` file follows this order:
 # One-line description of what this file tests.
 
 setup() {
-  load test_helper/setup
+  load test-helper/setup
   SCRIPT="$REPO_ROOT/path/to/script_under_test.sh"
 }
 
@@ -217,7 +217,7 @@ Use the narrowest scope that fits:
 
 ```bash
 setup_file() {
-  load test_helper/setup
+  load test-helper/setup
   create_temp_git_repo   # expensive — do once per file
   export TEMP_REPO       # export so tests see it
 }
@@ -227,7 +227,7 @@ teardown_file() {
 }
 
 setup() {
-  load test_helper/setup
+  load test-helper/setup
   HOOK="$HOOK_DIR/my_hook.sh"
 }
 ```
@@ -286,9 +286,9 @@ When checking multiple items in a loop, report which item failed:
 }
 ```
 
-### Helper Functions (test_helper/setup.bash)
+### Helper Functions (test-helper/setup.bash)
 
-Put shared fixtures in `test_helper/setup.bash`. Common patterns:
+Put shared fixtures in `test-helper/setup.bash`. Common patterns:
 
 ```bash
 REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"

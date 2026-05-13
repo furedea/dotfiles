@@ -2,7 +2,7 @@
 # Tests for .claude/hooks/guard_forbidden_commands.sh
 
 setup() {
-  load test_helper/setup
+  load test-helper/setup
   HOOK="$HOOK_DIR/guard_forbidden_commands.sh"
   RULES="$BATS_TEST_TMPDIR/forbidden_commands.json"
   cat >"$RULES" <<'JSON'

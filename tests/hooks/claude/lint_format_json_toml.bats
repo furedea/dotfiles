@@ -4,7 +4,7 @@
 # hookSpecificOutput.additionalContext JSON. Always exits 0.
 
 setup() {
-  load test_helper/setup
+  load test-helper/setup
   HOOK="$HOOK_DIR/lint_format_json_toml.sh"
   TEST_TMPDIR="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/lintjson.XXXXXX")"
 }

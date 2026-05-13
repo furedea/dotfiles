@@ -67,7 +67,7 @@ SKILL.md (Coordinator)
 
 Each sub-agent is spawned with:
 
-1. A task description referencing the agent prompt file (e.g., agents/routing-analyst.md)
+1. A task description referencing the agent prompt file (e.g., agents/routing_analyst.md)
 2. Instructions to read that file for detailed rubric
 3. Paths to input data files
 4. Path for output JSON file
@@ -75,7 +75,7 @@ Each sub-agent is spawned with:
 The coordinator instructs the sub-agent to:
 
 ```
-Read agents/routing-analyst.md for your analysis rubric.
+Read agents/routing_analyst.md for your analysis rubric.
 Read <workspace>/skill_manifest.json for skill definitions.
 Read <workspace>/transcripts-batch-N.json for session data.
 Write your analysis to <workspace>/batch_audit_N.json.

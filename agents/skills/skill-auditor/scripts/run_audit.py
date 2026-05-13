@@ -239,7 +239,7 @@ def write_agent_prompts(workspace: Path, batches: list[dict], language: str) -> 
 def routing_prompt(workspace: Path, batch: dict, language: str) -> str:
     return f"""Write all human-readable output text in {language}.
 
-Read agents/routing-analyst.md from the skill-auditor skill directory for your
+Read agents/routing_analyst.md from the skill-auditor skill directory for your
 analysis instructions.
 Read {workspace}/skill_manifest.json for skill definitions.
 Read {workspace}/transcripts.json for session data.
@@ -256,7 +256,7 @@ following the exact schema in schemas/schemas.md (audit_report.json section).
 def portfolio_prompt(workspace: Path, language: str) -> str:
     return f"""Write all human-readable output text in {language}.
 
-Read agents/portfolio-analyst.md from the skill-auditor skill directory.
+Read agents/portfolio_analyst.md from the skill-auditor skill directory.
 Read {workspace}/skill_manifest.json for skill definitions and attention budget.
 Read {workspace}/audit_report.json for the routing audit results.
 Write your portfolio analysis as JSON to {workspace}/portfolio_analysis.json.
@@ -266,7 +266,7 @@ Write your portfolio analysis as JSON to {workspace}/portfolio_analysis.json.
 def improvement_prompt(workspace: Path, language: str) -> str:
     return f"""Write all human-readable output text in {language}.
 
-Read agents/improvement-planner.md from the skill-auditor skill directory.
+Read agents/improvement_planner.md from the skill-auditor skill directory.
 Read {workspace}/audit_report.json for routing audit results.
 Read {workspace}/portfolio_analysis.json for portfolio analysis.
 Read {workspace}/skill_manifest.json for current skill definitions.

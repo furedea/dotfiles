@@ -9,7 +9,7 @@
 # This prevents auto-approved commands from bypassing the allowlist hook.
 
 setup() {
-  load test_helper/setup
+  load test-helper/setup
   ALLOWLIST="$REPO_ROOT/agents/hooks/guard_allowed_commands.sh"
 }
 

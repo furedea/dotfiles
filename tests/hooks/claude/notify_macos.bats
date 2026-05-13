@@ -5,7 +5,7 @@
 # Tests verify script structure and syntax rather than actual notification behavior.
 
 setup() {
-  load test_helper/setup
+  load test-helper/setup
   DONE_HOOK="$HOOK_DIR/notify_macos_done.sh"
   AWAIT_HOOK="$HOOK_DIR/notify_macos_await.sh"
 }

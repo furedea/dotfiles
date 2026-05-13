@@ -4,7 +4,7 @@
 # so we test structure, syntax, and source wiring rather than execution.
 
 setup() {
-  load test_helper/setup
+  load test-helper/setup
   LINT_HOOKS=(
     "$HOOK_DIR/lint_format_gha.sh"
     "$HOOK_DIR/lint_format_js.sh"

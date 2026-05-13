@@ -2,7 +2,7 @@
 # Tests for .claude/hooks/lib/shell_parse.sh
 
 setup() {
-  load test_helper/setup
+  load test-helper/setup
   LIB="$HOOK_DIR/lib/shell_parse.sh"
 }
 

@@ -2,7 +2,7 @@
 # Tests for github/setup_repo.sh
 
 setup() {
-  load test_helper/setup
+  load test-helper/setup
   setup_gh_stub
 }
 

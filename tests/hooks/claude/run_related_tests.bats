@@ -4,7 +4,7 @@
 # Always exits 0 (block signal is JSON, not status).
 
 setup() {
-  load test_helper/setup
+  load test-helper/setup
   HOOK="$HOOK_DIR/run_related_tests.sh"
   TEST_TMPDIR="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/gate.XXXXXX")"
 }

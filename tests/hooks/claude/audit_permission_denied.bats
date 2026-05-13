@@ -2,7 +2,7 @@
 # Tests for .claude/hooks/audit_permission_denied.sh
 
 setup() {
-  load test_helper/setup
+  load test-helper/setup
   HOOK="$HOOK_DIR/audit_permission_denied.sh"
   LOG_TMPDIR="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/denied.XXXXXX")"
 }

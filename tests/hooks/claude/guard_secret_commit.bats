@@ -2,7 +2,7 @@
 # Tests for .claude/hooks/guard_secret_commit.sh
 
 setup() {
-  load test_helper/setup
+  load test-helper/setup
   create_temp_git_repo
 }
 

@@ -2,7 +2,7 @@
 # Tests for .claude/hooks/guard_dangerous_git.sh
 
 setup() {
-  load test_helper/setup
+  load test-helper/setup
   HOOK="$HOOK_DIR/guard_dangerous_git.sh"
 }
 

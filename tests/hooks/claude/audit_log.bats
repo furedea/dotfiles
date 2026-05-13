@@ -2,7 +2,7 @@
 # Tests for .claude/hooks/lib/audit_log.sh::log_blocked
 
 setup() {
-  load test_helper/setup
+  load test-helper/setup
   LIB="$HOOK_DIR/lib/audit_log.sh"
   LOG_TMPDIR="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/log.XXXXXX")"
 }

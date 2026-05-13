@@ -78,7 +78,7 @@ Report the collection summary to the user: "N sessions, M user turns, K skills f
 
 Spawn one or more routing-analyst sub-agents. Each sub-agent:
 
-1. Reads `agents/routing-analyst.md` for its analysis rubric
+1. Reads `agents/routing_analyst.md` for its analysis rubric
 2. Reads a **filtered** skill manifest (only skills visible to that batch)
 3. Reads a batch of transcripts
 4. Writes analysis to a batch JSON file
@@ -196,7 +196,7 @@ Spawn sub-agents in parallel — one per batch. In Claude Code, use the Agent to
 ```
 For each batch i:
   Sub-agent:
-    "Read agents/routing-analyst.md from the skill-auditor skill directory for
+    "Read agents/routing_analyst.md from the skill-auditor skill directory for
      your analysis instructions.
      Read <workspace>/skill_manifest.json for skill definitions.
      Read <workspace>/transcripts.json for session data.
@@ -224,7 +224,7 @@ Spawn a portfolio-analyst sub-agent. In Claude Code, use the Agent tool. In Code
 
 ```
 Sub-agent:
-  "Read agents/portfolio-analyst.md from the skill-auditor skill directory.
+  "Read agents/portfolio_analyst.md from the skill-auditor skill directory.
    Read <workspace>/skill_manifest.json for skill definitions and attention budget.
    Read <workspace>/audit_report.json for the routing audit results.
    Write your portfolio analysis as JSON to <workspace>/portfolio_analysis.json."
@@ -236,7 +236,7 @@ Spawn an improvement_planner sub-agent. In Claude Code, use the Agent tool. In C
 
 ```
 Sub-agent:
-  "Read agents/improvement-planner.md from the skill-auditor skill directory.
+  "Read agents/improvement_planner.md from the skill-auditor skill directory.
    Read <workspace>/audit_report.json for routing audit results.
    Read <workspace>/portfolio_analysis.json for portfolio analysis.
    Read <workspace>/skill_manifest.json for current skill definitions.
@@ -308,11 +308,11 @@ Report what was done:
 
 ### Routing Accuracy
 
-Per-skill fire count, accuracy, false positives/negatives, specific incidents with root cause analysis. See `agents/routing-analyst.md` for the rubric.
+Per-skill fire count, accuracy, false positives/negatives, specific incidents with root cause analysis. See `agents/routing_analyst.md` for the rubric.
 
 ### Attention Budget
 
-Total description tokens across all skills. Per-skill token cost and efficiency rating. Identifies bloated descriptions that waste attention budget. See `agents/portfolio-analyst.md`.
+Total description tokens across all skills. Per-skill token cost and efficiency rating. Identifies bloated descriptions that waste attention budget. See `agents/portfolio_analyst.md`.
 
 ### Competition Matrix
 
@@ -320,7 +320,7 @@ Classifies skill-pair relationships: orthogonal / adjacent / overlapping / neste
 
 ### Portfolio-Aware Optimization
 
-Patches consider the full skill set. Cascade checking is mandatory — each patch states what it fixes, what it might break, and the token budget impact. See `agents/improvement-planner.md`.
+Patches consider the full skill set. Cascade checking is mandatory — each patch states what it fixes, what it might break, and the token budget impact. See `agents/improvement_planner.md`.
 
 ## Error Taxonomy
 

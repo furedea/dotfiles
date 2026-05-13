@@ -2,7 +2,7 @@
 # Tests for .claude/hooks/guard_harness_files.sh
 
 setup() {
-  load test_helper/setup
+  load test-helper/setup
   HOOK="$HOOK_DIR/guard_harness_files.sh"
   LOG_TMPDIR="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/harness.XXXXXX")"
 }

@@ -2,7 +2,7 @@
 # Tests for .claude/hooks/guard_secret_content.sh
 
 setup() {
-  load test_helper/setup
+  load test-helper/setup
   HOOK="$HOOK_DIR/guard_secret_content.sh"
   PATTERNS_FILE="$HOOK_DIR/rules/secret_content_patterns.json"
 

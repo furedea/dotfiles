@@ -13,7 +13,7 @@
 # the mechanism, not the policy.
 
 setup() {
-  load test_helper/setup
+  load test-helper/setup
 }
 
 run_hook() {

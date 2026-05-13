@@ -78,7 +78,7 @@ This is a reliable signal because it happens for every skill load and the path u
 There is no ground truth for "correct routing." The user didn't label their intent. We use the LLM itself as a judge, consistent with:
 
 - **Anthropic's guidance**: "Demystifying evals for AI agents" recommends model-based graders with rubrics for evaluating agent behavior.
-- **Sub-agent approach**: Each analysis sub-agent receives the full data for its batch and applies the rubric from agents/routing-analyst.md.
+- **Sub-agent approach**: Each analysis sub-agent receives the full data for its batch and applies the rubric from agents/routing_analyst.md.
 
 ### Calibration
 

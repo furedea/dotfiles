@@ -4,7 +4,7 @@
 # violations via hookSpecificOutput.additionalContext JSON. Always exits 0.
 
 setup() {
-  load test_helper/setup
+  load test-helper/setup
   HOOK="$HOOK_DIR/lint_format_js.sh"
   TEST_TMPDIR="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/lintjs.XXXXXX")"
 }

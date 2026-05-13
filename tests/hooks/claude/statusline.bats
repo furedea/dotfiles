@@ -2,7 +2,7 @@
 # Tests for .claude/statusline/statusline.sh
 
 setup() {
-  load test_helper/setup
+  load test-helper/setup
   STATUSLINE="$REPO_ROOT/claude/statusline/statusline.sh"
 }
 
