@@ -99,10 +99,11 @@ ALLOWED_PATTERNS=(
   '^dprint (check|fmt|output-file-paths)( [^;&|<>$`]+)?$'
   '^nixfmt( [^;&|<>$`]+)?$'
   '^npm test( [^;&|<>$`]+)?$'
-  '^npm run (test|lint|format|typecheck|check)( [^;&|<>$`]+)?$'
+  '^npm run (test|lint|format|typecheck|check|knip|knip:production)( [^;&|<>$`]+)?$'
   '^oxfmt( [^;&|<>$`]+)?$'
   '^oxlint( [^;&|<>$`]+)?$'
   '^pnpm (test|lint|format|typecheck|check)( [^;&|<>$`]+)?$'
+  '^pnpm run (test|lint|format|format:check|typecheck|check|knip|knip:production)( [^;&|<>$`]+)?$'
   '^pnpm exec (vitest|tsc|oxfmt|oxlint|tsgolint|prettier|prettierd)( [^;&|<>$`]+)?$'
   '^prettierd( [^;&|<>$`]+)?$'
   '^selene( [^;&|<>$`]+)?$'
@@ -186,6 +187,7 @@ ALLOWED_PATTERNS=(
   # Python development commands. Keep pytest broad enough for TDD, but reject
   # shell metacharacters that could trigger command injection before pytest runs.
   '^uv run ruff( check| format --check)?$'
+  '^uv run --group audit (deptry \.|vulture)$'
   '^uv run --frozen ruff (check|format)( --(fix|quiet|check))*( [^;&|<>$`]+)?$'
   '^uv run (--frozen )?ty check$'
   '^uv run (--frozen )?pytest( [^;&|<>$`]+)?$'

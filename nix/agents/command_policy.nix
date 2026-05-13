@@ -42,11 +42,11 @@ let
     (allow [ "git" "pull" ] [ "git pull --rebase origin main" ])
     (allow [ "git" "push" ] [ "git push origin feature/example" ])
     (allow [ "nixfmt" ] [ "nixfmt nix/home/default.nix" ])
-    (allow [ "npm" "run" ] [ "npm run test" "npm run lint" ])
+    (allow [ "npm" "run" ] [ "npm run test" "npm run lint" "npm run knip" ])
     (allow [ "npm" "test" ] [ "npm test" ])
     (allow [ "oxfmt" ] [ "oxfmt --check src" ])
     (allow [ "oxlint" ] [ "oxlint src" ])
-    (allow [ "pnpm" ] [ "pnpm test" "pnpm lint" ])
+    (allow [ "pnpm" ] [ "pnpm test" "pnpm lint" "pnpm run knip" ])
     (allow [ "prettierd" ] [ "prettierd README.md" ])
     (allow [ "selene" ] [ "selene nvim" ])
     (allow [ "shellcheck" ] [ "shellcheck agents/hooks/guard_allowed_commands.sh" ])
@@ -55,7 +55,15 @@ let
     (allow [ "stylua" ] [ "stylua --check nvim" ])
     (allow [ "tex-fmt" ] [ "tex-fmt --check docs/main.tex" ])
     (allow [ "tsgolint" ] [ "tsgolint --project tsconfig.json" ])
-    (allow [ "uv" "run" ] [ "uv run pytest" "uv run ruff check" "uv run ty check" ])
+    (allow
+      [ "uv" "run" ]
+      [
+        "uv run pytest"
+        "uv run ruff check"
+        "uv run ty check"
+        "uv run --group audit deptry ."
+      ]
+    )
   ];
 
   forbiddenRules = [

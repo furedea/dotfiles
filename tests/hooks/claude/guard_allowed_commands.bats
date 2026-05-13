@@ -71,6 +71,20 @@ run_hook() {
   [ "$status" -eq 0 ]
 }
 
+@test "allows Python and TypeScript audit commands" {
+  run_hook "uv run --group audit deptry ."
+  [ "$status" -eq 0 ]
+
+  run_hook "uv run --group audit vulture"
+  [ "$status" -eq 0 ]
+
+  run_hook "pnpm run knip"
+  [ "$status" -eq 0 ]
+
+  run_hook "pnpm run knip:production"
+  [ "$status" -eq 0 ]
+}
+
 @test "allows git commit messages with single or double quotes" {
   run_hook "git commit -m 'feat(test): allow single quoted messages'"
   [ "$status" -eq 0 ]
