@@ -157,7 +157,7 @@ in
         {
           matcher = editMatcher;
           hooks = [
-            (codexHook "$HOME/.claude/hooks/guard_harness_files.sh" "Checking harness boundaries" 30)
+            (codexHook "$HOME/.codex/hooks/adapt_harness_files.sh" "Checking harness boundaries" 30)
             (codexHook "$HOME/.codex/hooks/adapt_guard_secret_content.sh apply-patch"
               "Scanning patch for sensitive information"
               30
