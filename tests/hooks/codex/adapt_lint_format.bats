@@ -115,12 +115,12 @@ some content
   local _tmp
   _tmp="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/codex.XXXXXX")"
   local _file="$_tmp/x.py"
-  printf 'x = 1\n' > "$_file"
+  printf 'x = 1\n' >"$_file"
 
   # Stub hook directory: replace lint_format_py.sh with one that emits Claude-format JSON.
   local _stub_dir="$_tmp/hooks"
   mkdir -p "$_stub_dir"
-  cat > "$_stub_dir/lint_format_py.sh" <<EOF
+  cat >"$_stub_dir/lint_format_py.sh" <<EOF
 #!/bin/bash
 jq -cn '{hookSpecificOutput:{hookEventName:"PostToolUse",additionalContext:"ruff: F821 undefined name"}}'
 EOF
@@ -148,11 +148,11 @@ EOF
   local _tmp
   _tmp="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/codex.XXXXXX")"
   local _file="$_tmp/x.sh"
-  printf '#!/bin/bash\necho hi\n' > "$_file"
+  printf '#!/bin/bash\necho hi\n' >"$_file"
 
   local _stub_dir="$_tmp/.claude/hooks"
   mkdir -p "$_stub_dir"
-  cat > "$_stub_dir/lint_format_sh.sh" <<'EOF'
+  cat >"$_stub_dir/lint_format_sh.sh" <<'EOF'
 #!/bin/bash
 echo "plain-text hook output: SC2086 quote me"
 EOF
@@ -171,11 +171,11 @@ EOF
   local _tmp
   _tmp="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/codex.XXXXXX")"
   local _file="$_tmp/x.py"
-  printf 'x = 1\n' > "$_file"
+  printf 'x = 1\n' >"$_file"
 
   local _stub_dir="$_tmp/.claude/hooks"
   mkdir -p "$_stub_dir"
-  cat > "$_stub_dir/lint_format_py.sh" <<'EOF'
+  cat >"$_stub_dir/lint_format_py.sh" <<'EOF'
 #!/bin/bash
 # Clean: emit nothing
 EOF

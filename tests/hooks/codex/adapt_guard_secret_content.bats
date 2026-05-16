@@ -38,7 +38,7 @@ setup() {
 @test "prompt mode delegates to shared scanner" {
   STUB_DIR="$(mktemp -d "$BATS_TEST_TMPDIR/stub.XXXXXX")"
   mkdir -p "$STUB_DIR/.claude/hooks"
-  cat > "$STUB_DIR/.claude/hooks/guard_secret_content.sh" <<'STUB'
+  cat >"$STUB_DIR/.claude/hooks/guard_secret_content.sh" <<'STUB'
 #!/bin/bash
 echo "CALLED:$1"
 cat > /dev/null
@@ -67,7 +67,7 @@ STUB
 @test "apply-patch mode delegates to shared scanner with write arg" {
   STUB_DIR="$(mktemp -d "$BATS_TEST_TMPDIR/stub.XXXXXX")"
   mkdir -p "$STUB_DIR/.claude/hooks"
-  cat > "$STUB_DIR/.claude/hooks/guard_secret_content.sh" <<'STUB'
+  cat >"$STUB_DIR/.claude/hooks/guard_secret_content.sh" <<'STUB'
 #!/bin/bash
 echo "CALLED:$1"
 cat > /dev/null
