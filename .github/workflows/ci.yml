@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  hook-tests:
+  agent-harness-bats-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -31,8 +31,8 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@ab739621df7a23f52766f9ccc97f38da6b7af14f # v31.10.5
 
-      - name: Run hook tests
-        run: nix develop .#hook-tests --command bats --recursive tests/hooks/
+      - name: Run agent harness Bats tests
+        run: nix develop .#agent-harness-bats-tests --command bats --recursive tests/hooks/
 
   python-tests:
     runs-on: ubuntu-latest

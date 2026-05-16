@@ -118,10 +118,11 @@
             inherit (nixpkgs.legacyPackages.${sys}) python3;
           });
 
-      # Dev shells for everyday Python work and for CI-equivalent hook tests.
-      # The default shell is consumed by direnv (`use flake`); hook-tests keeps
-      # formatter/linter dependencies explicit so Bats does not depend on the
-      # caller's global PATH.
+      # Dev shells for everyday Python work and for CI-equivalent agent
+      # harness Bats tests. The default shell is consumed by direnv
+      # (`use flake`); agent-harness-bats-tests keeps formatter/linter
+      # dependencies explicit so Bats does not depend on the caller's global
+      # PATH.
       devShells =
         nixpkgs.lib.genAttrs
           [
@@ -158,7 +159,7 @@
                 '';
               };
 
-              hook-tests = shellPkgs.mkShell {
+              agent-harness-bats-tests = shellPkgs.mkShell {
                 packages = [
                   codex-cli-nix.packages.${sys}.default
                   shellPkgs.bats

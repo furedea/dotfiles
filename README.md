@@ -200,10 +200,10 @@ Provider-shared agent assets live under `agents/` and are wired into both Claude
 - `agents/hooks/rules/related_test_defaults.json`: global default test-selection conventions for Bats, Python, JavaScript/TypeScript, and Rust. Bats and Python define executable test naming conventions; JS/TS records common `*.test.*` / `*.spec.*` names for future runner support; Rust runs `cargo test <stem>` for ordinary `src/<stem>.rs` changes and `cargo test --test <stem>` for matching `tests/<stem>.rs` integration targets, while skipping generic stems such as `lib`, `main`, and `mod`. Format/lint-only hook families stay out of related-test execution.
 - `agents/hooks/rules/related_test_extensions.json`: project-specific extensions that add fan-out beyond the defaults, such as helper libraries to consumer tests, Codex adapters, generated config sync tests, and grouped macOS notification tests.
 
-Run the full hook test suite through the same Nix dev shell used by CI:
+Run the full agent harness Bats suite through the same Nix dev shell used by CI:
 
 ```bash
-nix develop .#hook-tests --command bats --recursive tests/hooks/
+nix develop .#agent-harness-bats-tests --command bats --recursive tests/hooks/
 ```
 
 ## Markdown Formatter
