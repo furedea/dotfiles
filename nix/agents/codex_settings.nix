@@ -67,12 +67,11 @@ let
   tomlEscape = value: builtins.replaceStrings [ "\\" "\"" ] [ "\\\\" "\\\"" ] value;
   pathLine = path: ''"${tomlEscape path}" = "read"'';
 
-  # `default_permissions = "guarded"` is intentionally NOT emitted here:
-  # appending a bare scalar after the existing `[features]` block in
-  # `codex/config.toml` would make the TOML parser fold it into that table.
-  # The scalar lives in the hand-written `codex/config.toml` instead, above
-  # all table headers, while this fragment only contributes the dynamic
-  # `[permissions.guarded.filesystem]` section.
+  # `default_permissions = "guarded"` is intentionally NOT emitted. Codex
+  # treats a selected permissions profile as the full filesystem sandbox
+  # policy, so this narrow file list would otherwise prevent read-only shell
+  # commands from starting. Hooks remain the default harness boundary; this
+  # profile is available for explicit experiments only.
   configFragmentToml = ''
     [permissions.guarded.filesystem]
     ${lib.concatMapStringsSep "\n" pathLine protectedPaths}

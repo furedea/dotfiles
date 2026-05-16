@@ -29,33 +29,29 @@ assert filesystem["glob_scan_max_depth"] >= 3, filesystem
 '
 }
 
-@test "codex/config.toml declares default_permissions at top level" {
-  # `default_permissions` MUST stay above any `[<table>]` header — TOML folds
-  # bare scalars into the most recent table, so placing it inside the
-  # appended `[permissions.guarded.filesystem]` fragment would silently
-  # promote it to `permissions.guarded.filesystem.default_permissions`.
+@test "codex/config.toml does not select guarded permissions by default" {
   CONFIG="$REPO_ROOT/codex/config.toml" "$PYTHON" -c '
 import os, tomllib, pathlib
 data = tomllib.loads(pathlib.Path(os.environ["CONFIG"]).read_text())
-assert data["default_permissions"] == "guarded", data
+assert "default_permissions" not in data, data
 '
 }
 
-@test "merged Codex config keeps default_permissions and locks hook files" {
+@test "merged Codex config removes stale default_permissions and keeps guarded profile available" {
   source_file="$BATS_TEST_TMPDIR/source.toml"
   target_file="$BATS_TEST_TMPDIR/target.toml"
 
   cat "$REPO_ROOT/codex/config.toml" >"$source_file"
   printf '\n' >>"$source_file"
   fragment_toml >>"$source_file"
-  : >"$target_file"
+  printf 'default_permissions = "guarded"\n' >"$target_file"
 
   "$PYTHON" "$REPO_ROOT/codex/sync_config.py" "$source_file" "$target_file"
 
   TARGET="$target_file" "$PYTHON" -c '
 import os, tomllib, pathlib
 data = tomllib.loads(pathlib.Path(os.environ["TARGET"]).read_text())
-assert data["default_permissions"] == "guarded", data
+assert "default_permissions" not in data, data
 filesystem = data["permissions"]["guarded"]["filesystem"]
 assert filesystem["glob_scan_max_depth"] == 5
 assert all(v == "read" for k, v in filesystem.items() if k != "glob_scan_max_depth")

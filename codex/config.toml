@@ -5,10 +5,9 @@ approval_policy = "on-request"
 sandbox_mode = "read-only"
 approvals_reviewer = "guardian_subagent"
 # `[permissions.guarded.filesystem]` is appended by nix/agents/codex_settings.nix
-# at evaluation time. Keeping `default_permissions` here (above any table
-# header) ensures the TOML parser treats it as a top-level scalar rather than
-# folding it into `[features]`.
-default_permissions = "guarded"
+# at evaluation time. Do not set `default_permissions = "guarded"` by default:
+# Codex treats that profile as the full filesystem sandbox policy, so a profile
+# containing only harness files prevents even read-only commands from starting.
 
 [notice]
 fast_default_opt_out = true

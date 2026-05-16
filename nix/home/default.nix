@@ -17,10 +17,11 @@ let
   codexSettings = import ../agents/codex_settings.nix { inherit lib username dotfilesDir; };
   agentHooks = import ../agents/hooks.nix { };
   # Concatenate the hand-written `codex/config.toml` with the Nix-generated
-  # `[permissions.guarded.filesystem]` fragment. `sync_config.py` then merges
-  # the union into `~/.codex/config.toml`, so hook auto-lock entries stay in
-  # lockstep with the files actually present in `agents/hooks/` and
-  # `codex/hooks/`.
+  # `[permissions.guarded.filesystem]` fragment. The profile is not selected
+  # by default because Codex applies it as a full filesystem sandbox policy.
+  # `sync_config.py` then merges the union into `~/.codex/config.toml`, so
+  # hook auto-lock entries stay in lockstep with the files actually present in
+  # `agents/hooks/` and `codex/hooks/`.
   codexConfigSource = pkgs.writeText "codex-config-source.toml" (
     builtins.readFile ../../codex/config.toml + "\n" + codexSettings.configFragmentToml
   );
