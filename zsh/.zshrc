@@ -149,6 +149,25 @@ function gr() {
   builtin cd "$root"
 }
 
+# ghd: open gh-dash for the GitHub repo configured as origin.
+function ghd() {
+  local url repo
+  url=$(git remote get-url origin 2>/dev/null) || {
+    gh dash "$@"
+    return
+  }
+
+  repo="${url#git@github.com:}"
+  repo="${repo#https://github.com/}"
+  repo="${repo%.git}"
+
+  if [[ "$repo" == */* ]]; then
+    GH_REPO="$repo" gh dash "$@"
+  else
+    gh dash "$@"
+  fi
+}
+
 # GitHub: create repo, clone into ghq root, apply template renames, run project setup
 function ghcreate() {
   if [[ -z "$1" ]]; then
