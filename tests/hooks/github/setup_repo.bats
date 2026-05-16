@@ -37,13 +37,14 @@ setup() {
   local calls
   calls="$(gh_calls)"
   [[ "$calls" == *"repos/owner/myrepo -X PATCH --input"*"repo_settings.json"* ]]
+  [[ "$calls" == *"repos/owner/myrepo/vulnerability-alerts -X PUT"* ]]
   [[ "$calls" == *"repos/owner/myrepo/rulesets -X POST --input"*"ruleset.json"* ]]
 }
 
-@test "gh api is called 3 times when creating a new ruleset" {
+@test "gh api is called 4 times when creating a new ruleset" {
   run bash "$SCRIPT" "owner/myrepo"
   [ "$status" -eq 0 ]
-  [ "$(gh_call_count)" -eq 3 ]
+  [ "$(gh_call_count)" -eq 4 ]
 }
 
 # --- Update path (existing ruleset, idempotent) ---
