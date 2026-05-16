@@ -25,6 +25,12 @@ function apply_settings() {
   echo "Applied repo settings to $_repo"
 }
 
+function enable_vulnerability_alerts() {
+  local _repo="$1"
+  gh api "repos/$_repo/vulnerability-alerts" -X PUT >/dev/null
+  echo "Enabled vulnerability alerts and dependency graph on $_repo"
+}
+
 function apply_ruleset() {
   local _repo="$1"
   local _name _id
@@ -55,6 +61,7 @@ function main() {
   [[ -z "$_repo" ]] && usage
 
   apply_settings "$_repo"
+  enable_vulnerability_alerts "$_repo"
   apply_ruleset "$_repo"
 }
 
