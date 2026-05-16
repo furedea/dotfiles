@@ -147,6 +147,8 @@ run_hook() {
 @test "allows tracked secret scanner hook scripts" {
   stage_file "agents/hooks/guard_secret_content.sh" "#!/bin/bash"
   stage_file "codex/hooks/adapt_guard_secret_content.sh" "#!/bin/bash"
+  stage_file "tests/hooks/claude/guard_secret_content.bats" "#!/usr/bin/env bats"
+  stage_file "tests/hooks/codex/adapt_guard_secret_content.bats" "#!/usr/bin/env bats"
   run_hook
   [ "$status" -eq 0 ]
 }

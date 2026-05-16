@@ -1,7 +1,6 @@
 #!/bin/bash
-set -euxCo pipefail
+set -euCo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
-set +x
 
 # shellcheck disable=SC1091
 source "$PWD/lib/audit_log.sh"

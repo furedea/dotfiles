@@ -27,6 +27,21 @@ STUB
   [[ "$output" == *"git status"* ]]
 }
 
+@test "successful pass-through does not emit shell trace" {
+  stub_dir="$(mktemp -d "$BATS_TEST_TMPDIR/stub.XXXXXX")"
+  stub_hook="$stub_dir/hook.sh"
+  cat >"$stub_hook" <<'STUB'
+#!/bin/bash
+cat >/dev/null
+STUB
+  chmod +x "$stub_hook"
+
+  input='{"tool_input":{"cmd":"pwd"}}'
+  run bash -c "printf '%s' '$input' | '$HOOK' '$stub_hook'"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "passes exec_command cmd to shared hook as command" {
   stub_dir="$(mktemp -d "$BATS_TEST_TMPDIR/stub.XXXXXX")"
   stub_hook="$stub_dir/hook.sh"

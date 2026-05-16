@@ -1,7 +1,6 @@
 #!/bin/bash
-set -euxCo pipefail
+set -euCo pipefail
 cd "$(dirname "$0")"
-set +x
 
 function usage() {
   cat <<EOF >&2

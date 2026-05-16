@@ -185,7 +185,7 @@ EOF
   _input=$(jq -n --arg cwd "$_tmp" --arg cmd "*** Update File: x.py" \
     '{cwd:$cwd, tool_input:{command:$cmd}}')
 
-  run env HOME="$_tmp" bash -c "echo '$_input' | '$HOOK' 2>/dev/null"
+  run env HOME="$_tmp" bash -c "echo '$_input' | '$HOOK'"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }

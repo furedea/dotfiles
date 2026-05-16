@@ -41,7 +41,9 @@ ALLOWLISTED_SENSITIVE_PATHS=(
   'agents/hooks/guard_secret_content.sh'
   'agents/hooks/guard_secret_commit.sh'
   'codex/hooks/adapt_guard_secret_content.sh'
+  'tests/hooks/claude/guard_secret_content.bats'
   'tests/hooks/claude/guard_secret_commit.bats'
+  'tests/hooks/codex/adapt_guard_secret_content.bats'
 )
 
 is_allowlisted_sensitive_path() {

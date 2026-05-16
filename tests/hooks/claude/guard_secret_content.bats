@@ -86,6 +86,7 @@ assert_allowed() {
   run bash "$HOOK" prompt <<< "$(make_prompt_input 'please fix the bug in main.py')"
   [ "$status" -eq 0 ]
   assert_allowed
+  [ -z "$output" ]
 }
 
 @test "prompt: allows empty prompt" {
