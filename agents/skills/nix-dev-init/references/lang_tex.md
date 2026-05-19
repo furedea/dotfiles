@@ -1,6 +1,6 @@
 # Phase 2: TeX / LaTeX
 
-Prerequisite: repo created via `ghcreate <name> --private --template furedea/template-tex`. The template provides `flake.nix`, `flake.lock`, `.envrc`, `lefthook.yml`, `.commitlintrc.yml`, CI workflows (tex-fmt lint + chktex), and `.gitignore`. The TeX template is the only one that ships `flake.lock` — see this skill's main workflow for why.
+Prerequisite: repo created via `cd "$($DOTFILES/github/create_repo.sh <name> --private --template furedea/template-tex)"`. The template provides `flake.nix`, `flake.lock`, `.envrc`, `lefthook.yml`, `.commitlintrc.yml`, CI workflows (tex-fmt lint + chktex), and `.gitignore`. The TeX template is the only one that ships `flake.lock` — see this skill's main workflow for why.
 
 TeX does not have an `init` command in the usual sense; Phase 2 here is about project scaffolding and verifying the typesetting chain, not a package manager bootstrap.
 

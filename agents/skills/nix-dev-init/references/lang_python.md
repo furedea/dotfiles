@@ -1,6 +1,6 @@
 # Phase 2: Python (uv)
 
-Prerequisite: repo created via `ghcreate <name> --private --template furedea/template-python`. The template provides `flake.nix`, `.envrc`, `pyproject.toml`, CI workflows, `.gitignore`, `lefthook.yml`, `.commitlintrc.yml`, and `renovate.json`. `ghcreate` also patches `pyproject.toml`'s `name` field and applies GitHub rulesets.
+Prerequisite: repo created via `cd "$($DOTFILES/github/create_repo.sh <name> --private --template furedea/template-python)"`. The template provides `flake.nix`, `.envrc`, `pyproject.toml`, CI workflows, `.gitignore`, `lefthook.yml`, `.commitlintrc.yml`, and `renovate.json`. `github/create_repo.sh` also patches `pyproject.toml`'s `name` field and applies GitHub rulesets.
 
 ## Steps
 

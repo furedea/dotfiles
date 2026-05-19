@@ -168,54 +168,6 @@ function ghd() {
   fi
 }
 
-# GitHub: create repo, clone into ghq root, apply template renames, run project setup
-function ghcreate() {
-  if [[ -z "$1" ]]; then
-    cat >&2 <<'EOF'
-usage: ghcreate <name> [gh repo create flags...]
-
-  <name>: 'foo' (your account) or 'owner/foo' (explicit owner/org)
-  Note: do not pass --clone; cloning is handled by ghq.
-  For local-only, use: cd $(ghq create <name>)
-EOF
-    return 1
-  fi
-
-  local name="$1"; shift
-  local short="${name##*/}" full owner
-
-  if [[ "$name" == */* ]]; then
-    full="$name"
-  else
-    owner=$(gh api user --jq .login) || return 1
-    full="$owner/$short"
-  fi
-
-  echo "→ creating GitHub repo: $full"
-  gh repo create "$name" "$@" || return 1
-
-  echo "→ cloning into $(ghq root)/github.com/$full"
-  ghq get "github.com/$full" || return 1
-  builtin cd "$(ghq root)/github.com/$full" || return 1
-
-  _ghcreate_apply_template "$short"
-
-  "$DOTFILES/github/setup_repo.sh" "$full" || return 1
-  [[ -f lefthook.yml ]] && command -v lefthook >/dev/null && lefthook install
-}
-
-# Helper: rewrite template-* placeholders to the new project name
-function _ghcreate_apply_template() {
-  local name="$1" file
-  for file in pyproject.toml Cargo.toml; do
-    [[ -f "$file" ]] && sed -i '' "s/^name = \"template-[a-z]*\"/name = \"$name\"/" "$file"
-  done
-  if [[ -f package.json ]] && command -v jq >/dev/null; then
-    local tmp; tmp=$(mktemp)
-    jq --arg n "$name" '.name = $n' package.json >"$tmp" && mv "$tmp" package.json
-  fi
-}
-
 # Abbreviations: new shortcuts that don't shadow existing commands.
 # Using -S (session scope) so definitions stay in this file, not in a separate file.
 abbr --quiet -S lg="lazygit"

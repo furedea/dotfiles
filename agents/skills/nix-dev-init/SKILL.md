@@ -1,7 +1,7 @@
 ---
 name: nix-dev-init
 description: >
-    Per-project development environment bootstrap workflow for this user: ghcreate --template → direnv allow → language sync/build inside the direnv-activated shell. ALWAYS load when starting a new project, initializing a repo, scaffolding dev tooling, or writing project-level flake.nix / .envrc / devShell. Also load when the user asks to use or reference template-python, template-typescript, template-rust, template-tex, template-minimal, or configure an existing project from a template. This skill is DISTINCT from `nix-dotfiles` (global dotfiles system config under ghq); load THIS for project-scoped devShells. Without it, Claude or Codex may run language tools on the host shell and leak host toolchain versions into lockfiles. Supported language templates live under furedea/ and are used via `ghcreate --template`. Also trigger on "/nix-dev-init", "new project", "set up dev environment", or any mention of creating a flake.nix for a project.
+    Per-project development environment bootstrap workflow for this user: github/create_repo.sh --template → direnv allow → language sync/build inside the direnv-activated shell. ALWAYS load when starting a new project, initializing a repo, scaffolding dev tooling, or writing project-level flake.nix / .envrc / devShell. Also load when the user asks to use or reference template-python, template-typescript, template-rust, template-tex, template-minimal, or configure an existing project from a template. This skill is DISTINCT from `nix-dotfiles` (global dotfiles system config under ghq); load THIS for project-scoped devShells. Without it, Claude or Codex may run language tools on the host shell and leak host toolchain versions into lockfiles. Supported language templates live under furedea/ and are used via `github/create_repo.sh --template`. Also trigger on "/nix-dev-init", "new project", "set up dev environment", or any mention of creating a flake.nix for a project.
 ---
 
 # Nix Dev Init Workflow
@@ -12,7 +12,7 @@ Setting up a **per-project** dev environment — not global dotfiles. For home-m
 
 The workflow has two phases, and the split is load-bearing:
 
-- **Phase 1 — Nix shell** (this file): `ghcreate --template` (or manual `flake.nix` → `.envrc`) → `direnv allow`. Language-agnostic.
+- **Phase 1 — Nix shell** (this file): `github/create_repo.sh --template` (or manual `flake.nix` → `.envrc`) → `direnv allow`. Language-agnostic.
 - **Phase 2 — Language init** (see `references/lang-<name>.md`): verify toolchain, run language-specific sync/build **inside the direnv-activated shell**.
 
 The whole reason Phase 1 runs before Phase 2 is so the language's commands see the nix-provided toolchain on PATH, not the host's. Do not collapse or reorder the phases.
@@ -22,9 +22,9 @@ The whole reason Phase 1 runs before Phase 2 is so the language's commands see t
 1. VCS init — pick one:
     - **New repo from template** (preferred for supported languages):
         ```
-        ghcreate <name> --private --template furedea/template-<lang>
+        cd "$($DOTFILES/github/create_repo.sh <name> --private --template furedea/template-<lang>)"
         ```
-        The `ghcreate` shell function (`~/.zshrc`) handles cloning, `cd`, ruleset application, and config file name substitution. The template provides `flake.nix`, `.envrc`, `.gitignore`, `lefthook.yml`, `.commitlintrc.yml`, CI workflows, and language-specific config — **skip steps 2-3**.
+        `github/create_repo.sh` creates the remote, clones into the ghq root, applies rulesets, and patches config file names. It prints the clone destination; command substitution above moves into that path after it succeeds. The template provides `flake.nix`, `.envrc`, `.gitignore`, `lefthook.yml`, `.commitlintrc.yml`, CI workflows, and language-specific config — **skip steps 2-3**.
     - New repo (public, no template): `gh repo create <name> --public --clone --license MIT` → `cd <name>`
     - New repo (private, no template): `gh repo create <name> --private --clone` → `cd <name>`
     - Clone: `git clone <url>` → `cd <name>`
@@ -36,15 +36,15 @@ The whole reason Phase 1 runs before Phase 2 is so the language's commands see t
 
 ### Why this order
 
-- **VCS before flake**: the git repo must exist before `nix flake update` creates `flake.lock`. Use `gh repo create --clone` instead of `git init` — it sets up remote, default branch, and license in one shot. Private repos skip `--license` because an accidental visibility flip with MIT attached grants everyone usage rights.
+- **VCS before flake**: the git repo must exist before `nix flake update` creates `flake.lock`. Use `github/create_repo.sh` for template-backed projects and `gh repo create --clone` for one-off non-template projects instead of `git init` — they set up remote and default branch in one shot. Private repos skip `--license` because an accidental visibility flip with MIT attached grants everyone usage rights.
 - **Toolchain before init**: running language init commands (e.g. `pnpm install`) on the host shell picks up the host's toolchain, whose version leaks into lockfiles. On another machine (or in CI) this silently breaks reproducibility.
 - **Commit `.envrc` before `direnv allow`**: direnv's trust state is keyed by file hash. Allowing first and editing after immediately invalidates the allow, forcing a re-allow.
 
 ## Template Repos
 
-All supported languages have a GitHub template repo under `furedea/`. Use `ghcreate --template` to create new projects — it clones, applies rulesets, and patches the project name in config files automatically.
+All supported languages have a GitHub template repo under `furedea/`. Use `github/create_repo.sh --template` to create new projects — it clones, applies rulesets, and patches the project name in config files automatically.
 
-| Project type | Template repo | ghcreate post-processing | Ship `flake.lock`? |
+| Project type | Template repo | create_repo.sh post-processing | Ship `flake.lock`? |
 | --- | --- | --- | --- |
 | Python (uv) | `furedea/template-python` | `pyproject.toml` name sub + `ruleset_python` | no |
 | TypeScript / Node (pnpm) | `furedea/template-typescript` | `package.json` name sub + `ruleset_typescript` | no |
@@ -115,7 +115,7 @@ Read only the ref that matches the project's primary language — the files are 
 
 ## Anti-Patterns
 
-- Using `git init` instead of `gh repo create --clone` (or `ghcreate`) for new projects → remote URL hand-typing, branch name mismatch (`master` vs `main`), missing license/gitignore.
+- Using `git init` instead of `github/create_repo.sh` or `gh repo create --clone` for new projects → remote URL hand-typing, branch name mismatch (`master` vs `main`), missing license/gitignore.
 - Running `uv init` / `pnpm install` / `cargo build` on the host shell before `direnv allow` → host toolchain leaks into the project.
 - Adding project-only tooling to `~/ghq/github.com/furedea/dotfiles/nix/home/default.nix` → bloats the global user env; keep project tooling in the project's own flake.
 - Running `darwin-rebuild switch` after editing a project's `flake.nix` → unnecessary. `darwin-rebuild` only reads the dotfiles flake + the nix-darwin modules.

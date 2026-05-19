@@ -1,6 +1,6 @@
 # Phase 2: TypeScript / Node (pnpm)
 
-Prerequisite: repo created via `ghcreate <name> --private --template furedea/template-typescript`. The template provides `flake.nix`, `.envrc`, `package.json`, `tsconfig.json`, `.oxlintrc.json`, `.oxfmtrc.json`, `vitest.config.ts`, `pnpm-workspace.yaml`, `lefthook.yml`, `.commitlintrc.yml`, CI workflows (lint, format, typecheck, test, CodeQL), and `.gitignore`. `ghcreate` also patches `package.json`'s `name` field and applies GitHub rulesets.
+Prerequisite: repo created via `cd "$($DOTFILES/github/create_repo.sh <name> --private --template furedea/template-typescript)"`. The template provides `flake.nix`, `.envrc`, `package.json`, `tsconfig.json`, `.oxlintrc.json`, `.oxfmtrc.json`, `vitest.config.ts`, `pnpm-workspace.yaml`, `lefthook.yml`, `.commitlintrc.yml`, CI workflows (lint, format, typecheck, test, CodeQL), and `.gitignore`. `github/create_repo.sh` also patches `package.json`'s `name` field and applies GitHub rulesets.
 
 ## Steps
 

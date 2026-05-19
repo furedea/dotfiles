@@ -1,6 +1,6 @@
 # Phase 2: Fallback (language without a dedicated template)
 
-Use this path when the project's primary language is not Python, TypeScript/Node, Rust, or TeX. Prerequisite: repo created via `ghcreate <name> --private --template furedea/template-minimal` (or `gh repo create` without a template). `template-minimal` provides `flake.nix` (empty `packages` list), `.envrc`, `.commitlintrc.yml`, `.gitignore`, and base CI workflows (gha_lint, dependency_review).
+Use this path when the project's primary language is not Python, TypeScript/Node, Rust, or TeX. Prerequisite: repo created via `cd "$($DOTFILES/github/create_repo.sh <name> --private --template furedea/template-minimal)"` (or `gh repo create` without a template). `template-minimal` provides `flake.nix` (empty `packages` list), `.envrc`, `.commitlintrc.yml`, `.gitignore`, and base CI workflows (gha_lint, dependency_review).
 
 The goal of this ref is to keep the fallback path **principled**, not to enumerate every language. Do not preemptively create a new template repo just because a project happened to use that language — wait until the language appears multiple times and a pattern is clear. YAGNI.
 
@@ -27,10 +27,10 @@ Everything in Phase 1 still holds regardless of language:
 
 If the same fallback recipe is repeated across ≥3 projects with only trivial variation, it is time to:
 
-1. Create `furedea/template-<lang>` from `furedea/template-minimal` via `ghcreate`.
+1. Create `furedea/template-<lang>` from `furedea/template-minimal` via `github/create_repo.sh`.
 2. Add language-specific `flake.nix`, config files, CI workflows, and `.gitignore` entries.
 3. Create `~/ghq/github.com/furedea/dotfiles/github/ruleset_<lang>.json` with the required CI status checks.
-4. Add a case to `ghcreate` in `~/.zshrc` for name substitution and ruleset application.
+4. Add the post-processing case to `github/create_repo.sh` for name substitution and ruleset application.
 5. Create `references/lang-<lang>.md` following the structure of the existing language refs.
 6. Update the template table in `SKILL.md` and this skill's description.
 

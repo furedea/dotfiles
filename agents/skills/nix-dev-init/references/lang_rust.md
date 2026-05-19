@@ -1,6 +1,6 @@
 # Phase 2: Rust (cargo)
 
-Prerequisite: repo created via `ghcreate <name> --private --template furedea/template-rust`. The template provides `flake.nix`, `.envrc`, `Cargo.toml`, `src/main.rs`, `lefthook.yml`, `.commitlintrc.yml`, CI workflows (lint, format, test, CodeQL), and `.gitignore`. `ghcreate` also patches `Cargo.toml`'s `name` field and applies GitHub rulesets.
+Prerequisite: repo created via `cd "$($DOTFILES/github/create_repo.sh <name> --private --template furedea/template-rust)"`. The template provides `flake.nix`, `.envrc`, `Cargo.toml`, `src/main.rs`, `lefthook.yml`, `.commitlintrc.yml`, CI workflows (lint, format, test, CodeQL), and `.gitignore`. `github/create_repo.sh` also patches `Cargo.toml`'s `name` field and applies GitHub rulesets.
 
 ## Steps
 
