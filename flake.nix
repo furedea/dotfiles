@@ -127,10 +127,7 @@
             codex = codex-cli-nix.packages.${sys}.default;
           });
 
-      # Dev shells for local work and CI-equivalent Bats tests. The default
-      # shell is consumed by direnv (`use flake`); dotfiles-bats-tests keeps
-      # test dependencies explicit so Bats does not depend on the caller's
-      # global PATH.
+      # Dev shell for local work, consumed by direnv (`use flake`).
       devShells =
         nixpkgs.lib.genAttrs
           [
@@ -149,16 +146,6 @@
                 packages = with shellPkgs; [
                   commitlint
                   lefthook
-                ];
-              };
-
-              dotfiles-bats-tests = shellPkgs.mkShell {
-                packages = [
-                  shellPkgs.bats
-                  shellPkgs.git
-                  shellPkgs.jq
-                  shellPkgs.shellcheck
-                  shellPkgs.shfmt
                 ];
               };
             }
