@@ -87,9 +87,6 @@ dotfiles/
 ├── atuin/                     # Shell history (via home-manager programs.atuin)
 ├── yazi/                      # File manager (via home-manager programs.yazi)
 ├── jj/                        # Jujutsu VCS root-level config
-├── agents/                    # Provider-shared agent assets (AGENTS.md, hooks, skills) — Claude Code + Codex
-├── claude/                    # Claude Code-only sources (agents/, commands/, settings.base.json, statusline/)
-├── codex/                     # Codex-only sources (config.toml, hooks/)
 └── ...
 ```
 
@@ -174,36 +171,28 @@ Some directories are kept as **plain copies for backup/reference** only. They ar
 
 ## Claude Code & Codex Security Harness
 
-Provider-shared agent assets live under `agents/` and are wired into both Claude Code and Codex by `nix/home/default.nix`:
+Claude Code and Codex configuration is delegated to the
+[`furedea/agent-harness`](https://github.com/furedea/agent-harness) flake.
+This dotfiles repo only enables the Home Manager module in
+`nix/home/default.nix`:
 
-| Path | Role |
-| --- | --- |
-| `agents/hooks/` | `PreToolUse` / `PostToolUse` / `Stop` shell hooks — command policy, secret blocking, lint/format feedback, audit logging |
-| `agents/hooks/rules/` | JSON rule data consumed by hooks, including secret-content patterns and completion-gate test selection rules |
-| `agents/skills/` | Skill sources rendered to `~/.claude/skills/` and `~/.codex/skills/` via `agents/scripts/render_skills.py` |
-| `agents/AGENTS.md` | Global instructions linked into both agents |
+```nix
+agent-harness = {
+  enable = true;
+  package = agent-harness.packages.${system}.default;
+  source = agent-harness;
+};
+```
 
-`nix/agents/hooks.nix` is the source of truth for Claude and Codex hook registration. `nix/agents/command_policy.nix` is the source of truth for Bash command permissions: it generates Claude `permissions.allow` / `permissions.deny`, Codex `default.rules`, and the `forbidden_commands.json` runtime rule file read by `guard_forbidden_commands.sh`. `claude/settings.base.json` keeps only non-Bash Claude settings and permissions such as `Skill(...)`, `Read(...)`, and `Write(...)`.
+The separate harness repository owns provider-shared instructions, hooks,
+permissions, protected paths, skills, and their tests. This keeps dotfiles
+focused on local machine composition while the reusable agent runtime can be
+installed on non-Nix machines and remote servers.
 
-`guard_allowed_commands.sh` is the detailed policy for broad allowed command families such as `git add`, `git commit`, `gh api`, and `uv run`; bulk `git add` and `git commit --no-verify` are denied there. `guard_forbidden_commands.sh` is the runtime mirror of shared forbidden command prefixes such as `rm`, `sudo`, and shell wrappers. Semantic guards that are not simple allowlist shape checks, such as dangerous git pushes, stay in dedicated hooks.
-
-`nix/agents/claude_settings.nix` merges generated hooks with `claude/settings.base.json`, then walks every file under `agents/hooks/` at evaluation time and emits matching `permissions.deny` (`Edit`/`Write`) entries plus `sandbox.filesystem.denyWrite` paths into the generated `~/.claude/settings.json`. Protected paths cover both the symlinked Claude view (`~/.claude/hooks/**`, `~/.claude/settings.json`, `~/.claude/CLAUDE.md`, `~/.claude/rules/forbidden_commands.json`) and the real dotfiles checkout (`~/ghq/.../dotfiles/agents/hooks/**`, `~/ghq/.../dotfiles/agents/AGENTS.md`).
-
-`nix/agents/codex_settings.nix` is the symmetric counterpart for Codex. Codex's `default.rules` is `execpolicy` (shell argv only) and cannot express file-edit deny, so the harness emits a `[permissions.guarded.filesystem]` TOML fragment for explicit guarded-profile experiments. The profile is not selected by default because Codex treats it as the full filesystem sandbox policy. The fragment is concatenated with `codex/config.toml` and merged into `~/.codex/config.toml` by `codex/sync_config.py`, while `~/.codex/hooks.json` is generated directly from `nix/agents/hooks.nix`. Protected paths cover both hook trees (`~/.claude/hooks/**`, `~/.codex/hooks/**`), generated bindings (`~/.codex/AGENTS.md`, `~/.codex/hooks.json`, `~/.codex/rules/default.rules`), and the real dotfiles checkout (`~/ghq/.../dotfiles/agents/hooks/**`, `~/ghq/.../dotfiles/codex/hooks/**`).
-
-- Adding a new file under `agents/hooks/` or `codex/hooks/` automatically extends the deny set on the next `darwin-rebuild switch` — no manual `settings.json` or `config.toml` edit needed.
-- The harness is protected as a whole, including helper libraries (`lib/shell_parse.sh`) and JSON rule data (`rules/*.json`), so the agent cannot weaken `guard_allowed_commands.sh`, `run_related_tests.sh`, or `guard_secret_content.sh` by rewriting their dependencies.
-- Skill scripts under `agents/skills/` are deliberately excluded — they are workflow tools, not security boundaries.
-
-`run_related_tests.sh` is a `Stop` hook that blocks completion by emitting `{ "decision": "block" }` JSON when relevant tests fail. Test selection combines two rule layers:
-
-- `agents/hooks/rules/related_test_defaults.json`: global default test-selection conventions for Bats, Python, JavaScript/TypeScript, and Rust. Bats and Python define executable test naming conventions; JS/TS records common `*.test.*` / `*.spec.*` names for future runner support; Rust runs `cargo test <stem>` for ordinary `src/<stem>.rs` changes and `cargo test --test <stem>` for matching `tests/<stem>.rs` integration targets, while skipping generic stems such as `lib`, `main`, and `mod`. Format/lint-only hook families stay out of related-test execution.
-- `agents/hooks/rules/related_test_extensions.json`: project-specific extensions that add fan-out beyond the defaults, such as helper libraries to consumer tests, Codex adapters, generated config sync tests, and grouped macOS notification tests.
-
-Run the full agent harness Bats suite through the same Nix dev shell used by CI:
+Dotfiles only verifies the integration boundary:
 
 ```bash
-nix develop .#agent-harness-bats-tests --command bats --recursive tests/hooks/
+nix develop .#dotfiles-bats-tests --command bats tests/nix tests/hooks/github
 ```
 
 ## Markdown Formatter
@@ -218,10 +207,11 @@ nix develop .#agent-harness-bats-tests --command bats --recursive tests/hooks/
 
 ## GitHub Workflow Starters
 
-Starter workflows for new projects come from two places:
-
-- **Project scaffolds** from `furedea/template-{minimal,python,typescript,rust,tex}` — instantiated with `github/create_repo.sh --template`. Each ships with `ci.yml` (language-specific jobs plus an `all-green` aggregator), `codeql.yml`, `dependency_review.yml`, and `gha_lint.yml` (`actionlint` + `zizmor`).
-    - **Optional CI add-ons** at `agents/skills/github-ci-init/templates/`: `release_please.yml`, `claude.yml`, `claude_code_review.yml`, `artifact_attestation.yml`. The `github-ci-init` Claude Code skill copies the curated default adopted set into a new repo on demand.
+Starter workflows for new projects come from project scaffolds in
+`furedea/template-{minimal,python,typescript,rust,tex}` and are instantiated
+with `github/create_repo.sh --template`. Each ships with `ci.yml`
+(language-specific jobs plus an `all-green` aggregator), `codeql.yml`,
+`dependency_review.yml`, and `gha_lint.yml` (`actionlint` + `zizmor`).
 
 Standard repo settings and the `main` branch ruleset live in `github/` and are applied via `github/setup_repo.sh <owner>/<repo>`. The ruleset requires a status check named `all-green`, which the project scaffolds satisfy via the aggregator job in `ci.yml`. See [`github/README.md`](github/README.md) for the contract and the caveat on which repos to apply it to.
 

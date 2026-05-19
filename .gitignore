@@ -17,36 +17,6 @@ desktop.ini
 *.swo
 *.bak
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-.venv/
-dist/
-build/
-*.egg-info/
-*.egg
-.ruff_cache/
-.uv-cache/
-
-# Testing
-.coverage
-.coverage.*
-*.cover
-*.py,cover
-.pytest_cache/
-.hypothesis/
-htmlcov/
-coverage.xml
-.cache/
-.tox/
-.nox/
-
-# Jupyter
-.ipynb_checkpoints/
-
 # Agent-local state
 .claude/
 .jj/
@@ -55,6 +25,3 @@ coverage.xml
 # Nix vim undo files in nvim config
 nvim/.undo/
 nvim/lazy-lock.json
-
-# Codex auto-generated system skills
-agents/skills/.system/
