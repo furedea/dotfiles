@@ -11,8 +11,11 @@
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
     codex-cli-nix.url = "github:sadjow/codex-cli-nix";
     nix-claude-code.url = "github:ryoppippi/nix-claude-code";
-    agent-harness.url = "github:furedea/agent-harness";
-    agent-harness.inputs.nixpkgs.follows = "nixpkgs";
+    agent-harness = {
+      url = "github:furedea/agent-harness";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.codex-cli-nix.follows = "codex-cli-nix";
+    };
   };
 
   outputs =
