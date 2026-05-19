@@ -109,9 +109,9 @@
         ];
       };
 
-      # Re-export codex CLI and python3 per system so CI (and local users)
-      # can `nix shell .#codex` / `nix build .#python3` without hard-coding
-      # upstream flake URLs. Versions stay pinned via flake.lock.
+      # Re-export codex CLI per system so local users can `nix shell .#codex`
+      # without hard-coding the upstream flake URL. Versions stay pinned via
+      # flake.lock.
       packages =
         nixpkgs.lib.genAttrs
           [
@@ -122,7 +122,6 @@
           ]
           (sys: {
             codex = codex-cli-nix.packages.${sys}.default;
-            inherit (nixpkgs.legacyPackages.${sys}) python3;
           });
 
       # Dev shells for local work and CI-equivalent Bats tests. The default
@@ -147,18 +146,7 @@
                 packages = with shellPkgs; [
                   commitlint
                   lefthook
-                  uv
                 ];
-
-                env = {
-                  UV_MANAGED_PYTHON = "1";
-                };
-
-                shellHook = ''
-                  if [ -d .venv/bin ]; then
-                    export PATH="$PWD/.venv/bin:$PATH"
-                  fi
-                '';
               };
 
               dotfiles-bats-tests = shellPkgs.mkShell {
