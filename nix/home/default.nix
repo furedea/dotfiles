@@ -7,34 +7,12 @@
   unstable,
   nix-claude-code,
   codex-cli-nix,
+  agent-harness,
   system,
   ...
 }:
 let
   link = path: config.lib.file.mkOutOfStoreSymlink "${dotfilesDir}/${path}";
-  agentCommandPolicy = import ../agents/command_policy.nix { inherit lib; };
-  claudeSettings = import ../agents/claude_settings.nix { inherit lib username dotfilesDir; };
-  codexSettings = import ../agents/codex_settings.nix { inherit lib username dotfilesDir; };
-  agentHooks = import ../agents/hooks.nix { };
-  # Concatenate the hand-written `codex/config.toml` with the Nix-generated
-  # `[permissions.guarded.filesystem]` fragment. The profile is not selected
-  # by default because Codex applies it as a full filesystem sandbox policy.
-  # `sync_config.py` then merges the union into `~/.codex/config.toml`, so
-  # hook auto-lock entries stay in lockstep with the files actually present in
-  # `agents/hooks/` and `codex/hooks/`.
-  codexConfigSource = pkgs.writeText "codex-config-source.toml" (
-    builtins.readFile ../../codex/config.toml + "\n" + codexSettings.configFragmentToml
-  );
-  agentSkills = import ../agents/skills.nix { };
-  agentSkillsOverridesJson = pkgs.writeText "agent-skills-overrides.json" (
-    builtins.toJSON agentSkills.overrides
-  );
-  renderedAgentSkills = pkgs.runCommand "agent-skills" { } ''
-    ${pkgs.python3}/bin/python ${../../agents/scripts/render_skills.py} \
-      --source ${../../agents/skills} \
-      --overrides ${agentSkillsOverridesJson} \
-      --output "$out"
-  '';
 in
 {
   home = {
@@ -308,6 +286,12 @@ in
       };
     };
 
+    agent-harness = {
+      enable = true;
+      package = agent-harness.packages.${system}.default;
+      source = agent-harness;
+    };
+
     yazi = {
       enable = true;
       settings = {
@@ -363,11 +347,6 @@ in
         ssh-keygen -t ed25519 -C "132188853+furedea@users.noreply.github.com" -f ~/.ssh/id_ed25519 -N ""
       fi
     '';
-    codexConfigSync = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      ${pkgs.python3}/bin/python ${dotfilesDir}/codex/sync_config.py \
-        ${codexConfigSource} \
-        "$HOME/.codex/config.toml"
-    '';
   };
 
   # lazygit reads XDG_CONFIG_HOME/lazygit/config.yml first when XDG_CONFIG_HOME is set
@@ -410,19 +389,5 @@ in
     ".config/ghostty/config".source = link "ghostty/config";
     ".config/karabiner/karabiner.json".source = link "karabiner/karabiner.json";
     ".config/cmux/settings.json".source = link "cmux/settings.json";
-    # Codex (shares the same global instructions and skills as Claude Code)
-    ".codex/AGENTS.md".source = link "agents/AGENTS.md";
-    ".codex/skills".source = "${renderedAgentSkills}/codex/skills";
-    ".codex/hooks".source = link "codex/hooks";
-    ".codex/hooks.json".text = builtins.toJSON agentHooks.codexHooks;
-    ".codex/rules/default.rules".text = agentCommandPolicy.codexRules;
-
-    # Claude Code
-    ".claude/hooks".source = link "agents/hooks";
-    ".claude/rules/forbidden_commands.json".text = agentCommandPolicy.forbiddenRulesJson;
-    ".claude/statusline".source = link "claude/statusline";
-    ".claude/skills".source = "${renderedAgentSkills}/claude/skills";
-    ".claude/CLAUDE.md".source = link "agents/AGENTS.md";
-    ".claude/settings.json".text = claudeSettings.generatedSettingsJson;
   };
 }

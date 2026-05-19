@@ -4,8 +4,8 @@ commit-msg:
       run: commitlint --edit {1}
 
 # pre-commit owns whole-project format check, lint, and typecheck. Test
-# execution is delegated to the Stop hook (agents/hooks/run_related_tests.sh)
-# and CI. Per-file fast feedback during edits lives in PostToolUse hooks.
+# execution is delegated to CI and the agent-harness hooks installed by
+# Home Manager.
 pre-commit:
   parallel: true
   commands:
