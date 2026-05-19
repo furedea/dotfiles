@@ -29,3 +29,4 @@ Existing project style takes precedence over these rules.
 - Prefer Collection Objects for domain collections with invariants; do not expose mutable raw collections
 - Use Entities only when stable identity matters across state changes
 - Use classification objects/enums when categories or state transitions have domain rules
+- Keep policy/configuration data out of implementation code; generators should load repository data files and only contain transformation logic.
