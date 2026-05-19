@@ -9,19 +9,19 @@
     home-manager.url = "github:nix-community/home-manager/release-25.11";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
-    nix-claude-code.url = "github:ryoppippi/nix-claude-code";
     codex-cli-nix.url = "github:sadjow/codex-cli-nix";
+    nix-claude-code.url = "github:ryoppippi/nix-claude-code";
   };
 
   outputs =
     {
-      nix-darwin,
       nixpkgs,
       nixpkgs-unstable,
+      nix-darwin,
       home-manager,
       nix-homebrew,
-      nix-claude-code,
       codex-cli-nix,
+      nix-claude-code,
       ...
     }:
     let
