@@ -70,7 +70,7 @@ function run_file_hook() {
 				file_path: $file_path
 			}
 		}' |
-    "$_hook" 2>&1)" || true
+    "$_hook" 2>/dev/null)" || true
 
   [[ -z "$_output" ]] && return 0
 

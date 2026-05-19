@@ -189,3 +189,26 @@ EOF
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
+
+@test "adapter ignores stderr from a successful lint hook" {
+  local _tmp
+  _tmp="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/codex.XXXXXX")"
+  local _file="$_tmp/x.py"
+  printf 'x = 1\n' >"$_file"
+
+  local _stub_dir="$_tmp/.claude/hooks"
+  mkdir -p "$_stub_dir"
+  cat >"$_stub_dir/lint_format_py.sh" <<'EOF'
+#!/bin/bash
+echo "environment noise" >&2
+EOF
+  chmod +x "$_stub_dir/lint_format_py.sh"
+
+  local _input
+  _input=$(jq -n --arg cwd "$_tmp" --arg cmd "*** Update File: x.py" \
+    '{cwd:$cwd, tool_input:{command:$cmd}}')
+
+  run env HOME="$_tmp" bash -c "echo '$_input' | '$HOOK'"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
