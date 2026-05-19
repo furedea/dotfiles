@@ -10,7 +10,7 @@ setup_gh_stub() {
   GH_LOG="$BATS_TEST_TMPDIR/gh_calls.log"
   GH_STUB_DIR="$BATS_TEST_TMPDIR/bin"
   mkdir -p "$GH_STUB_DIR"
-  cat > "$GH_STUB_DIR/gh" <<'STUB'
+  cat >"$GH_STUB_DIR/gh" <<'STUB'
 #!/bin/bash
 echo "$*" >> "${GH_LOG}"
 # For "repo view" subcommand, return a fake owner/repo
@@ -27,7 +27,7 @@ STUB
 # for the list query, exercising the PUT (update) path.
 setup_gh_stub_with_existing_ruleset() {
   local _id="$1"
-  cat > "$GH_STUB_DIR/gh" <<STUB
+  cat >"$GH_STUB_DIR/gh" <<STUB
 #!/bin/bash
 echo "\$*" >> "${GH_LOG}"
 if [[ "\$1" == "repo" && "\$2" == "view" ]]; then
@@ -48,7 +48,7 @@ gh_calls() {
 # Count how many times gh was called.
 gh_call_count() {
   if [[ -f "$GH_LOG" ]]; then
-    wc -l < "$GH_LOG" | tr -d ' '
+    wc -l <"$GH_LOG" | tr -d ' '
   else
     echo 0
   fi
