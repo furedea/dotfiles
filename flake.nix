@@ -11,8 +11,11 @@
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
     codex-cli-nix.url = "github:sadjow/codex-cli-nix";
     nix-claude-code.url = "github:ryoppippi/nix-claude-code";
-    agent-harness.url = "github:furedea/agent-harness";
-    agent-harness.inputs.nixpkgs.follows = "nixpkgs";
+    agent-harness = {
+      url = "github:furedea/agent-harness";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.codex-cli-nix.follows = "codex-cli-nix";
+    };
   };
 
   outputs =
@@ -109,9 +112,9 @@
         ];
       };
 
-      # Re-export codex CLI and python3 per system so CI (and local users)
-      # can `nix shell .#codex` / `nix build .#python3` without hard-coding
-      # upstream flake URLs. Versions stay pinned via flake.lock.
+      # Re-export codex CLI per system so local users can `nix shell .#codex`
+      # without hard-coding the upstream flake URL. Versions stay pinned via
+      # flake.lock.
       packages =
         nixpkgs.lib.genAttrs
           [
@@ -122,13 +125,9 @@
           ]
           (sys: {
             codex = codex-cli-nix.packages.${sys}.default;
-            inherit (nixpkgs.legacyPackages.${sys}) python3;
           });
 
-      # Dev shells for local work and CI-equivalent Bats tests. The default
-      # shell is consumed by direnv (`use flake`); dotfiles-bats-tests keeps
-      # test dependencies explicit so Bats does not depend on the caller's
-      # global PATH.
+      # Dev shell for local work, consumed by direnv (`use flake`).
       devShells =
         nixpkgs.lib.genAttrs
           [
@@ -147,27 +146,6 @@
                 packages = with shellPkgs; [
                   commitlint
                   lefthook
-                  uv
-                ];
-
-                env = {
-                  UV_MANAGED_PYTHON = "1";
-                };
-
-                shellHook = ''
-                  if [ -d .venv/bin ]; then
-                    export PATH="$PWD/.venv/bin:$PATH"
-                  fi
-                '';
-              };
-
-              dotfiles-bats-tests = shellPkgs.mkShell {
-                packages = [
-                  shellPkgs.bats
-                  shellPkgs.git
-                  shellPkgs.jq
-                  shellPkgs.shellcheck
-                  shellPkgs.shfmt
                 ];
               };
             }

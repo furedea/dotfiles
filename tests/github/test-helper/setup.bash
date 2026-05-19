@@ -1,6 +1,6 @@
 # Shared setup for github script tests.
 
-REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd)"
+REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
 GITHUB_DIR="$REPO_ROOT/github"
 SCRIPT="$GITHUB_DIR/setup_repo.sh"
 

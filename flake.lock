@@ -2,16 +2,19 @@
   "nodes": {
     "agent-harness": {
       "inputs": {
+        "codex-cli-nix": [
+          "codex-cli-nix"
+        ],
         "nixpkgs": [
           "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1779171114,
-        "narHash": "sha256-oW+o00M3Wv+LWQ/JT5KgRL9+5V1j5xkhhuyqjORJCOc=",
+        "lastModified": 1779213310,
+        "narHash": "sha256-MZyPoZ1CumBOmhqoWgNrLIbWabZZmWixWF5U1xZ4vJ0=",
         "owner": "furedea",
         "repo": "agent-harness",
-        "rev": "e131b756c721da4cb34165342fda988463cd478f",
+        "rev": "991163203ab90adee596a444781dd508bcd6608c",
         "type": "github"
       },
       "original": {

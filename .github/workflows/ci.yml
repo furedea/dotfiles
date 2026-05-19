@@ -28,11 +28,17 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install Nix
-        uses: cachix/install-nix-action@ab739621df7a23f52766f9ccc97f38da6b7af14f # v31.10.5
+      - name: Install Bats
+        uses: bats-core/bats-action@77d6fb60505b4d0d1d73e48bd035b55074bbfb43 # 4.0.0
+        with:
+          bats-version: "1.13.0"
+          support-install: "false"
+          assert-install: "false"
+          detik-install: "false"
+          file-install: "false"
 
       - name: Run Bats tests
-        run: nix develop .#dotfiles-bats-tests --command bats tests/nix tests/hooks/github
+        run: bats tests/github
 
   shell-lint:
     runs-on: ubuntu-latest
