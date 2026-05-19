@@ -189,12 +189,6 @@ permissions, protected paths, skills, and their tests. This keeps dotfiles
 focused on local machine composition while the reusable agent runtime can be
 installed on non-Nix machines and remote servers.
 
-Dotfiles only verifies the integration boundary:
-
-```bash
-nix develop .#dotfiles-bats-tests --command bats tests/nix tests/hooks/github
-```
-
 ## Markdown Formatter
 
 `dprint-plugin-markdown` hardcodes list indent to 2 spaces (CommonMark minimum) with no configuration option. `prettierd` is used instead with `tabWidth: 4` in `~/.prettierrc` to get 4-space list nesting matching Obsidian.
