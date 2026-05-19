@@ -11,6 +11,8 @@
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
     codex-cli-nix.url = "github:sadjow/codex-cli-nix";
     nix-claude-code.url = "github:ryoppippi/nix-claude-code";
+    agent-harness.url = "github:furedea/agent-harness";
+    agent-harness.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs =
@@ -22,16 +24,13 @@
       nix-homebrew,
       codex-cli-nix,
       nix-claude-code,
+      agent-harness,
       ...
     }:
     let
       username = "kaito";
       system = "aarch64-darwin";
       dotfilesDir = "/Users/${username}/ghq/github.com/furedea/dotfiles";
-      agentPaths = import ./nix/agents/paths.nix {
-        inherit (nixpkgs) lib;
-        inherit username dotfilesDir;
-      };
       allowUnfreePredicate =
         pkg:
         builtins.elem pkg.pname [
@@ -76,10 +75,16 @@
                   unstable
                   nix-claude-code
                   codex-cli-nix
+                  agent-harness
                   system
                   ;
               };
-              users.${username} = import ./nix/home/default.nix;
+              users.${username} = {
+                imports = [
+                  agent-harness.homeManagerModules.default
+                  ./nix/home/default.nix
+                ];
+              };
             };
           }
         ];
@@ -94,10 +99,12 @@
             unstable
             nix-claude-code
             codex-cli-nix
+            agent-harness
             system
             ;
         };
         modules = [
+          agent-harness.homeManagerModules.default
           ./nix/home/default.nix
         ];
       };
@@ -118,11 +125,10 @@
             inherit (nixpkgs.legacyPackages.${sys}) python3;
           });
 
-      # Dev shells for everyday Python work and for CI-equivalent agent
-      # harness Bats tests. The default shell is consumed by direnv
-      # (`use flake`); agent-harness-bats-tests keeps formatter/linter
-      # dependencies explicit so Bats does not depend on the caller's global
-      # PATH.
+      # Dev shells for local work and CI-equivalent Bats tests. The default
+      # shell is consumed by direnv (`use flake`); dotfiles-bats-tests keeps
+      # test dependencies explicit so Bats does not depend on the caller's
+      # global PATH.
       devShells =
         nixpkgs.lib.genAttrs
           [
@@ -135,10 +141,6 @@
             sys:
             let
               shellPkgs = nixpkgs.legacyPackages.${sys};
-              shellUnstable = import nixpkgs-unstable {
-                system = sys;
-                config = { inherit allowUnfreePredicate; };
-              };
             in
             {
               default = shellPkgs.mkShell {
@@ -159,52 +161,16 @@
                 '';
               };
 
-              agent-harness-bats-tests = shellPkgs.mkShell {
+              dotfiles-bats-tests = shellPkgs.mkShell {
                 packages = [
-                  codex-cli-nix.packages.${sys}.default
                   shellPkgs.bats
-                  shellPkgs.dprint
                   shellPkgs.git
                   shellPkgs.jq
-                  shellPkgs.oxlint
-                  shellPkgs.ripgrep
-                  shellPkgs.ruff
-                  shellPkgs.rustfmt
                   shellPkgs.shellcheck
                   shellPkgs.shfmt
-                  shellUnstable.oxfmt
                 ];
               };
             }
           );
-
-      # Pure data outputs consumed by bats tests. Going through the flake (and
-      # flake.lock) keeps tests reproducible: no `<nixpkgs>` channel lookup,
-      # no `--impure`, and the same nixpkgs revision as the dev environment.
-      lib =
-        let
-          libSet = nixpkgs.lib;
-          agentSettings = import ./nix/agents/claude_settings.nix {
-            lib = libSet;
-            inherit username dotfilesDir;
-          };
-          codexSettings = import ./nix/agents/codex_settings.nix {
-            lib = libSet;
-            inherit username dotfilesDir;
-          };
-          agentHooks = import ./nix/agents/hooks.nix { };
-          agentPolicy = import ./nix/agents/command_policy.nix { lib = libSet; };
-          agentSkills = import ./nix/agents/skills.nix { };
-        in
-        {
-          inherit (agentPaths) dotfilesHomePath;
-          inherit (agentSettings) generatedSettings;
-          inherit (agentPolicy) codexRules forbiddenRulesJson;
-          inherit (agentHooks) codexHooks;
-          codexFilesystemPermissions = codexSettings.filesystemPermissions;
-          codexConfigFragmentToml = codexSettings.configFragmentToml;
-          agentSkillOverrides = agentSkills.overrides;
-          policyRules = map (entry: { inherit (entry) decision pattern; }) agentPolicy.rules;
-        };
     };
 }

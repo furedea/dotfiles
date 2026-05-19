@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  agent-harness-bats-tests:
+  bats-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -31,29 +31,8 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@ab739621df7a23f52766f9ccc97f38da6b7af14f # v31.10.5
 
-      - name: Run agent harness Bats tests
-        run: nix develop .#agent-harness-bats-tests --command bats --recursive tests/hooks/
-
-  python-tests:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-
-      - name: Install Nix
-        uses: cachix/install-nix-action@ab739621df7a23f52766f9ccc97f38da6b7af14f # v31.10.5
-
-      - name: Run Python quality checks
-        run: |
-          nix shell nixpkgs#uv --command uv run --frozen ruff format --check
-          nix shell nixpkgs#uv --command uv run --frozen ruff check
-          nix shell nixpkgs#uv --command uv run --frozen ty check
-          nix shell nixpkgs#uv --command uv run --frozen pytest tests/python
+      - name: Run Bats tests
+        run: nix develop .#dotfiles-bats-tests --command bats tests/nix tests/hooks/github
 
   shell-lint:
     runs-on: ubuntu-latest
@@ -71,19 +50,14 @@ jobs:
         env:
           SHELLCHECK_OPTS: -x --source-path=SCRIPTDIR
         with:
-          scandir: agents/hooks
+          scandir: github
           format: gcc
-          additional_files: >-
-            claude/statusline/statusline.sh
-            codex/hooks/adapt_guard_secret_content.sh
-            codex/hooks/adapt_lint_format.sh
-            codex/hooks/adapt_shell_command.sh
 
       - name: Setup shfmt
         uses: mfinelli/setup-shfmt@a25fda4c1fe115aec0f85e04126610841bc3141d # v4.0.1
 
       - name: Run shfmt
-        run: shfmt -d -i 2 -ci agents/hooks/ claude/statusline/ codex/hooks/
+        run: shfmt -d -i 2 -ci github/
 
   lua-lint:
     runs-on: ubuntu-latest
