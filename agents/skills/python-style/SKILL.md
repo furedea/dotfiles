@@ -1,7 +1,7 @@
 ---
 name: python-style
 description: >
-    Python coding conventions: uv commands (sync/add/run), pytest, ruff, ty/pyright, pytest-mock with autospec, src/ layout, dataclass Value Objects (frozen=True, slots=True), naming, imports, docstrings. Load whenever writing, reviewing, refactoring, linting, typechecking, testing, or PLANNING Python code — even in plan mode, before any code exists. Also load for Python test environment discussions such as pytest, uv run --with pytest, ruff, or ty. Do NOT use for project bootstrap (`uv init`, flake.nix, initial `pyproject.toml` scaffolding) — that is `nix-dev-init`'s job. Without this skill, Claude or Codex falls back to pip, unittest.mock, and wrong class patterns this user rejects.
+    Python coding conventions: uv commands (sync/add/run), pytest, ruff, ty, pytest-mock with autospec, src/ layout, dataclass Value Objects (frozen=True, slots=True), naming, imports, docstrings. Load whenever writing, reviewing, refactoring, linting, typechecking, testing, or PLANNING Python code — even in plan mode, before any code exists. Also load for Python test environment discussions such as pytest, uv run --with pytest, ruff, or ty. Do NOT use for project bootstrap (`uv init`, flake.nix, initial `pyproject.toml` scaffolding) — that is `nix-dev-init`'s job. Without this skill, Claude or Codex falls back to pip, unittest.mock, and wrong class patterns this user rejects.
 ---
 
 # Python Coding Style Guidelines
@@ -20,10 +20,12 @@ Keeping bootstrap out of this skill has two benefits: (1) when Claude is trigger
 
 - Use only `uv` for package management, don't use `pip`
 - Install dependencies using `uv sync`
-- Install packages using `uv add {package}`
 - Run tools using `uv run {tool}`
-- Upgrade packages using `uv add --dev {package} --upgrade-package {package}`
-- Prohibited: `uv pip install`, `@latest`
+- Baseline tooling dependencies belong in template-defined dependency groups, not ad hoc commands
+- Add project-specific dependencies using `uv add {package}`
+- Add project-specific tool dependencies using `uv add --group <group> {package}`
+- Upgrade pinned packages using `uv lock --upgrade-package {package}`
+- Prohibited: `uv pip install`, `uv add --dev`, `@latest`
 
 ## Directory Structure
 
@@ -37,7 +39,15 @@ Keeping bootstrap out of this skill has two benefits: (1) when Claude is trigger
 
 - Keep code within 119 characters per line (URLs may exceed this limit)
 - Always include type hints
-- Use pyright for static analysis
+- Use ty for static type checking
+
+## Static Type Checking
+
+- ty should already be provided by the project's `typecheck` dependency group
+- Run type checks using `uv run ty check`
+- Check specific paths using `uv run ty check src tests`
+- Use `uv run ty server` only for editor or language-server integration
+- Do not introduce another type checker unless the existing project is already standardized on it
 
 ## Testing
 
@@ -45,7 +55,7 @@ Keeping bootstrap out of this skill has two benefits: (1) when Claude is trigger
 - Run tests using `uv run --frozen pytest`
 - Use `anyio` for async tests, do not use `asyncio`
 - Use `pytest-mock` for mocking (`mocker` fixture), do not use `unittest.mock` directly
-- Use `pytest`, `anyio`, and `pytest-mock` with `--dev` flag as they are development packages
+- `pytest`, `anyio`, and `pytest-mock` belong in the template's test dependency group
 - Test coverage should include edge cases and errors
 - Always add tests for new features
 - Add unit tests for bug fixes
