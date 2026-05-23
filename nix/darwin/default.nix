@@ -292,6 +292,7 @@
       "skim"
       "slack"
       "steam"
+      "tailscale"
       "vimr"
       "visual-studio-code"
     ];
