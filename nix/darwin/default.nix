@@ -192,8 +192,8 @@
       # Homerow: keyboard-driven macOS navigation
       "com.superultra.Homerow" = {
         "launch-at-login" = true;
-        "scroll-shortcut" = "⌘J";
-        "non-search-shortcut" = "⌘F";
+        "scroll-shortcut" = "⇧⌘J";
+        "non-search-shortcut" = "⇧⌘F";
         "scroll-px-per-ms" = 1.5;
         "theme-id" = "original";
         "auto-switch-input-source-id" = "com.google.inputmethod.Japanese.Roman";
