@@ -7,22 +7,8 @@ ignore:
   - .direnv
   - result
   - result-*
-  - "**/logs"
-  - "**/.cache"
+  - docs/logs
 
-  - "**/README.md"
-  - "**/AGENTS.md"
-  - "**/CLAUDE.md"
-  - "**/SKILL.md"
-
-  - .venv
-  - .uv-cache
-  - .ruff_cache
-  - .pytest_cache
-  - .ipynb_checkpoints
-  - "**/__pycache__"
-  - "**/__init__.py"
-  - dist
-  - build
-
+  - README.md
+  - github/README.md
   - "raycast/Raycast 2026-04-15 14.52.13.rayconfig"
