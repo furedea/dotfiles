@@ -270,7 +270,7 @@
       "betterdisplay"
       "bitwarden"
       "claude"
-      "codex-app"
+      "chatgpt"
       "deepl"
       "discord"
       "firefox"
@@ -290,7 +290,7 @@
       "skim"
       "slack"
       "steam"
-      "tailscale"
+      "tailscale-app"
       "vimr"
       "visual-studio-code"
     ];
