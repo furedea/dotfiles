@@ -110,7 +110,6 @@
       # ────────── Dock persistent apps (in order) ──────────
       # Finder is always pinned to the left by macOS; no need to specify it here
       persistent-apps = [
-        { app = "/Applications/cmux.app"; }
         { app = "/Applications/Raycast.app"; }
         { app = "/Applications/Arc.app"; }
         { app = "/Applications/Obsidian.app"; }
@@ -273,7 +272,6 @@
       "chatgpt"
       "claude"
       "codex-app"
-      "cmux"
       "deepl"
       "discord"
       "firefox"

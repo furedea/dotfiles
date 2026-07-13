@@ -108,7 +108,7 @@ dotfiles/
 
 ### GUI Apps (Homebrew Cask)
 
-appcleaner, arc, bitwarden, chatgpt, claude, cmux, discord, firefox, font-jetbrains-mono, ghostty, google-chrome, karabiner-elements, mactex, nani, obsidian, orbstack, raycast, slack, steam, vimr, visual-studio-code, zoom
+appcleaner, arc, bitwarden, chatgpt, claude, discord, firefox, font-jetbrains-mono, ghostty, google-chrome, karabiner-elements, mactex, nani, obsidian, orbstack, raycast, slack, steam, vimr, visual-studio-code, zoom
 
 ### Mac App Store
 
@@ -127,7 +127,7 @@ LINE is installed manually via the App Store app. Automated `masApps` management
 | Finder | Show hidden files, path bar, status bar, column view, folders first |
 | Dock | Auto-hide, bottom, size 128, no recents, minimize to app icon |
 | Hot corners | TL=Desktop, TR=Notification Center, BL=Lock Screen, BR=Quick Note |
-| Dock apps | cmux, Raycast, Arc, Obsidian, OrbStack, Slack, Discord, LINE, System Settings, Nani |
+| Dock apps | Raycast, Arc, Obsidian, OrbStack, Slack, Discord, LINE, System Settings, Nani |
 | Screenshot | Save to ~/Pictures as file |
 | Lock screen | Require password immediately after sleep |
 | Menu bar clock | 24h, seconds, date, day of week |

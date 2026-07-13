@@ -14,7 +14,6 @@
     agent-harness = {
       url = "github:furedea/agent-harness";
       inputs.nixpkgs.follows = "nixpkgs";
-      inputs.codex-cli-nix.follows = "codex-cli-nix";
     };
   };
 

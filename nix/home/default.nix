@@ -13,6 +13,12 @@
 }:
 let
   link = path: config.lib.file.mkOutOfStoreSymlink "${dotfilesDir}/${path}";
+  codexPackage = codex-cli-nix.packages.${system}.default;
+  herdrCompatibleCodex = pkgs.writeShellScriptBin "codex" ''
+    export CODEX_EXECUTABLE_PATH="$HOME/.local/bin/codex"
+    export DISABLE_AUTOUPDATER=1
+    exec -a codex ${codexPackage}/bin/codex-raw "$@"
+  '';
 in
 {
   home = {
@@ -55,9 +61,10 @@ in
 
     # AI Coding Agent
     nix-claude-code.packages.${system}.default
-    codex-cli-nix.packages.${system}.default
+    herdrCompatibleCodex
     unstable.github-copilot-cli
     unstable.opencode
+    unstable.herdr
 
     # General Formatters
     autocorrect
@@ -290,6 +297,10 @@ in
       enable = true;
       package = agent-harness.packages.${system}.default;
       source = agent-harness;
+      herdr = {
+        enable = true;
+        package = unstable.herdr;
+      };
     };
 
     yazi = {
@@ -388,6 +399,6 @@ in
     # macOS GUI 設定
     ".config/ghostty/config".source = link "ghostty/config";
     ".config/karabiner/karabiner.json".source = link "karabiner/karabiner.json";
-    ".config/cmux/settings.json".source = link "cmux/settings.json";
+    ".config/herdr/config.toml".source = link "herdr/config.toml";
   };
 }
