@@ -91,8 +91,11 @@ return {
           end
           vim.schedule(function()
             local clients = vim.lsp.get_clients({ bufnr = 0 })
-            if #clients > 0 then
-              vim.lsp.buf.hover()
+            for _, client in ipairs(clients) do
+              if client:supports_method("textDocument/hover") then
+                vim.lsp.buf.hover()
+                return
+              end
             end
           end)
         end,
