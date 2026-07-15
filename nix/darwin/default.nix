@@ -265,11 +265,8 @@
     };
 
     casks = [
-      "appcleaner"
       "arc"
-      "betterdisplay"
       "bitwarden"
-      "claude"
       "chatgpt"
       "deepl"
       "discord"
@@ -292,7 +289,6 @@
       "steam"
       "tailscale-app"
       "vimr"
-      "visual-studio-code"
     ];
 
     taps = [
