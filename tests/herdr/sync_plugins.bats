@@ -32,6 +32,18 @@ setup() {
   ! [[ "$(herdr_calls)" == *"plugin install"* ]]
 }
 
+@test "stays quiet when plugins already match the declaration" {
+  export HERDR_PLUGIN_LIST_JSON='{"result":{"plugins":[{"plugin_id":"persiyanov.reviewr","source":{"resolved_commit":"160ad607a195ee35ac9450e887974b3b5ddc4479"}}]}}'
+
+  run bash -c 'exec 9>/dev/null; BASH_XTRACEFD=9 bash "$@"' _ "$SCRIPT" \
+    persiyanov.reviewr \
+    persiyanov/herdr-reviewr \
+    160ad607a195ee35ac9450e887974b3b5ddc4479
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "uninstalls a previously managed plugin removed from the declaration" {
   echo "persiyanov.reviewr" >"$HERDR_PLUGIN_SYNC_STATE_FILE"
   export HERDR_PLUGIN_LIST_JSON='{"result":{"plugins":[{"plugin_id":"persiyanov.reviewr","source":{"resolved_commit":"160ad607a195ee35ac9450e887974b3b5ddc4479"}}]}}'

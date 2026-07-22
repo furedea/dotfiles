@@ -378,12 +378,13 @@ in
       fi
     '';
     herdrPlugins = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
-      HERDR_BIN="${unstable.herdr}/bin/herdr" \
+      BASH_XTRACEFD=9 \
+        HERDR_BIN="${unstable.herdr}/bin/herdr" \
         JQ_BIN="${pkgs.jq}/bin/jq" \
         HERDR_PLUGIN_SYNC_STATE_FILE="${config.xdg.stateHome}/home-manager/herdr_plugins" \
         ${pkgs.bash}/bin/bash \
         "${config.home.homeDirectory}/.local/libexec/sync_herdr_plugins.sh" \
-        ${herdrPluginArgs} || true
+        ${herdrPluginArgs} 9>/dev/null || true
     '';
   };
 
