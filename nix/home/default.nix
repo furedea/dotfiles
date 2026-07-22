@@ -19,6 +19,25 @@ let
     export DISABLE_AUTOUPDATER=1
     exec -a codex ${codexPackage}/bin/codex-raw "$@"
   '';
+  herdrPlugins = [
+    {
+      id = "persiyanov.reviewr";
+      source = "persiyanov/herdr-reviewr";
+      rev = "160ad607a195ee35ac9450e887974b3b5ddc4479";
+    }
+    {
+      id = "herdr-file-viewer";
+      source = "smarzban/herdr-file-viewer";
+      rev = "96fcc0a2bdd2727ec88c38f8c8806f97b7ca0ea0";
+    }
+  ];
+  herdrPluginArgs = lib.escapeShellArgs (
+    lib.concatMap (plugin: [
+      plugin.id
+      plugin.source
+      plugin.rev
+    ]) herdrPlugins
+  );
 in
 {
   home = {
@@ -358,6 +377,14 @@ in
         ssh-keygen -t ed25519 -C "132188853+furedea@users.noreply.github.com" -f ~/.ssh/id_ed25519 -N ""
       fi
     '';
+    herdrPlugins = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+      HERDR_BIN="${unstable.herdr}/bin/herdr" \
+        JQ_BIN="${pkgs.jq}/bin/jq" \
+        HERDR_PLUGIN_SYNC_STATE_FILE="${config.xdg.stateHome}/home-manager/herdr_plugins" \
+        ${pkgs.bash}/bin/bash \
+        "${config.home.homeDirectory}/.local/libexec/sync_herdr_plugins.sh" \
+        ${herdrPluginArgs} || true
+    '';
   };
 
   # lazygit reads XDG_CONFIG_HOME/lazygit/config.yml first when XDG_CONFIG_HOME is set
@@ -400,5 +427,6 @@ in
     ".config/ghostty/config".source = link "ghostty/config";
     ".config/karabiner/karabiner.json".source = link "karabiner/karabiner.json";
     ".config/herdr/config.toml".source = link "herdr/config.toml";
+    ".local/libexec/sync_herdr_plugins.sh".source = link "herdr/sync_plugins.sh";
   };
 }
