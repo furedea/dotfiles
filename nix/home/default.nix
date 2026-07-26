@@ -25,11 +25,6 @@ let
       source = "persiyanov/herdr-reviewr";
       rev = "160ad607a195ee35ac9450e887974b3b5ddc4479";
     }
-    {
-      id = "herdr-file-viewer";
-      source = "smarzban/herdr-file-viewer";
-      rev = "96fcc0a2bdd2727ec88c38f8c8806f97b7ca0ea0";
-    }
   ];
   herdrPluginArgs = lib.escapeShellArgs (
     lib.concatMap (plugin: [
@@ -428,6 +423,7 @@ in
     ".config/ghostty/config".source = link "ghostty/config";
     ".config/karabiner/karabiner.json".source = link "karabiner/karabiner.json";
     ".config/herdr/config.toml".source = link "herdr/config.toml";
+    ".config/herdr/plugins/config/persiyanov.reviewr/config.toml".source = link "herdr/reviewr.toml";
     ".local/libexec/sync_herdr_plugins.sh".source = link "herdr/sync_plugins.sh";
   };
 }

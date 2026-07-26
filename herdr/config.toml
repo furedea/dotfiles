@@ -12,7 +12,7 @@ delivery = "system"
 prefix = "ctrl+a"
 
 [[keys.command]]
-key = "prefix+ctrl+y"
+key = "prefix+ctrl+f"
 type = "popup"
 command = "yazi"
 description = "run yazi"
@@ -34,6 +34,12 @@ command = "exec zsh"
 description = "open scratch terminal"
 width = "85%"
 height = "85%"
+
+[[keys.command]]
+key = "prefix+ctrl+r"
+type = "plugin_action"
+command = "persiyanov.reviewr.toggle"
+description = "toggle reviewr"
 
 [ui]
 agent_panel_sort = "spaces"
