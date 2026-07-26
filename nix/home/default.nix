@@ -245,19 +245,6 @@ in
       };
     };
 
-    gh-dash = {
-      enable = true;
-      settings = {
-        defaults.refetchIntervalMinutes = 5;
-        keybindings.prs = [
-          {
-            key = "m";
-            command = "gh pr merge --squash --auto -d {{.PrNumber}} -R {{.RepoName}}";
-          }
-        ];
-      };
-    };
-
     lazygit = {
       enable = true;
       settings = {
