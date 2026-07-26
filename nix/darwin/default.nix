@@ -296,7 +296,6 @@
     ];
 
     brews = [
-      "hunk"
       "winebarrel/kasa/kasa"
     ];
   };
