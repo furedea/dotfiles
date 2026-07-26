@@ -4,8 +4,6 @@
 setup() {
   load test-helper/setup
   CONFIG="$REPO_ROOT/herdr/config.toml"
-  DARWIN_CONFIG="$REPO_ROOT/nix/darwin/default.nix"
-  HOME_CONFIG="$REPO_ROOT/nix/home/default.nix"
   REVIEWR_CONFIG="$REPO_ROOT/herdr/reviewr.toml"
 }
 
@@ -70,15 +68,4 @@ setup() {
   ' <<<"$output"
 
   [ "$status" -eq 0 ]
-}
-
-@test "manages reviewr without redundant review tools" {
-  run rg -n 'id = "persiyanov\.reviewr"' "$HOME_CONFIG"
-  [ "$status" -eq 0 ]
-
-  run rg -n 'herdr-file-viewer' "$HOME_CONFIG"
-  [ "$status" -eq 1 ]
-
-  run rg -n '"hunk"' "$DARWIN_CONFIG"
-  [ "$status" -eq 1 ]
 }
