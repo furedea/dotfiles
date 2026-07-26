@@ -149,25 +149,6 @@ function gr() {
   builtin cd "$root"
 }
 
-# ghd: open gh-dash for the GitHub repo configured as origin.
-function ghd() {
-  local url repo
-  url=$(git remote get-url origin 2>/dev/null) || {
-    gh dash "$@"
-    return
-  }
-
-  repo="${url#git@github.com:}"
-  repo="${repo#https://github.com/}"
-  repo="${repo%.git}"
-
-  if [[ "$repo" == */* ]]; then
-    GH_REPO="$repo" gh dash "$@"
-  else
-    gh dash "$@"
-  fi
-}
-
 # Abbreviations: new shortcuts that don't shadow existing commands.
 # Using -S (session scope) so definitions stay in this file, not in a separate file.
 abbr --quiet -S lg="lazygit"
