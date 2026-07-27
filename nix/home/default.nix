@@ -322,12 +322,12 @@ in
         plugin.prepend_fetchers = [
           {
             id = "git";
-            url = "*";
+            name = "*";
             run = "git";
           }
           {
             id = "git";
-            url = "*/";
+            name = "*/";
             run = "git";
           }
         ];
