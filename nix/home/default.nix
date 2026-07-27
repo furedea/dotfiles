@@ -306,8 +306,29 @@ in
 
     yazi = {
       enable = true;
+      plugins = with pkgs.yaziPlugins; {
+        inherit
+          git
+          smart-enter
+          smart-filter
+          vcs-files
+          ;
+      };
+      initLua = ''
+        require("git"):setup()
+      '';
       settings = {
         mgr.show_hidden = true;
+        plugin.prepend_fetchers = [
+          {
+            url = "*";
+            run = "git";
+          }
+          {
+            url = "*/";
+            run = "git";
+          }
+        ];
       };
       keymap = {
         mgr.prepend_keymap = [
@@ -320,6 +341,24 @@ in
             on = [ "<Esc>" ];
             run = "quit";
             desc = "Quit";
+          }
+          {
+            on = [ "l" ];
+            run = "plugin smart-enter";
+            desc = "Enter directory or open file";
+          }
+          {
+            on = [ "F" ];
+            run = "plugin smart-filter";
+            desc = "Smart filter";
+          }
+          {
+            on = [
+              "g"
+              "c"
+            ];
+            run = "plugin vcs-files";
+            desc = "Show Git file changes";
           }
         ];
       };
