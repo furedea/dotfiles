@@ -138,4 +138,4 @@ jobs:
           args: --incremental=false
 
       - name: Run autocorrect
-        uses: huacnlee/autocorrect-action@ecfab7cbe52ead55514356c1322636fab42e060a # v2.5.4
+        uses: huacnlee/autocorrect-action@bf91ab3904c2908dd8e71312a8a83ed1eb632997 # v2.13.3
