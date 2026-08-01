@@ -4,6 +4,15 @@
   username,
   ...
 }:
+let
+  kasaFormula = "winebarrel/kasa/kasa";
+  trustedHomebrewFormulae = [ kasaFormula ];
+  homebrewTrustFile = pkgs.writeText "homebrew-trust.json" (
+    builtins.toJSON {
+      trustedformulae = trustedHomebrewFormulae;
+    }
+  );
+in
 {
   environment.systemPackages = [ pkgs.vim ];
 
@@ -219,6 +228,16 @@
         mv "$f" "$f.before-nix-darwin"
       fi
     done
+
+    # Homebrew Bundle runs without XDG_CONFIG_HOME, while interactive shells
+    # may set it. Keep both trust stores identical and available before Bundle.
+    user="${config.system.primaryUser}"
+    user_home="/Users/$user"
+    for trust_dir in "$user_home/.homebrew" "$user_home/.config/homebrew"; do
+      install -d -m 700 -o "$user" -g staff "$trust_dir"
+      install -m 600 -o "$user" -g staff \
+        ${homebrewTrustFile} "$trust_dir/trust.json"
+    done
   '';
 
   system.activationScripts.postActivation.text = ''
@@ -296,7 +315,7 @@
     ];
 
     brews = [
-      "winebarrel/kasa/kasa"
+      kasaFormula
     ];
   };
 }
