@@ -7,6 +7,36 @@ setup() {
   REVIEWR_CONFIG="$REPO_ROOT/herdr/reviewr.toml"
 }
 
+@test "switches workspaces by prefix control number" {
+  run nix eval --impure --json --expr "builtins.fromTOML (builtins.readFile $CONFIG)"
+
+  [ "$status" -eq 0 ]
+
+  run jq -e '.keys.switch_workspace == "prefix+ctrl+1..9"' <<<"$output"
+
+  [ "$status" -eq 0 ]
+}
+
+@test "uses control bindings for workspace lifecycle actions" {
+  run nix eval --impure --json --expr "builtins.fromTOML (builtins.readFile $CONFIG)"
+
+  [ "$status" -eq 0 ]
+
+  run jq -e '
+    .keys | {
+      new_workspace,
+      new_worktree,
+      close_workspace
+    } == {
+      "new_workspace": "prefix+ctrl+n",
+      "new_worktree": "prefix+ctrl+w",
+      "close_workspace": "prefix+ctrl+d"
+    }
+  ' <<<"$output"
+
+  [ "$status" -eq 0 ]
+}
+
 @test "opens terminal tools in 85 percent popup panes" {
   run nix eval --impure --json --expr "builtins.fromTOML (builtins.readFile $CONFIG)"
 

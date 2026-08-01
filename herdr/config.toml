@@ -10,6 +10,10 @@ delivery = "system"
 
 [keys]
 prefix = "ctrl+a"
+new_workspace = "prefix+ctrl+n"
+new_worktree = "prefix+ctrl+w"
+close_workspace = "prefix+ctrl+d"
+switch_workspace = "prefix+ctrl+1..9"
 
 [[keys.command]]
 key = "prefix+ctrl+f"
