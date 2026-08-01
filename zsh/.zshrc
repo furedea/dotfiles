@@ -78,69 +78,7 @@ export ESA_TOKEN=$(security find-generic-password -s "esa-token" -a "$USER" -w)
 
 # Plugins
 source "$XDG_CONFIG_HOME/zsh/nix-plugins.zsh"
-
-# esa helpers — always saves as WIP; use `es` to explicitly ship
-_ESA_LAST_POST=""
-
-# _esa_edit: open editor and remember post for `es`
-function _esa_edit() {
-  local post="$1"
-  local editor="${EDITOR:-vim}"
-  echo "editor: $editor"
-  if EDITOR="$editor" kasa edit --no-notice "$post"; then
-    _ESA_LAST_POST="$post"
-  fi
-}
-
-# en: create new post under Members/k-shigyo/; errors if already exists (typo guard)
-function en() {
-  [[ -z "$1" ]] && echo "usage: en <title>" && return 1
-  local url
-  url=$(kasa touch --no-notice "Members/k-shigyo/$1") || return 1
-  _esa_edit "$url"
-}
-
-# ee: edit post under Members/k-shigyo/ — direct name if arg given, fzf picker if no arg
-function ee() {
-  local post
-  if [[ -n "$1" ]]; then
-    post="Members/k-shigyo/$1"
-  else
-    post=$(kasa ls "Members/k-shigyo/" | awk '{print $NF}' | fzf --prompt="esa > ")
-    [[ -z "$post" ]] && return
-  fi
-  kasa wip -f --no-notice "$post" >/dev/null 2>&1 || true
-  _esa_edit "$post"
-}
-
-# eep: edit daily progress post; ensures WIP state before editing
-function eep() {
-  local post="議事録/2026年度配属/shigyo"
-  kasa wip -f --no-notice "$post" >/dev/null 2>&1 || true
-  _esa_edit "$post"
-}
-
-# es: ship the last edited post (unwip with optional notice)
-function es() {
-  local notice_flag="--notice"
-
-  case "$1" in
-    "" )
-      ;;
-    -q | --quiet | --no-notice )
-      notice_flag="--no-notice"
-      shift
-      ;;
-    * )
-      echo "usage: es [-q|--quiet]"
-      return 1
-      ;;
-  esac
-
-  [[ -n "$1" ]] && echo "usage: es [-q|--quiet]" && return 1
-  [[ -z "$_ESA_LAST_POST" ]] && echo "es: no post to ship (edit something first)" && return 1
-  kasa unwip -f "$notice_flag" "$_ESA_LAST_POST" && _ESA_LAST_POST=""
-}
+source "$DOTFILES/zsh/esa.zsh"
 
 # gr: cd to git repository root
 function gr() {
