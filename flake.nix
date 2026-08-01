@@ -9,6 +9,11 @@
     home-manager.url = "github:nix-community/home-manager/release-25.11";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
+    brew-src = {
+      url = "github:Homebrew/brew/0bfbbb6c1a08254177d133f5c14a8f506ea7888e";
+      flake = false;
+    };
+    nix-homebrew.inputs.brew-src.follows = "brew-src";
     codex-cli-nix.url = "github:sadjow/codex-cli-nix";
     nix-claude-code.url = "github:ryoppippi/nix-claude-code";
     agent-harness = {
