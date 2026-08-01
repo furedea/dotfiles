@@ -36,6 +36,8 @@ in
     options = "--delete-older-than 30d";
   };
 
+  security.pam.services.sudo_local.touchIdAuth = true;
+
   system = {
     configurationRevision = null;
     stateVersion = 6;
