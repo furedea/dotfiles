@@ -16,6 +16,7 @@
     nix-homebrew.inputs.brew-src.follows = "brew-src";
     codex-cli-nix.url = "github:sadjow/codex-cli-nix";
     nix-claude-code.url = "github:ryoppippi/nix-claude-code";
+    herdr.url = "github:herdrdev/herdr/v0.8.0";
     agent-harness = {
       url = "github:furedea/agent-harness";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -31,6 +32,7 @@
       nix-homebrew,
       codex-cli-nix,
       nix-claude-code,
+      herdr,
       agent-harness,
       ...
     }:
@@ -54,6 +56,7 @@
         inherit system;
         config = { inherit allowUnfreePredicate; };
       };
+      herdrPackage = herdr.packages.${system}.default;
     in
     {
       darwinConfigurations."mba" = nix-darwin.lib.darwinSystem {
@@ -82,6 +85,7 @@
                   unstable
                   nix-claude-code
                   codex-cli-nix
+                  herdrPackage
                   agent-harness
                   system
                   ;
@@ -106,6 +110,7 @@
             unstable
             nix-claude-code
             codex-cli-nix
+            herdrPackage
             agent-harness
             system
             ;
