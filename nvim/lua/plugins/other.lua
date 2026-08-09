@@ -1,10 +1,4 @@
 return {
-  -- tmux integration
-  {
-    "christoomey/vim-tmux-navigator",
-    event = "VeryLazy",
-  },
-
   -- TODO comment tracking
   {
     "folke/todo-comments.nvim",

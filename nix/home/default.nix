@@ -379,25 +379,6 @@ in
       };
     };
 
-    tmux = {
-      enable = true;
-      mouse = true;
-      extraConfig = ''
-        set -s extended-keys on
-        set -as terminal-features 'xterm-ghostty:extkeys'
-
-        # vim-tmux-navigator
-        is_vim="ps -o state= -o comm= -t '#{pane_tty}' | grep -iqE '^[^TXZ ]+ +(\\S+\\/)?g?(view|n?vim?x?)(diff)?$'"
-        bind-key -n C-h if-shell "$is_vim" "send-keys C-h" "select-pane -L"
-        bind-key -n C-j if-shell "$is_vim" "send-keys C-j" "select-pane -D"
-        bind-key -n C-k if-shell "$is_vim" "send-keys C-k" "if -F '#{pane_at_top}' 'send-keys C-k' 'select-pane -U'"
-        bind-key -n C-l if-shell "$is_vim" "send-keys C-l" "select-pane -R"
-
-        # Dim inactive panes (Catppuccin Mocha)
-        set -g window-style 'fg=#6c7086,bg=#181825'
-        set -g window-active-style 'fg=#cdd6f4,bg=#1e1e2e'
-      '';
-    };
   };
 
   home.activation = {
