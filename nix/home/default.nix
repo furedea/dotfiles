@@ -7,6 +7,7 @@
   unstable,
   nix-claude-code,
   codex-cli-nix,
+  herdrPackage,
   agent-harness,
   system,
   ...
@@ -78,7 +79,7 @@ in
     herdrCompatibleCodex
     unstable.github-copilot-cli
     unstable.opencode
-    unstable.herdr
+    herdrPackage
 
     # General Formatters
     autocorrect
@@ -300,7 +301,7 @@ in
       source = agent-harness;
       herdr = {
         enable = true;
-        package = unstable.herdr;
+        package = herdrPackage;
       };
     };
 
@@ -402,7 +403,7 @@ in
     '';
     herdrPlugins = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
       BASH_XTRACEFD=9 \
-        HERDR_BIN="${unstable.herdr}/bin/herdr" \
+        HERDR_BIN="${herdrPackage}/bin/herdr" \
         JQ_BIN="${pkgs.jq}/bin/jq" \
         HERDR_PLUGIN_SYNC_STATE_FILE="${config.xdg.stateHome}/home-manager/herdr_plugins" \
         ${pkgs.bash}/bin/bash \
