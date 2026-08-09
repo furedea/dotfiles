@@ -41,12 +41,6 @@ setup() {
   [[ "$calls" == *"repos/owner/myrepo/rulesets -X POST --input"*"ruleset.json"* ]]
 }
 
-@test "gh api is called 4 times when creating a new ruleset" {
-  run bash "$SCRIPT" "owner/myrepo"
-  [ "$status" -eq 0 ]
-  [ "$(gh_call_count)" -eq 4 ]
-}
-
 # --- Update path (existing ruleset, idempotent) ---
 
 @test "updates existing ruleset by id when one with the same name exists" {

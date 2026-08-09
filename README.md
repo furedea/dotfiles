@@ -251,7 +251,6 @@ Run the executable specifications directly with:
 bats tests/github
 bats tests/herdr
 bats tests/esa
-bats tests/nix
 ```
 
 CI checks GitHub scripts with Bats and ShellCheck, checks Lua with Selene and
