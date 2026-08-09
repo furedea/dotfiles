@@ -15,6 +15,16 @@
 let
   link = path: config.lib.file.mkOutOfStoreSymlink "${dotfilesDir}/${path}";
   codexPackage = codex-cli-nix.packages.${system}.default;
+  herdrSkill = pkgs.runCommand "herdr-skill" { } ''
+    set -euxCo pipefail
+    mkdir -p "$out"
+    ${lib.getExe herdrPackage} --skill >| "$out/SKILL.md"
+  '';
+  herdrZshCompletion = pkgs.runCommand "herdr-zsh-completion" { } ''
+    set -euxCo pipefail
+    mkdir -p "$out/share/zsh/site-functions"
+    ${lib.getExe herdrPackage} completion zsh >| "$out/share/zsh/site-functions/_herdr"
+  '';
   herdrCompatibleCodex = pkgs.writeShellScriptBin "codex" ''
     export CODEX_EXECUTABLE_PATH="$HOME/.local/bin/codex"
     export DISABLE_AUTOUPDATER=1
@@ -80,6 +90,7 @@ in
     unstable.github-copilot-cli
     unstable.opencode
     herdrPackage
+    herdrZshCompletion
 
     # General Formatters
     autocorrect
@@ -299,6 +310,7 @@ in
       enable = true;
       package = agent-harness.packages.${system}.default;
       source = agent-harness;
+      skills.extra.herdr = herdrSkill;
       herdr = {
         enable = true;
         package = herdrPackage;
