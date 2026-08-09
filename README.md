@@ -1,259 +1,295 @@
 # dotfiles
 
-furedea's macOS dotfiles — managed with [Nix](https://nixos.org/), [nix-darwin](https://github.com/nix-darwin/nix-darwin), and [home-manager](https://github.com/nix-community/home-manager).
+Personal macOS configuration for an Apple Silicon Mac. Nix flakes compose
+nix-darwin, Home Manager, Homebrew, editable dotfile symlinks, and the local AI
+agent environment.
 
-## Overview
+## Architecture
 
-| Layer | Tool | Role |
-| --- | --- | --- |
-| System settings | nix-darwin | macOS defaults, Homebrew, activation scripts |
-| User environment | home-manager | CLI tools, shell, git, editor config |
-| Dotfiles | symlinks (`mkOutOfStoreSymlink`) | Direct editable files in this repo |
-| Language toolchains | Nix / rustup / uv | Node.js + pnpm + ni / Rust / Python |
+| Layer                  | Authority                                          | Responsibility                                                     |
+| ---------------------- | -------------------------------------------------- | ------------------------------------------------------------------ |
+| Flake composition      | [`flake.nix`](flake.nix)                           | Inputs, supported outputs, username, platform, and shared packages |
+| macOS system           | [`nix/darwin/default.nix`](nix/darwin/default.nix) | System defaults, Homebrew, Nix settings, and privileged activation |
+| User environment       | [`nix/home/default.nix`](nix/home/default.nix)     | CLI packages, Home Manager programs, symlinks, and user activation |
+| Package overlays       | [`nix/overlays.nix`](nix/overlays.nix)             | Pinned packages not yet available from nixpkgs                     |
+| Editable configuration | Top-level application directories                  | Files linked from this checkout into `$HOME`                       |
 
-## Requirements
+The primary outputs are:
 
-- macOS (Apple Silicon)
-- macOS username must be **`kaito`** (hardcoded in `nix/darwin/default.nix` and `nix/home/default.nix`). If different, update the following before running:
-    - `flake.nix` — `home-manager.users.<name>`
-    - `nix/darwin/default.nix` — `users.users.<name>.home`, `system.primaryUser`
-    - `nix/home/default.nix` — `home.username`, `home.homeDirectory`
+- `darwinConfigurations.mba`: the complete Mac configuration
+- `homeConfigurations.kaito`: the user environment for faster iteration
+- `packages.<system>.codex`: the pinned Codex CLI exposed by this flake
+- `devShells.<system>.default`: commitlint and lefthook for repository work
 
-## Setup (new Mac)
+The repository currently assumes:
 
-1. Install Nix using the [NixOS nix-installer](https://github.com/NixOS/nix-installer). The `--enable-flakes` flag turns on the `nix-command` and `flakes` experimental features so nix-darwin can be bootstrapped without extra arguments below:
+- `aarch64-darwin`
+- macOS user `kaito`
+- checkout path `/Users/kaito/ghq/github.com/furedea/dotfiles`
+
+The username and checkout path are defined together in [`flake.nix`](flake.nix).
+Change them there before applying the configuration for another user or path.
+
+## Bootstrap a New Mac
+
+1. Install upstream Nix with flakes enabled:
 
     ```sh
     curl -sSfL https://artifacts.nixos.org/nix-installer | sh -s -- install --enable-flakes
     ```
 
-    After the installer finishes, open a new shell so `nix` is on `PATH`.
-
-2. Clone dotfiles:
+2. Open a new shell and clone this repository at the configured path:
 
     ```sh
-    git clone https://github.com/furedea/dotfiles ~/ghq/github.com/furedea/dotfiles
+    git clone https://github.com/furedea/dotfiles \
+      "$HOME/ghq/github.com/furedea/dotfiles"
+    cd "$HOME/ghq/github.com/furedea/dotfiles"
     ```
 
 3. Bootstrap nix-darwin:
 
     ```sh
-    sudo nix run nix-darwin -- switch --flake "$HOME/ghq/github.com/furedea/dotfiles/#mba"
+    sudo nix run \
+      github:nix-darwin/nix-darwin/nix-darwin-25.11#darwin-rebuild \
+      -- switch --flake .#mba
     ```
 
-> **Do not use the Determinate Systems installer** (`install.determinate.systems/nix`). Despite sharing a Rust codebase with the NixOS nix-installer above, current versions install Determinate Nix by default, whose `determinate-nixd` daemon conflicts with nix-darwin's native Nix management (`nix.settings`, `nix.gc`). If you need to recover from this, run `/nix/nix-installer uninstall` and reinstall using the command in step 1.
+The first switch installs the `darwin-rebuild` and `home-manager` commands used
+for later updates.
 
-> Subsequent system updates use `darwin-rebuild` directly (installed by the step above):
->
-> ```sh
-> sudo darwin-rebuild switch --flake "$HOME/ghq/github.com/furedea/dotfiles/#mba"
-> ```
->
-> For user-environment updates only, use `home-manager` directly:
->
-> ```sh
-> home-manager switch --flake "$HOME/ghq/github.com/furedea/dotfiles/#kaito"
-> ```
->
-> `home-manager` CLI itself is installed by this config, so if it is not yet available on PATH, run one `darwin-rebuild switch` first.
+## Apply Changes
 
-`darwin-rebuild switch` automatically:
-
-- Installs all CLI tools via Nix
-- Installs GUI apps via Homebrew Cask
-- Applies all macOS system settings
-- Generates `~/.config/zsh/nix-plugins.zsh` (zsh plugin paths)
-- Runs `rustup toolchain install stable`, `uv python install`
-- Symlinks dotfiles from this repo to `~`
-
-## Directory Structure
-
-```
-dotfiles/
-├── flake.nix                  # Entry point — inputs and outputs
-├── nix/
-│   ├── darwin/default.nix     # nix-darwin: system settings, Homebrew, activation scripts
-│   └── home/default.nix       # home-manager: packages, programs, symlinks
-├── zsh/
-│   ├── .zshrc
-│   ├── .zshenv
-│   └── .zprofile
-├── nvim/                      # Neovim config (lazy.nvim)
-├── ghostty/                   # Ghostty terminal config
-├── tmux/                      # tmux config (via home-manager programs.tmux)
-├── starship/                  # Starship prompt config
-├── git/                       # Global gitignore
-├── karabiner/                 # Karabiner-Elements key mapping
-├── atuin/                     # Shell history (via home-manager programs.atuin)
-├── yazi/                      # File manager (via home-manager programs.yazi)
-├── jj/                        # Jujutsu VCS root-level config
-└── ...
-```
-
-## What nix-darwin Manages
-
-### CLI Tools (Nix packages)
-
-| Category | Tools |
-| --- | --- |
-| Shell | bash-language-server, bats, carapace, shellcheck, shfmt, zoxide, zsh-abbr, zsh-autosuggestions, zsh-fast-syntax-highlighting |
-| File ops | bat, dust, eza, fd, fzf, ripgrep |
-| Dev | just, neovim, starship, tree-sitter |
-| CI | actionlint |
-| Formatters | autocorrect, dprint, prettierd (markdown only — see [note](#markdown-formatter)) |
-| VCS | git (programs.git), delta, jujutsu, gh |
-| Language runtimes | nodejs, pnpm, ni, rustup (Rust), uv (Python) |
-| AI / CLI | claude-code, codex |
-| macOS | xcodes, dotenvx, marp-cli |
-
-### GUI Apps (Homebrew Cask)
-
-appcleaner, arc, bitwarden, chatgpt, claude, discord, firefox, font-jetbrains-mono, ghostty, google-chrome, karabiner-elements, mactex, nani, obsidian, orbstack, raycast, slack, steam, vimr, visual-studio-code, zoom
-
-### Mac App Store
-
-LINE is installed manually via the App Store app. Automated `masApps` management is not used because Apple hardened `installd` on macOS 15.7.2+ (CVE-2025-43411 mitigation), which makes `mas install` unable to run under the `sudo darwin-rebuild` root context — see [mas-cli#1221](https://github.com/mas-cli/mas/issues/1221).
-
-### macOS System Settings
-
-| Category | Settings |
-| --- | --- |
-| Keyboard | KeyRepeat=2, InitialKeyRepeat=15, F1-F12 as function keys |
-| Text input | All auto-corrections disabled (caps, spelling, quotes, dashes, period) |
-| Appearance | Dark mode, always show extensions, always show scroll bars |
-| Trackpad | Tap to click, right-click, momentum scroll, pinch, rotate, Force Click |
-| Trackpad speed | 3.0 (fastest) |
-| Mouse speed | 3 (fastest) |
-| Finder | Show hidden files, path bar, status bar, column view, folders first |
-| Dock | Auto-hide, bottom, size 128, no recents, minimize to app icon |
-| Hot corners | TL=Desktop, TR=Notification Center, BL=Lock Screen, BR=Quick Note |
-| Dock apps | Raycast, Arc, Obsidian, OrbStack, Slack, Discord, LINE, System Settings, Nani |
-| Screenshot | Save to ~/Pictures as file |
-| Lock screen | Require password immediately after sleep |
-| Menu bar clock | 24h, seconds, date, day of week |
-| Stage Manager | Disabled |
-| iCloud default save | Disabled (save locally by default) |
-| .DS_Store on network | Disabled |
-| Spotlight | Disabled (use Raycast instead) |
-| Apple Music auto-launch | Disabled |
-| Display sleep | 5 min on battery / never on charger |
-| Software Update | Auto-download and auto-install disabled |
-| Timezone | Asia/Tokyo |
-
-### Dotfile Symlink Strategy
-
-Files that are frequently edited (shell config, Neovim, etc.) are symlinked directly from this repo using `mkOutOfStoreSymlink`. Editing files in `~/ghq/github.com/furedea/dotfiles/` takes effect immediately without running `darwin-rebuild`.
-
-Files generated by Nix (e.g. zsh plugin paths) are written as `home.file.*.text` so Nix expands Nix store paths at evaluation time.
-
-| File/Dir | Strategy |
-| --- | --- |
-| `.zshrc`, `.zshenv`, `.zprofile` | symlink → `zsh/` |
-| `.config/nvim` | symlink → `nvim/` |
-| `.config/ghostty/config` | symlink → `ghostty/` |
-| `.config/starship.toml` | symlink → `starship/` |
-| `.config/karabiner/karabiner.json` | symlink → `karabiner/` |
-| `.config/zsh/nix-plugins.zsh` | generated by Nix (zsh plugin source paths) |
-| `programs.tmux` | fully managed by home-manager |
-| `programs.git` | fully managed by home-manager |
-| `programs.atuin` | fully managed by home-manager |
-| `programs.yazi` | fully managed by home-manager |
-
-### Reference Copies (not symlinked)
-
-Some directories are kept as **plain copies for backup/reference** only. They are not symlinked into `~` and are not applied automatically by `darwin-rebuild`.
-
-| Dir | Source | Notes |
-| --- | --- | --- |
-| `kawasemi4/` | `~/Library/Mobile Documents/com~apple~CloudDocs/Kawasemi4/` | Kawasemi4 key settings and dictionary. Synced via iCloud on new Mac; copy here is for version control backup. Update manually when settings change. |
-| `templates/` | — | Small starter snippets (e.g. `pyproject_pyright.toml`) copied manually into new projects. Full project scaffolds live separately in `~/dev/templates/template-*`. |
-| `github/` | — | Standard GitHub repo settings, branch ruleset, and `setup_repo.sh` applier. See `github/README.md`. |
-
-## Claude Code & Codex Security Harness
-
-Claude Code and Codex configuration is delegated to the
-[`furedea/agent-harness`](https://github.com/furedea/agent-harness) flake.
-This dotfiles repo only enables the Home Manager module in
-`nix/home/default.nix`:
-
-```nix
-agent-harness = {
-  enable = true;
-  package = agent-harness.packages.${system}.default;
-  source = agent-harness;
-};
-```
-
-The separate harness repository owns provider-shared instructions, hooks,
-permissions, protected paths, skills, and their tests. This keeps dotfiles
-focused on local machine composition while the reusable agent runtime can be
-installed on non-Nix machines and remote servers.
-
-## Markdown Formatter
-
-`dprint-plugin-markdown` hardcodes list indent to 2 spaces (CommonMark minimum) with no configuration option. `prettierd` is used instead with `tabWidth: 4` in `~/.prettierrc` to get 4-space list nesting matching Obsidian.
-
-> **TODO:** switch back to dprint once [dprint-plugin-markdown#176](https://github.com/dprint/dprint-plugin-markdown/pull/176) merges.
-
-## GitHub Actions Workflow Linting
-
-`actionlint` is installed via Nix and integrated with Neovim through `nvim-lint`. It only runs for files under `.github/workflows/*.yml` and `.github/workflows/*.yaml` by assigning those paths the compound filetype `yaml.ghaction`.
-
-## GitHub Workflow Starters
-
-Starter workflows for new projects come from project scaffolds in
-`furedea/template-{minimal,python,typescript,rust,tex}` and are instantiated
-with `github/create_repo.sh --template`. Each ships with `ci.yml`
-(language-specific jobs plus an `all-green` aggregator), `codeql.yml`,
-`dependency_review.yml`, and `gha_lint.yml` (`actionlint` + `zizmor`).
-
-Standard repo settings and the `main` branch ruleset live in `github/` and are applied via `github/setup_repo.sh <owner>/<repo>`. The ruleset requires a status check named `all-green`, which the project scaffolds satisfy via the aggregator job in `ci.yml`. See [`github/README.md`](github/README.md) for the contract and the caveat on which repos to apply it to.
-
-## Post-rebuild Checklist
-
-Run these after `darwin-rebuild switch` if needed.
-
-Update dprint plugin checksums (first time only, or after changing plugin versions):
+Use the full switch to converge the actual Mac, including both nix-darwin and
+its integrated Home Manager profile:
 
 ```sh
-dprint config update
+sudo darwin-rebuild switch --flake \
+  "$HOME/ghq/github.com/furedea/dotfiles/#mba"
 ```
 
-## Manual Setup (after darwin-rebuild)
-
-These settings cannot be automated:
-
-| Setting | Where |
-| --- | --- |
-| Night Shift | System Settings > Displays > Night Shift |
-| True Tone | System Settings > Displays > True Tone |
-| Display resolution | `brew install displayplacer && displayplacer list` → update activation script |
-| Accessibility (reduceMotion/Transparency) | System Settings > Accessibility > Display |
-| Input Sources (Kawasemi4) | System Settings > Keyboard > Input Sources |
-| Kawasemi4 settings | Kawasemi4 app preferences |
-| iCloud sign-in | System Settings > Apple ID (syncs user dict, Focus, etc.) |
-| Touch ID | System Settings > Touch ID |
-| Apple Pay | System Settings > Wallet & Apple Pay |
-| Wi-Fi / Bluetooth | System Settings > Wi-Fi / Bluetooth |
-| Notifications (per-app) | System Settings > Notifications |
-
-## Update
-
-Update all packages and apply system + user changes:
+For changes limited to [`nix/home/default.nix`](nix/home/default.nix), the
+standalone Home Manager output provides a faster, unprivileged feedback loop:
 
 ```sh
-sudo darwin-rebuild switch --flake "$HOME/ghq/github.com/furedea/dotfiles/#mba"
+home-manager switch --flake \
+  "$HOME/ghq/github.com/furedea/dotfiles/#kaito"
 ```
 
-Update user packages and home-manager config only:
+The standalone and nix-darwin-integrated Home Manager outputs use different
+profiles. A package removed with only `home-manager switch` may remain visible
+from `/etc/profiles/per-user/kaito` until the next full `darwin-rebuild switch`.
+
+Files managed with `mkOutOfStoreSymlink` update immediately when their source in
+this checkout changes. Nix-generated files and Home Manager program settings
+still require a switch.
+
+## What Is Managed
+
+### macOS and Homebrew
+
+[`nix/darwin/default.nix`](nix/darwin/default.nix) manages:
+
+- Nix flakes, weekly garbage collection, and Touch ID authentication for `sudo`
+- keyboard, text input, Finder, Dock, trackpad, screenshots, lock screen, menu
+  clock, Spotlight, and other macOS defaults
+- Dock applications: Raycast, Arc, Obsidian, OrbStack, Slack, System Settings,
+  and Nani
+- display sleep disabled on both battery and charger
+- Homebrew through nix-homebrew, with unlisted packages removed on activation
+- the `winebarrel/kasa` tap and `winebarrel/kasa/kasa` formula
+
+The current cask set is:
+
+```text
+arc                    bitwarden              chatgpt
+deepl                  discord                firefox
+font-jetbrains-mono    ghostty                google-chrome
+homerow                karabiner-elements     mactex
+microsoft-excel        microsoft-powerpoint   microsoft-word
+nani                   obsidian               orbstack
+raycast                skim                   slack
+steam                  tailscale-app          vimr
+```
+
+The cask list in `nix/darwin/default.nix` is authoritative.
+
+### User Environment
+
+[`nix/home/default.nix`](nix/home/default.nix) installs and configures:
+
+- shell and navigation tools including Zsh plugins, Starship, Atuin, direnv,
+  zoxide, ghq, roots, git-wt, fzf, eza, bat, fd, ripgrep, and Yazi
+- Git, Delta, GitHub CLI, Lazygit, Neovim, Tree-sitter, and Vim configuration
+- Nix, Bash, Python, Rust, TypeScript, Lua, LaTeX, formatting, and linting tools
+- Claude Code, Codex, GitHub Copilot CLI, OpenCode, and Herdr
+- `programs.git`, `programs.delta`, `programs.gh`, `programs.lazygit`,
+  `programs.direnv`, `programs.atuin`, `programs.agent-harness`, and
+  `programs.yazi`
+
+Activation also installs the stable Rust toolchain, installs the default Python
+requested by uv, creates the SSH signing key when absent, and reconciles the
+commit-pinned Herdr plugin set.
+
+### AI Agent Environment
+
+[agent-harness](https://github.com/furedea/agent-harness) owns the shared Claude
+Code and Codex instructions, policies, hooks, skills, and generated files. This
+repository enables its Home Manager module and adds the Herdr integration.
+
+Herdr is pinned as a flake input and replaces tmux for local and managed remote
+terminal sessions. The local configuration uses `ctrl+a` as its prefix and adds
+popup commands for Yazi, Lazygit, a scratch shell, and the `reviewr` plugin.
+
+Attach directly to a managed remote host with:
 
 ```sh
-home-manager switch --flake "$HOME/ghq/github.com/furedea/dotfiles/#kaito"
+herdr --remote <ssh-target>
+herdr --remote <ssh-target> --session <name>
 ```
 
-Update Codex CLI from codex-cli-nix, then apply only home-manager changes:
+The `persiyanov.reviewr` plugin revision is declared in
+[`nix/home/default.nix`](nix/home/default.nix), synchronized during Home Manager
+activation by [`herdr/sync_plugins.sh`](herdr/sync_plugins.sh), and justified by
+[`ADR-0002`](docs/adr/0002_manage_herdr_plugins_through_home_manager_activation.md).
+
+### Editable Symlinks
+
+The following repository sources are linked directly into the home directory:
+
+| Source                                       | Target                                 |
+| -------------------------------------------- | -------------------------------------- |
+| `zsh/.zshrc`, `zsh/.zshenv`, `zsh/.zprofile` | `~/.zshrc`, `~/.zshenv`, `~/.zprofile` |
+| `bash/.bashrc`                               | `~/.bashrc`                            |
+| `git/ignore`                                 | `~/.config/git/ignore`                 |
+| `nvim/`                                      | `~/.config/nvim`                       |
+| `vim/.vimrc`                                 | `~/.vimrc`                             |
+| `starship/starship.toml`                     | `~/.config/starship.toml`              |
+| `ghostty/config`                             | `~/.config/ghostty/config`             |
+| `karabiner/karabiner.json`                   | `~/.config/karabiner/karabiner.json`   |
+| `herdr/config.toml`, `herdr/reviewr.toml`    | Herdr config and reviewr plugin config |
+| `dprint/dprint.json`                         | `~/dprint.json`                        |
+| `prettier/.prettierrc`                       | `~/.prettierrc`                        |
+| `.editorconfig`                              | `~/.editorconfig`                      |
+
+Git, GitHub CLI, Lazygit, Atuin, Yazi, Zsh plugin paths, and agent-harness files
+are generated from Home Manager modules rather than linked from similarly named
+reference files.
+
+### Reference and Export Files
+
+These tracked files are not applied by Home Manager or nix-darwin:
+
+- `atuin/config.toml`, `gh/config.yml`, `git/.gitconfig`, and the standalone
+  `yazi/*.toml` files are reference copies; their active configuration comes
+  from `nix/home/default.nix`
+- `raycast/*.rayconfig` is a manual Raycast export
+- `templates/` contains small files copied into other repositories as needed
+
+## Repository Map
+
+```text
+.
+├── flake.nix                  # Flake inputs and outputs
+├── nix/                       # nix-darwin, Home Manager, and overlays
+├── docs/adr/                  # Durable architecture decisions
+├── zsh/ and bash/             # Interactive shell configuration
+├── nvim/ and vim/             # Editor configuration
+├── herdr/                     # Herdr UI and plugin synchronization
+├── ghostty/                   # Terminal configuration
+├── karabiner/                 # Keyboard remapping
+├── starship/                  # Shell prompt
+├── github/                    # Repository creation and policy scripts
+├── tests/                     # Bats specifications by domain
+├── dprint/ and prettier/      # Global formatter configuration
+├── raycast/                   # Manual settings export
+└── templates/                 # Manually copied reference templates
+```
+
+## Shell Behavior
+
+The Zsh configuration:
+
+- replaces common commands with modern equivalents such as `eza`, `bat`, `rg`,
+  `fd`, and `dust`
+- initializes zoxide, Starship, direnv, Atuin, and Nix-provided Zsh plugins
+- provides `y` for Yazi directory changes and `gr` for the Git root
+- binds `ctrl+g` to fuzzy repository and monorepo navigation through ghq, roots,
+  and fzf
+- reads the `esa-token` credential from the macOS Keychain
+
+The Bash configuration provides the same core aliases and initializes zoxide,
+Starship, and Atuin.
+
+## Repository Automation
+
+Create and clone a repository into the ghq root, optionally from a template:
+
+```sh
+github/create_repo.sh <name-or-owner/name> [gh-repo-create-options]
+```
+
+Apply the standard repository settings, vulnerability alerts, and branch
+ruleset to an existing repository:
+
+```sh
+github/setup_repo.sh <owner/repo>
+```
+
+Both scripts are covered by Bats tests under `tests/github/`.
+
+## Formatting and Validation
+
+Lefthook runs the pre-commit format and lint checks for changed files:
+
+```sh
+lefthook run pre-commit
+```
+
+Run the executable specifications directly with:
+
+```sh
+bats tests/github
+bats tests/herdr
+bats tests/esa
+```
+
+CI checks GitHub scripts with Bats and ShellCheck, checks Lua with Selene and
+StyLua, checks Nix with Statix, deadnix, and nixfmt, checks JSON/TOML with
+dprint, and lints prose with AutoCorrect. GitHub Actions are also checked with
+actionlint, zizmor, and CodeQL.
+
+dprint intentionally owns JSON and TOML only. Markdown is formatted with
+prettierd because its four-space nested-list indentation matches the preferred
+Obsidian style.
+
+## Manual Setup
+
+The repository cannot automate credentials or settings protected by macOS TCC.
+After the first switch, configure as needed:
+
+- sign in to GUI applications and iCloud
+- run `gh auth login`
+- add the `esa-token` generic password to the macOS Keychain before using the
+  ESA shell integration
+- configure Atuin synchronization credentials if history sync is wanted
+- configure Night Shift, True Tone, display resolution, and Accessibility
+  display options in System Settings
+- import `raycast/*.rayconfig` when restoring Raycast manually
+
+## Update Dependencies
+
+Update every flake input, then apply the complete configuration:
+
+```sh
+nix flake update
+sudo darwin-rebuild switch --flake \
+  "$HOME/ghq/github.com/furedea/dotfiles/#mba"
+```
+
+Update a single input when only one tool needs to move:
 
 ```sh
 nix flake update codex-cli-nix
-home-manager switch --flake "$HOME/ghq/github.com/furedea/dotfiles/#kaito"
+home-manager switch --flake \
+  "$HOME/ghq/github.com/furedea/dotfiles/#kaito"
 ```

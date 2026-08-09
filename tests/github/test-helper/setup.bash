@@ -45,15 +45,6 @@ gh_calls() {
   cat "$GH_LOG" 2>/dev/null || true
 }
 
-# Count how many times gh was called.
-gh_call_count() {
-  if [[ -f "$GH_LOG" ]]; then
-    wc -l <"$GH_LOG" | tr -d ' '
-  else
-    echo 0
-  fi
-}
-
 # Create gh and ghq stubs for github/create_repo.sh tests.
 setup_create_repo_stubs() {
   GH_LOG="$BATS_TEST_TMPDIR/gh_calls.log"
