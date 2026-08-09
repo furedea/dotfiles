@@ -72,6 +72,9 @@ in
     fzf
     ripgrep
 
+    # Media tools
+    ffmpeg
+
     # Dev tools
     neovim
     tree-sitter
