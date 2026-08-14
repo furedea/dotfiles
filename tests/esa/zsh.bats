@@ -140,6 +140,25 @@ EOF
   done
 }
 
+@test "help output ignores an interactive cat alias" {
+  local -a _commands=(en ee eep es)
+  local -a _usage_lines=(
+    "Usage: en <title>"
+    "Usage: ee [title]"
+    "Usage: eep"
+    "Usage: es [-q|--quiet]"
+  )
+
+  local _index
+  for ((_index = 0; _index < ${#_commands[@]}; _index++)); do
+    run zsh -c \
+      "alias cat=false; source '$ESA_ZSH'; ${_commands[$_index]} --help"
+
+    [ "$status" -eq 0 ]
+    [ "${lines[0]}" = "${_usage_lines[$_index]}" ]
+  done
+}
+
 @test "es rejects invalid options with usage" {
   local _arguments
   for _arguments in "--unknown" "--quiet unexpected"; do

@@ -4,7 +4,7 @@ _ESA_LAST_POST_NUMBER=""
 function _esa_usage() {
   case "$1" in
     en)
-      cat <<'EOF'
+      command cat <<'EOF'
 Usage: en <title>
 
 Create a WIP post under Members/k-shigyo and edit it in Neovim.
@@ -14,7 +14,7 @@ Options:
 EOF
       ;;
     ee)
-      cat <<'EOF'
+      command cat <<'EOF'
 Usage: ee [title]
 
 Open an existing post under Members/k-shigyo.
@@ -25,7 +25,7 @@ Options:
 EOF
       ;;
     eep)
-      cat <<'EOF'
+      command cat <<'EOF'
 Usage: eep
 
 Open 議事録/2026年度配属/shigyo in Neovim.
@@ -35,7 +35,7 @@ Options:
 EOF
       ;;
     es)
-      cat <<'EOF'
+      command cat <<'EOF'
 Usage: es [-q|--quiet]
 
 Ship the last post opened by en, ee, or eep.
