@@ -3,29 +3,62 @@
 REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
 export REPO_ROOT
 
-setup_kasa_stub() {
-  KASA_LOG="$BATS_TEST_TMPDIR/kasa_calls.log"
-  KASA_STUB_DIR="$BATS_TEST_TMPDIR/bin"
-  mkdir -p "$KASA_STUB_DIR"
-  cat >"$KASA_STUB_DIR/kasa" <<'STUB'
+setup_esa_stub() {
+  ESA_LOG="$BATS_TEST_TMPDIR/esa_calls.log"
+  ESA_STUB_DIR="$BATS_TEST_TMPDIR/bin"
+  mkdir -p "$ESA_STUB_DIR"
+  cat >"$ESA_STUB_DIR/esa" <<'STUB'
 #!/bin/bash
-echo "$*" >>"${KASA_LOG}"
-case "$1" in
-info)
-  printf '{"number":1515}\n'
+set -euxCo pipefail
+cd "$(dirname "$0")"
+set +x
+
+printf '%s\n' "$*" >>"${ESA_LOG}"
+case "$1 $2" in
+"post create")
+  printf '{"number":1515,"url":"https://posl.esa.io/posts/1515"}\n'
   ;;
-cat)
-  printf '# Existing body\n'
+"post search")
+  if [[ "$*" == *"議事録/2026年度配属/shigyo"* ]]; then
+    cat <<'JSON'
+{
+  "posts": [
+    {
+      "number": 2525,
+      "name": "shigyo",
+      "category": "議事録/2026年度配属",
+      "full_name": "議事録/2026年度配属/shigyo"
+    }
+  ]
+}
+JSON
+  else
+    cat <<'JSON'
+{
+  "posts": [
+    {
+      "number": 1515,
+      "name": "example",
+      "category": "Members/k-shigyo",
+      "full_name": "Members/k-shigyo/example"
+    }
+  ]
+}
+JSON
+  fi
+  ;;
+"post view")
+  printf '{"body_md":"# Existing body\\n"}\n'
   ;;
 esac
-if [[ -n "${KASA_STDERR:-}" ]]; then
-  printf '%s\n' "$KASA_STDERR" >&2
+if [[ -n "${ESA_STUB_STDERR:-}" ]]; then
+  printf '%s\n' "$ESA_STUB_STDERR" >&2
 fi
-exit "${KASA_EXIT_STATUS:-0}"
+exit "${ESA_STUB_EXIT_STATUS:-0}"
 STUB
-  chmod +x "$KASA_STUB_DIR/kasa"
-  export KASA_LOG
-  export PATH="$KASA_STUB_DIR:$PATH"
+  chmod +x "$ESA_STUB_DIR/esa"
+  export ESA_LOG
+  export PATH="$ESA_STUB_DIR:$PATH"
 }
 
 setup_editor_stub() {
@@ -33,8 +66,11 @@ setup_editor_stub() {
   EDITOR_STUB="$BATS_TEST_TMPDIR/esa_test_editor"
   cat >"$EDITOR_STUB" <<'STUB'
 #!/bin/bash
-printf '%s|%s|%s|%s|%s\n' \
-  "${ESA_EDIT_POST:-}" \
+set -euxCo pipefail
+cd "$(dirname "$0")"
+set +x
+
+printf '%s|%s|%s|%s\n' \
   "${ESA_EDIT_POST_NUMBER:-}" \
   "${ESA_EDIT_FILE:-}" \
   "$1" \
@@ -43,6 +79,21 @@ STUB
   chmod +x "$EDITOR_STUB"
   export EDITOR="$EDITOR_STUB"
   export EDITOR_LOG
+}
+
+setup_fzf_stub() {
+  FZF_STUB_DIR="$BATS_TEST_TMPDIR/bin"
+  mkdir -p "$FZF_STUB_DIR"
+  cat >"$FZF_STUB_DIR/fzf" <<'STUB'
+#!/bin/bash
+set -euxCo pipefail
+cd "$(dirname "$0")"
+set +x
+
+head -n 1
+STUB
+  chmod +x "$FZF_STUB_DIR/fzf"
+  export PATH="$FZF_STUB_DIR:$PATH"
 }
 
 setup_nvim_data_stub() {
@@ -57,8 +108,8 @@ STUB
   export NVIM_DATA_HOME
 }
 
-kasa_calls() {
-  cat "$KASA_LOG" 2>/dev/null || true
+esa_calls() {
+  cat "$ESA_LOG" 2>/dev/null || true
 }
 
 editor_calls() {

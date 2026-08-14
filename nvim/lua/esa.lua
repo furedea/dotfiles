@@ -11,14 +11,23 @@ local function save_error(result)
 end
 
 function M.setup()
-  local post = vim.env.ESA_EDIT_POST
   local post_number = vim.env.ESA_EDIT_POST_NUMBER
   local file = vim.env.ESA_EDIT_FILE
-  if not post or post == "" or not post_number or post_number == "" or not file or file == "" then
+  if not post_number or post_number == "" or not file or file == "" then
     return
   end
 
-  local post_reference = "//" .. post_number
+  local save_command = {
+    "esa",
+    "post",
+    "update",
+    post_number,
+    "--body-file",
+    file,
+    "--wip",
+    "--message",
+    "[skip notice]",
+  }
   local edit_file = realpath(file)
   local group = vim.api.nvim_create_augroup("esa_wip_on_save", { clear = true })
   vim.api.nvim_create_autocmd("BufWriteCmd", {
@@ -33,12 +42,7 @@ function M.setup()
       vim.api.nvim_buf_call(args.buf, function()
         vim.cmd("silent noautocmd write")
       end)
-      local result = vim
-        .system(
-          { "kasa", "post", post_reference, "--body", file, "--wip", "--no-notice" },
-          { text = true }
-        )
-        :wait()
+      local result = vim.system(save_command, { text = true }):wait()
       if result.code ~= 0 then
         vim.bo[args.buf].modified = true
         error(save_error(result), 0)
