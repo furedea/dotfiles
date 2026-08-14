@@ -3,15 +3,14 @@
 
 setup() {
   load test-helper/setup
-  setup_kasa_stub
+  setup_esa_stub
   setup_nvim_data_stub
   ARTICLE_FILE="$BATS_TEST_TMPDIR/article.md"
   printf '# Before\n' >"$ARTICLE_FILE"
 }
 
-@test "the Neovim configuration enables WIP saves for marked esa buffers" {
+@test "the Neovim configuration saves marked esa buffers through the official CLI" {
   run env \
-    ESA_EDIT_POST="Members/k-shigyo/example" \
     ESA_EDIT_POST_NUMBER=1515 \
     ESA_EDIT_FILE="$ARTICLE_FILE" \
     XDG_DATA_HOME="$NVIM_DATA_HOME" \
@@ -22,15 +21,14 @@ setup() {
     -c quit
 
   [ "$status" -eq 0 ]
-  [ "$(kasa_calls)" = "post //1515 --body $ARTICLE_FILE --wip --no-notice" ]
+  [ "$(esa_calls)" = "post update 1515 --body-file $ARTICLE_FILE --wip --message [skip notice]" ]
 }
 
-@test "saving another buffer in an esa editing session does not invoke kasa" {
+@test "saving another buffer in an esa editing session does not invoke esa CLI" {
   local other_file="$BATS_TEST_TMPDIR/other.md"
   printf '# Other\n' >"$other_file"
 
   run env \
-    ESA_EDIT_POST="Members/k-shigyo/example" \
     ESA_EDIT_POST_NUMBER=1515 \
     ESA_EDIT_FILE="$ARTICLE_FILE" \
     XDG_DATA_HOME="$NVIM_DATA_HOME" \
@@ -41,12 +39,11 @@ setup() {
     -c quit
 
   [ "$status" -eq 0 ]
-  [ -z "$(kasa_calls)" ]
+  [ -z "$(esa_calls)" ]
 }
 
-@test "saving an esa buffer updates the existing post number as WIP without notice" {
+@test "saving an esa buffer updates the existing post as WIP without notice" {
   run env \
-    ESA_EDIT_POST="Members/k-shigyo/example" \
     ESA_EDIT_POST_NUMBER=1515 \
     ESA_EDIT_FILE="$ARTICLE_FILE" \
     nvim --headless -u NONE \
@@ -58,17 +55,16 @@ setup() {
     -c quit
 
   [ "$status" -eq 0 ]
-  [ "$(kasa_calls)" = "post //1515 --body $ARTICLE_FILE --wip --no-notice" ]
+  [ "$(esa_calls)" = "post update 1515 --body-file $ARTICLE_FILE --wip --message [skip notice]" ]
   [ "$(cat "$ARTICLE_FILE")" = "# After" ]
 }
 
-@test "a failed esa WIP save reports the kasa error" {
+@test "a failed esa WIP save reports the official CLI error" {
   run env \
-    ESA_EDIT_POST="Members/k-shigyo/example" \
     ESA_EDIT_POST_NUMBER=1515 \
     ESA_EDIT_FILE="$ARTICLE_FILE" \
-    KASA_EXIT_STATUS=1 \
-    KASA_STDERR="kasa: error: request rejected" \
+    ESA_STUB_EXIT_STATUS=1 \
+    ESA_STUB_STDERR="esa: error: request rejected" \
     nvim --headless -u NONE \
     --cmd "set runtimepath^=$REPO_ROOT/nvim" \
     "$ARTICLE_FILE" \
@@ -77,15 +73,14 @@ setup() {
     -c "quit!"
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *"kasa: error: request rejected"* ]]
+  [[ "$output" == *"esa: error: request rejected"* ]]
 }
 
 @test "a failed esa WIP save prevents wq from discarding the modified buffer" {
   run env \
-    ESA_EDIT_POST="Members/k-shigyo/example" \
     ESA_EDIT_POST_NUMBER=1515 \
     ESA_EDIT_FILE="$ARTICLE_FILE" \
-    KASA_EXIT_STATUS=1 \
+    ESA_STUB_EXIT_STATUS=1 \
     nvim --headless -u NONE \
     --cmd "set runtimepath^=$REPO_ROOT/nvim" \
     "$ARTICLE_FILE" \

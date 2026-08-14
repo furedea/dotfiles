@@ -96,7 +96,6 @@ still require a switch.
   and Nani
 - display sleep disabled on both battery and charger
 - Homebrew through nix-homebrew, with unlisted packages removed on activation
-- the `winebarrel/kasa` tap and `winebarrel/kasa/kasa` formula
 
 The current cask set is:
 
@@ -215,7 +214,7 @@ The Zsh configuration:
 - provides `y` for Yazi directory changes and `gr` for the Git root
 - binds `ctrl+g` to fuzzy repository and monorepo navigation through ghq, roots,
   and fzf
-- reads the `esa-token` credential from the macOS Keychain
+- provides Neovim-based esa editing helpers backed by the official esa CLI
 
 The Bash configuration provides the same core aliases and initializes zoxide,
 Starship, and Atuin.
@@ -278,8 +277,7 @@ After the first switch, configure as needed:
 
 - sign in to GUI applications and iCloud
 - run `gh auth login`
-- add the `esa-token` generic password to the macOS Keychain before using the
-  ESA shell integration
+- run `esa auth login --scopes "read:post write:post"`
 - configure Atuin synchronization credentials if history sync is wanted
 - configure Night Shift, True Tone, display resolution, and Accessibility
   display options in System Settings
