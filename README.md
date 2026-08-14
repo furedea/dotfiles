@@ -221,20 +221,29 @@ Starship, and Atuin.
 
 ## Repository Automation
 
-Create and clone a repository into the ghq root, optionally from a template:
+Create and clone a repository into the ghq root, then apply the standard
+repository policy:
 
 ```sh
-github/create_repo.sh <name-or-owner/name> [gh-repo-create-options]
+repo create <name-or-owner/name> (--public|--private|--internal) [options]
 ```
 
-Apply the standard repository settings, vulnerability alerts, and branch
-ruleset to an existing repository:
+Common creation options include `--template`, `--description`, `--homepage`,
+`--add-readme`, `--gitignore`, `--license`, `--disable-issues`,
+`--disable-wiki`, and `--team`. Options that conflict with the managed ghq
+clone destination (`--clone`, `--source`, `--push`, and `--remote`) are
+rejected. Run `repo create --help` for details.
+
+Apply the standard repository settings, vulnerability alerts, and ruleset to
+an existing repository:
 
 ```sh
-github/setup_repo.sh <owner/repo>
+repo configure <name-or-owner/name>
 ```
 
-Both scripts are covered by Bats tests under `tests/github/`.
+A name without an owner defaults to the authenticated GitHub user. Run
+`repo --help` or `repo -h` for the command overview. The commands are covered
+by Bats tests under `tests/github/`.
 
 ## Formatting and Validation
 

@@ -17,6 +17,9 @@ let
   link = path: config.lib.file.mkOutOfStoreSymlink "${dotfilesDir}/${path}";
   esaCliPackage = unstable.callPackage ../packages/esa_cli.nix { };
   codexPackage = codex-cli-nix.packages.${system}.default;
+  repoCommand = pkgs.writeShellScriptBin "repo" ''
+    exec "${dotfilesDir}/github/repo.sh" "$@"
+  '';
   herdrSkill = pkgs.runCommand "herdr-skill" { } ''
     set -euxCo pipefail
     mkdir -p "$out"
@@ -88,6 +91,7 @@ in
     ghq
     roots
     git-wt
+    repoCommand
     esaCliPackage
 
     # AI Coding Agent

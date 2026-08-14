@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# Tests for github/setup_repo.sh
+# Tests for github/configure_repo.sh
 
 setup() {
   load test-helper/setup
@@ -24,6 +24,30 @@ setup() {
   run bash "$SCRIPT"
   [ "$status" -eq 1 ]
   [[ "$output" == *"Usage:"* ]]
+}
+
+@test "rejects multiple repository arguments" {
+  run bash "$SCRIPT" "owner/first" "owner/second"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Usage:"* ]]
+  ! grep -q "repos/owner/" "$GH_LOG"
+}
+
+@test "rejects unknown options" {
+  run bash "$SCRIPT" --unknown
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Usage:"* ]]
+  ! grep -q "repos/" "$GH_LOG"
+}
+
+@test "configures the authenticated owner's repository when given a short name" {
+  run bash "$SCRIPT" "myrepo"
+  [ "$status" -eq 0 ]
+
+  local calls
+  calls="$(gh_calls)"
+  [[ "$calls" == *"api user --jq .login"* ]]
+  [[ "$calls" == *"repos/furedea/myrepo -X PATCH --input"* ]]
 }
 
 # --- Create path (no existing ruleset) ---

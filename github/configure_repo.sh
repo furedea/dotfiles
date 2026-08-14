@@ -1,8 +1,9 @@
 #!/bin/bash
-set -euxCo pipefail
+set -euCo pipefail
 cd "$(dirname "$0")"
 GITHUB_DIR="$(pwd)"
 readonly GITHUB_DIR
+source "$GITHUB_DIR/repository.bash"
 
 function usage() {
   cat <<EOF >&2
@@ -11,7 +12,7 @@ Description:
     Idempotent: existing ruleset with the same name is updated in place.
 
 Usage:
-    $0 <owner/repo>
+    repo configure <name-or-owner/name>
 
 Options:
     --help, -h: print this
@@ -46,19 +47,11 @@ function apply_ruleset() {
 }
 
 function main() {
-  local _repo=""
+  [[ $# -ne 1 ]] && usage
+  [[ "$1" == -* ]] && usage
 
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-      -h | --help) usage ;;
-      *)
-        _repo="$1"
-        shift
-        ;;
-    esac
-  done
-
-  [[ -z "$_repo" ]] && usage
+  local _repo="$1"
+  _repo=$(resolve_repository "$_repo")
 
   apply_settings "$_repo"
   enable_vulnerability_alerts "$_repo"
