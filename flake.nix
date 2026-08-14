@@ -16,6 +16,7 @@
     nix-homebrew.inputs.brew-src.follows = "brew-src";
     codex-cli-nix.url = "github:sadjow/codex-cli-nix";
     nix-claude-code.url = "github:ryoppippi/nix-claude-code";
+    hermes-agent.url = "github:NousResearch/hermes-agent";
     herdr.url = "github:herdrdev/herdr/v0.8.0";
     agent-harness = {
       url = "github:furedea/agent-harness";
@@ -32,6 +33,7 @@
       nix-homebrew,
       codex-cli-nix,
       nix-claude-code,
+      hermes-agent,
       herdr,
       agent-harness,
       ...
@@ -57,6 +59,20 @@
         config = { inherit allowUnfreePredicate; };
       };
       herdrPackage = herdr.packages.${system}.default;
+      hermesAgentPackage = hermes-agent.packages.${system}.minimal;
+      homeSpecialArgs = {
+        inherit
+          username
+          dotfilesDir
+          unstable
+          nix-claude-code
+          codex-cli-nix
+          hermesAgentPackage
+          herdrPackage
+          agent-harness
+          system
+          ;
+      };
     in
     {
       darwinConfigurations."mba" = nix-darwin.lib.darwinSystem {
@@ -78,18 +94,7 @@
               useGlobalPkgs = true;
               useUserPackages = true;
               backupFileExtension = "bak";
-              extraSpecialArgs = {
-                inherit
-                  username
-                  dotfilesDir
-                  unstable
-                  nix-claude-code
-                  codex-cli-nix
-                  herdrPackage
-                  agent-harness
-                  system
-                  ;
-              };
+              extraSpecialArgs = homeSpecialArgs;
               users.${username} = {
                 imports = [
                   agent-harness.homeManagerModules.default
@@ -103,18 +108,7 @@
 
       homeConfigurations.${username} = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
-        extraSpecialArgs = {
-          inherit
-            username
-            dotfilesDir
-            unstable
-            nix-claude-code
-            codex-cli-nix
-            herdrPackage
-            agent-harness
-            system
-            ;
-        };
+        extraSpecialArgs = homeSpecialArgs;
         modules = [
           agent-harness.homeManagerModules.default
           ./nix/home/default.nix
