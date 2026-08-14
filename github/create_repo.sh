@@ -1,10 +1,11 @@
 #!/bin/bash
-set -euxCo pipefail
+set -euCo pipefail
 cd "$(dirname "$0")"
 
 GITHUB_DIR="$(pwd)"
 readonly GITHUB_DIR
-readonly SETUP_REPO="$GITHUB_DIR/setup_repo.sh"
+readonly CONFIGURE_REPO="$GITHUB_DIR/configure_repo.sh"
+source "$GITHUB_DIR/repository.bash"
 
 function usage() {
   cat <<EOF >&2
@@ -13,19 +14,34 @@ Description:
     renames, and apply standard repository settings.
 
 Usage:
-    $0 <name> [gh repo create flags...]
+    repo create <name-or-owner/name> <visibility> [options]
 
 Arguments:
-    <name>: 'foo' for the authenticated user or 'owner/foo' for explicit owner.
+    <name-or-owner/name>: 'foo' for the authenticated user or 'owner/foo'.
 
 Examples:
-    $0 agent-harness --private --template furedea/template-rust
+    repo create agent-harness --private --template furedea/template-rust
 
-Options:
+Visibility:
+    --public, --private, --internal: set exactly one repository visibility
+
+Common options:
+    --template, -p <repository>: create from a template repository
+    --include-all-branches: include every branch from the template
+    --description, -d <text>: set the repository description
+    --homepage <url>: set the repository homepage
+    --add-readme: add a README
+    --gitignore, -g <template>: add a .gitignore template
+    --license, -l <keyword>: add a license
+    --disable-issues: disable issues
+    --disable-wiki: disable the wiki
+    --team, -t <name>: grant access to an organization team
     --help, -h: print this
 
 Notes:
-    Do not pass --clone. This script controls the local clone destination.
+    --clone/-c, --source/-s, --push, and --remote/-r are not supported because
+    this command controls the local clone destination.
+    Other compatible gh repo create options are forwarded.
     The clone destination is printed to stdout on success.
 EOF
   exit 1
@@ -40,28 +56,31 @@ function main() {
   [[ "$_name" == "-h" || "$_name" == "--help" ]] && usage
 
   local _short="${_name##*/}"
-  local _full _owner _dest _has_template=false _arg
+  local _full _dest _has_template=false _arg _visibility_count=0
 
-  if [[ "$_name" == */* ]]; then
-    _full="$_name"
-  else
-    _owner=$(gh api user --jq .login)
-    _full="$_owner/$_short"
-  fi
+  _full=$(resolve_repository "$_name")
 
   for _arg in "$@"; do
-    if [[ "$_arg" == "--clone" ]]; then
-      echo "create_repo.sh: do not pass --clone; create_repo.sh controls the clone destination" >&2
+    if is_unsupported_create_option "$_arg"; then
+      echo "repo create: $_arg is not supported; repo create controls the local clone destination" >&2
       return 1
     fi
-    if [[ "$_arg" == "--template" || "$_arg" == --template=* ]]; then
-      _has_template=true
-    fi
+
+    case "$_arg" in
+      -h | --help) usage ;;
+      --template | --template=* | -p) _has_template=true ;;
+      --public | --private | --internal) _visibility_count=$((_visibility_count + 1)) ;;
+    esac
   done
+
+  if [[ "$_visibility_count" -ne 1 ]]; then
+    echo "repo create: exactly one of --public, --private, or --internal is required" >&2
+    return 1
+  fi
 
   _dest="$(ghq root)/github.com/$_full"
   if [[ -e "$_dest" ]]; then
-    echo "create_repo.sh: local destination already exists: $_dest" >&2
+    echo "repo create: local destination already exists: $_dest" >&2
     return 1
   fi
 
@@ -79,12 +98,20 @@ function main() {
 
   apply_template "$_dest" "$_short"
 
-  "$SETUP_REPO" "$_full" >&2
+  "$CONFIGURE_REPO" "$_full" >&2
   if [[ -f "$_dest/lefthook.yml" ]] && command -v lefthook >/dev/null; then
     (cd "$_dest" && lefthook install) >&2
   fi
 
   printf '%s\n' "$_dest"
+}
+
+function is_unsupported_create_option() {
+  case "$1" in
+    --clone | --clone=* | -c | --push | --push=*) return 0 ;;
+    --source | --source=* | -s | -s=* | --remote | --remote=* | -r | -r=*) return 0 ;;
+    *) return 1 ;;
+  esac
 }
 
 function wait_for_default_branch() {
@@ -100,7 +127,7 @@ function wait_for_default_branch() {
     sleep 2
   done
 
-  echo "create_repo.sh: remote default branch is not ready: $_repo" >&2
+  echo "repo create: remote default branch is not ready: $_repo" >&2
   return 1
 }
 

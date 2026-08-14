@@ -2,7 +2,7 @@
 
 REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
 GITHUB_DIR="$REPO_ROOT/github"
-SCRIPT="$GITHUB_DIR/setup_repo.sh"
+SCRIPT="$GITHUB_DIR/configure_repo.sh"
 
 # Create a stub gh command that logs calls to a file for assertion.
 # The stub succeeds by default and records each invocation.
@@ -13,6 +13,9 @@ setup_gh_stub() {
   cat >"$GH_STUB_DIR/gh" <<'STUB'
 #!/bin/bash
 echo "$*" >> "${GH_LOG}"
+if [[ "$1" == "api" && "$2" == "user" ]]; then
+  echo "furedea"
+fi
 # For "repo view" subcommand, return a fake owner/repo
 if [[ "$1" == "repo" && "$2" == "view" ]]; then
   echo "detected/repo"
