@@ -47,7 +47,6 @@
         builtins.elem pkg.pname [
           "zsh-abbr"
           "claude"
-          "github-copilot-cli"
         ];
       pkgs = import nixpkgs {
         inherit system;
@@ -87,7 +86,6 @@
             # accidentally permitting other proprietary packages.
             #   zsh-abbr         : CC-BY-NC-SA-4.0 + Hippocratic License v3.0 (both free=false)
             #   claude           : Anthropic proprietary (via ryoppippi/nix-claude-code)
-            #   github-copilot-cli: GitHub proprietary
             nixpkgs.config.allowUnfreePredicate = allowUnfreePredicate;
 
             home-manager = {
