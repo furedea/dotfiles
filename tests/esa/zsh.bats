@@ -1,12 +1,155 @@
 #!/usr/bin/env bats
 # Tests for opening esa posts from Zsh.
 
+bats_require_minimum_version 1.5.0
+
 setup() {
   load test-helper/setup
   setup_esa_stub
   setup_editor_stub
   setup_fzf_stub
   ESA_ZSH="$REPO_ROOT/zsh/esa.zsh"
+}
+
+@test "en displays help for its help options" {
+  local _expected
+  _expected=$(cat <<'EOF'
+Usage: en <title>
+
+Create a WIP post under Members/k-shigyo and edit it in Neovim.
+
+Options:
+  -h, --help  Show this help
+EOF
+  )
+
+  local _option
+  for _option in -h --help; do
+    run zsh -c "source '$ESA_ZSH'; en '$_option'"
+
+    [ "$status" -eq 0 ]
+    [ "$output" = "$_expected" ]
+    [ -z "$(esa_calls)" ]
+  done
+}
+
+@test "en rejects invalid argument counts with usage" {
+  local _arguments
+  for _arguments in "" "one two"; do
+    run --separate-stderr zsh -c "source '$ESA_ZSH'; en $_arguments"
+
+    [ "$status" -eq 1 ]
+    [ -z "$output" ]
+    [[ "$stderr" == "Usage: en <title>"$'\n'* ]]
+    [ -z "$(esa_calls)" ]
+  done
+}
+
+@test "en rejects an empty title with usage" {
+  run --separate-stderr zsh -c "source '$ESA_ZSH'; en ''"
+
+  [ "$status" -eq 1 ]
+  [ -z "$output" ]
+  [[ "$stderr" == "Usage: en <title>"$'\n'* ]]
+  [ -z "$(esa_calls)" ]
+}
+
+@test "ee displays help for its help options" {
+  local _expected
+  _expected=$(cat <<'EOF'
+Usage: ee [title]
+
+Open an existing post under Members/k-shigyo.
+Without a title, choose one with fzf.
+
+Options:
+  -h, --help  Show this help
+EOF
+  )
+
+  local _option
+  for _option in -h --help; do
+    run zsh -c "source '$ESA_ZSH'; ee '$_option'"
+
+    [ "$status" -eq 0 ]
+    [ "$output" = "$_expected" ]
+    [ -z "$(esa_calls)" ]
+  done
+}
+
+@test "ee rejects extra arguments with usage" {
+  run --separate-stderr zsh -c "source '$ESA_ZSH'; ee one two"
+
+  [ "$status" -eq 1 ]
+  [ -z "$output" ]
+  [[ "$stderr" == "Usage: ee [title]"$'\n'* ]]
+  [ -z "$(esa_calls)" ]
+}
+
+@test "eep displays help for its help options" {
+  local _expected
+  _expected=$(cat <<'EOF'
+Usage: eep
+
+Open 議事録/2026年度配属/shigyo in Neovim.
+
+Options:
+  -h, --help  Show this help
+EOF
+  )
+
+  local _option
+  for _option in -h --help; do
+    run zsh -c "source '$ESA_ZSH'; eep '$_option'"
+
+    [ "$status" -eq 0 ]
+    [ "$output" = "$_expected" ]
+    [ -z "$(esa_calls)" ]
+  done
+}
+
+@test "eep rejects unexpected arguments with usage" {
+  run --separate-stderr zsh -c "source '$ESA_ZSH'; eep unexpected"
+
+  [ "$status" -eq 1 ]
+  [ -z "$output" ]
+  [[ "$stderr" == "Usage: eep"$'\n'* ]]
+  [ -z "$(esa_calls)" ]
+}
+
+@test "es displays help for its help options" {
+  local _expected
+  _expected=$(cat <<'EOF'
+Usage: es [-q|--quiet]
+
+Ship the last post opened by en, ee, or eep.
+
+Options:
+  -q, --quiet, --no-notice  Ship without notification
+  -h, --help                Show this help
+EOF
+  )
+
+  local _option
+  for _option in -h --help; do
+    run zsh -c "source '$ESA_ZSH'; es '$_option'"
+
+    [ "$status" -eq 0 ]
+    [ "$output" = "$_expected" ]
+    [ -z "$(esa_calls)" ]
+  done
+}
+
+@test "es rejects invalid options with usage" {
+  local _arguments
+  for _arguments in "--unknown" "--quiet unexpected"; do
+    run --separate-stderr zsh -c "source '$ESA_ZSH'; es $_arguments"
+
+    [ "$status" -eq 1 ]
+    [ -z "$output" ]
+    [[ "$stderr" == "Usage: es [-q|--quiet]"$'\n'* ]]
+    [ -z "$(esa_calls)" ]
+  done
 }
 
 @test "opening a numbered esa post fetches its body through the official CLI" {

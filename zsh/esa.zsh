@@ -1,6 +1,53 @@
 # esa helpers open posts in Neovim, save them as WIP, and explicitly ship them.
 _ESA_LAST_POST_NUMBER=""
 
+function _esa_usage() {
+  case "$1" in
+    en)
+      cat <<'EOF'
+Usage: en <title>
+
+Create a WIP post under Members/k-shigyo and edit it in Neovim.
+
+Options:
+  -h, --help  Show this help
+EOF
+      ;;
+    ee)
+      cat <<'EOF'
+Usage: ee [title]
+
+Open an existing post under Members/k-shigyo.
+Without a title, choose one with fzf.
+
+Options:
+  -h, --help  Show this help
+EOF
+      ;;
+    eep)
+      cat <<'EOF'
+Usage: eep
+
+Open 議事録/2026年度配属/shigyo in Neovim.
+
+Options:
+  -h, --help  Show this help
+EOF
+      ;;
+    es)
+      cat <<'EOF'
+Usage: es [-q|--quiet]
+
+Ship the last post opened by en, ee, or eep.
+
+Options:
+  -q, --quiet, --no-notice  Ship without notification
+  -h, --help                Show this help
+EOF
+      ;;
+  esac
+}
+
 function _esa_cleanup() {
   local _temp_dir="$1"
   command rm -f "$_temp_dir/post.md"
@@ -62,7 +109,18 @@ function _esa_select_post() {
 }
 
 function en() {
-  [[ -z "${1:-}" ]] && echo "usage: en <title>" && return 1
+  if (( $# != 1 )) || [[ -z "$1" ]]; then
+    _esa_usage en >&2
+    return 1
+  fi
+
+  case "${1:-}" in
+    -h | --help)
+      _esa_usage en
+      return
+      ;;
+  esac
+
   local _post="Members/k-shigyo/$1"
   local _post_json
   _post_json=$(esa post create "$_post" \
@@ -75,6 +133,18 @@ function en() {
 }
 
 function ee() {
+  if (( $# > 1 )); then
+    _esa_usage ee >&2
+    return 1
+  fi
+
+  case "${1:-}" in
+    -h | --help)
+      _esa_usage ee
+      return
+      ;;
+  esac
+
   if [[ -n "${1:-}" ]]; then
     local _post="Members/k-shigyo/$1"
     local _post_number
@@ -91,6 +161,23 @@ function ee() {
 }
 
 function eep() {
+  if (( $# > 1 )); then
+    _esa_usage eep >&2
+    return 1
+  fi
+
+  case "${1:-}" in
+    "") ;;
+    -h | --help)
+      _esa_usage eep
+      return
+      ;;
+    *)
+      _esa_usage eep >&2
+      return 1
+      ;;
+  esac
+
   local _post="議事録/2026年度配属/shigyo"
   local _post_number
   _post_number=$(_esa_find_post_number "$_post") || return 1
@@ -100,19 +187,26 @@ function eep() {
 function es() {
   local -a _message_args=()
 
+  if (( $# > 1 )); then
+    _esa_usage es >&2
+    return 1
+  fi
+
   case "${1:-}" in
     "") ;;
+    -h | --help)
+      _esa_usage es
+      return
+      ;;
     -q | --quiet | --no-notice)
       _message_args=(--message "[skip notice]")
-      shift
       ;;
     *)
-      echo "usage: es [-q|--quiet]"
+      _esa_usage es >&2
       return 1
       ;;
   esac
 
-  [[ -n "${1:-}" ]] && echo "usage: es [-q|--quiet]" && return 1
   [[ -z "$_ESA_LAST_POST_NUMBER" ]] \
     && echo "es: no post to ship (edit something first)" \
     && return 1
