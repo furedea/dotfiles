@@ -15,6 +15,7 @@
 }:
 let
   link = path: config.lib.file.mkOutOfStoreSymlink "${dotfilesDir}/${path}";
+  esaCliPackage = unstable.callPackage ../packages/esa_cli.nix { };
   codexPackage = codex-cli-nix.packages.${system}.default;
   herdrSkill = pkgs.runCommand "herdr-skill" { } ''
     set -euxCo pipefail
@@ -87,6 +88,7 @@ in
     ghq
     roots
     git-wt
+    esaCliPackage
 
     # AI Coding Agent
     nix-claude-code.packages.${system}.default
