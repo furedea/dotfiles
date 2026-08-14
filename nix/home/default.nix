@@ -16,6 +16,9 @@
 let
   link = path: config.lib.file.mkOutOfStoreSymlink "${dotfilesDir}/${path}";
   codexPackage = codex-cli-nix.packages.${system}.default;
+  repoCommand = pkgs.writeShellScriptBin "repo" ''
+    exec "${dotfilesDir}/github/repo.sh" "$@"
+  '';
   herdrSkill = pkgs.runCommand "herdr-skill" { } ''
     set -euxCo pipefail
     mkdir -p "$out"
@@ -87,6 +90,7 @@ in
     ghq
     roots
     git-wt
+    repoCommand
 
     # AI Coding Agent
     nix-claude-code.packages.${system}.default

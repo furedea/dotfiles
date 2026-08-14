@@ -15,10 +15,34 @@ setup() {
   [[ "$output" == *"Usage:"* ]]
 }
 
-@test "rejects --clone because the script controls the local destination" {
-  run bash "$SCRIPT" agent-harness --private --clone
+@test "shows usage when -h follows the repository name" {
+  run bash "$SCRIPT" agent-harness --private -h
   [ "$status" -eq 1 ]
-  [[ "$output" == *"do not pass --clone"* ]]
+  [[ "$output" == *"Usage:"* ]]
+  ! grep -q "repo create" "$GH_LOG"
+}
+
+@test "rejects local repository lifecycle flags" {
+  local flag
+  for flag in --clone -c --source=. -s=. --push --remote=origin -r=origin; do
+    run bash "$SCRIPT" agent-harness --private "$flag"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"controls the local clone destination"* ]]
+  done
+}
+
+@test "requires exactly one repository visibility" {
+  run bash "$SCRIPT" agent-harness --template furedea/template-rust
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"exactly one of --public, --private, or --internal is required"* ]]
+  ! grep -q "repo create" "$GH_LOG"
+}
+
+@test "rejects multiple repository visibilities" {
+  run bash "$SCRIPT" agent-harness --public --private
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"exactly one of --public, --private, or --internal is required"* ]]
+  ! grep -q "repo create" "$GH_LOG"
 }
 
 @test "creates a template repository and prints only the clone destination to stdout" {
