@@ -126,7 +126,7 @@ in
     rustup
 
     # TypeScript tools
-    nodejs
+    unstable.nodejs_24
     pnpm
     nodePackages."@antfu/ni"
     typescript
