@@ -120,7 +120,7 @@ The cask list in `nix/darwin/default.nix` is authoritative.
   zoxide, ghq, roots, git-wt, fzf, eza, bat, fd, ripgrep, and Yazi
 - Git, Delta, GitHub CLI, Lazygit, Neovim, Tree-sitter, and Vim configuration
 - Nix, Bash, Python, Rust, TypeScript, Lua, LaTeX, formatting, and linting tools
-- Claude Code, Codex, GitHub Copilot CLI, OpenCode, and Herdr
+- Claude Code, Codex, OpenCode, and Herdr
 - `programs.git`, `programs.delta`, `programs.gh`, `programs.lazygit`,
   `programs.direnv`, `programs.atuin`, `programs.agent-harness`, and
   `programs.yazi`

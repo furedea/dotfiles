@@ -97,7 +97,6 @@ in
     # AI Coding Agent
     nix-claude-code.packages.${system}.default
     herdrCompatibleCodex
-    unstable.github-copilot-cli
     unstable.opencode
     unstable.pi-coding-agent
     hermesAgentPackage
