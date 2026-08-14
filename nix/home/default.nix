@@ -7,6 +7,7 @@
   unstable,
   nix-claude-code,
   codex-cli-nix,
+  hermesAgentPackage,
   herdrPackage,
   agent-harness,
   system,
@@ -92,6 +93,8 @@ in
     herdrCompatibleCodex
     unstable.github-copilot-cli
     unstable.opencode
+    unstable.pi-coding-agent
+    hermesAgentPackage
     herdrPackage
     herdrZshCompletion
 
