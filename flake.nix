@@ -60,6 +60,19 @@
       };
       herdrPackage = herdr.packages.${system}.default;
       hermesAgentPackage = hermes-agent.packages.${system}.minimal;
+      homeSpecialArgs = {
+        inherit
+          username
+          dotfilesDir
+          unstable
+          nix-claude-code
+          codex-cli-nix
+          hermesAgentPackage
+          herdrPackage
+          agent-harness
+          system
+          ;
+      };
     in
     {
       darwinConfigurations."mba" = nix-darwin.lib.darwinSystem {
@@ -81,19 +94,7 @@
               useGlobalPkgs = true;
               useUserPackages = true;
               backupFileExtension = "bak";
-              extraSpecialArgs = {
-                inherit
-                  username
-                  dotfilesDir
-                  unstable
-                  nix-claude-code
-                  codex-cli-nix
-                  hermesAgentPackage
-                  herdrPackage
-                  agent-harness
-                  system
-                  ;
-              };
+              extraSpecialArgs = homeSpecialArgs;
               users.${username} = {
                 imports = [
                   agent-harness.homeManagerModules.default
@@ -107,19 +108,7 @@
 
       homeConfigurations.${username} = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
-        extraSpecialArgs = {
-          inherit
-            username
-            dotfilesDir
-            unstable
-            nix-claude-code
-            codex-cli-nix
-            hermesAgentPackage
-            herdrPackage
-            agent-harness
-            system
-            ;
-        };
+        extraSpecialArgs = homeSpecialArgs;
         modules = [
           agent-harness.homeManagerModules.default
           ./nix/home/default.nix
