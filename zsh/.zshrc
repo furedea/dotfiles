@@ -73,7 +73,6 @@ export PATH="/opt/homebrew/bin:$PATH"
 export XDG_CONFIG_HOME="$HOME/.config"
 export PATH="/Library/TeX/texbin:$PATH"
 export PATH="$HOME/.local/bin:$PATH"
-export ESA_TEAM="posl"
 
 # Plugins
 source "$XDG_CONFIG_HOME/zsh/nix-plugins.zsh"

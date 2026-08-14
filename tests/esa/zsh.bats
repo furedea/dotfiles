@@ -11,6 +11,12 @@ setup() {
   ESA_ZSH="$REPO_ROOT/zsh/esa.zsh"
 }
 
+@test "zsh configuration leaves the default esa team to the CLI" {
+  run rg --fixed-strings 'export ESA_TEAM=' "$REPO_ROOT/zsh/.zshrc"
+
+  [ "$status" -eq 1 ]
+}
+
 @test "en displays help for its help options" {
   local _expected
   _expected=$(cat <<'EOF'
