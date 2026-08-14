@@ -20,6 +20,7 @@ let
   repoCommand = pkgs.writeShellScriptBin "repo" ''
     exec "${dotfilesDir}/github/repo.sh" "$@"
   '';
+  zshCacheBuilder = pkgs.writeText "build_cache.sh" (builtins.readFile ../../zsh/build_cache.sh);
   herdrSkill = pkgs.runCommand "herdr-skill" { } ''
     set -euxCo pipefail
     mkdir -p "$out"
@@ -395,6 +396,15 @@ in
   };
 
   home.activation = {
+    zshCache = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+      BASH_XTRACEFD=9 \
+        "${pkgs.bash}/bin/bash" \
+        "${zshCacheBuilder}" \
+        "${pkgs.zsh}/bin/zsh" \
+        "${config.home.homeDirectory}/.zshrc" \
+        "${config.xdg.cacheHome}/zsh/.zcompdump" \
+        9>/dev/null
+    '';
     rustupInit = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       ${pkgs.rustup}/bin/rustup toolchain install stable --no-self-update 2>/dev/null || true
     '';

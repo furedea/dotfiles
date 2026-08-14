@@ -7,6 +7,12 @@
 {
   environment.systemPackages = [ pkgs.vim ];
 
+  programs.zsh = {
+    enableBashCompletion = false;
+    enableGlobalCompInit = false;
+    promptInit = "";
+  };
+
   # Overlays must be set at the nix-darwin level because home-manager runs
   # with useGlobalPkgs = true (see flake.nix) and shares this pkgs instance.
   nixpkgs.overlays = import ../overlays.nix;
@@ -254,6 +260,7 @@
 
   nix-homebrew = {
     enable = true;
+    enableZshIntegration = false;
     user = username;
     autoMigrate = true;
   };
