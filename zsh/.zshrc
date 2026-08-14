@@ -1,10 +1,7 @@
 # Completion
+ZSH_COMPDUMP="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/.zcompdump"
 autoload -Uz compinit
-if [[ -n ~/.zcompdump(#qN.mh+24) ]]; then
-  compinit
-else
-  compinit -C
-fi
+compinit -C -d "$ZSH_COMPDUMP"
 
 zstyle ":completion:*" format $'\e[2;37mCompleting %d\e[m'
 zstyle ":completion:*" group-name ""
