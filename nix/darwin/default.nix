@@ -274,7 +274,6 @@
     };
 
     casks = [
-      "arc"
       "bitwarden"
       "chatgpt"
       "deepl"
