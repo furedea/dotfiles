@@ -298,7 +298,6 @@
       "tailscale-app"
       "thebrowsercompany-dia"
       "vimr"
-      "wezterm"
     ];
   };
 }
