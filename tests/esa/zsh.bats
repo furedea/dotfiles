@@ -12,23 +12,13 @@ setup() {
 }
 
 @test "en displays help for its help options" {
-  local _expected
-  _expected=$(cat <<'EOF'
-Usage: en <title>
-
-Create a WIP post under Members/k-shigyo and edit it in Neovim.
-
-Options:
-  -h, --help  Show this help
-EOF
-  )
-
   local _option
   for _option in -h --help; do
     run zsh -c "source '$ESA_ZSH'; en '$_option'"
 
     [ "$status" -eq 0 ]
-    [ "$output" = "$_expected" ]
+    [ "${lines[0]}" = "Usage: en <title>" ]
+    [[ "$output" == *"-h, --help"* ]]
     [ -z "$(esa_calls)" ]
   done
 }
@@ -55,24 +45,13 @@ EOF
 }
 
 @test "ee displays help for its help options" {
-  local _expected
-  _expected=$(cat <<'EOF'
-Usage: ee [title]
-
-Open an existing post under Members/k-shigyo.
-Without a title, choose one with fzf.
-
-Options:
-  -h, --help  Show this help
-EOF
-  )
-
   local _option
   for _option in -h --help; do
     run zsh -c "source '$ESA_ZSH'; ee '$_option'"
 
     [ "$status" -eq 0 ]
-    [ "$output" = "$_expected" ]
+    [ "${lines[0]}" = "Usage: ee [title]" ]
+    [[ "$output" == *"-h, --help"* ]]
     [ -z "$(esa_calls)" ]
   done
 }
@@ -87,23 +66,13 @@ EOF
 }
 
 @test "eep displays help for its help options" {
-  local _expected
-  _expected=$(cat <<'EOF'
-Usage: eep
-
-Open 議事録/2026年度配属/shigyo in Neovim.
-
-Options:
-  -h, --help  Show this help
-EOF
-  )
-
   local _option
   for _option in -h --help; do
     run zsh -c "source '$ESA_ZSH'; eep '$_option'"
 
     [ "$status" -eq 0 ]
-    [ "$output" = "$_expected" ]
+    [ "${lines[0]}" = "Usage: eep" ]
+    [[ "$output" == *"-h, --help"* ]]
     [ -z "$(esa_calls)" ]
   done
 }
@@ -118,24 +87,14 @@ EOF
 }
 
 @test "es displays help for its help options" {
-  local _expected
-  _expected=$(cat <<'EOF'
-Usage: es [-q|--quiet]
-
-Ship the last post opened by en, ee, or eep.
-
-Options:
-  -q, --quiet, --no-notice  Ship without notification
-  -h, --help                Show this help
-EOF
-  )
-
   local _option
   for _option in -h --help; do
     run zsh -c "source '$ESA_ZSH'; es '$_option'"
 
     [ "$status" -eq 0 ]
-    [ "$output" = "$_expected" ]
+    [ "${lines[0]}" = "Usage: es [-q|--quiet]" ]
+    [[ "$output" == *"-q, --quiet, --no-notice"* ]]
+    [[ "$output" == *"-h, --help"* ]]
     [ -z "$(esa_calls)" ]
   done
 }

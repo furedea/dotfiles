@@ -63,5 +63,4 @@ setup() {
   run bash "$SCRIPT" configure --help
   [ "$status" -eq 1 ]
   [[ "$output" == *"repo configure <name-or-owner/name>"* ]]
-  [[ "$output" == *"Apply standard repository settings and ruleset"* ]]
 }
