@@ -297,7 +297,9 @@
       "slack"
       "steam"
       "tailscale-app"
+      "thebrowsercompany-dia"
       "vimr"
+      "wezterm"
     ];
   };
 }
