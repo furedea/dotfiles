@@ -94,7 +94,7 @@ EOF
   [ "$output" = "false" ]
 }
 
-@test "Home Manager activation invokes the Zsh cache builder" {
+@test "Home Manager activation invokes the packaged Zsh cache builder" {
   run --separate-stderr nix build --no-link --print-out-paths \
     "$REPO_ROOT#homeConfigurations.kaito.activationPackage"
 
@@ -105,7 +105,10 @@ EOF
 
   local _activation_package="$output"
   [ -f "$_activation_package/activate" ]
-  grep -q "build_cache.sh" "$_activation_package/activate"
+  local _builder
+  _builder="$(grep -Eo '/nix/store/[^"[:space:]]+-build_cache[.]sh' "$_activation_package/activate" | head -n 1)"
+  [ -f "$_builder" ]
+  cmp --silent "$REPO_ROOT/zsh/build_cache.sh" "$_builder"
 }
 
 @test "Home Manager builds Zsh caches after linking the new startup file" {
