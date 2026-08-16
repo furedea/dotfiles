@@ -1,3 +1,4 @@
+command = direct:/etc/profiles/per-user/kaito/bin/herdr
 font-family = JetBrains Mono
 theme = Catppuccin Mocha
 window-padding-x = 20
@@ -7,10 +8,20 @@ window-theme = ghostty
 background-opacity = 1.0
 background-blur-radius = 0
 bell-features = system,attention,title
-macos-titlebar-style = tabs
+macos-titlebar-style = hidden
 font-feature = -calt
 font-feature = -liga
 font-feature = -dlig
+keybind = cmd+t=unbind
+keybind = cmd+d=unbind
+keybind = cmd+shift+d=unbind
+keybind = cmd+[=unbind
+keybind = cmd+]=unbind
+keybind = cmd+shift+enter=unbind
+keybind = cmd+enter=unbind
+keybind = cmd+z=unbind
+keybind = cmd+shift+z=unbind
+keybind = cmd+shift+t=unbind
 keybind = shift+enter=text:\n
 keybind = ctrl+0=text:\x1b[48;5u
 keybind = ctrl+1=text:\x1b[49;5u

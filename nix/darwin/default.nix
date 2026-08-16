@@ -274,7 +274,6 @@
     };
 
     casks = [
-      "arc"
       "bitwarden"
       "chatgpt"
       "deepl"
@@ -297,6 +296,7 @@
       "slack"
       "steam"
       "tailscale-app"
+      "thebrowsercompany-dia"
       "vimr"
     ];
   };
