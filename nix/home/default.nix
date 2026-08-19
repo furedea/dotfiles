@@ -88,6 +88,7 @@ in
     herdrPackage
     herdrZshCompletion
     just
+    mosh
     repoCommand
     roots
 
