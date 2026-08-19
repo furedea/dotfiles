@@ -1,4 +1,4 @@
-command = direct:/etc/profiles/per-user/kaito/bin/herdr
+command = direct:/etc/profiles/per-user/kaito/bin/herdr --session main
 font-family = JetBrains Mono
 theme = Catppuccin Mocha
 window-padding-x = 20
