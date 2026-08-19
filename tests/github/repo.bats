@@ -28,6 +28,16 @@ setup() {
   [[ "$calls" == *"repos/furedea/agent-harness -X PATCH --input"* ]]
 }
 
+@test "synchronizes owned repositories through the public command" {
+  run --separate-stderr bash "$SCRIPT" sync --dry-run
+
+  if [ "$status" -ne 0 ]; then
+    printf '%s\n' "$stderr" >&2
+  fi
+  [ "$status" -eq 0 ]
+  [[ "$(gh_calls)" == *"repo list furedea"* ]]
+}
+
 @test "shows top-level help with --help" {
   run bash "$SCRIPT" --help
   [ "$status" -eq 1 ]
@@ -35,6 +45,7 @@ setup() {
   [[ "$output" == *"repo <command> [arguments]"* ]]
   [[ "$output" == *"create"* ]]
   [[ "$output" == *"configure"* ]]
+  [[ "$output" == *"sync"* ]]
 }
 
 @test "does not print the Bash execution trace" {

@@ -6,6 +6,7 @@ REPO_DIR="$(pwd)"
 readonly REPO_DIR
 readonly CREATE_REPO="$REPO_DIR/create_repo.sh"
 readonly CONFIGURE_REPO="$REPO_DIR/configure_repo.sh"
+readonly SYNC_REPOS="$REPO_DIR/sync_repos.sh"
 
 function usage() {
   cat <<EOF >&2
@@ -18,6 +19,7 @@ Usage:
 Commands:
     create       Create, clone, and configure a repository.
     configure    Apply standard settings and rulesets.
+    sync         Clone or fast-forward all owned repositories.
 
 Options:
     --help, -h: print this
@@ -38,6 +40,10 @@ function main() {
     configure)
       shift
       exec "$CONFIGURE_REPO" "$@"
+      ;;
+    sync)
+      shift
+      exec "$SYNC_REPOS" "$@"
       ;;
     -h | --help | "") usage ;;
     *) usage ;;

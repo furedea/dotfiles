@@ -48,6 +48,59 @@ gh_calls() {
   cat "$GH_LOG" 2>/dev/null || true
 }
 
+setup_sync_repo_stubs() {
+  GH_LOG="$BATS_TEST_TMPDIR/gh_calls.log"
+  GIT_LOG="$BATS_TEST_TMPDIR/git_calls.log"
+  GH_STUB_DIR="$BATS_TEST_TMPDIR/bin"
+  mkdir -p "$GH_STUB_DIR"
+  cat >"$GH_STUB_DIR/ghq" <<'STUB'
+#!/bin/bash
+if [[ "$1" == "root" ]]; then
+  printf '%s\n' "${BATS_TEST_TMPDIR}/ghq"
+  exit 0
+fi
+exit 1
+STUB
+  cat >"$GH_STUB_DIR/gh" <<'STUB'
+#!/bin/bash
+printf '%s\n' "$*" >>"${GH_LOG}"
+
+if [[ "$1" == "api" && "$2" == "user" ]]; then
+  printf 'furedea\n'
+  exit 0
+fi
+
+if [[ "$1" == "repo" && "$2" == "list" ]]; then
+  printf '%s\n' "${GH_REPOSITORIES:-}"
+  exit 0
+fi
+
+if [[ "$1" == "repo" && "$2" == "clone" ]]; then
+  mkdir -p "$4/.git"
+  exit 0
+fi
+
+exit 1
+STUB
+  cat >"$GH_STUB_DIR/git" <<'STUB'
+#!/bin/bash
+printf '%s\n' "$*" >>"${GIT_LOG}"
+
+if [[ "$*" == *"${GIT_PULL_FAILURE:-__never__}"* ]]; then
+  exit 1
+fi
+STUB
+  chmod +x "$GH_STUB_DIR/gh" "$GH_STUB_DIR/ghq" "$GH_STUB_DIR/git"
+  export GH_LOG GIT_LOG GH_STUB_DIR
+  export GH_REPOSITORIES=""
+  export GIT_PULL_FAILURE="__never__"
+  export PATH="$GH_STUB_DIR:$PATH"
+}
+
+git_calls() {
+  cat "$GIT_LOG" 2>/dev/null || true
+}
+
 # Create gh and ghq stubs for github/create_repo.sh tests.
 setup_create_repo_stubs() {
   GH_LOG="$BATS_TEST_TMPDIR/gh_calls.log"
