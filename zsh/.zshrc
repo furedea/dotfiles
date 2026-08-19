@@ -85,6 +85,8 @@ function gr() {
 # Abbreviations: new shortcuts that don't shadow existing commands.
 # Using -S (session scope) so definitions stay in this file, not in a separate file.
 abbr --quiet -S lg="lazygit"
+abbr --quiet -S hl="herdr --session main"
+abbr --quiet -S hr="herdr --remote mbp --session main"
 abbr --quiet -S gwt="git wt"
 abbr --quiet -S ll="eza -la --git"
 abbr --quiet -S lt="eza --tree --level=2"

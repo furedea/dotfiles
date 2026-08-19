@@ -8,6 +8,7 @@ setup() {
   TEST_HOME="$BATS_TEST_TMPDIR/home"
   TEST_BIN="$BATS_TEST_TMPDIR/bin"
   COMPINIT_LOG="$BATS_TEST_TMPDIR/compinit.log"
+  ABBR_LOG="$BATS_TEST_TMPDIR/abbr.log"
 
   mkdir -p \
     "$TEST_HOME/.config/zsh" \
@@ -19,7 +20,7 @@ setup() {
 print -r -- "$*" >>"$COMPINIT_LOG"
 EOF
   cat >"$TEST_HOME/.config/zsh/nix-plugins.zsh" <<'EOF'
-function abbr() { :; }
+function abbr() { print -r -- "$*" >>"$ABBR_LOG"; }
 EOF
   : >"$TEST_HOME/ghq/github.com/furedea/dotfiles/zsh/esa.zsh"
 
@@ -35,9 +36,34 @@ EOF
   done
 
   export COMPINIT_LOG
+  export ABBR_LOG
   export REPO_ROOT
   export TEST_BIN
   export TEST_HOME
+}
+
+@test "hl expands to the local main Herdr session" {
+  run env \
+    HOME="$TEST_HOME" \
+    XDG_CACHE_HOME="$TEST_HOME/.cache" \
+    FPATH="$BATS_TEST_TMPDIR/functions" \
+    PATH="$TEST_BIN:$PATH" \
+    zsh -dfi -c "source '$REPO_ROOT/zsh/.zshrc'"
+
+  [ "$status" -eq 0 ]
+  grep -Fx -- "--quiet -S hl=herdr --session main" "$ABBR_LOG"
+}
+
+@test "hr expands to the home Mac Herdr session" {
+  run env \
+    HOME="$TEST_HOME" \
+    XDG_CACHE_HOME="$TEST_HOME/.cache" \
+    FPATH="$BATS_TEST_TMPDIR/functions" \
+    PATH="$TEST_BIN:$PATH" \
+    zsh -dfi -c "source '$REPO_ROOT/zsh/.zshrc'"
+
+  [ "$status" -eq 0 ]
+  grep -Fx -- "--quiet -S hr=herdr --remote mbp --session main" "$ABBR_LOG"
 }
 
 @test "interactive startup loads only the prebuilt completion dump" {
