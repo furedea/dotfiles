@@ -34,7 +34,7 @@ let
   herdrCompatibleCodex = pkgs.writeShellScriptBin "codex" ''
     export CODEX_EXECUTABLE_PATH="$HOME/.local/bin/codex"
     export DISABLE_AUTOUPDATER=1
-    exec -a codex ${codexPackage}/bin/codex-raw "$@"
+    exec -a codex ${codexPackage}/bin/codex "$@"
   '';
   herdrPlugins = [
     {

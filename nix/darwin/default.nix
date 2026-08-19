@@ -119,7 +119,7 @@
       # Finder is always pinned to the left by macOS; no need to specify it here
       persistent-apps = [
         { app = "/Applications/Raycast.app"; }
-        { app = "/Applications/Arc.app"; }
+        { app = "/Applications/Dia.app"; }
         { app = "/Applications/Obsidian.app"; }
         { app = "/Applications/OrbStack.app"; }
         { app = "/Applications/Slack.app"; }
