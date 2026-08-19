@@ -273,6 +273,8 @@
       cleanup = "uninstall";
     };
 
+    brews = [ "rjyo/moshi/moshi-hook" ];
+
     casks = [
       "bitwarden"
       "chatgpt"
@@ -299,5 +301,10 @@
       "thebrowsercompany-dia"
       "vimr"
     ];
+
+    # nix-darwin 25.11 does not expose Homebrew Bundle's trusted tap option yet.
+    extraConfig = ''
+      tap "rjyo/moshi", trusted: true
+    '';
   };
 }
