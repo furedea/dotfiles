@@ -8,11 +8,11 @@
         "nixpkgs-unstable": "nixpkgs-unstable"
       },
       "locked": {
-        "lastModified": 1787167212,
-        "narHash": "sha256-/GPt18vmQpUi7GX2NDTgOS0EGDT5Cjv5iyIjmy01q5Y=",
+        "lastModified": 1787197726,
+        "narHash": "sha256-/0Soql8t4BHqpdk/t0bXU0vI8UriAY34Lhejt/oqctA=",
         "owner": "furedea",
         "repo": "agent-harness",
-        "rev": "d1c875d7f7c90bf9c1457bef286eed744875917f",
+        "rev": "8fd8ccbc92699183f02bef9e464aa3a3193773dd",
         "type": "github"
       },
       "original": {
@@ -165,11 +165,11 @@
         "nixpkgs": "nixpkgs_4"
       },
       "locked": {
-        "lastModified": 1787087043,
-        "narHash": "sha256-rAJUu6wTUdMAQJTdwQzawR7pwBR/xrJ2k/PaNRm9Qhw=",
+        "lastModified": 1787184227,
+        "narHash": "sha256-cjhwdpAoh9D8SkNN+locvpc/OxfAJPKd4fqEng3/SEQ=",
         "owner": "ryoppippi",
         "repo": "nix-claude-code",
-        "rev": "fde63e82b57347233682b5abf4f90d0ed3b5e79e",
+        "rev": "de1802b747fab9488813455b1c0c6d7fb91d06bc",
         "type": "github"
       },
       "original": {
