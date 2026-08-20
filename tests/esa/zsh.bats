@@ -142,6 +142,54 @@ setup() {
   [ "$marked_file" = "$(cut -d '|' -f 3 <<<"$(editor_calls)")" ]
 }
 
+@test "closing an editor saves changed content as WIP without notice" {
+  export EDITOR_STUB_BODY="# Updated body"
+
+  run zsh -c "source '$ESA_ZSH'; _esa_edit 1515"
+
+  [ "$status" -eq 0 ]
+  [[ "$(esa_calls)" == $'post view 1515 --json body_md\npost update 1515 --body-file '* ]]
+  [[ "$(esa_calls)" == *"/post.md --wip --message [skip notice]" ]]
+}
+
+@test "closing an editor does not repeat an already synchronized save" {
+  export EDITOR_STUB_BODY="# Updated body"
+  export EDITOR_STUB_SYNC=1
+
+  run zsh -c "source '$ESA_ZSH'; _esa_edit 1515"
+
+  [ "$status" -eq 0 ]
+  [ "$(esa_calls | wc -l | tr -d ' ')" -eq 2 ]
+  [[ "$(esa_calls)" == $'post view 1515 --json body_md\npost update 1515 --body-file '* ]]
+}
+
+@test "a failed final save preserves edited content for recovery" {
+  export EDITOR_STUB_BODY="# Unsaved body"
+  export ESA_STUB_FAIL_COMMAND="post update"
+  export ESA_STUB_STDERR="esa: error: request rejected"
+  export TMPDIR="$BATS_TEST_TMPDIR"
+
+  run --separate-stderr zsh -c "source '$ESA_ZSH'; _esa_edit 1515"
+
+  [ "$status" -eq 1 ]
+  [[ "$stderr" == *"esa: edits preserved at "* ]]
+  local recovery_file
+  recovery_file=$(awk '/^esa: edits preserved at / { sub(/^esa: edits preserved at /, ""); print }' \
+    <<<"$stderr")
+  [ -f "$recovery_file" ]
+  [ "$(cat "$recovery_file")" = "# Unsaved body" ]
+}
+
+@test "an editor failure does not update esa" {
+  export EDITOR_STUB_BODY="# Unsaved body"
+  export EDITOR_STUB_EXIT_STATUS=1
+
+  run zsh -c "source '$ESA_ZSH'; _esa_edit 1515"
+
+  [ "$status" -eq 1 ]
+  [ "$(esa_calls)" = "post view 1515 --json body_md" ]
+}
+
 @test "creating a personal esa post opens it as WIP in the editor" {
   run zsh -c "source '$ESA_ZSH'; en 'new note'"
 
