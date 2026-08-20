@@ -16,7 +16,8 @@ agent environment.
 
 The primary outputs are:
 
-- `darwinConfigurations.mba`: the complete Mac configuration
+- `darwinConfigurations.mbp`: the complete MacBook Pro configuration
+- `darwinConfigurations.mba`: the complete MacBook Air configuration
 - `homeConfigurations.kaito`: the user environment for faster iteration
 - `packages.<system>.codex`: the pinned Codex CLI exposed by this flake
 - `devShells.<system>.default`: commitlint and lefthook for repository work
@@ -46,12 +47,13 @@ Change them there before applying the configuration for another user or path.
     cd "$HOME/ghq/github.com/furedea/dotfiles"
     ```
 
-3. Bootstrap nix-darwin:
+3. Bootstrap nix-darwin with the output for the current Mac:
 
     ```sh
+    # Use .#mba on the MacBook Air.
     sudo nix run \
       github:nix-darwin/nix-darwin/nix-darwin-25.11#darwin-rebuild \
-      -- switch --flake .#mba
+      -- switch --flake .#mbp
     ```
 
 The first switch installs the `darwin-rebuild` and `home-manager` commands used
@@ -63,8 +65,9 @@ Use the full switch to converge the actual Mac, including both nix-darwin and
 its integrated Home Manager profile:
 
 ```sh
+# Use #mba on the MacBook Air.
 sudo darwin-rebuild switch --flake \
-  "$HOME/ghq/github.com/furedea/dotfiles/#mba"
+  "$HOME/ghq/github.com/furedea/dotfiles/#mbp"
 ```
 
 For changes limited to [`nix/home/default.nix`](nix/home/default.nix), the
@@ -296,8 +299,9 @@ Update every flake input, then apply the complete configuration:
 
 ```sh
 nix flake update
+# Use #mba on the MacBook Air.
 sudo darwin-rebuild switch --flake \
-  "$HOME/ghq/github.com/furedea/dotfiles/#mba"
+  "$HOME/ghq/github.com/furedea/dotfiles/#mbp"
 ```
 
 Update a single input when only one tool needs to move:

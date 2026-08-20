@@ -11,6 +11,7 @@
   herdrPackage,
   agent-harness,
   system,
+  enableMoshiService,
   ...
 }:
 let
@@ -19,6 +20,7 @@ let
   codexPackage = codex-cli-nix.packages.${system}.default;
   agentHarnessPackage = agent-harness.packages.${system}.default;
   moshiHookGenerator = pkgs.callPackage ../packages/moshi_hook.nix { };
+  moshiHookRuntime = "/opt/homebrew/bin/moshi-hook";
   repoCommand = pkgs.writeShellScriptBin "repo" ''
     exec "${dotfilesDir}/github/repo.sh" "$@"
   '';
@@ -71,7 +73,7 @@ let
       command_replacements = [
         {
           from = lib.getExe moshiHookGenerator;
-          to = "/opt/homebrew/bin/moshi-hook";
+          to = moshiHookRuntime;
         }
       ];
     }
@@ -520,6 +522,26 @@ in
         ${pkgs.bash}/bin/bash \
         "${config.home.homeDirectory}/.local/libexec/sync_herdr_plugins.sh" \
         ${herdrPluginArgs} 9>/dev/null || true
+    '';
+  }
+  // lib.optionalAttrs enableMoshiService {
+    moshiPairingCheck = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      moshi_hook_bin="''${MOSHI_HOOK_BIN:-${moshiHookRuntime}}"
+      if [ ! -x "$moshi_hook_bin" ] \
+        || ! moshi_status="$("$moshi_hook_bin" status --json 2>/dev/null)" \
+        || ! printf '%s\n' "$moshi_status" | ${lib.getExe pkgs.jq} -e '
+          .paired == true
+          and .secretStore == "keychain"
+          and (
+            [.hooks[] | select(.target == "claude" or .target == "codex")]
+            | length == 2 and all(.status == "current")
+          )
+        ' >/dev/null 2>&1
+      then
+        printf '%s\n' \
+          'Moshi pairing or managed hooks could not be confirmed.' \
+          'Run interactively: /opt/homebrew/bin/moshi-hook status' >&2
+      fi
     '';
   };
 
