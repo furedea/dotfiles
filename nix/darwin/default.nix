@@ -2,6 +2,7 @@
   pkgs,
   config,
   username,
+  enableMoshiService,
   ...
 }:
 {
@@ -273,7 +274,12 @@
       cleanup = "uninstall";
     };
 
-    brews = [ "rjyo/moshi/moshi-hook" ];
+    brews = [
+      {
+        name = "rjyo/moshi/moshi-hook";
+        restart_service = if enableMoshiService then "changed" else null;
+      }
+    ];
 
     casks = [
       "bitwarden"

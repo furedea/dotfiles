@@ -73,42 +73,54 @@
           system
           ;
       };
+      mkDarwinConfiguration =
+        { enableMoshiService }:
+        nix-darwin.lib.darwinSystem {
+          specialArgs = {
+            inherit username enableMoshiService;
+          };
+          modules = [
+            ./nix/darwin/default.nix
+            nix-homebrew.darwinModules.nix-homebrew
+            home-manager.darwinModules.home-manager
+            {
+              # Allowlist for packages with non-free licenses (nixpkgs blocks unfree by default).
+              # Use allowUnfreePredicate instead of allowUnfree = true to avoid
+              # accidentally permitting other proprietary packages.
+              #   zsh-abbr         : CC-BY-NC-SA-4.0 + Hippocratic License v3.0 (both free=false)
+              #   claude           : Anthropic proprietary (via ryoppippi/nix-claude-code)
+              #   moshi-hook       : upstream binary release without a declared license
+              nixpkgs.config.allowUnfreePredicate = allowUnfreePredicate;
+
+              home-manager = {
+                useGlobalPkgs = true;
+                useUserPackages = true;
+                backupFileExtension = "bak";
+                extraSpecialArgs = homeSpecialArgs // {
+                  inherit enableMoshiService;
+                };
+                users.${username} = {
+                  imports = [
+                    agent-harness.homeManagerModules.default
+                    ./nix/home/default.nix
+                  ];
+                };
+              };
+            }
+          ];
+        };
     in
     {
-      darwinConfigurations."mba" = nix-darwin.lib.darwinSystem {
-        specialArgs = { inherit username; };
-        modules = [
-          ./nix/darwin/default.nix
-          nix-homebrew.darwinModules.nix-homebrew
-          home-manager.darwinModules.home-manager
-          {
-            # Allowlist for packages with non-free licenses (nixpkgs blocks unfree by default).
-            # Use allowUnfreePredicate instead of allowUnfree = true to avoid
-            # accidentally permitting other proprietary packages.
-            #   zsh-abbr         : CC-BY-NC-SA-4.0 + Hippocratic License v3.0 (both free=false)
-            #   claude           : Anthropic proprietary (via ryoppippi/nix-claude-code)
-            #   moshi-hook       : upstream binary release without a declared license
-            nixpkgs.config.allowUnfreePredicate = allowUnfreePredicate;
-
-            home-manager = {
-              useGlobalPkgs = true;
-              useUserPackages = true;
-              backupFileExtension = "bak";
-              extraSpecialArgs = homeSpecialArgs;
-              users.${username} = {
-                imports = [
-                  agent-harness.homeManagerModules.default
-                  ./nix/home/default.nix
-                ];
-              };
-            };
-          }
-        ];
+      darwinConfigurations = {
+        mba = mkDarwinConfiguration { enableMoshiService = false; };
+        mbp = mkDarwinConfiguration { enableMoshiService = true; };
       };
 
       homeConfigurations.${username} = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
-        extraSpecialArgs = homeSpecialArgs;
+        extraSpecialArgs = homeSpecialArgs // {
+          enableMoshiService = false;
+        };
         modules = [
           agent-harness.homeManagerModules.default
           ./nix/home/default.nix
