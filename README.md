@@ -133,7 +133,11 @@ commit-pinned Herdr plugin set.
 
 [agent-harness](https://github.com/furedea/agent-harness) owns the shared Claude
 Code and Codex instructions, policies, hooks, skills, and generated files. This
-repository enables its Home Manager module and adds the Herdr integration.
+repository builds release-matched Herdr and Moshi hook bundles, then passes them
+through the module's generic `hooks.extra` boundary. Herdr comes from the pinned
+flake input. Moshi Hook 0.2.87 is pinned in Nix for deterministic hook generation,
+while the Homebrew installation remains the runtime daemon used by generated hooks.
+Pairing tokens and mutable Moshi state are never added to the Nix store.
 
 Herdr is pinned as a flake input and replaces tmux for local and managed remote
 terminal sessions. The local configuration uses `ctrl+a` as its prefix and adds
@@ -259,6 +263,7 @@ Run the executable specifications directly with:
 bats tests/github
 bats tests/herdr
 bats tests/esa
+bats tests/nix
 ```
 
 CI checks GitHub scripts with Bats and ShellCheck, checks Lua with Selene and
@@ -279,6 +284,7 @@ After the first switch, configure as needed:
 - run `gh auth login`
 - run `esa auth login --scopes "read:post write:post"`
 - configure Atuin synchronization credentials if history sync is wanted
+- pair Moshi Hook with the iPhone app when restoring a host
 - configure Night Shift, True Tone, display resolution, and Accessibility
   display options in System Settings
 - import `raycast/*.rayconfig` when restoring Raycast manually
