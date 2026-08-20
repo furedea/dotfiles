@@ -494,10 +494,22 @@ in
     uvPythonInstall = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       ${pkgs.uv}/bin/uv python install 2>/dev/null || true
     '';
-    sshKeyGen = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      if [ ! -f ~/.ssh/id_ed25519 ]; then
-        mkdir -p ~/.ssh
-        ssh-keygen -t ed25519 -C "132188853+furedea@users.noreply.github.com" -f ~/.ssh/id_ed25519 -N ""
+    sshDirectoryPermissions = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      if [ -d "$HOME/.ssh" ]; then
+        /bin/chmod 0700 "$HOME/.ssh"
+      fi
+    '';
+    sshIdentityCheck = lib.hm.dag.entryAfter [ "sshDirectoryPermissions" ] ''
+      if [ ! -f "$HOME/.ssh/id_ed25519" ]; then
+        printf '%s\n' \
+          'SSH identity is missing. Create it interactively with a non-empty passphrase:' \
+          '  /usr/bin/ssh-keygen -t ed25519 -f "$HOME/.ssh/id_ed25519"' \
+          '  /usr/bin/ssh-add --apple-use-keychain "$HOME/.ssh/id_ed25519"'
+      elif /usr/bin/ssh-keygen -y -P "" -f "$HOME/.ssh/id_ed25519" >/dev/null 2>&1; then
+        printf '%s\n' \
+          'SSH identity has no passphrase. Protect it and store the passphrase in the macOS Keychain:' \
+          '  /usr/bin/ssh-keygen -p -f "$HOME/.ssh/id_ed25519"' \
+          '  /usr/bin/ssh-add --apple-use-keychain "$HOME/.ssh/id_ed25519"'
       fi
     '';
     herdrPlugins = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
