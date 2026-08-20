@@ -494,10 +494,12 @@ in
     uvPythonInstall = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       ${pkgs.uv}/bin/uv python install 2>/dev/null || true
     '';
-    sshKeyGen = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      if [ ! -f ~/.ssh/id_ed25519 ]; then
-        mkdir -p ~/.ssh
-        ssh-keygen -t ed25519 -C "132188853+furedea@users.noreply.github.com" -f ~/.ssh/id_ed25519 -N ""
+    sshIdentityCheck = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      if [ ! -f "$HOME/.ssh/id_ed25519" ]; then
+        printf '%s\n' \
+          'SSH identity is missing. Create it interactively with a non-empty passphrase:' \
+          '  /usr/bin/ssh-keygen -t ed25519 -f "$HOME/.ssh/id_ed25519"' \
+          '  /usr/bin/ssh-add --apple-use-keychain "$HOME/.ssh/id_ed25519"'
       fi
     '';
     herdrPlugins = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
