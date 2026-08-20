@@ -17,6 +17,8 @@ let
   link = path: config.lib.file.mkOutOfStoreSymlink "${dotfilesDir}/${path}";
   esaCliPackage = unstable.callPackage ../packages/esa_cli.nix { };
   codexPackage = codex-cli-nix.packages.${system}.default;
+  agentHarnessPackage = agent-harness.packages.${system}.default;
+  moshiHookGenerator = pkgs.callPackage ../packages/moshi_hook.nix { };
   repoCommand = pkgs.writeShellScriptBin "repo" ''
     exec "${dotfilesDir}/github/repo.sh" "$@"
   '';
@@ -26,6 +28,56 @@ let
     mkdir -p "$out"
     ${lib.getExe herdrPackage} --skill >| "$out/SKILL.md"
   '';
+  generateHookBundle =
+    name: spec:
+    pkgs.runCommand name { } ''
+      set -euxCo pipefail
+      ${lib.getExe agentHarnessPackage} generate-hook-bundle \
+        --spec ${spec} \
+        --output "$out"
+    '';
+  herdrHookSpec = pkgs.writeText "herdr-hook-bundle-spec.json" (
+    builtins.toJSON {
+      version = 1;
+      installers =
+        map
+          (provider: {
+            executable = lib.getExe herdrPackage;
+            arguments = [
+              "integration"
+              "install"
+              provider
+            ];
+          })
+          [
+            "claude"
+            "codex"
+          ];
+    }
+  );
+  moshiHookSpec = pkgs.writeText "moshi-hook-bundle-spec.json" (
+    builtins.toJSON {
+      version = 1;
+      installers = [
+        {
+          executable = lib.getExe moshiHookGenerator;
+          arguments = [
+            "install"
+            "--target"
+            "claude,codex"
+          ];
+        }
+      ];
+      command_replacements = [
+        {
+          from = lib.getExe moshiHookGenerator;
+          to = "/opt/homebrew/bin/moshi-hook";
+        }
+      ];
+    }
+  );
+  herdrHookBundle = generateHookBundle "herdr-hook-bundle" herdrHookSpec;
+  moshiHookBundle = generateHookBundle "moshi-hook-bundle" moshiHookSpec;
   herdrZshCompletion = pkgs.runCommand "herdr-zsh-completion" { } ''
     set -euxCo pipefail
     mkdir -p "$out/share/zsh/site-functions"
@@ -341,12 +393,12 @@ in
 
     agent-harness = {
       enable = true;
-      package = agent-harness.packages.${system}.default;
+      package = agentHarnessPackage;
       source = agent-harness;
       skills.extra.herdr = herdrSkill;
-      herdr = {
-        enable = true;
-        package = herdrPackage;
+      hooks.extra = {
+        herdr = herdrHookBundle;
+        moshi = moshiHookBundle;
       };
     };
 

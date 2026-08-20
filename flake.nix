@@ -47,6 +47,7 @@
         builtins.elem pkg.pname [
           "zsh-abbr"
           "claude"
+          "moshi-hook"
         ];
       pkgs = import nixpkgs {
         inherit system;
@@ -86,6 +87,7 @@
             # accidentally permitting other proprietary packages.
             #   zsh-abbr         : CC-BY-NC-SA-4.0 + Hippocratic License v3.0 (both free=false)
             #   claude           : Anthropic proprietary (via ryoppippi/nix-claude-code)
+            #   moshi-hook       : upstream binary release without a declared license
             nixpkgs.config.allowUnfreePredicate = allowUnfreePredicate;
 
             home-manager = {
