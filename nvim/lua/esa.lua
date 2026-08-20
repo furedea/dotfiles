@@ -13,6 +13,7 @@ end
 function M.setup()
   local post_number = vim.env.ESA_EDIT_POST_NUMBER
   local file = vim.env.ESA_EDIT_FILE
+  local sync_file = vim.env.ESA_EDIT_SYNC_FILE
   if not post_number or post_number == "" or not file or file == "" then
     return
   end
@@ -46,6 +47,13 @@ function M.setup()
       if result.code ~= 0 then
         vim.bo[args.buf].modified = true
         error(save_error(result), 0)
+      end
+      if sync_file and sync_file ~= "" then
+        local copied, copy_error = vim.uv.fs_copyfile(file, sync_file)
+        if not copied then
+          vim.bo[args.buf].modified = true
+          error("Failed to record esa sync state: " .. copy_error, 0)
+        end
       end
     end,
   })

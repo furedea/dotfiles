@@ -218,7 +218,8 @@ The Zsh configuration:
 - provides `y` for Yazi directory changes and `gr` for the Git root
 - binds `ctrl+g` to fuzzy repository and monorepo navigation through ghq, roots,
   and fzf
-- provides Neovim-based esa editing helpers backed by the official esa CLI
+- provides editor-based esa helpers backed by the official esa CLI, with
+  incremental WIP saves from Neovim
 
 The Bash configuration provides the same core aliases and initializes zoxide,
 Starship, and Atuin.

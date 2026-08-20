@@ -59,6 +59,26 @@ setup() {
   [ "$(cat "$ARTICLE_FILE")" = "# After" ]
 }
 
+@test "a successful Neovim save records the content synchronized with esa" {
+  local sync_file="$BATS_TEST_TMPDIR/synced.md"
+  printf '# Before\n' >"$sync_file"
+
+  run env \
+    ESA_EDIT_POST_NUMBER=1515 \
+    ESA_EDIT_FILE="$ARTICLE_FILE" \
+    ESA_EDIT_SYNC_FILE="$sync_file" \
+    nvim --headless -u NONE \
+    --cmd "set runtimepath^=$REPO_ROOT/nvim" \
+    "$ARTICLE_FILE" \
+    -c "lua require('esa').setup()" \
+    -c "call setline(1, '# After')" \
+    -c write \
+    -c quit
+
+  [ "$status" -eq 0 ]
+  [ "$(cat "$sync_file")" = "# After" ]
+}
+
 @test "a failed esa WIP save reports the official CLI error" {
   run env \
     ESA_EDIT_POST_NUMBER=1515 \
@@ -74,6 +94,27 @@ setup() {
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"esa: error: request rejected"* ]]
+}
+
+@test "a failed esa WIP save does not advance the synchronized content" {
+  local sync_file="$BATS_TEST_TMPDIR/synced.md"
+  printf '# Before\n' >"$sync_file"
+
+  run env \
+    ESA_EDIT_POST_NUMBER=1515 \
+    ESA_EDIT_FILE="$ARTICLE_FILE" \
+    ESA_EDIT_SYNC_FILE="$sync_file" \
+    ESA_STUB_EXIT_STATUS=1 \
+    nvim --headless -u NONE \
+    --cmd "set runtimepath^=$REPO_ROOT/nvim" \
+    "$ARTICLE_FILE" \
+    -c "lua require('esa').setup()" \
+    -c "call setline(1, '# After')" \
+    -c write \
+    -c "quit!"
+
+  [ "$status" -eq 0 ]
+  [ "$(cat "$sync_file")" = "# Before" ]
 }
 
 @test "a failed esa WIP save prevents wq from discarding the modified buffer" {

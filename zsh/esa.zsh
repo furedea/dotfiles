@@ -1,4 +1,4 @@
-# esa helpers open posts in Neovim, save them as WIP, and explicitly ship them.
+# esa helpers edit posts with $EDITOR, save them as WIP, and explicitly ship them.
 _ESA_LAST_POST_NUMBER=""
 
 function _esa_usage() {
@@ -7,7 +7,7 @@ function _esa_usage() {
       command cat <<'EOF'
 Usage: en <title>
 
-Create a WIP post under Members/k-shigyo and edit it in Neovim.
+Create a WIP post under Members/k-shigyo and edit it with $EDITOR.
 
 Options:
   -h, --help  Show this help
@@ -17,7 +17,7 @@ EOF
       command cat <<'EOF'
 Usage: ee [title]
 
-Open an existing post under Members/k-shigyo.
+Open an existing post under Members/k-shigyo with $EDITOR.
 Without a title, choose one with fzf.
 
 Options:
@@ -28,7 +28,7 @@ EOF
       command cat <<'EOF'
 Usage: eep
 
-Open 議事録/2026年度配属/shigyo in Neovim.
+Open 議事録/2026年度配属/shigyo with $EDITOR.
 
 Options:
   -h, --help  Show this help
@@ -50,7 +50,7 @@ EOF
 
 function _esa_cleanup() {
   local _temp_dir="$1"
-  command rm -f "$_temp_dir/post.md"
+  command rm -f "$_temp_dir/post.md" "$_temp_dir/synced.md"
   command rmdir "$_temp_dir"
 }
 
@@ -60,6 +60,7 @@ function _esa_edit() {
   local _temp_dir
   _temp_dir=$(mktemp -d "${TMPDIR:-/tmp}/esa-edit.XXXXXX") || return 1
   local _temp_file="$_temp_dir/post.md"
+  local _synced_file="$_temp_dir/synced.md"
 
   local _post_json
   if ! _post_json=$(esa post view "$_post_number" --json body_md); then
@@ -70,12 +71,29 @@ function _esa_edit() {
     _esa_cleanup "$_temp_dir"
     return 1
   fi
+  if ! command cp "$_temp_file" "$_synced_file"; then
+    _esa_cleanup "$_temp_dir"
+    return 1
+  fi
 
   echo "editor: $_editor"
   ESA_EDIT_POST_NUMBER="$_post_number" \
     ESA_EDIT_FILE="$_temp_file" \
+    ESA_EDIT_SYNC_FILE="$_synced_file" \
     "$_editor" "$_temp_file"
   local _status=$?
+
+  if ((_status == 0)) && ! command cmp -s "$_temp_file" "$_synced_file"; then
+    esa post update "$_post_number" \
+      --body-file "$_temp_file" \
+      --wip \
+      --message "[skip notice]"
+    _status=$?
+    if ((_status != 0)); then
+      print -u2 -- "esa: edits preserved at $_temp_file"
+      return "$_status"
+    fi
+  fi
 
   if ((_status == 0)); then
     _ESA_LAST_POST_NUMBER="$_post_number"

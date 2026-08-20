@@ -51,6 +51,11 @@ JSON
   printf '{"body_md":"# Existing body\\n"}\n'
   ;;
 esac
+if [[ -n "${ESA_STUB_FAIL_COMMAND:-}" \
+  && "$1 $2" == "$ESA_STUB_FAIL_COMMAND" ]]; then
+  printf '%s\n' "${ESA_STUB_STDERR:-esa: error: request rejected}" >&2
+  exit "${ESA_STUB_FAIL_STATUS:-1}"
+fi
 if [[ -n "${ESA_STUB_STDERR:-}" ]]; then
   printf '%s\n' "$ESA_STUB_STDERR" >&2
 fi
@@ -70,11 +75,23 @@ set -euxCo pipefail
 cd "$(dirname "$0")"
 set +x
 
+if [[ -n "${EDITOR_STUB_BODY:-}" ]]; then
+  printf '%s\n' "$EDITOR_STUB_BODY" >|"$1"
+fi
+if [[ "${EDITOR_STUB_SYNC:-}" == "1" ]]; then
+  esa post update "$ESA_EDIT_POST_NUMBER" \
+    --body-file "$1" \
+    --wip \
+    --message "[skip notice]"
+  cp "$1" "$ESA_EDIT_SYNC_FILE"
+fi
+
 printf '%s|%s|%s|%s\n' \
   "${ESA_EDIT_POST_NUMBER:-}" \
   "${ESA_EDIT_FILE:-}" \
   "$1" \
   "$(cat "$1")" >>"${EDITOR_LOG}"
+exit "${EDITOR_STUB_EXIT_STATUS:-0}"
 STUB
   chmod +x "$EDITOR_STUB"
   export EDITOR="$EDITOR_STUB"
