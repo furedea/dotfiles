@@ -32,12 +32,12 @@ setup() {
   [ "$output" = '["--force"]' ]
 }
 
-@test "MacBook Pro starts moshi-hook through the Homebrew service" {
+@test "Homebrew does not own the MacBook Pro moshi-hook service" {
   run --separate-stderr nix eval --raw \
     "$REPO_ROOT#darwinConfigurations.mbp.config.homebrew.brewfile"
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *'brew "rjyo/moshi/moshi-hook", restart_service: :changed'* ]]
+  [[ "$output" != *'brew "rjyo/moshi/moshi-hook", restart_service:'* ]]
 }
 
 @test "MacBook Air does not start the moshi-hook service" {

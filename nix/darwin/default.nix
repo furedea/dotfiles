@@ -2,7 +2,6 @@
   pkgs,
   config,
   username,
-  enableMoshiService,
   ...
 }:
 {
@@ -281,12 +280,7 @@
       extraFlags = [ "--force" ];
     };
 
-    brews = [
-      {
-        name = "rjyo/moshi/moshi-hook";
-        restart_service = if enableMoshiService then "changed" else null;
-      }
-    ];
+    brews = [ "rjyo/moshi/moshi-hook" ];
 
     casks = [
       "bitwarden"

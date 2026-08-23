@@ -20,6 +20,20 @@ let
   agentHarnessPackage = agent-harness.packages.${system}.default;
   moshiHookGenerator = pkgs.callPackage ../packages/moshi_hook.nix { };
   moshiHookRuntime = "/opt/homebrew/bin/moshi-hook";
+  moshiLifecycle = pkgs.writeTextFile {
+    name = "manage-moshi-hook";
+    destination = "/bin/manage_moshi_hook";
+    executable = true;
+    text = builtins.readFile ../../scripts/moshi/manage_moshi_hook.sh;
+  };
+  moshiLifecycleBin = "${moshiLifecycle}/bin/manage_moshi_hook";
+  moshiLifecycleEnvironment = {
+    JQ_BIN = lib.getExe pkgs.jq;
+    MOSHI_HOOK_BIN = moshiHookRuntime;
+    MOSHI_RUNTIME_STATE_FILE = "${config.xdg.stateHome}/moshi-hook/runtime_path";
+    REALPATH_BIN = lib.getExe' pkgs.coreutils "realpath";
+    SLEEP_BIN = lib.getExe' pkgs.coreutils "sleep";
+  };
   repoCommand = pkgs.writeShellScriptBin "repo" ''
     exec "${dotfilesDir}/github/repo.sh" "$@"
   '';
@@ -471,15 +485,47 @@ in
 
   };
 
-  launchd.agents.ssh-agent-loader = {
-    enable = true;
-    config = {
-      ProgramArguments = [
-        "/usr/bin/ssh-add"
-        "--apple-load-keychain"
-      ];
-      ProcessType = "Background";
-      RunAtLoad = true;
+  launchd.agents = {
+    ssh-agent-loader = {
+      enable = true;
+      config = {
+        ProgramArguments = [
+          "/usr/bin/ssh-add"
+          "--apple-load-keychain"
+        ];
+        ProcessType = "Background";
+        RunAtLoad = true;
+      };
+    };
+  }
+  // lib.optionalAttrs enableMoshiService {
+    moshi-hook = {
+      enable = true;
+      config = {
+        ProgramArguments = [
+          moshiLifecycleBin
+          "serve"
+        ];
+        EnvironmentVariables = moshiLifecycleEnvironment;
+        KeepAlive = true;
+        LimitLoadToSessionType = "Aqua";
+        ProcessType = "Background";
+        RunAtLoad = true;
+      };
+    };
+    moshi-hook-updater = {
+      enable = true;
+      config = {
+        ProgramArguments = [
+          moshiLifecycleBin
+          "restart-after-update"
+        ];
+        EnvironmentVariables = moshiLifecycleEnvironment;
+        LimitLoadToSessionType = "Aqua";
+        ProcessType = "Background";
+        ThrottleInterval = 30;
+        WatchPaths = [ "/opt/homebrew/Cellar/moshi-hook" ];
+      };
     };
   };
 
@@ -526,60 +572,14 @@ in
         "${config.home.homeDirectory}/.local/libexec/sync_herdr_plugins.sh" \
         ${herdrPluginArgs} 9>/dev/null || true
     '';
-  }
-  // lib.optionalAttrs enableMoshiService {
-    moshiConfigurationCheck = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
-      moshi_hook_bin="''${MOSHI_HOOK_BIN:-${moshiHookRuntime}}"
-      if [ ! -x "$moshi_hook_bin" ] \
-        || ! moshi_status="$("$moshi_hook_bin" status --json 2>/dev/null)" \
-        || ! printf '%s\n' "$moshi_status" | ${lib.getExe pkgs.jq} -e '
-          .secretStore == "keychain"
-          and (
-            [.hooks[] | select(.target == "claude" and .status == "current")]
-            | length == 1
-          )
-          and (
-            [.hooks[] | select(.target == "codex" and .status == "current")]
-            | length == 1
-          )
-        ' >/dev/null 2>&1
-      then
-        printf '%s\n' \
-          'Moshi Keychain storage or managed hooks could not be confirmed.' \
-          'Run interactively: /opt/homebrew/bin/moshi-hook status' >&2
-      fi
-    '';
-    moshiRuntimeCheck = lib.hm.dag.entryAfter [ "setupLaunchAgents" ] ''
-      moshi_hook_bin="''${MOSHI_HOOK_BIN:-${moshiHookRuntime}}"
-      moshi_sleep_bin="''${MOSHI_SLEEP_BIN:-${pkgs.coreutils}/bin/sleep}"
-      moshi_runtime_ready=false
-
-      if [ -x "$moshi_hook_bin" ]; then
-        for attempt in 1 2 3 4 5; do
-          if moshi_probe="$("$moshi_hook_bin" probe --json 2>/dev/null)" \
-            && printf '%s\n' "$moshi_probe" | ${lib.getExe pkgs.jq} -e '
-              .running == true
-              and .gateway == true
-              and ((.hostId | type) == "string")
-              and ((.hostId | length) > 0)
-            ' >/dev/null 2>&1
-          then
-            moshi_runtime_ready=true
-            break
-          fi
-
-          if [ "$attempt" -lt 5 ]; then
-            "$moshi_sleep_bin" 1
-          fi
-        done
-      fi
-
-      if [ "$moshi_runtime_ready" != true ]; then
-        printf '%s\n' \
-          'Moshi daemon readiness could not be confirmed.' \
-          'Run interactively: /opt/homebrew/bin/moshi-hook probe' >&2
-      fi
-    '';
+    moshiHomebrewServiceMigration = lib.mkIf enableMoshiService (
+      lib.hm.dag.entryBetween [ "setupLaunchAgents" ] [ "writeBoundary" ] ''
+        BASH_XTRACEFD=9 \
+          BREW_BIN="/opt/homebrew/bin/brew" \
+          MOSHI_LEGACY_SERVICE_FILE="$HOME/Library/LaunchAgents/homebrew.mxcl.moshi-hook.plist" \
+          "${moshiLifecycleBin}" migrate-homebrew-service 9>/dev/null
+      ''
+    );
   };
 
   # lazygit reads XDG_CONFIG_HOME/lazygit/config.yml first when XDG_CONFIG_HOME is set

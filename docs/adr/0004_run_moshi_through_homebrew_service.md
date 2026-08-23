@@ -1,7 +1,8 @@
 # ADR-0004: Run Moshi through the Homebrew user service
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-08-20
+- Superseded by: ADR-0009
 
 In the context of a MacBook Pro acting as the remote agent host while a MacBook Air acts as a
 client, facing an upstream Moshi runtime that already publishes a Homebrew service and stores its
