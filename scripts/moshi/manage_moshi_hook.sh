@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euxCo pipefail
+set -euCo pipefail
 cd "$(dirname "$0")"
 
 function usage() {
