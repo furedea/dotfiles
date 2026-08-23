@@ -78,6 +78,9 @@ home-manager switch --flake \
   "$HOME/ghq/github.com/furedea/dotfiles/#kaito"
 ```
 
+Run `:Lazy update` in Neovim to update editor plugins and commit the resulting
+`nvim/lazy-lock.json` change.
+
 The standalone and nix-darwin-integrated Home Manager outputs use different
 profiles. A package removed with only `home-manager switch` may remain visible
 from `/etc/profiles/per-user/kaito` until the next full `darwin-rebuild switch`.
@@ -307,7 +310,7 @@ sudo darwin-rebuild switch --flake \
 Update a single input when only one tool needs to move:
 
 ```sh
-nix flake update codex-cli-nix
+nix flake update llm-agents
 home-manager switch --flake \
   "$HOME/ghq/github.com/furedea/dotfiles/#kaito"
 ```

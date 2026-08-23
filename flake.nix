@@ -14,10 +14,8 @@
       flake = false;
     };
     nix-homebrew.inputs.brew-src.follows = "brew-src";
-    codex-cli-nix.url = "github:sadjow/codex-cli-nix";
-    nix-claude-code.url = "github:ryoppippi/nix-claude-code";
+    llm-agents.url = "github:numtide/llm-agents.nix";
     hermes-agent.url = "github:NousResearch/hermes-agent";
-    herdr.url = "github:herdrdev/herdr/v0.8.0";
     agent-harness = {
       url = "github:furedea/agent-harness";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -31,10 +29,8 @@
       nix-darwin,
       home-manager,
       nix-homebrew,
-      codex-cli-nix,
-      nix-claude-code,
+      llm-agents,
       hermes-agent,
-      herdr,
       agent-harness,
       ...
     }:
@@ -46,7 +42,7 @@
         pkg:
         builtins.elem pkg.pname [
           "zsh-abbr"
-          "claude"
+          "claude-code"
           "moshi-hook"
         ];
       pkgs = import nixpkgs {
@@ -58,15 +54,14 @@
         inherit system;
         config = { inherit allowUnfreePredicate; };
       };
-      herdrPackage = herdr.packages.${system}.default;
+      herdrPackage = llm-agents.packages.${system}.herdr;
       hermesAgentPackage = hermes-agent.packages.${system}.minimal;
       homeSpecialArgs = {
         inherit
           username
           dotfilesDir
           unstable
-          nix-claude-code
-          codex-cli-nix
+          llm-agents
           hermesAgentPackage
           herdrPackage
           agent-harness
@@ -88,7 +83,7 @@
               # Use allowUnfreePredicate instead of allowUnfree = true to avoid
               # accidentally permitting other proprietary packages.
               #   zsh-abbr         : CC-BY-NC-SA-4.0 + Hippocratic License v3.0 (both free=false)
-              #   claude           : Anthropic proprietary (via ryoppippi/nix-claude-code)
+              #   claude-code      : Anthropic proprietary (via numtide/llm-agents.nix)
               #   moshi-hook       : upstream binary release without a declared license
               nixpkgs.config.allowUnfreePredicate = allowUnfreePredicate;
 
@@ -139,7 +134,7 @@
             "x86_64-linux"
           ]
           (sys: {
-            codex = codex-cli-nix.packages.${sys}.default;
+            inherit (llm-agents.packages.${sys}) codex;
           });
 
       # Dev shell for local work, consumed by direnv (`use flake`).

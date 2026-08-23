@@ -5,8 +5,7 @@
   username,
   dotfilesDir,
   unstable,
-  nix-claude-code,
-  codex-cli-nix,
+  llm-agents,
   hermesAgentPackage,
   herdrPackage,
   agent-harness,
@@ -17,7 +16,7 @@
 let
   link = path: config.lib.file.mkOutOfStoreSymlink "${dotfilesDir}/${path}";
   esaCliPackage = unstable.callPackage ../packages/esa_cli.nix { };
-  codexPackage = codex-cli-nix.packages.${system}.default;
+  codexPackage = llm-agents.packages.${system}.codex;
   agentHarnessPackage = agent-harness.packages.${system}.default;
   moshiHookGenerator = pkgs.callPackage ../packages/moshi_hook.nix { };
   moshiHookRuntime = "/opt/homebrew/bin/moshi-hook";
@@ -133,7 +132,6 @@ in
     ripgrep
 
     # Editors
-    neovim
     tree-sitter
 
     # Developer workflow
@@ -164,7 +162,7 @@ in
     marp-cli
 
     # AI coding agents
-    nix-claude-code.packages.${system}.default
+    llm-agents.packages.${system}.claude-code
     herdrCompatibleCodex
     hermesAgentPackage
     unstable.opencode
@@ -223,6 +221,11 @@ in
   '';
 
   programs = {
+    neovim = {
+      enable = true;
+      plugins = [ pkgs.vimPlugins.lazy-nvim ];
+    };
+
     git = {
       enable = true;
       settings = {
