@@ -1,6 +1,6 @@
 # ADR-0006: Consolidate primary agents in llm-agents.nix
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-08-23
 
 In the context of keeping fast-moving Claude Code and Codex releases reproducible, facing duplicate

@@ -16,21 +16,22 @@ setup() {
     | has("llm-agents")
       and (has("nix-claude-code") | not)
       and (has("codex-cli-nix") | not)
+      and (has("herdr") | not)
   ' <<<"$output"
 
   [ "$status" -eq 0 ]
   [ "$output" = "true" ]
 }
 
-@test "Home Manager selects only Claude Code and Codex from llm-agents" {
+@test "Home Manager selects only Claude Code, Codex, and Herdr from llm-agents" {
   run --separate-stderr nix eval --no-write-lock-file --json \
     "$REPO_ROOT#homeConfigurations.kaito.config.home.packages" \
     --apply \
     'packages:
       builtins.filter
-        (name: builtins.elem name [ "claude-code" "codex" ])
+        (name: builtins.elem name [ "claude-code" "codex" "herdr" ])
         (map (package: package.pname or package.name) packages)'
 
   [ "$status" -eq 0 ]
-  [ "$output" = '["claude-code","codex"]' ]
+  [ "$output" = '["herdr","claude-code","codex"]' ]
 }

@@ -16,7 +16,6 @@
     nix-homebrew.inputs.brew-src.follows = "brew-src";
     llm-agents.url = "github:numtide/llm-agents.nix";
     hermes-agent.url = "github:NousResearch/hermes-agent";
-    herdr.url = "github:herdrdev/herdr/v0.8.0";
     agent-harness = {
       url = "github:furedea/agent-harness";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -32,7 +31,6 @@
       nix-homebrew,
       llm-agents,
       hermes-agent,
-      herdr,
       agent-harness,
       ...
     }:
@@ -56,7 +54,7 @@
         inherit system;
         config = { inherit allowUnfreePredicate; };
       };
-      herdrPackage = herdr.packages.${system}.default;
+      herdrPackage = llm-agents.packages.${system}.herdr;
       hermesAgentPackage = hermes-agent.packages.${system}.minimal;
       homeSpecialArgs = {
         inherit
