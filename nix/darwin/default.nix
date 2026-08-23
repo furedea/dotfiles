@@ -308,9 +308,9 @@
       "vimr"
     ];
 
-    # nix-darwin 25.11 does not expose Homebrew Bundle's trusted tap option yet.
+    # nix-darwin 25.11 does not expose Homebrew Bundle's formula-scoped trust yet.
     extraConfig = ''
-      tap "rjyo/moshi", trusted: true
+      tap "rjyo/moshi", trusted: { formula: "moshi-hook" }
     '';
   };
 }

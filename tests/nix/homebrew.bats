@@ -7,13 +7,21 @@ setup() {
   REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
 }
 
-@test "Homebrew installs moshi-hook from a trusted tap" {
+@test "Homebrew installs moshi-hook" {
   run --separate-stderr nix eval --raw \
     "$REPO_ROOT#darwinConfigurations.mba.config.homebrew.brewfile"
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *'tap "rjyo/moshi", trusted: true'* ]]
   [[ "$output" == *'brew "rjyo/moshi/moshi-hook"'* ]]
+}
+
+@test "Homebrew trusts only the moshi-hook formula from the Moshi tap" {
+  run --separate-stderr nix eval --raw \
+    "$REPO_ROOT#darwinConfigurations.mba.config.homebrew.brewfile"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'tap "rjyo/moshi", trusted: { formula: "moshi-hook" }'* ]]
+  [[ "$output" != *'tap "rjyo/moshi", trusted: true'* ]]
 }
 
 @test "MacBook Pro starts moshi-hook through the Homebrew service" {
