@@ -132,7 +132,6 @@ in
     ripgrep
 
     # Editors
-    neovim
     tree-sitter
 
     # Developer workflow
@@ -222,6 +221,11 @@ in
   '';
 
   programs = {
+    neovim = {
+      enable = true;
+      plugins = [ pkgs.vimPlugins.lazy-nvim ];
+    };
+
     git = {
       enable = true;
       settings = {

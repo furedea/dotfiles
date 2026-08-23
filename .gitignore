@@ -24,4 +24,3 @@ desktop.ini
 
 # Nix vim undo files in nvim config
 nvim/.undo/
-nvim/lazy-lock.json
