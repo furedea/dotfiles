@@ -31,9 +31,7 @@ vim.filetype.add({
 
 require("esa").setup()
 
-require("lazy").setup("plugins", {
-  lockfile = vim.fn.stdpath("config") .. "/lazy_lock.json",
-})
+require("lazy").setup("plugins")
 
 -- Auto-restore session when opening nvim without arguments
 vim.api.nvim_create_autocmd("VimEnter", {

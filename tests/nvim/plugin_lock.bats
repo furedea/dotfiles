@@ -5,7 +5,7 @@ bats_require_minimum_version 1.5.0
 
 setup() {
   REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
-  LOCK_FILE="$REPO_ROOT/nvim/lazy_lock.json"
+  LOCK_FILE="$REPO_ROOT/nvim/lazy-lock.json"
 }
 
 @test "Neovim loads lazy.nvim from the Nix-managed runtime" {
@@ -25,7 +25,7 @@ setup() {
 @test "Neovim plugin revisions are recorded in version control" {
   [ -f "$LOCK_FILE" ]
 
-  run git -C "$REPO_ROOT" check-ignore nvim/lazy_lock.json
+  run git -C "$REPO_ROOT" check-ignore nvim/lazy-lock.json
 
   [ "$status" -eq 1 ]
 

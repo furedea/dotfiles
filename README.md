@@ -79,7 +79,7 @@ home-manager switch --flake \
 ```
 
 Run `:Lazy update` in Neovim to update editor plugins and commit the resulting
-`nvim/lazy_lock.json` change.
+`nvim/lazy-lock.json` change.
 
 The standalone and nix-darwin-integrated Home Manager outputs use different
 profiles. A package removed with only `home-manager switch` may remain visible
