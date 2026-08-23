@@ -531,10 +531,16 @@ in
     moshiPairingCheck = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       moshi_hook_bin="''${MOSHI_HOOK_BIN:-${moshiHookRuntime}}"
       if [ ! -x "$moshi_hook_bin" ] \
+        || ! moshi_probe="$("$moshi_hook_bin" probe --json 2>/dev/null)" \
+        || ! printf '%s\n' "$moshi_probe" | ${lib.getExe pkgs.jq} -e '
+          .running == true
+          and .gateway == true
+          and ((.hostId | type) == "string")
+          and ((.hostId | length) > 0)
+        ' >/dev/null 2>&1 \
         || ! moshi_status="$("$moshi_hook_bin" status --json 2>/dev/null)" \
         || ! printf '%s\n' "$moshi_status" | ${lib.getExe pkgs.jq} -e '
-          .paired == true
-          and .secretStore == "keychain"
+          .secretStore == "keychain"
           and (
             [.hooks[] | select(.target == "claude" or .target == "codex")]
             | length == 2 and all(.status == "current")

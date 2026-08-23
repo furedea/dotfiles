@@ -19,10 +19,37 @@ create_moshi_hook_stub() {
 #!/bin/bash
 set -euxCo pipefail
 cd "$(dirname "$0")"
-printf '%s\n' "$*" >| "${MOSHI_ARGS_FILE:?}"
-printf '%s\n' "${MOSHI_STATUS_JSON:?}"
+printf '%s\n' "$*" >>"${MOSHI_ARGS_FILE:?}"
+case "${1:-}" in
+  probe)
+    printf '%s\n' "${MOSHI_PROBE_JSON:?}"
+    ;;
+  status)
+    printf '%s\n' "${MOSHI_STATUS_JSON:?}"
+    ;;
+  *)
+    exit 2
+    ;;
+esac
 EOF
   chmod 0700 "$MOSHI_HOOK_STUB"
+}
+
+create_probe_json() {
+  local _is_running="${1:-true}"
+  local _has_gateway="${2:-true}"
+  local _host_id="${3-host_test}"
+
+  jq -cn \
+    --argjson is_running "$_is_running" \
+    --argjson has_gateway "$_has_gateway" \
+    --arg host_id "$_host_id" \
+    '{
+      installed: true,
+      running: $is_running,
+      gateway: $has_gateway,
+      hostId: $host_id
+    }'
 }
 
 create_status_json() {
@@ -46,6 +73,7 @@ create_status_json() {
 
 run_moshi_pairing_check() {
   local _status_json="$1"
+  local _probe_json="${2:-$(create_probe_json)}"
 
   run --separate-stderr evaluate_moshi_pairing_check
   [ "$status" -eq 0 ]
@@ -55,6 +83,7 @@ run_moshi_pairing_check() {
   run --separate-stderr env \
     MOSHI_ARGS_FILE="$MOSHI_ARGS_FILE" \
     MOSHI_HOOK_BIN="$MOSHI_HOOK_STUB" \
+    MOSHI_PROBE_JSON="$_probe_json" \
     MOSHI_STATUS_JSON="$_status_json" \
     /bin/bash -c "$_activation_script"
 }
@@ -67,8 +96,36 @@ run_moshi_pairing_check() {
   [ -z "$stderr" ]
 }
 
-@test "MacBook Pro warns without blocking when Moshi is unpaired" {
+@test "MacBook Pro accepts a healthy daemon when activation cannot read pairing" {
   run_moshi_pairing_check "$(create_status_json false current)"
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  [ -z "$stderr" ]
+}
+
+@test "MacBook Pro warns without blocking when the Moshi daemon is not running" {
+  run_moshi_pairing_check \
+    "$(create_status_json true current)" \
+    "$(create_probe_json false)"
+
+  [ "$status" -eq 0 ]
+  [[ "$stderr" == *"Moshi pairing or managed hooks could not be confirmed."* ]]
+}
+
+@test "MacBook Pro warns without blocking when the Moshi gateway is unavailable" {
+  run_moshi_pairing_check \
+    "$(create_status_json true current)" \
+    "$(create_probe_json true false)"
+
+  [ "$status" -eq 0 ]
+  [[ "$stderr" == *"Moshi pairing or managed hooks could not be confirmed."* ]]
+}
+
+@test "MacBook Pro warns without blocking when Moshi has no host identity" {
+  run_moshi_pairing_check \
+    "$(create_status_json true current)" \
+    "$(create_probe_json true true '')"
 
   [ "$status" -eq 0 ]
   [[ "$stderr" == *"Moshi pairing or managed hooks could not be confirmed."* ]]
@@ -102,7 +159,7 @@ run_moshi_pairing_check() {
   [[ "$stderr" == *"Moshi pairing or managed hooks could not be confirmed."* ]]
 }
 
-@test "Moshi readiness checks status without passing credentials" {
+@test "Moshi readiness checks use only health subcommands" {
   run_moshi_pairing_check "$(create_status_json true current)"
 
   [ "$status" -eq 0 ]
@@ -110,7 +167,9 @@ run_moshi_pairing_check() {
   run /bin/cat "$MOSHI_ARGS_FILE"
 
   [ "$status" -eq 0 ]
-  [ "$output" = "status --json" ]
+  [ "${lines[0]}" = "probe --json" ]
+  [ "${lines[1]}" = "status --json" ]
+  [ "${#lines[@]}" -eq 2 ]
 }
 
 @test "MacBook Air does not inspect Moshi pairing" {
