@@ -24,6 +24,14 @@ setup() {
   [[ "$output" != *'tap "rjyo/moshi", trusted: true'* ]]
 }
 
+@test "Homebrew cleanup runs without an interactive confirmation" {
+  run --separate-stderr nix eval --json \
+    "$REPO_ROOT#darwinConfigurations.mbp.config.homebrew.onActivation.extraFlags"
+
+  [ "$status" -eq 0 ]
+  [ "$output" = '["--force"]' ]
+}
+
 @test "MacBook Pro starts moshi-hook through the Homebrew service" {
   run --separate-stderr nix eval --raw \
     "$REPO_ROOT#darwinConfigurations.mbp.config.homebrew.brewfile"
