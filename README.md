@@ -307,7 +307,7 @@ sudo darwin-rebuild switch --flake \
 Update a single input when only one tool needs to move:
 
 ```sh
-nix flake update codex-cli-nix
+nix flake update llm-agents
 home-manager switch --flake \
   "$HOME/ghq/github.com/furedea/dotfiles/#kaito"
 ```
