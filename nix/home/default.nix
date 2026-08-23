@@ -37,6 +37,13 @@ let
   repoCommand = pkgs.writeShellScriptBin "repo" ''
     exec "${dotfilesDir}/github/repo.sh" "$@"
   '';
+  secretaryCli = pkgs.writeShellApplication {
+    name = "secretary";
+    runtimeInputs = [ hermesAgentPackage ];
+    text = ''
+      exec hermes -p secretary "$@"
+    '';
+  };
   zshCacheBuilder = pkgs.writeText "build_cache.sh" (builtins.readFile ../../zsh/build_cache.sh);
   herdrSkill = pkgs.runCommand "herdr-skill" { } ''
     set -euxCo pipefail
@@ -157,6 +164,7 @@ in
     mosh
     repoCommand
     roots
+    secretaryCli
 
     # Code quality
     actionlint
@@ -174,6 +182,11 @@ in
     esaCliPackage
     ffmpeg
     marp-cli
+
+    # Personal secretary integrations
+    himalaya
+    khal
+    vdirsyncer
 
     # AI coding agents
     llm-agents.packages.${system}.claude-code
@@ -624,5 +637,10 @@ in
     ".config/herdr/config.toml".source = link "herdr/config.toml";
     ".config/herdr/plugins/config/persiyanov.reviewr/config.toml".source = link "herdr/reviewr.toml";
     ".local/libexec/sync_herdr_plugins.sh".source = link "herdr/sync_plugins.sh";
+
+    # Hermes secretary files remain editable by Hermes and visible to Git.
+    ".hermes/profiles/secretary/SOUL.md".source = link "hermes/secretary/SOUL.md";
+    ".hermes/profiles/secretary/skills/secretary".source = link "hermes/secretary/skills/secretary";
+    ".hermes/profiles/secretary/cron".source = link "hermes/secretary/cron";
   };
 }
