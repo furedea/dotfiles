@@ -528,28 +528,56 @@ in
     '';
   }
   // lib.optionalAttrs enableMoshiService {
-    moshiPairingCheck = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    moshiConfigurationCheck = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
       moshi_hook_bin="''${MOSHI_HOOK_BIN:-${moshiHookRuntime}}"
       if [ ! -x "$moshi_hook_bin" ] \
-        || ! moshi_probe="$("$moshi_hook_bin" probe --json 2>/dev/null)" \
-        || ! printf '%s\n' "$moshi_probe" | ${lib.getExe pkgs.jq} -e '
-          .running == true
-          and .gateway == true
-          and ((.hostId | type) == "string")
-          and ((.hostId | length) > 0)
-        ' >/dev/null 2>&1 \
         || ! moshi_status="$("$moshi_hook_bin" status --json 2>/dev/null)" \
         || ! printf '%s\n' "$moshi_status" | ${lib.getExe pkgs.jq} -e '
           .secretStore == "keychain"
           and (
-            [.hooks[] | select(.target == "claude" or .target == "codex")]
-            | length == 2 and all(.status == "current")
+            [.hooks[] | select(.target == "claude" and .status == "current")]
+            | length == 1
+          )
+          and (
+            [.hooks[] | select(.target == "codex" and .status == "current")]
+            | length == 1
           )
         ' >/dev/null 2>&1
       then
         printf '%s\n' \
-          'Moshi pairing or managed hooks could not be confirmed.' \
+          'Moshi Keychain storage or managed hooks could not be confirmed.' \
           'Run interactively: /opt/homebrew/bin/moshi-hook status' >&2
+      fi
+    '';
+    moshiRuntimeCheck = lib.hm.dag.entryAfter [ "setupLaunchAgents" ] ''
+      moshi_hook_bin="''${MOSHI_HOOK_BIN:-${moshiHookRuntime}}"
+      moshi_sleep_bin="''${MOSHI_SLEEP_BIN:-${pkgs.coreutils}/bin/sleep}"
+      moshi_runtime_ready=false
+
+      if [ -x "$moshi_hook_bin" ]; then
+        for attempt in 1 2 3 4 5; do
+          if moshi_probe="$("$moshi_hook_bin" probe --json 2>/dev/null)" \
+            && printf '%s\n' "$moshi_probe" | ${lib.getExe pkgs.jq} -e '
+              .running == true
+              and .gateway == true
+              and ((.hostId | type) == "string")
+              and ((.hostId | length) > 0)
+            ' >/dev/null 2>&1
+          then
+            moshi_runtime_ready=true
+            break
+          fi
+
+          if [ "$attempt" -lt 5 ]; then
+            "$moshi_sleep_bin" 1
+          fi
+        done
+      fi
+
+      if [ "$moshi_runtime_ready" != true ]; then
+        printf '%s\n' \
+          'Moshi daemon readiness could not be confirmed.' \
+          'Run interactively: /opt/homebrew/bin/moshi-hook probe' >&2
       fi
     '';
   };
