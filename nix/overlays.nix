@@ -1,6 +1,6 @@
 # Custom overlays for packages not yet in nixpkgs.
-# Pin ical, k1LoW/roots, and k1LoW/git-wt to upstream releases and install
-# their shell completions.
+# Pin ical, xurl, k1LoW/roots, and k1LoW/git-wt to upstream releases and
+# install their shell completions.
 [
   (final: _prev: {
     ical = final.buildGoModule rec {
@@ -43,6 +43,43 @@
         license = licenses.mit;
         mainProgram = "ical";
         platforms = platforms.darwin;
+      };
+    };
+
+    xurl = final.stdenvNoCC.mkDerivation rec {
+      pname = "xurl";
+      version = "1.3.1";
+
+      src = final.fetchurl {
+        url = "https://github.com/xdevplatform/xurl/releases/download/v${version}/xurl_Darwin_arm64.tar.gz";
+        hash = "sha256-XhJwfLTsYl/0TPbiJ4Dq455DD6E9tuiQxD20Lb6voAg=";
+      };
+
+      sourceRoot = ".";
+
+      nativeBuildInputs = [ final.installShellFiles ];
+
+      installPhase = ''
+        runHook preInstall
+
+        install -Dm755 xurl "$out/bin/xurl"
+        install -Dm644 LICENSE "$out/share/licenses/xurl/LICENSE"
+        installShellCompletion --cmd xurl \
+          --bash <($out/bin/xurl completion bash) \
+          --fish <($out/bin/xurl completion fish) \
+          --zsh <($out/bin/xurl completion zsh)
+
+        runHook postInstall
+      '';
+
+      dontStrip = true;
+
+      meta = with final.lib; {
+        description = "Auth-enabled curl-like CLI for the X API";
+        homepage = "https://github.com/xdevplatform/xurl";
+        license = licenses.mit;
+        mainProgram = "xurl";
+        platforms = [ "aarch64-darwin" ];
       };
     };
 

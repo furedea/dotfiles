@@ -186,6 +186,7 @@ in
     # Personal secretary integrations
     ical
     unstable.himalaya
+    xurl
 
     # AI coding agents
     llm-agents.packages.${system}.claude-code

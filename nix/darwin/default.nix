@@ -307,13 +307,11 @@
       "tailscale-app"
       "thebrowsercompany-dia"
       "vimr"
-      "xdevplatform/tap/xurl"
     ];
 
     # nix-darwin 25.11 does not expose Homebrew Bundle's item-scoped trust yet.
     extraConfig = ''
       tap "rjyo/moshi", trusted: { formula: "moshi-hook" }
-      tap "xdevplatform/tap", trusted: { cask: "xurl" }
     '';
   };
 }

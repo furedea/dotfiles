@@ -64,11 +64,11 @@ EOF
     --apply \
     'packages:
       builtins.filter
-        (name: builtins.elem name [ "himalaya" "ical" "khal" "vdirsyncer" ])
+        (name: builtins.elem name [ "himalaya" "ical" "khal" "vdirsyncer" "xurl" ])
         (map (package: package.pname or package.name) packages)'
 
   [ "$status" -eq 0 ]
-  run jq -e 'sort == ["himalaya", "ical"]' <<<"$output"
+  run jq -e 'sort == ["himalaya", "ical", "xurl"]' <<<"$output"
   [ "$status" -eq 0 ]
 }
 
@@ -85,6 +85,21 @@ EOF
 
   [ "$status" -eq 0 ]
   [ "$output" = '["2.0.0"]' ]
+}
+
+@test "Home Manager installs xurl 1.3.1" {
+  run --separate-stderr nix eval --no-write-lock-file --json \
+    "$REPO_ROOT#$HOME_CONFIG.home.packages" \
+    --apply \
+    'packages:
+      map
+        (package: package.version)
+        (builtins.filter
+          (package: (package.pname or package.name) == "xurl")
+          packages)'
+
+  [ "$status" -eq 0 ]
+  [ "$output" = '["1.3.1"]' ]
 }
 
 @test "Home Manager installs a dedicated secretary CLI" {
@@ -114,21 +129,13 @@ EOF
   grep -Fq 'exec hermes -p secretary "$@"' "$_secretary_path/bin/secretary"
 }
 
-@test "Homebrew installs the official X API client" {
+@test "Homebrew does not manage the X API client" {
   run --separate-stderr nix eval --no-write-lock-file --raw \
     "$REPO_ROOT#darwinConfigurations.mba.config.homebrew.brewfile"
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *'cask "xdevplatform/tap/xurl"'* ]]
-}
-
-@test "Homebrew trusts only xurl from the X developer platform tap" {
-  run --separate-stderr nix eval --no-write-lock-file --raw \
-    "$REPO_ROOT#darwinConfigurations.mba.config.homebrew.brewfile"
-
-  [ "$status" -eq 0 ]
-  [[ "$output" == *'tap "xdevplatform/tap", trusted: { cask: "xurl" }'* ]]
-  [[ "$output" != *'tap "xdevplatform/tap", trusted: true'* ]]
+  [[ "$output" != *'xdevplatform/tap/xurl'* ]]
+  [[ "$output" != *'tap "xdevplatform/tap"'* ]]
 }
 
 @test "The Hermes secretary exposes five focused skills" {
