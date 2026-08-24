@@ -19,6 +19,10 @@ stdenvNoCC.mkDerivation (finalAttrs: {
 
     mkdir -p "$out"
     cp -R . "$out"
+    substituteInPlace "$out/bin/terminal-browser" \
+      --replace-fail \
+      'ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)"' \
+      "ROOT=\"$out\""
 
     runHook postInstall
   '';
