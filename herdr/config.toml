@@ -38,6 +38,12 @@ width = "85%"
 height = "85%"
 
 [[keys.command]]
+key = "prefix+ctrl+e"
+type = "shell"
+command = "HERDR_PANE_ID=\"$HERDR_ACTIVE_PANE_ID\" HERDR_TAB_ID=\"$HERDR_ACTIVE_TAB_ID\" /etc/profiles/per-user/kaito/bin/terminal-browser --split right"
+description = "open terminal browser"
+
+[[keys.command]]
 key = "prefix+ctrl+r"
 type = "plugin_action"
 command = "persiyanov.reviewr.toggle"
@@ -45,3 +51,6 @@ description = "toggle reviewr"
 
 [ui]
 agent_panel_sort = "spaces"
+
+[experimental]
+kitty_graphics = true
