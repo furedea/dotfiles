@@ -1,6 +1,6 @@
 # ADR-0012: Use structured native secretary clients
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-08-24
 
 In the context of a macOS Hermes secretary that must read the calendar already

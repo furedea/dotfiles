@@ -58,7 +58,7 @@ EOF
   [ ! -e "$_home/.local/bin/secretary" ]
 }
 
-@test "Home Manager installs the Hermes secretary data clients" {
+@test "Home Manager installs only the mail secretary data client" {
   run --separate-stderr nix eval --no-write-lock-file --json \
     "$REPO_ROOT#$HOME_CONFIG.home.packages" \
     --apply \
@@ -68,7 +68,7 @@ EOF
         (map (package: package.pname or package.name) packages)'
 
   [ "$status" -eq 0 ]
-  run jq -e 'sort == ["himalaya", "ical", "xurl"]' <<<"$output"
+  run jq -e 'sort == ["himalaya"]' <<<"$output"
   [ "$status" -eq 0 ]
 }
 
@@ -85,21 +85,6 @@ EOF
 
   [ "$status" -eq 0 ]
   [ "$output" = '["2.0.0"]' ]
-}
-
-@test "Home Manager installs xurl 1.3.1" {
-  run --separate-stderr nix eval --no-write-lock-file --json \
-    "$REPO_ROOT#$HOME_CONFIG.home.packages" \
-    --apply \
-    'packages:
-      map
-        (package: package.version)
-        (builtins.filter
-          (package: (package.pname or package.name) == "xurl")
-          packages)'
-
-  [ "$status" -eq 0 ]
-  [ "$output" = '["1.3.1"]' ]
 }
 
 @test "Home Manager installs a dedicated secretary CLI" {
@@ -129,30 +114,32 @@ EOF
   grep -Fq 'exec hermes -p secretary "$@"' "$_secretary_path/bin/secretary"
 }
 
-@test "Homebrew does not manage the X API client" {
-  run --separate-stderr nix eval --no-write-lock-file --raw \
-    "$REPO_ROOT#darwinConfigurations.mba.config.homebrew.brewfile"
-
-  [ "$status" -eq 0 ]
-  [[ "$output" != *'xdevplatform/tap/xurl'* ]]
-  [[ "$output" != *'tap "xdevplatform/tap"'* ]]
-}
-
-@test "The Hermes secretary exposes five focused skills" {
+@test "The Hermes secretary exposes four focused skills" {
   local _skill
 
   for _skill in \
     calendar-briefing \
     himalaya-mail \
     mail-triage \
-    morning-briefing \
-    x-morning-digest; do
+    morning-briefing; do
     [ -f "$REPO_ROOT/hermes/secretary/skills/secretary/$_skill/SKILL.md" ]
     grep -Fq "name: $_skill" \
       "$REPO_ROOT/hermes/secretary/skills/secretary/$_skill/SKILL.md"
     grep -Fq '## When to Use' \
       "$REPO_ROOT/hermes/secretary/skills/secretary/$_skill/SKILL.md"
   done
+
+  run find "$REPO_ROOT/hermes/secretary/skills/secretary" -name SKILL.md -type f
+  [ "$status" -eq 0 ]
+  [ "${#lines[@]}" -eq 4 ]
+}
+
+@test "The calendar connector delegates to Google Workspace" {
+  local _skill="$REPO_ROOT/hermes/secretary/skills/secretary/calendar-briefing/SKILL.md"
+
+  grep -Fq '`google-workspace`' "$_skill"
+  grep -Fq '$GAPI calendar list' "$_skill"
+  ! grep -Fq '`ical`' "$_skill"
 }
 
 @test "The mail connector uses account-scoped Himalaya 2 commands" {
