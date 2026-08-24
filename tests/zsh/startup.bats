@@ -63,7 +63,9 @@ EOF
     zsh -dfi -c "source '$REPO_ROOT/zsh/.zshrc'"
 
   [ "$status" -eq 0 ]
-  grep -Fx -- "--quiet -S hr=herdr --remote mbp --session main" "$ABBR_LOG"
+  grep -Fx -- \
+    "--quiet -S hr=herdr --remote mbp --session main --remote-keybindings server" \
+    "$ABBR_LOG"
 }
 
 @test "interactive startup loads only the prebuilt completion dump" {
