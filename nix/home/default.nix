@@ -16,6 +16,7 @@
 let
   link = path: config.lib.file.mkOutOfStoreSymlink "${dotfilesDir}/${path}";
   esaCliPackage = unstable.callPackage ../packages/esa_cli.nix { };
+  terminalBrowserPackage = pkgs.callPackage ../packages/terminal_browser.nix { };
   codexPackage = llm-agents.packages.${system}.codex;
   agentHarnessPackage = agent-harness.packages.${system}.default;
   moshiHookGenerator = pkgs.callPackage ../packages/moshi_hook.nix { };
@@ -165,6 +166,7 @@ in
     repoCommand
     roots
     secretaryCli
+    terminalBrowserPackage
 
     # Code quality
     actionlint
