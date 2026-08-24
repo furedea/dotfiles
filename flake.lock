@@ -8,11 +8,11 @@
         "nixpkgs-unstable": "nixpkgs-unstable"
       },
       "locked": {
-        "lastModified": 1787565496,
-        "narHash": "sha256-6a2cFF+V4uZkg6w/jzq4zqnnQv8cIRFvKrs4AbGfGo8=",
+        "lastModified": 1787570398,
+        "narHash": "sha256-DywCPaUNB4t4KNZD6vlI4d9pkv4WbJaD7Te8z1fm7PE=",
         "owner": "furedea",
         "repo": "agent-harness",
-        "rev": "d4f6e83f2d710c05a0494b4a34c57e1272ac477e",
+        "rev": "56f0f54ff935fdd8986553381878c3a45d2d0692",
         "type": "github"
       },
       "original": {
