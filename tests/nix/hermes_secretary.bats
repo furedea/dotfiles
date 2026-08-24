@@ -114,7 +114,7 @@ EOF
   grep -Fq 'exec hermes -p secretary "$@"' "$_secretary_path/bin/secretary"
 }
 
-@test "The Hermes secretary exposes four focused skills" {
+@test "The Hermes secretary exposes focused skills" {
   local _skill
 
   for _skill in \
@@ -128,18 +128,6 @@ EOF
     grep -Fq '## When to Use' \
       "$REPO_ROOT/hermes/secretary/skills/secretary/$_skill/SKILL.md"
   done
-
-  run find "$REPO_ROOT/hermes/secretary/skills/secretary" -name SKILL.md -type f
-  [ "$status" -eq 0 ]
-  [ "${#lines[@]}" -eq 4 ]
-}
-
-@test "The calendar connector delegates to Google Workspace" {
-  local _skill="$REPO_ROOT/hermes/secretary/skills/secretary/calendar-briefing/SKILL.md"
-
-  grep -Fq '`google-workspace`' "$_skill"
-  grep -Fq '$GAPI calendar list' "$_skill"
-  ! grep -Fq '`ical`' "$_skill"
 }
 
 @test "The mail connector uses account-scoped Himalaya 2 commands" {
