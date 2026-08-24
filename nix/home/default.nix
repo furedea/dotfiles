@@ -37,6 +37,13 @@ let
   repoCommand = pkgs.writeShellScriptBin "repo" ''
     exec "${dotfilesDir}/github/repo.sh" "$@"
   '';
+  secretaryCli = pkgs.writeShellApplication {
+    name = "secretary";
+    runtimeInputs = [ hermesAgentPackage ];
+    text = ''
+      exec hermes -p secretary "$@"
+    '';
+  };
   zshCacheBuilder = pkgs.writeText "build_cache.sh" (builtins.readFile ../../zsh/build_cache.sh);
   herdrSkill = pkgs.runCommand "herdr-skill" { } ''
     set -euxCo pipefail
@@ -157,6 +164,7 @@ in
     mosh
     repoCommand
     roots
+    secretaryCli
 
     # Code quality
     actionlint
@@ -174,6 +182,11 @@ in
     esaCliPackage
     ffmpeg
     marp-cli
+
+    # Personal secretary integrations
+    ical
+    unstable.himalaya
+    xurl
 
     # AI coding agents
     llm-agents.packages.${system}.claude-code
@@ -530,6 +543,12 @@ in
   };
 
   home.activation = {
+    initializeHermesSecretary = lib.hm.dag.entryBetween [ "linkGeneration" ] [ "writeBoundary" ] ''
+      if [ ! -d "$HOME/.hermes/profiles/secretary" ]; then
+        ${lib.getExe hermesAgentPackage} profile create secretary --no-skills --no-alias
+        /bin/rm -f "$HOME/.hermes/profiles/secretary/SOUL.md"
+      fi
+    '';
     zshCache = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
       BASH_XTRACEFD=9 \
         "${pkgs.bash}/bin/bash" \
@@ -624,5 +643,9 @@ in
     ".config/herdr/config.toml".source = link "herdr/config.toml";
     ".config/herdr/plugins/config/persiyanov.reviewr/config.toml".source = link "herdr/reviewr.toml";
     ".local/libexec/sync_herdr_plugins.sh".source = link "herdr/sync_plugins.sh";
+
+    # Hermes secretary files remain editable by Hermes and visible to Git.
+    ".hermes/profiles/secretary/SOUL.md".source = link "hermes/secretary/SOUL.md";
+    ".hermes/profiles/secretary/skills/secretary".source = link "hermes/secretary/skills/secretary";
   };
 }

@@ -10,5 +10,8 @@ ignore:
   - docs/logs
 
   - README.md
+  # Hermes requires these canonical uppercase filenames.
+  - hermes/secretary/SOUL.md
+  - hermes/secretary/skills/**/SKILL.md
   - nvim/lazy-lock.json
   - "raycast/Raycast 2026-04-15 14.52.13.rayconfig"
