@@ -7,6 +7,18 @@ setup() {
   REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
 }
 
+@test "Herdr uses a fixed dark Catppuccin theme" {
+  run --separate-stderr nix eval --impure --json --expr "
+    let
+      config = builtins.fromTOML (builtins.readFile \"$REPO_ROOT/herdr/config.toml\");
+    in
+    config.theme.name == \"catppuccin\" && !config.theme.auto_switch
+  "
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "true" ]
+}
+
 @test "Nix popup tools resolve without the Herdr server PATH" {
   run --separate-stderr nix eval --impure --json --expr "
     let
