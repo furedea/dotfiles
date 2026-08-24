@@ -37,3 +37,24 @@ setup() {
   [ "$status" -eq 0 ]
   [ "$output" = "true" ]
 }
+
+@test "Herdr opens the terminal browser in a right split with prefix+ctrl+e" {
+  run --separate-stderr nix eval --impure --json --expr "
+    let
+      config = builtins.fromTOML (builtins.readFile \"$REPO_ROOT/herdr/config.toml\");
+      browser = builtins.head (builtins.filter
+        (item: item.description == \"open terminal browser\")
+        config.keys.command);
+      expectedCommand =
+        \"HERDR_PANE_ID=\\\"\$HERDR_ACTIVE_PANE_ID\\\" \"
+        + \"HERDR_TAB_ID=\\\"\$HERDR_ACTIVE_TAB_ID\\\" \"
+        + \"/etc/profiles/per-user/kaito/bin/terminal-browser --split right\";
+    in
+    browser.key == \"prefix+ctrl+e\"
+      && browser.type == \"shell\"
+      && browser.command == expectedCommand
+  "
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "true" ]
+}

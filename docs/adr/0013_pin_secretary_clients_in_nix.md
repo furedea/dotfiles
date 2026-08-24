@@ -1,6 +1,6 @@
 # ADR-0013: Pin secretary clients in Nix
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-08-24
 
 In the context of unattended Hermes routines that depend on `ical` and `xurl`,

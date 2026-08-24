@@ -15,7 +15,10 @@
 }:
 let
   link = path: config.lib.file.mkOutOfStoreSymlink "${dotfilesDir}/${path}";
-  esaCliPackage = unstable.callPackage ../packages/esa_cli.nix { };
+  esaCliPackage = pkgs.callPackage ../packages/esa_cli.nix { };
+  gitWtPackage = unstable.callPackage ../packages/git_wt.nix { gitWt = unstable.git-wt; };
+  rootsPackage = pkgs.callPackage ../packages/roots.nix { };
+  terminalBrowserPackage = pkgs.callPackage ../packages/terminal_browser.nix { };
   codexPackage = llm-agents.packages.${system}.codex;
   agentHarnessPackage = agent-harness.packages.${system}.default;
   moshiHookGenerator = pkgs.callPackage ../packages/moshi_hook.nix { };
@@ -157,14 +160,15 @@ in
 
     # Developer workflow
     ghq
-    git-wt
+    gitWtPackage
     herdrPackage
     herdrZshCompletion
     just
     mosh
     repoCommand
-    roots
+    rootsPackage
     secretaryCli
+    terminalBrowserPackage
 
     # Code quality
     actionlint
@@ -184,9 +188,7 @@ in
     marp-cli
 
     # Personal secretary integrations
-    ical
     unstable.himalaya
-    xurl
 
     # AI coding agents
     llm-agents.packages.${system}.claude-code

@@ -11,7 +11,7 @@ agent environment.
 | Flake composition      | [`flake.nix`](flake.nix)                           | Inputs, supported outputs, username, platform, and shared packages |
 | macOS system           | [`nix/darwin/default.nix`](nix/darwin/default.nix) | System defaults, Homebrew, Nix settings, and privileged activation |
 | User environment       | [`nix/home/default.nix`](nix/home/default.nix)     | CLI packages, Home Manager programs, symlinks, and user activation |
-| Package overlays       | [`nix/overlays.nix`](nix/overlays.nix)             | Pinned packages not yet available from nixpkgs                     |
+| Local Nix packages     | [`nix/packages/`](nix/packages/)                   | Local derivations and narrowly scoped package overrides            |
 | Editable configuration | Top-level application directories                  | Files linked from this checkout into `$HOME`                       |
 
 The primary outputs are:
@@ -199,7 +199,7 @@ These tracked files are not applied by Home Manager or nix-darwin:
 ```text
 .
 ├── flake.nix                  # Flake inputs and outputs
-├── nix/                       # nix-darwin, Home Manager, and overlays
+├── nix/                       # nix-darwin, Home Manager, and local packages
 ├── docs/adr/                  # Durable architecture decisions
 ├── zsh/ and bash/             # Interactive shell configuration
 ├── nvim/ and vim/             # Editor configuration
