@@ -184,9 +184,8 @@ in
     marp-cli
 
     # Personal secretary integrations
-    himalaya
-    khal
-    vdirsyncer
+    ical
+    unstable.himalaya
 
     # AI coding agents
     llm-agents.packages.${system}.claude-code
@@ -543,6 +542,12 @@ in
   };
 
   home.activation = {
+    initializeHermesSecretary = lib.hm.dag.entryBetween [ "linkGeneration" ] [ "writeBoundary" ] ''
+      if [ ! -d "$HOME/.hermes/profiles/secretary" ]; then
+        ${lib.getExe hermesAgentPackage} profile create secretary --no-skills --no-alias
+        /bin/rm -f "$HOME/.hermes/profiles/secretary/SOUL.md"
+      fi
+    '';
     zshCache = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
       BASH_XTRACEFD=9 \
         "${pkgs.bash}/bin/bash" \
@@ -641,6 +646,5 @@ in
     # Hermes secretary files remain editable by Hermes and visible to Git.
     ".hermes/profiles/secretary/SOUL.md".source = link "hermes/secretary/SOUL.md";
     ".hermes/profiles/secretary/skills/secretary".source = link "hermes/secretary/skills/secretary";
-    ".hermes/profiles/secretary/cron".source = link "hermes/secretary/cron";
   };
 }

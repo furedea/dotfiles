@@ -1,8 +1,51 @@
 # Custom overlays for packages not yet in nixpkgs.
-# k1LoW/roots and k1LoW/git-wt are not packaged in nixpkgs (their PRs are
-# pending upstream); pin to upstream releases and install shell completions.
+# Pin ical, k1LoW/roots, and k1LoW/git-wt to upstream releases and install
+# their shell completions.
 [
   (final: _prev: {
+    ical = final.buildGoModule rec {
+      pname = "ical";
+      version = "0.12.2";
+
+      src = final.fetchFromGitHub {
+        owner = "BRO3886";
+        repo = "ical";
+        rev = "v${version}";
+        hash = "sha256-APmqU3yqiA08RH/5ED220Q3yZIQ2zFURbDEsf0xpt38=";
+      };
+
+      vendorHash = "sha256-an2RZmzdfL2wz3tE/4w1hGTmihaai0C33E9R/tMAa5c=";
+
+      subPackages = [ "cmd/ical" ];
+
+      env.CGO_ENABLED = 1;
+
+      ldflags = [
+        "-s"
+        "-w"
+        "-X main.version=v${version}"
+        "-X main.commit=${src.rev}"
+        "-X main.date=1970-01-01T00:00:00Z"
+      ];
+
+      nativeBuildInputs = [ final.installShellFiles ];
+
+      postInstall = ''
+        installShellCompletion --cmd ical \
+          --bash <($out/bin/ical completion bash) \
+          --fish <($out/bin/ical completion fish) \
+          --zsh <($out/bin/ical completion zsh)
+      '';
+
+      meta = with final.lib; {
+        description = "Native CLI for Apple Calendar using EventKit";
+        homepage = "https://ical.sidv.dev";
+        license = licenses.mit;
+        mainProgram = "ical";
+        platforms = platforms.darwin;
+      };
+    };
+
     roots = final.buildGoModule rec {
       pname = "roots";
       version = "0.4.1";

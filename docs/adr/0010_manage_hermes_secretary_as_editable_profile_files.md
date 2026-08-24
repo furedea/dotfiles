@@ -1,6 +1,6 @@
 # ADR-0010: Manage Hermes secretary as editable profile files
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-08-24
 
 In the context of a Hermes secretary that learns and maintains its own identity,

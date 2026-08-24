@@ -24,8 +24,38 @@ setup() {
   done <<'EOF'
 .hermes/profiles/secretary/SOUL.md|hermes/secretary/SOUL.md
 .hermes/profiles/secretary/skills/secretary|hermes/secretary/skills/secretary
-.hermes/profiles/secretary/cron|hermes/secretary/cron
 EOF
+}
+
+@test "Home Manager keeps Hermes cron state local" {
+  run --separate-stderr nix eval --no-write-lock-file --json \
+    "$REPO_ROOT#$HOME_CONFIG.home.file" \
+    --apply \
+    'files: builtins.hasAttr ".hermes/profiles/secretary/cron" files'
+
+  [ "$status" -eq 0 ]
+  [ "$output" = 'false' ]
+}
+
+@test "Home Manager initializes the secretary with the Hermes profile CLI" {
+  local _activation
+  local _home="$BATS_TEST_TMPDIR/home"
+
+  run --separate-stderr nix eval --no-write-lock-file --raw \
+    "$REPO_ROOT#$HOME_CONFIG.home.activation.initializeHermesSecretary.data"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'profile create secretary --no-skills --no-alias'* ]]
+  _activation="$output"
+
+  mkdir -p "$_home"
+  run env HOME="$_home" bash -c "$_activation"
+
+  [ "$status" -eq 0 ]
+  [ -f "$_home/.hermes/profiles/secretary/.env" ]
+  [ -f "$_home/.hermes/profiles/secretary/.no-bundled-skills" ]
+  [ ! -e "$_home/.hermes/profiles/secretary/SOUL.md" ]
+  [ ! -e "$_home/.local/bin/secretary" ]
 }
 
 @test "Home Manager installs the Hermes secretary data clients" {
@@ -34,11 +64,27 @@ EOF
     --apply \
     'packages:
       builtins.filter
-        (name: builtins.elem name [ "himalaya" "khal" "vdirsyncer" ])
+        (name: builtins.elem name [ "himalaya" "ical" "khal" "vdirsyncer" ])
         (map (package: package.pname or package.name) packages)'
 
   [ "$status" -eq 0 ]
-  [ "$output" = '["himalaya","khal","vdirsyncer"]' ]
+  run jq -e 'sort == ["himalaya", "ical"]' <<<"$output"
+  [ "$status" -eq 0 ]
+}
+
+@test "Home Manager installs Himalaya 2" {
+  run --separate-stderr nix eval --no-write-lock-file --json \
+    "$REPO_ROOT#$HOME_CONFIG.home.packages" \
+    --apply \
+    'packages:
+      map
+        (package: package.version)
+        (builtins.filter
+          (package: (package.pname or package.name) == "himalaya")
+          packages)'
+
+  [ "$status" -eq 0 ]
+  [ "$output" = '["2.0.0"]' ]
 }
 
 @test "Home Manager installs a dedicated secretary CLI" {
@@ -85,34 +131,38 @@ EOF
   [[ "$output" != *'tap "xdevplatform/tap", trusted: true'* ]]
 }
 
-@test "The Hermes secretary exposes four focused skills" {
+@test "The Hermes secretary exposes five focused skills" {
   local _skill
 
-  for _skill in calendar-briefing mail-triage morning-briefing x-morning-digest; do
+  for _skill in \
+    calendar-briefing \
+    himalaya-mail \
+    mail-triage \
+    morning-briefing \
+    x-morning-digest; do
     [ -f "$REPO_ROOT/hermes/secretary/skills/secretary/$_skill/SKILL.md" ]
     grep -Fq "name: $_skill" \
+      "$REPO_ROOT/hermes/secretary/skills/secretary/$_skill/SKILL.md"
+    grep -Fq '## When to Use' \
       "$REPO_ROOT/hermes/secretary/skills/secretary/$_skill/SKILL.md"
   done
 }
 
-@test "Mail triage uses account-scoped Himalaya 1.x commands" {
-  local _skill="$REPO_ROOT/hermes/secretary/skills/secretary/mail-triage/SKILL.md"
+@test "The mail connector uses account-scoped Himalaya 2 commands" {
+  local _skill="$REPO_ROOT/hermes/secretary/skills/secretary/himalaya-mail/SKILL.md"
 
   grep -Fq \
-    'himalaya envelope list --account ACCOUNT --output json --page-size LIMIT' \
+    'himalaya --account ACCOUNT --json envelope list --page-size LIMIT' \
     "$_skill"
-  ! grep -Fq 'himalaya --account' "$_skill"
+  ! grep -Fq -- '--output json' "$_skill"
 }
 
-@test "Cron tracks only the routine definition" {
-  run jq -e '.jobs == []' "$REPO_ROOT/hermes/secretary/cron/jobs.json"
-  [ "$status" -eq 0 ]
+@test "The morning routine is a read-only Hermes blueprint" {
+  local _skill="$REPO_ROOT/hermes/secretary/skills/secretary/morning-briefing/SKILL.md"
 
-  run git -C "$REPO_ROOT" check-ignore --no-index \
-    hermes/secretary/cron/output/example/run.json
-  [ "$status" -eq 0 ]
-
-  run git -C "$REPO_ROOT" check-ignore --no-index \
-    hermes/secretary/cron/jobs.json
-  [ "$status" -eq 1 ]
+  grep -Fq 'blueprint:' "$_skill"
+  grep -Fq 'schedule: "0 8 * * *"' "$_skill"
+  grep -Fq 'prompt: Prepare today' "$_skill"
+  grep -Fq 'Keep the run read-only.' "$_skill"
+  grep -Fq 'enabled_toolsets: [terminal, skills]' "$_skill"
 }
