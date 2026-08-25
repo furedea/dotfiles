@@ -33,22 +33,13 @@ evaluate_ssh_directory_permissions() {
   [ "$output" = "true" ]
 }
 
-@test "SSH connections retain newly used identities in the agent" {
+@test "home manager leaves the SSH client config unmanaged" {
   run --separate-stderr nix eval --no-write-lock-file --json \
-    --apply 'home: home.config.programs.ssh.matchBlocks."*".data.addKeysToAgent' \
+    --apply 'home: builtins.hasAttr ".ssh/config" home.config.home.file' \
     "$REPO_ROOT#homeConfigurations.kaito"
 
   [ "$status" -eq 0 ]
-  [ "$output" = '"yes"' ]
-}
-
-@test "SSH connections retrieve passphrases from the macOS Keychain" {
-  run --separate-stderr nix eval --no-write-lock-file --json \
-    --apply 'home: home.config.programs.ssh.matchBlocks."*".data.extraOptions.UseKeychain' \
-    "$REPO_ROOT#homeConfigurations.kaito"
-
-  [ "$status" -eq 0 ]
-  [ "$output" = '"yes"' ]
+  [ "$output" = "false" ]
 }
 
 @test "home activation leaves SSH identity creation to the user" {
