@@ -52,5 +52,11 @@ description = "toggle reviewr"
 [ui]
 agent_panel_sort = "spaces"
 
+[ui.sidebar.agents]
+rows = [
+  ["state_icon", "workspace", "tab"],
+  ["agent", "state_text"],
+]
+
 [experimental]
 kitty_graphics = true

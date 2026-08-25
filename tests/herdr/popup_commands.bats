@@ -19,6 +19,21 @@ setup() {
   [ "$output" = "true" ]
 }
 
+@test "Herdr shows semantic state text in Agent rows" {
+  run --separate-stderr nix eval --impure --json --expr "
+    let
+      config = builtins.fromTOML (builtins.readFile \"$REPO_ROOT/herdr/config.toml\");
+      rows = config.ui.sidebar.agents.rows or [];
+    in
+    builtins.any
+      (row: builtins.elem \"state_text\" row)
+      rows
+  "
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "true" ]
+}
+
 @test "Nix popup tools resolve without the Herdr server PATH" {
   run --separate-stderr nix eval --impure --json --expr "
     let
