@@ -101,11 +101,11 @@ eval "$(direnv hook zsh)"
 eval "$(atuin init zsh --disable-up-arrow)"
 
 # ghq + roots + fzf: Ctrl-G to fuzzy-cd into a managed repository, monorepo
-# subproject, or worktree. `roots` expands each ghq path to all detected
-# project markers (.git/config, go.mod, package.json, Cargo.toml).
+# subproject, or worktree. `roots` expands primary checkouts while Git supplies
+# registered linked worktrees.
 function ghq-fzf() {
   local selected
-  selected=$(ghq list -p | roots | fzf \
+  selected=$(_repository_search_candidates | fzf \
     --height=80% \
     --reverse \
     --preview "
@@ -126,5 +126,52 @@ function ghq-fzf() {
   zle accept-line
   zle reset-prompt
 }
+
+function _repository_search_candidates() {
+  local -A _seen_git_directories
+  local -a _git_paths _repository_roots _worktree_roots
+  local _git_details _git_common_dir _ghq_path _is_main_worktree _record
+  local _top_level _worktree_path
+
+  for _ghq_path in "${(@f)$(ghq list -p)}"; do
+    if ! _git_details=$(command git -C "$_ghq_path" rev-parse \
+      --path-format=absolute --show-toplevel --git-common-dir 2>/dev/null); then
+      _repository_roots+=("$_ghq_path")
+      continue
+    fi
+    _git_paths=("${(@f)_git_details}")
+    _top_level="${_git_paths[1]}"
+    _git_common_dir="${_git_paths[2]}"
+
+    [[ -z "${_seen_git_directories[$_git_common_dir]-}" ]] || continue
+    _seen_git_directories[$_git_common_dir]=1
+
+    if [[ ! -d "$_git_common_dir/worktrees" ]]; then
+      _repository_roots+=("$_top_level")
+      continue
+    fi
+
+    _is_main_worktree=true
+    while IFS= read -r -d $'\0' _record; do
+      [[ "$_record" == worktree\ * ]] || continue
+      _worktree_path="${_record#worktree }"
+
+      if [[ "$_is_main_worktree" == true ]]; then
+        _is_main_worktree=false
+        [[ -d "$_worktree_path" ]] && _repository_roots+=("$_worktree_path")
+      elif [[ -d "$_worktree_path" ]]; then
+        _worktree_roots+=("$_worktree_path")
+      fi
+    done < <(command git -C "$_ghq_path" worktree list --porcelain -z)
+  done
+
+  if (( ${#_repository_roots[@]} > 0 )); then
+    print -rl -- "${_repository_roots[@]}" | roots
+  fi
+  if (( ${#_worktree_roots[@]} > 0 )); then
+    print -rl -- "${_worktree_roots[@]}"
+  fi
+}
+
 zle -N ghq-fzf
 bindkey '^G' ghq-fzf
