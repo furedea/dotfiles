@@ -27,14 +27,22 @@ setup() {
 EOF
 }
 
-@test "Home Manager keeps Hermes cron state local" {
+@test "Home Manager keeps mutable Hermes profile state local" {
   run --separate-stderr nix eval --no-write-lock-file --json \
     "$REPO_ROOT#$HOME_CONFIG.home.file" \
     --apply \
-    'files: builtins.hasAttr ".hermes/profiles/secretary/cron" files'
+    'files:
+      builtins.all
+        (path: !(builtins.hasAttr path files))
+        [
+          ".hermes/profiles/secretary/cron"
+          ".hermes/profiles/secretary/state"
+          ".hermes/profiles/secretary/.env"
+          ".hermes/profiles/secretary/config.yaml"
+        ]'
 
   [ "$status" -eq 0 ]
-  [ "$output" = 'false' ]
+  [ "$output" = 'true' ]
 }
 
 @test "Home Manager initializes the secretary with the Hermes profile CLI" {
@@ -130,6 +138,52 @@ EOF
   done
 }
 
+@test "The Hermes secretary separates paper and technology digests" {
+  local _skill
+
+  for _skill in research-digest tech-digest; do
+    [ -f "$REPO_ROOT/hermes/secretary/skills/secretary/$_skill/SKILL.md" ]
+    grep -Fq "name: $_skill" \
+      "$REPO_ROOT/hermes/secretary/skills/secretary/$_skill/SKILL.md"
+  done
+}
+
+@test "The research digest keeps AI4SE and benchmark tracks distinct" {
+  local _skill="$REPO_ROOT/hermes/secretary/skills/secretary/research-digest/SKILL.md"
+
+  grep -Fq '## AI4SE Track' "$_skill"
+  grep -Fq '## LLM and Agent Benchmark Track' "$_skill"
+}
+
+@test "The technology digest covers the declared engineering toolchain" {
+  local _topic
+  local _skill="$REPO_ROOT/hermes/secretary/skills/secretary/tech-digest/SKILL.md"
+
+  for _topic in Python Rust 'TypeScript and JavaScript' Nix \
+    'LLM and Agent Tooling' Neovim; do
+    grep -Fq "### $_topic" "$_skill" || {
+      echo "Missing technology topic: $_topic"
+      return 1
+    }
+  done
+}
+
+@test "The research integrations declare API keys as local secrets" {
+  local _research_skill="$REPO_ROOT/hermes/secretary/skills/secretary/research-digest/SKILL.md"
+  local _zotero_skill="$REPO_ROOT/hermes/secretary/skills/secretary/zotero-library/SKILL.md"
+
+  grep -Fq 'required_environment_variables:' "$_research_skill"
+  grep -Fq 'name: OPENALEX_API_KEY' "$_research_skill"
+  grep -Fq 'name: zotero-library' "$_zotero_skill"
+  grep -Fq 'required_environment_variables:' "$_zotero_skill"
+  grep -Fq 'name: ZOTERO_API_KEY' "$_zotero_skill"
+}
+
+@test "The secretary excludes X from research and briefing sources" {
+  grep -Fq 'Never use X as a research or briefing source.' \
+    "$REPO_ROOT/hermes/secretary/SOUL.md"
+}
+
 @test "The mail connector uses account-scoped Himalaya 2 commands" {
   local _skill="$REPO_ROOT/hermes/secretary/skills/secretary/himalaya-mail/SKILL.md"
 
@@ -139,12 +193,14 @@ EOF
   ! grep -Fq -- '--output json' "$_skill"
 }
 
-@test "The morning routine is a read-only Hermes blueprint" {
+@test "The morning routine combines both digests without provider mutations" {
   local _skill="$REPO_ROOT/hermes/secretary/skills/secretary/morning-briefing/SKILL.md"
 
   grep -Fq 'blueprint:' "$_skill"
   grep -Fq 'schedule: "0 8 * * *"' "$_skill"
   grep -Fq 'prompt: Prepare today' "$_skill"
-  grep -Fq 'Keep the run read-only.' "$_skill"
-  grep -Fq 'enabled_toolsets: [terminal, skills]' "$_skill"
+  grep -Fq 'Keep provider access read-only.' "$_skill"
+  grep -Fq 'enabled_toolsets: [web, terminal, skills]' "$_skill"
+  grep -Fq 'research-digest' "$_skill"
+  grep -Fq 'tech-digest' "$_skill"
 }
