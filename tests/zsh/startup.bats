@@ -4,49 +4,15 @@
 bats_require_minimum_version 1.5.0
 
 setup() {
-  REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
-  TEST_HOME="$BATS_TEST_TMPDIR/home"
-  TEST_BIN="$BATS_TEST_TMPDIR/bin"
-  COMPINIT_LOG="$BATS_TEST_TMPDIR/compinit.log"
-  ABBR_LOG="$BATS_TEST_TMPDIR/abbr.log"
-
-  mkdir -p \
-    "$TEST_HOME/.config/zsh" \
-    "$TEST_HOME/ghq/github.com/furedea/dotfiles/zsh" \
-    "$TEST_BIN" \
-    "$BATS_TEST_TMPDIR/functions"
-
-  cat >"$BATS_TEST_TMPDIR/functions/compinit" <<'EOF'
-print -r -- "$*" >>"$COMPINIT_LOG"
-EOF
-  cat >"$TEST_HOME/.config/zsh/nix-plugins.zsh" <<'EOF'
-function abbr() { print -r -- "$*" >>"$ABBR_LOG"; }
-EOF
-  : >"$TEST_HOME/ghq/github.com/furedea/dotfiles/zsh/esa.zsh"
-
-  local _command
-  for _command in atuin carapace direnv starship zoxide; do
-    cat >"$TEST_BIN/$_command" <<'EOF'
-#!/bin/bash
-set -euxCo pipefail
-cd "$(dirname "$0")"
-set +x
-EOF
-    chmod +x "$TEST_BIN/$_command"
-  done
-
-  export COMPINIT_LOG
-  export ABBR_LOG
-  export REPO_ROOT
-  export TEST_BIN
-  export TEST_HOME
+  load test-helper/setup
+  setup_zsh_test_environment
 }
 
 @test "hl expands to the local main Herdr session" {
   run env \
     HOME="$TEST_HOME" \
     XDG_CACHE_HOME="$TEST_HOME/.cache" \
-    FPATH="$BATS_TEST_TMPDIR/functions" \
+    FPATH="$TEST_FUNCTIONS" \
     PATH="$TEST_BIN:$PATH" \
     zsh -dfi -c "source '$REPO_ROOT/zsh/.zshrc'"
 
@@ -58,7 +24,7 @@ EOF
   run env \
     HOME="$TEST_HOME" \
     XDG_CACHE_HOME="$TEST_HOME/.cache" \
-    FPATH="$BATS_TEST_TMPDIR/functions" \
+    FPATH="$TEST_FUNCTIONS" \
     PATH="$TEST_BIN:$PATH" \
     zsh -dfi -c "source '$REPO_ROOT/zsh/.zshrc'"
 
@@ -72,7 +38,7 @@ EOF
   run env \
     HOME="$TEST_HOME" \
     XDG_CACHE_HOME="$TEST_HOME/.cache" \
-    FPATH="$BATS_TEST_TMPDIR/functions" \
+    FPATH="$TEST_FUNCTIONS" \
     PATH="$TEST_BIN:$PATH" \
     zsh -dfi -c "source '$REPO_ROOT/zsh/.zshrc'"
 
@@ -87,7 +53,7 @@ EOF
     zsh -dfxc "source '$REPO_ROOT/zsh/.zprofile'"
 
   [ "$status" -eq 0 ]
-  ! [[ "$stderr" == *"brew shellenv"* ]]
+  [[ "$stderr" != *"brew shellenv"* ]]
 }
 
 @test "system Zsh leaves completion initialization to the user configuration" {
