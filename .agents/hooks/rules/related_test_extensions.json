@@ -1,0 +1,94 @@
+{
+  "agents/hooks/lib/audit_log.sh": [
+    "tests/agents/hooks/claude/guard_allowed_commands.bats",
+    "tests/agents/hooks/claude/guard_forbidden_commands.bats",
+    "tests/agents/hooks/claude/guard_dangerous_git.bats"
+  ],
+  "agents/hooks/lib/shell_parse.sh": [
+    "tests/agents/hooks/claude/guard_dangerous_git.bats",
+    "tests/agents/hooks/claude/guard_allowed_commands.bats",
+    "tests/agents/hooks/claude/guard_forbidden_commands.bats",
+    "tests/agents/hooks/codex/adapt_shell_command.bats"
+  ],
+  "agents/hooks/lib/command_rules.sh": [
+    "tests/agents/hooks/claude/command_permissions_sync.bats",
+    "tests/agents/hooks/claude/guard_allowed_commands.bats",
+    "tests/agents/hooks/claude/guard_forbidden_commands.bats"
+  ],
+  "agents/hooks/lib/lint_format.sh": [
+    "tests/agents/hooks/claude/lint_format_hooks.bats",
+    "tests/agents/hooks/claude/lint_format_js.bats",
+    "tests/agents/hooks/claude/lint_format_py.bats",
+    "tests/agents/hooks/claude/lint_format_rs.bats",
+    "tests/agents/hooks/claude/lint_format_sh.bats",
+    "tests/agents/hooks/codex/adapt_lint_format.bats"
+  ],
+  "agents/hooks/notify_macos_done.sh": [
+    "tests/agents/hooks/claude/notify_macos.bats"
+  ],
+  "agents/hooks/notify_macos_await.sh": [
+    "tests/agents/hooks/claude/notify_macos.bats"
+  ],
+  "agents/hooks/guard_secret_content.sh": [
+    "tests/agents/hooks/codex/adapt_guard_secret_content.bats"
+  ],
+  "agents/hooks/guard_secret_commit.sh": [
+    "tests/agents/hooks/claude/guard_secret_commit.bats"
+  ],
+  "agents/hooks/guard_harness_files.sh": [
+    "tests/agents/hooks/claude/guard_harness_files.bats",
+    "tests/agents/hooks/codex/adapt_harness_files.bats"
+  ],
+  "agents/hooks/rules/secret_path_policy.json": [
+    "tests/agents/hooks/codex/adapt_guard_secret_paths.bats",
+    "tests/agents/hooks/claude/related_test_rules.bats"
+  ],
+  "agents/hooks/rules/allowed_commands.json": [
+    "tests/agents/hooks/claude/command_permissions_sync.bats",
+    "tests/agents/hooks/claude/guard_allowed_commands.bats"
+  ],
+  "agents/hooks/rules/forbidden_commands.json": [
+    "tests/agents/hooks/claude/guard_forbidden_commands.bats"
+  ],
+  "agents/hooks/lint_format_*.sh": [
+    "tests/agents/hooks/claude/lint_format_hooks.bats"
+  ],
+  "agents/hooks/rules/secret_content_patterns.json": [
+    "tests/agents/hooks/rules/secret_patterns.bats",
+    "tests/agents/hooks/claude/related_test_rules.bats"
+  ],
+  "agents/hooks/rules/secret_commit_policy.json": [
+    "tests/agents/hooks/rules/secret_commit_policy.bats",
+    "tests/agents/hooks/claude/guard_secret_commit.bats",
+    "tests/agents/hooks/claude/related_test_rules.bats"
+  ],
+  "agents/hooks/rules/related_test_*.json": [
+    "tests/agents/hooks/claude/related_test_rules.bats"
+  ],
+  "agents/claude/settings.base.json": [
+    "tests/agents/hooks/claude/guard_allowed_commands.bats"
+  ],
+  "agents/claude/statusline/*.sh": [
+    "tests/agents/hooks/claude/statusline.bats"
+  ],
+  "agents/claude/statusline/*.json": [
+    "tests/agents/hooks/claude/statusline.bats"
+  ],
+  "agents/command_permissions.json": [
+    "tests/agents/codex/execpolicy.bats",
+    "tests/agents/hooks/claude/command_permissions_sync.bats",
+    "tests/agents/hooks/claude/guard_allowed_commands.bats",
+    "tests/agents/hooks/claude/guard_forbidden_commands.bats"
+  ],
+  "agents/skills/git-commit-split/*": [
+    "tests/agents/python/skills/git-commit-split/test_branch_name.py",
+    "tests/agents/python/skills/git-commit-split/test_build_partial_patch.py"
+  ],
+  "agents/skills/skill-auditor/*": [
+    "tests/agents/python/skills/skill-auditor/test_apply_patches.py",
+    "tests/agents/python/skills/skill-auditor/test_collect_skills.py",
+    "tests/agents/python/skills/skill-auditor/test_collect_transcripts.py",
+    "tests/agents/python/skills/skill-auditor/test_generate_report.py",
+    "tests/agents/python/skills/skill-auditor/test_run_audit.py"
+  ]
+}

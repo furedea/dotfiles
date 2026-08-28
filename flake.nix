@@ -18,6 +18,7 @@
     hermes-agent.url = "github:NousResearch/hermes-agent";
     agent-harness = {
       url = "github:furedea/agent-harness";
+      inputs.home-manager.follows = "home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };

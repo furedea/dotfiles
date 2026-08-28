@@ -5,11 +5,22 @@ ls:
 ignore:
   - .git
   - .direnv
+  - .pytest_cache
+  - .ruff_cache
+  - .venv
+  - node_modules
   - result
   - result-*
   - docs/logs
+  - agents/hooks/docs/logs
+  - agents/**/__pycache__
+  - tests/**/__pycache__
 
   - README.md
+  - package-lock.json
+  # Agent providers require these canonical uppercase filenames.
+  - agents/AGENTS.md
+  - agents/skills/**/SKILL.md
   # Hermes requires these canonical uppercase filenames.
   - hermes/secretary/SOUL.md
   - hermes/secretary/skills/**/SKILL.md

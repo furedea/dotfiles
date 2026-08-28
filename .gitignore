@@ -17,6 +17,14 @@ desktop.ini
 *.swo
 *.bak
 
+# Language tool caches
+.pytest_cache/
+.ruff_cache/
+.venv/
+__pycache__/
+*.py[cod]
+node_modules/
+
 # Agent-local state
 .claude/
 .jj/

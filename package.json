@@ -1,0 +1,11 @@
+{
+  "name": "dotfiles-agent-ci-tools",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Locked JavaScript tools used by personal agent tests.",
+  "devDependencies": {
+    "@openai/codex": "0.143.0",
+    "oxfmt": "0.52.0",
+    "oxlint": "1.67.0"
+  }
+}

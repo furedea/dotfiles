@@ -9,7 +9,7 @@ setup() {
 
 @test "Home Manager composes Herdr and Moshi hook bundles" {
   run --separate-stderr nix eval --json \
-    "$REPO_ROOT#homeConfigurations.kaito.config.programs.agent-harness.hooks.extra" \
+    "$REPO_ROOT#homeConfigurations.kaito.config.programs.agent-harness.hooks" \
     --apply 'hooks: builtins.attrNames hooks'
 
   [ "$status" -eq 0 ]
@@ -26,11 +26,18 @@ setup() {
   [ "$status" -eq 0 ]
 
   local _generation="$output"
+  local _activation="$_generation/activate"
   local _codex_hooks="$_generation/home-files/.codex/hooks.json"
-  local _claude_settings="$_generation/home-files/.claude/settings.json"
+  local _rendered
+  _rendered=$(grep -oE '/nix/store/[a-z0-9]+-agent-harness-rendered' "$_activation" | head -n 1)
+  local _claude_settings="$_rendered/.claude/settings.json"
 
   [ -f "$_generation/home-files/.codex/hooks/external/herdr/herdr-agent-state.sh" ]
-  [ -f "$_generation/home-files/.claude/hooks/external/herdr/herdr-agent-state.sh" ]
+  [ -n "$_rendered" ]
+  [ -f "$_rendered/.claude/hooks/external/herdr/herdr-agent-state.sh" ]
+  [ ! -e "$_generation/home-files/.claude/settings.json" ]
+  grep -Fq 'sync-claude-files' "$_activation"
+  cmp "$REPO_ROOT/agents/AGENTS.md" "$_rendered/.claude/CLAUDE.md"
   grep -Fq -- \
     'bash \"$HOME/.codex/hooks/external/herdr/herdr-agent-state.sh\" session' \
     "$_codex_hooks"

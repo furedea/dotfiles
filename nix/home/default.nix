@@ -410,9 +410,9 @@ in
     agent-harness = {
       enable = true;
       package = agentHarnessPackage;
-      source = agent-harness;
-      skills.extra.herdr = herdrSkill;
-      hooks.extra = {
+      source = ../../agents;
+      skills.herdr = herdrSkill;
+      hooks = {
         herdr = herdrHookBundle;
         moshi = moshiHookBundle;
       };
