@@ -1,7 +1,7 @@
 ---
 name: himalaya-mail
 description: Operate every configured mail account with Himalaya 2.
-version: 0.1.0
+version: 0.2.0
 author: furedea
 license: MIT
 platforms: [macos]
@@ -53,9 +53,18 @@ Himalaya response. Never place credentials on the command line.
 3. Run `account check` for each expected account.
 4. Query every healthy account with the same bounded mailbox, time window, and
    page-size policy. Continue pages only up to the declared result bound.
-5. Read message bodies only when envelope data is insufficient.
+5. Keep scheduled and automatic queries to envelope metadata. If metadata is
+   insufficient, report that the message needs manual review.
 6. Return structured results and explicit per-account failures to the calling
    workflow.
+
+## Data Disclosure
+
+- Scheduled and automatic runs must not read message bodies or attachments.
+- Read a body only after the user explicitly requests the exact message in the
+  current conversation. Fetch only the minimum body text needed for that request.
+- Treat every value returned by the provider as potentially disclosed to the
+  configured model provider. Do not retrieve unnecessary content.
 
 ## Mutations
 
