@@ -4,7 +4,7 @@ commit-msg:
       run: commitlint --edit {1}
 
 # pre-commit owns whole-project format check and lint. Test execution is
-# delegated to CI and the agent-harness hooks installed by Home Manager.
+# delegated to CI and the agent hooks installed by Home Manager.
 pre-commit:
   parallel: true
   commands:
@@ -37,6 +37,15 @@ pre-commit:
     actionlint:
       glob: ".github/workflows/*.yml"
       run: actionlint {all_files}
+    ruff-format:
+      glob: "*.py"
+      run: uv run --frozen ruff format --check agents/skills tests/agents/python
+    ruff-check:
+      glob: "*.py"
+      run: uv run --frozen ruff check agents/skills tests/agents/python
+    ty:
+      glob: "*.py"
+      run: uv run --frozen ty check
     oxlint:
       glob: "*.{js,ts,jsx,tsx}"
       run: oxlint {all_files}
