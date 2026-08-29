@@ -572,7 +572,8 @@ in
       fi
     '';
     herdrPlugins = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
-      BASH_XTRACEFD=9 \
+      PATH="${lib.makeBinPath [ pkgs.git ]}:/usr/bin:/bin" \
+        BASH_XTRACEFD=9 \
         HERDR_BIN="${herdrPackage}/bin/herdr" \
         JQ_BIN="${pkgs.jq}/bin/jq" \
         HERDR_PLUGIN_SYNC_STATE_FILE="${config.xdg.stateHome}/home-manager/herdr_plugins" \
