@@ -38,6 +38,22 @@ width = "85%"
 height = "85%"
 
 [[keys.command]]
+key = "prefix+ctrl+p"
+type = "popup"
+command = '''
+gh pr merge --auto --squash \
+  --match-head-commit "$(git rev-parse HEAD)" || {
+  status=$?
+  printf "\nPress Enter to close..."
+  read _
+  exit "$status"
+}
+'''
+description = "queue current PR for squash auto-merge"
+width = "85%"
+height = "85%"
+
+[[keys.command]]
 key = "prefix+ctrl+e"
 type = "shell"
 command = "HERDR_PANE_ID=\"$HERDR_ACTIVE_PANE_ID\" HERDR_TAB_ID=\"$HERDR_ACTIVE_TAB_ID\" /etc/profiles/per-user/kaito/bin/terminal-browser --split right"
