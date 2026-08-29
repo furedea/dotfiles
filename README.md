@@ -297,6 +297,10 @@ After the first switch, configure as needed:
 - run `gh auth login`
 - run `esa auth login --scopes "read:post write:post"`
 - configure Atuin synchronization credentials if history sync is wanted
+- on MacBook Pro, publish Hister to the tailnet with
+  `tailscale serve --bg --yes 4433`
+- install the Hister browser extension on both Macs and set its server URL to
+  `https://mbp.tailbb556b.ts.net/`
 - pair Moshi Hook with the iPhone app when restoring a host
 - configure Night Shift, True Tone, display resolution, and Accessibility
   display options in System Settings

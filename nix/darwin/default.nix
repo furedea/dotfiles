@@ -1,11 +1,21 @@
 {
   pkgs,
   config,
+  enableHisterService,
+  histerServerUrl,
   username,
   ...
 }:
 {
   environment.systemPackages = [ pkgs.vim ];
+
+  services.hister = {
+    enable = enableHisterService;
+    settings.server = {
+      address = "127.0.0.1:4433";
+      base_url = histerServerUrl;
+    };
+  };
 
   programs.zsh = {
     enableBashCompletion = false;

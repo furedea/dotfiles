@@ -21,6 +21,7 @@
       inputs.home-manager.follows = "home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    hister.url = "github:asciimoo/hister";
   };
 
   outputs =
@@ -33,12 +34,14 @@
       llm-agents,
       hermes-agent,
       agent-harness,
+      hister,
       ...
     }:
     let
       username = "kaito";
       system = "aarch64-darwin";
       dotfilesDir = "/Users/${username}/ghq/github.com/furedea/dotfiles";
+      histerServerUrl = "https://mbp.tailbb556b.ts.net";
       allowUnfreePredicate =
         pkg:
         builtins.elem pkg.pname [
@@ -56,6 +59,7 @@
       };
       herdrPackage = llm-agents.packages.${system}.herdr;
       hermesAgentPackage = hermes-agent.packages.${system}.minimal;
+      histerPackage = hister.packages.${system}.default;
       homeSpecialArgs = {
         inherit
           username
@@ -64,18 +68,29 @@
           llm-agents
           hermesAgentPackage
           herdrPackage
+          histerPackage
+          histerServerUrl
           agent-harness
           system
           ;
       };
       mkDarwinConfiguration =
-        { enableMoshiService }:
+        {
+          enableHisterService,
+          enableMoshiService,
+        }:
         nix-darwin.lib.darwinSystem {
           specialArgs = {
-            inherit username enableMoshiService;
+            inherit
+              username
+              enableHisterService
+              enableMoshiService
+              histerServerUrl
+              ;
           };
           modules = [
             ./nix/darwin/default.nix
+            hister.darwinModules.default
             nix-homebrew.darwinModules.nix-homebrew
             home-manager.darwinModules.home-manager
             {
@@ -107,8 +122,14 @@
     in
     {
       darwinConfigurations = {
-        mba = mkDarwinConfiguration { enableMoshiService = false; };
-        mbp = mkDarwinConfiguration { enableMoshiService = true; };
+        mba = mkDarwinConfiguration {
+          enableHisterService = false;
+          enableMoshiService = false;
+        };
+        mbp = mkDarwinConfiguration {
+          enableHisterService = true;
+          enableMoshiService = true;
+        };
       };
 
       homeConfigurations.${username} = home-manager.lib.homeManagerConfiguration {
