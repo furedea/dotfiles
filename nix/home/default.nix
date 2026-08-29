@@ -190,7 +190,6 @@ in
     # Content and media
     esaCliPackage
     ffmpeg
-    marp-cli
 
     # Personal secretary integrations
     appleMailCliPackage
