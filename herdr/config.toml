@@ -41,15 +41,13 @@ height = "85%"
 key = "prefix+ctrl+p"
 type = "popup"
 command = '''
-gh pr merge --auto --squash \
-  --match-head-commit "$(git rev-parse HEAD)" || {
-  status=$?
-  printf "\nPress Enter to close..."
-  read _
-  exit "$status"
-}
+BASH_XTRACEFD=9 \
+  GH_BIN="/etc/profiles/per-user/kaito/bin/gh" \
+  GIT_BIN="/etc/profiles/per-user/kaito/bin/git" \
+  exec "$HOME/.local/libexec/herdr_merge_pull_request.sh" \
+    "${HERDR_ACTIVE_PANE_CWD:-$PWD}" 9>/dev/null
 '''
-description = "queue current PR for squash auto-merge"
+description = "squash-merge current PR"
 width = "85%"
 height = "85%"
 

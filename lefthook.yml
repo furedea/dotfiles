@@ -11,7 +11,7 @@ pre-commit:
     # ----- format check -----
     shfmt:
       glob: "*.sh"
-      run: shfmt -i 2 -ci -d {all_files}
+      run: shfmt -d {all_files}
     nixfmt:
       glob: "*.nix"
       run: bash -c 'mapfile -t files < <(git ls-files "*.nix"); ((${#files[@]} == 0)) || nixfmt --check "${files[@]}"'
