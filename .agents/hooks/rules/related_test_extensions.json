@@ -23,12 +23,6 @@
     "tests/agents/hooks/claude/lint_format_sh.bats",
     "tests/agents/hooks/codex/adapt_lint_format.bats"
   ],
-  "agents/hooks/notify_macos_done.sh": [
-    "tests/agents/hooks/claude/notify_macos.bats"
-  ],
-  "agents/hooks/notify_macos_await.sh": [
-    "tests/agents/hooks/claude/notify_macos.bats"
-  ],
   "agents/hooks/guard_secret_content.sh": [
     "tests/agents/hooks/codex/adapt_guard_secret_content.bats"
   ],
@@ -66,7 +60,15 @@
     "tests/agents/hooks/claude/related_test_rules.bats"
   ],
   "agents/claude/settings.base.json": [
-    "tests/agents/hooks/claude/guard_allowed_commands.bats"
+    "tests/agents/hooks/claude/guard_allowed_commands.bats",
+    "tests/agents/notifications.bats"
+  ],
+  "agents/codex/config.toml": [
+    "tests/agents/notifications.bats"
+  ],
+  "agents/hooks.json": [
+    "tests/agents/notifications.bats",
+    "tests/agents/hooks/claude/related_test_rules.bats"
   ],
   "agents/claude/statusline/*.sh": [
     "tests/agents/hooks/claude/statusline.bats"

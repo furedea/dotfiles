@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 # run_related_tests.sh
-# Stop hook: differential test gate. Blocks completion if relevant tests fail.
+# Stop hook: differential test gate. Blocks completion when relevant verification
+# fails, times out, or cannot run.
 # Always exits 0 (block signal is JSON, not status).
 #
 # Test selection combines three sources:
@@ -23,12 +24,7 @@
 
 set -eo pipefail
 
-INPUT=$(cat)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Loop guard: if Stop hook already fired in this turn, do not re-trigger.
-STOP_ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active // false')
-[ "$STOP_ACTIVE" = "true" ] && exit 0
 
 # Must be inside a git repo to detect changes; otherwise skip.
 GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
@@ -42,12 +38,38 @@ CHANGED=$(
 
 emit_block() {
   local _failures="$1"
-  jq -cn --arg reason "Differential tests failed before completion."$'\n\n'"$_failures" \
+  jq -cn --arg reason "Verification did not pass before completion."$'\n\n'"$_failures" \
     '{decision:"block", reason:$reason}'
+}
+
+append_result() {
+  local _runner="$1"
+  local _status="$2"
+  local _target="$3"
+  local _command="$4"
+  local _result="$5"
+
+  FAILURES+="status: $_status"$'\n'
+  FAILURES+="runner: $_runner"$'\n'
+  FAILURES+="target: $_target"$'\n'
+  FAILURES+="command: $_command"$'\n'
+  FAILURES+="result: $_result"$'\n\n'
+}
+
+format_command() {
+  local _formatted=""
+  local _argument
+
+  for _argument in "$@"; do
+    printf -v _argument '%q' "$_argument"
+    _formatted+="${_formatted:+ }$_argument"
+  done
+  printf '%s\n' "$_formatted"
 }
 
 # --- 1. Project extension rules: dispatch JSON-mapped tests by runner. ---
 declare -a PROJECT_BATS=()
+declare -a PROJECT_JS=()
 declare -a PROJECT_PY=()
 declare -a PROJECT_RS=()
 RULES_FILE="$GIT_ROOT/.agents/hooks/rules/related_test_extensions.json"
@@ -64,6 +86,7 @@ if [ -f "$RULES_FILE" ] && jq empty "$RULES_FILE" 2>/dev/null; then
             *.bats) PROJECT_BATS+=("$t") ;;
             *.py) PROJECT_PY+=("$t") ;;
             *.rs) PROJECT_RS+=("$t") ;;
+            *.js | *.jsx | *.ts | *.tsx) PROJECT_JS+=("$t") ;;
           esac
         done < <(jq -r --arg k "$pattern" '.[$k][]' "$RULES_FILE")
       fi
@@ -152,6 +175,9 @@ find_language_tests() {
       python)
         find "$test_dir" -type f \( "${_find_args[@]}" \) -not -path './.venv/*' -not -path './node_modules/*' 2>/dev/null
         ;;
+      javascript_typescript)
+        find "$test_dir" -type f \( "${_find_args[@]}" \) -not -path './node_modules/*' -not -path './.git/*' 2>/dev/null
+        ;;
       *)
         find "$test_dir" -type f \( "${_find_args[@]}" \) 2>/dev/null
         ;;
@@ -160,46 +186,120 @@ find_language_tests() {
 }
 
 FAILURES=""
-# Runner timeouts are opportunistic: GNU `timeout` (Linux) or `gtimeout`
-# (macOS coreutils) enables the cap; if neither exists, the gate keeps the
-# previous direct-run behavior. Override with RUN_RELATED_TESTS_TIMEOUT_SECONDS.
 TIMEOUT_SECONDS="${RUN_RELATED_TESTS_TIMEOUT_SECONDS:-120}"
 
 timeout_bin() {
+  local _managed_timeout="${XDG_CONFIG_HOME:-$HOME/.config}/agent-harness/bin/timeout"
+
+  if [ "${RUN_RELATED_TESTS_TIMEOUT_BIN+x}" = "x" ]; then
+    command -v "$RUN_RELATED_TESTS_TIMEOUT_BIN" 2>/dev/null || return 1
+    return 0
+  fi
   if command -v timeout >/dev/null 2>&1; then
-    echo "timeout"
+    command -v timeout
     return 0
   fi
   if command -v gtimeout >/dev/null 2>&1; then
-    echo "gtimeout"
+    command -v gtimeout
+    return 0
+  fi
+  if [ -x "$_managed_timeout" ]; then
+    printf '%s\n' "$_managed_timeout"
     return 0
   fi
   return 1
 }
 
-run_with_timeout() {
+run_verification() {
   local _label="$1"
-  shift
+  local _target="$2"
+  shift 2
+
+  local _command
+  _command=$(format_command "$@")
 
   local _timeout_bin
   if ! _timeout_bin=$(timeout_bin); then
-    "$@"
-    return $?
+    append_result "$_label" unavailable "$_target" "$_command" \
+      "timeout enforcement is unavailable"
+    return 0
   fi
 
-  "$_timeout_bin" "$TIMEOUT_SECONDS" "$@"
-  local _status=$?
-  if [ "$_status" -eq 124 ]; then
-    printf '%s timed out after %ss\n' "$_label" "$TIMEOUT_SECONDS"
+  local _output=""
+  local _status=0
+  _output=$("$_timeout_bin" "$TIMEOUT_SECONDS" "$@" 2>&1) || _status=$?
+
+  if [ "$_status" -eq 0 ]; then
+    return 0
   fi
-  return "$_status"
+
+  if [ "$_status" -eq 124 ]; then
+    append_result "$_label" timeout "$_target" "$_command" \
+      "timed out after ${TIMEOUT_SECONDS}s${_output:+$'\n'$_output}"
+    return 0
+  fi
+
+  append_result "$_label" failed "$_target" "$_command" \
+    "${_output:-exited with status $_status}"
+}
+
+require_runner() {
+  local _label="$1"
+  local _runner="$2"
+  local _target="$3"
+  shift 3
+
+  if command -v "$_runner" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  append_result "$_label" unavailable "$_target" "$(format_command "$@")" \
+    "$_runner is not available"
+  return 1
+}
+
+javascript_package_manager() {
+  local _declared
+  _declared=$(jq -r '.packageManager // "" | split("@")[0]' package.json)
+  if [ -n "$_declared" ]; then
+    echo "$_declared"
+    return 0
+  fi
+
+  [ -f pnpm-lock.yaml ] && echo "pnpm" && return 0
+  [ -f yarn.lock ] && echo "yarn" && return 0
+  { [ -f bun.lock ] || [ -f bun.lockb ]; } && echo "bun" && return 0
+  echo "npm"
+}
+
+javascript_test_runner() {
+  if jq -e '(.dependencies.vitest // .devDependencies.vitest // null) != null' \
+    package.json >/dev/null 2>&1; then
+    echo "vitest"
+    return 0
+  fi
+  if jq -e '(.dependencies.jest // .devDependencies.jest // null) != null' \
+    package.json >/dev/null 2>&1; then
+    echo "jest"
+    return 0
+  fi
+  if jq -e '
+    .scripts.test
+      | type == "string"
+      and test("(^|[[:space:]])node[[:space:]]+--test([[:space:]]|$)")
+  ' package.json >/dev/null 2>&1; then
+    echo "node"
+    return 0
+  fi
+  return 1
 }
 
 # --- 2. Bats: project rules + basename heuristic; full-suite fallback. ---
 need_bats=0
 has_changed_extension bats && need_bats=1
 [ ${#PROJECT_BATS[@]} -gt 0 ] && need_bats=1
-if [ $need_bats -eq 1 ] && [ -d tests ] && command -v bats >/dev/null 2>&1; then
+if [ $need_bats -eq 1 ] && [ -d tests ]; then
+  BATS_BIN="${RUN_RELATED_TESTS_BATS_BIN:-bats}"
   declare -a BATS_TARGETS=()
   [ ${#PROJECT_BATS[@]} -gt 0 ] && BATS_TARGETS+=("${PROJECT_BATS[@]}")
   while IFS= read -r f; do
@@ -223,15 +323,18 @@ if [ $need_bats -eq 1 ] && [ -d tests ] && command -v bats >/dev/null 2>&1; then
       [ -f "$t" ] && BATS_EXIST+=("$t")
     done
     if [ ${#BATS_EXIST[@]} -gt 0 ]; then
-      BATS_OUT=""
-      if ! BATS_OUT=$(run_with_timeout "bats" bats "${BATS_EXIST[@]}" 2>&1); then
-        FAILURES+="bats:"$'\n'"$BATS_OUT"$'\n\n'
+      if require_runner bats "$BATS_BIN" "${BATS_EXIST[*]}" \
+        "$BATS_BIN" "${BATS_EXIST[@]}"; then
+        run_verification bats "${BATS_EXIST[*]}" "$BATS_BIN" "${BATS_EXIST[@]}"
       fi
+    else
+      append_result bats unavailable "${BATS_TARGETS[*]}" \
+        "$(format_command "$BATS_BIN" "${BATS_TARGETS[@]}")" \
+        "selected test targets do not exist"
     fi
   elif has_changed_extension bats; then
-    BATS_OUT=""
-    if ! BATS_OUT=$(run_with_timeout "bats" bats tests/ --recursive 2>&1); then
-      FAILURES+="bats:"$'\n'"$BATS_OUT"$'\n\n'
+    if require_runner bats "$BATS_BIN" "tests/" "$BATS_BIN" tests/ --recursive; then
+      run_verification bats "tests/" "$BATS_BIN" tests/ --recursive
     fi
   fi
 fi
@@ -240,7 +343,7 @@ fi
 need_pytest=0
 has_changed_extension python && need_pytest=1
 [ ${#PROJECT_PY[@]} -gt 0 ] && need_pytest=1
-if [ $need_pytest -eq 1 ] && has_project_marker python && command -v uv >/dev/null 2>&1; then
+if [ $need_pytest -eq 1 ] && has_project_marker python; then
   declare -a PY_TARGETS=()
   [ ${#PROJECT_PY[@]} -gt 0 ] && PY_TARGETS+=("${PROJECT_PY[@]}")
   while IFS= read -r f; do
@@ -264,26 +367,96 @@ if [ $need_pytest -eq 1 ] && has_project_marker python && command -v uv >/dev/nu
       [ -f "$t" ] && PY_EXIST+=("$t")
     done
     if [ ${#PY_EXIST[@]} -gt 0 ]; then
-      PYTEST_OUT=""
-      if ! PYTEST_OUT=$(run_with_timeout "pytest" uv run --frozen pytest --no-header -q "${PY_EXIST[@]}" 2>&1); then
-        FAILURES+="pytest:"$'\n'"$PYTEST_OUT"$'\n\n'
+      if require_runner pytest uv "${PY_EXIST[*]}" \
+        uv run --frozen pytest --no-header -q "${PY_EXIST[@]}"; then
+        run_verification pytest "${PY_EXIST[*]}" \
+          uv run --frozen pytest --no-header -q "${PY_EXIST[@]}"
       fi
+    else
+      append_result pytest unavailable "${PY_TARGETS[*]}" \
+        "$(format_command uv run --frozen pytest --no-header -q "${PY_TARGETS[@]}")" \
+        "selected test targets do not exist"
     fi
   elif has_changed_extension python; then
-    PYTEST_OUT=""
-    if ! PYTEST_OUT=$(run_with_timeout "pytest" uv run --frozen pytest --no-header -q 2>&1); then
-      FAILURES+="pytest:"$'\n'"$PYTEST_OUT"$'\n\n'
+    if require_runner pytest uv "full suite" uv run --frozen pytest --no-header -q; then
+      run_verification pytest "full suite" uv run --frozen pytest --no-header -q
     fi
   fi
 fi
 
-# --- 4. Rust: project rules, unit-name filters, and integration-test targets. `cargo test foo`
-# is a substring filter over test names/module paths, so skip generic stems
-# like lib/main/mod and use explicit mappings for wider project fan-out.
+# --- 4. JavaScript and TypeScript: related tests, then the full suite. ---
+need_javascript=0
+has_changed_extension javascript_typescript && need_javascript=1
+[ ${#PROJECT_JS[@]} -gt 0 ] && need_javascript=1
+if [ $need_javascript -eq 1 ] && [ -f package.json ]; then
+  declare -a JS_TARGETS=()
+  [ ${#PROJECT_JS[@]} -gt 0 ] && JS_TARGETS+=("${PROJECT_JS[@]}")
+  while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    case "$f" in
+      *.js | *.jsx | *.ts | *.tsx) ;;
+      *) continue ;;
+    esac
+    if is_self_test_file javascript_typescript "$f" && [ -f "$f" ]; then
+      JS_TARGETS+=("$f")
+      continue
+    fi
+    stem="${f##*/}"
+    stem="${stem%.*}"
+    while IFS= read -r match; do
+      JS_TARGETS+=("$match")
+    done < <(find_language_tests javascript_typescript "$stem")
+  done <<<"$CHANGED"
+
+  JS_PACKAGE_MANAGER=$(javascript_package_manager)
+  JS_RUNNER=$(javascript_test_runner || true)
+  if [ -n "$JS_RUNNER" ]; then
+    if [ ${#JS_TARGETS[@]} -gt 0 ]; then
+      mapfile -t JS_TARGETS < <(printf '%s\n' "${JS_TARGETS[@]}" | sort -u)
+    fi
+    declare -a JS_COMMAND=()
+    if [ "$JS_RUNNER" = "node" ]; then
+      JS_COMMAND=(node --test)
+    else
+      case "$JS_PACKAGE_MANAGER" in
+        pnpm) JS_COMMAND=(pnpm exec "$JS_RUNNER") ;;
+        npm) JS_COMMAND=(npm exec -- "$JS_RUNNER") ;;
+        yarn) JS_COMMAND=(yarn exec "$JS_RUNNER") ;;
+        bun) JS_COMMAND=(bun x "$JS_RUNNER") ;;
+        *) JS_COMMAND=(false) ;;
+      esac
+      [ "$JS_RUNNER" = "vitest" ] && JS_COMMAND+=("run")
+    fi
+    JS_COMMAND+=("${JS_TARGETS[@]}")
+    JS_TARGET="${JS_TARGETS[*]:-full suite}"
+    JS_EXECUTABLE="${JS_COMMAND[0]}"
+    if require_runner "$JS_RUNNER" "$JS_EXECUTABLE" "$JS_TARGET" \
+      env CI=1 "${JS_COMMAND[@]}"; then
+      run_verification "$JS_RUNNER" "$JS_TARGET" env CI=1 "${JS_COMMAND[@]}"
+    fi
+  elif jq -e '.scripts.test | type == "string" and length > 0' package.json >/dev/null 2>&1; then
+    declare -a JS_COMMAND=()
+    case "$JS_PACKAGE_MANAGER" in
+      pnpm | npm | yarn) JS_COMMAND=("$JS_PACKAGE_MANAGER" test) ;;
+      bun) JS_COMMAND=(bun run test) ;;
+      *) JS_COMMAND=(false) ;;
+    esac
+    if require_runner "$JS_PACKAGE_MANAGER test" "${JS_COMMAND[0]}" "full suite" \
+      env CI=1 "${JS_COMMAND[@]}"; then
+      run_verification "$JS_PACKAGE_MANAGER test" "full suite" \
+        env CI=1 "${JS_COMMAND[@]}"
+    fi
+  else
+    append_result javascript_typescript unavailable "full suite" "package test script" \
+      "test command could not be determined"
+  fi
+fi
+
+# --- 5. Rust: explicit project mappings, integration targets, then the full suite. ---
 need_rust=0
 has_changed_extension rust && need_rust=1
 [ ${#PROJECT_RS[@]} -gt 0 ] && need_rust=1
-if [ $need_rust -eq 1 ] && has_project_marker rust && command -v cargo >/dev/null 2>&1; then
+if [ $need_rust -eq 1 ] && has_project_marker rust; then
   declare -a CARGO_UNIT_FILTERS=()
   declare -a CARGO_TEST_TARGETS=()
   for t in "${PROJECT_RS[@]}"; do
@@ -306,16 +479,6 @@ if [ $need_rust -eq 1 ] && has_project_marker rust && command -v cargo >/dev/nul
         CARGO_TEST_TARGETS+=("$stem")
         ;;
       src/*.rs)
-        skip_filter=false
-        while IFS= read -r skipped_stem; do
-          [ -z "$skipped_stem" ] && continue
-          if [ "$stem" = "$skipped_stem" ]; then
-            skip_filter=true
-            break
-          fi
-        done < <(language_rule rust ".[\$language].skip_unit_filter_stems[]?")
-        [ "$skip_filter" = false ] && CARGO_UNIT_FILTERS+=("$stem")
-
         if [ -f "tests/${stem}.rs" ]; then
           CARGO_TEST_TARGETS+=("$stem")
         fi
@@ -323,12 +486,17 @@ if [ $need_rust -eq 1 ] && has_project_marker rust && command -v cargo >/dev/nul
     esac
   done <<<"$CHANGED"
 
+  if [ ${#CARGO_UNIT_FILTERS[@]} -eq 0 ] && [ ${#CARGO_TEST_TARGETS[@]} -eq 0 ]; then
+    if require_runner rust cargo "full suite" cargo test --quiet; then
+      run_verification rust "full suite" cargo test --quiet
+    fi
+  fi
+
   if [ ${#CARGO_UNIT_FILTERS[@]} -gt 0 ]; then
     mapfile -t CARGO_UNIT_FILTERS < <(printf '%s\n' "${CARGO_UNIT_FILTERS[@]}" | sort -u)
     for filter in "${CARGO_UNIT_FILTERS[@]}"; do
-      CARGO_OUT=""
-      if ! CARGO_OUT=$(run_with_timeout "cargo test $filter" cargo test "$filter" --quiet 2>&1); then
-        FAILURES+="cargo test $filter:"$'\n'"$CARGO_OUT"$'\n\n'
+      if require_runner rust cargo "$filter" cargo test "$filter" --quiet; then
+        run_verification rust "$filter" cargo test "$filter" --quiet
       fi
     done
   fi
@@ -336,9 +504,8 @@ if [ $need_rust -eq 1 ] && has_project_marker rust && command -v cargo >/dev/nul
   if [ ${#CARGO_TEST_TARGETS[@]} -gt 0 ]; then
     mapfile -t CARGO_TEST_TARGETS < <(printf '%s\n' "${CARGO_TEST_TARGETS[@]}" | sort -u)
     for target in "${CARGO_TEST_TARGETS[@]}"; do
-      CARGO_OUT=""
-      if ! CARGO_OUT=$(run_with_timeout "cargo test --test $target" cargo test --test "$target" --quiet 2>&1); then
-        FAILURES+="cargo test --test $target:"$'\n'"$CARGO_OUT"$'\n\n'
+      if require_runner rust cargo "$target" cargo test --test "$target" --quiet; then
+        run_verification rust "$target" cargo test --test "$target" --quiet
       fi
     done
   fi

@@ -25,9 +25,9 @@ status_line = [
   "five-hour-limit",
   "weekly-limit",
 ]
-notifications = true
-notification_condition = "always"
-notification_method = "bel"
+notifications = ["agent-turn-complete", "approval-requested"]
+notification_condition = "unfocused"
+notification_method = "auto"
 
 [tui.model_availability_nux]
 "gpt-5.5" = 1

@@ -147,32 +147,6 @@
           {
             "command": "$HOME/.claude/hooks/run_related_tests.sh",
             "type": "command"
-          },
-          {
-            "command": "$HOME/.claude/hooks/notify_macos_done.sh",
-            "type": "command"
-          }
-        ]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "command": "$HOME/.claude/hooks/notify_macos_done.sh",
-            "type": "command"
-          }
-        ]
-      }
-    ],
-    "Notification": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "command": "$HOME/.claude/hooks/notify_macos_await.sh",
-            "type": "command"
           }
         ]
       }
@@ -303,6 +277,18 @@
               "command": "$HOME/.claude/hooks/audit_tool_call.sh",
               "statusMessage": "Logging tool call",
               "timeout": 10,
+              "type": "command"
+            }
+          ]
+        }
+      ],
+      "Stop": [
+        {
+          "hooks": [
+            {
+              "command": "$HOME/.claude/hooks/run_related_tests.sh",
+              "statusMessage": "Running related tests",
+              "timeout": 600,
               "type": "command"
             }
           ]

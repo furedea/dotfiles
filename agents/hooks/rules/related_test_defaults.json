@@ -41,16 +41,13 @@
       "*.spec.ts",
       "*.test.tsx",
       "*.spec.tsx"
-    ],
-    "strategy": "metadata_only"
+    ]
   },
   "rust": {
     "source_extensions": [".rs"],
     "lint_hook": "lint_format_rs.sh",
     "project_markers": ["Cargo.toml"],
     "integration_test_dir": "tests",
-    "source_dirs": ["src"],
-    "skip_unit_filter_stems": ["lib", "main", "mod"],
-    "strategy": "unit_filter_and_integration_targets"
+    "source_dirs": ["src"]
   }
 }

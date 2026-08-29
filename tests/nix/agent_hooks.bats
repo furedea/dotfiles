@@ -41,6 +41,10 @@ setup() {
   grep -Fq -- \
     'bash \"$HOME/.codex/hooks/external/herdr/herdr-agent-state.sh\" session' \
     "$_codex_hooks"
+  jq -e '
+    .hooks.Stop
+      | any(.[]; any(.hooks[]; .command == "$HOME/.claude/hooks/run_related_tests.sh"))
+  ' "$_codex_hooks" >/dev/null
   grep -Fq -- "'/opt/homebrew/bin/moshi-hook' codex-hook" "$_codex_hooks"
   grep -Fq -- "'/opt/homebrew/bin/moshi-hook' claude-hook" "$_claude_settings"
   ! grep -Fq -- '/nix/store' "$_codex_hooks"
