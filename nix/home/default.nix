@@ -18,6 +18,7 @@
 let
   link = path: config.lib.file.mkOutOfStoreSymlink "${dotfilesDir}/${path}";
   esaCliPackage = pkgs.callPackage ../packages/esa_cli.nix { };
+  ghStackPackage = pkgs.callPackage ../packages/gh_stack.nix { };
   gitWtPackage = unstable.callPackage ../packages/git_wt.nix { gitWt = unstable.git-wt; };
   rootsPackage = pkgs.callPackage ../packages/roots.nix { };
   terminalBrowserPackage = pkgs.callPackage ../packages/terminal_browser.nix { };
@@ -354,6 +355,7 @@ in
 
     gh = {
       enable = true;
+      extensions = [ ghStackPackage ];
       settings = {
         git_protocol = "https";
         prompt = "enabled";

@@ -327,6 +327,7 @@ in
       "raycast"
       "skim"
       "slack"
+      "stablyai/orca/orca"
       "steam"
       "tailscale-app"
       "thebrowsercompany-dia"
