@@ -1,5 +1,10 @@
 ls:
   .dir: regex:\.?[a-z0-9]+(-[a-z0-9]+)*
+  .md: regex:[a-z0-9]*([._][a-z0-9]+)* | regex:(README|CONTRIBUTING|CHANGELOG|AGENTS|CLAUDE|SKILL|SOUL)
+  .py: regex:[a-z0-9]*([._][a-z0-9]+)* | regex:__[a-z0-9]+__
+  .toml: regex:[a-z0-9]*([._][a-z0-9]+)* | regex:Cargo
+  .lock: regex:[a-z0-9]*([._][a-z0-9]+)* | regex:Cargo
+  .json: regex:[a-z0-9]*([._][a-z0-9]+)* | regex:(package-lock|lazy-lock)
   .*: regex:[a-z0-9]*([._][a-z0-9]+)*
 
 ignore:
@@ -7,11 +12,9 @@ ignore:
   - .direnv
   - result
   - result-*
+  - "{.venv,.uv-cache,.ruff_cache,.pytest_cache,.ipynb_checkpoints,__pycache__,node_modules,target}"
+  - "**/{.venv,.uv-cache,.ruff_cache,.pytest_cache,.ipynb_checkpoints,__pycache__,node_modules,target}"
   - docs/logs
+  - "**/docs/logs"
 
-  - README.md
-  # Hermes requires these canonical uppercase filenames.
-  - hermes/secretary/SOUL.md
-  - hermes/secretary/skills/**/SKILL.md
-  - nvim/lazy-lock.json
-  - "raycast/Raycast 2026-04-15 14.52.13.rayconfig"
+  - "raycast/*.rayconfig"
