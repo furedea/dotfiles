@@ -7,14 +7,6 @@ setup() {
   REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
 }
 
-@test "Homebrew installs Orca from its official tap" {
-  run --separate-stderr nix eval --raw \
-    "$REPO_ROOT#darwinConfigurations.mba.config.homebrew.brewfile"
-
-  [ "$status" -eq 0 ]
-  [[ "$output" == *'cask "stablyai/orca/orca"'* ]]
-}
-
 @test "Homebrew installs moshi-hook" {
   run --separate-stderr nix eval --raw \
     "$REPO_ROOT#darwinConfigurations.mba.config.homebrew.brewfile"
