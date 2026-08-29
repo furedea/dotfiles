@@ -64,27 +64,12 @@ EOF
     --apply \
     'packages:
       builtins.filter
-        (name: builtins.elem name [ "himalaya" "ical" "khal" "vdirsyncer" "xurl" ])
+        (name: builtins.elem name [ "apple-mail-cli" "himalaya" "ical" "khal" "vdirsyncer" "xurl" ])
         (map (package: package.pname or package.name) packages)'
 
   [ "$status" -eq 0 ]
-  run jq -e 'sort == ["himalaya"]' <<<"$output"
+  run jq -e 'sort == ["apple-mail-cli"]' <<<"$output"
   [ "$status" -eq 0 ]
-}
-
-@test "Home Manager installs Himalaya 2" {
-  run --separate-stderr nix eval --no-write-lock-file --json \
-    "$REPO_ROOT#$HOME_CONFIG.home.packages" \
-    --apply \
-    'packages:
-      map
-        (package: package.version)
-        (builtins.filter
-          (package: (package.pname or package.name) == "himalaya")
-          packages)'
-
-  [ "$status" -eq 0 ]
-  [ "$output" = '["2.0.0"]' ]
 }
 
 @test "Home Manager installs a dedicated secretary CLI" {
@@ -118,8 +103,8 @@ EOF
   local _skill
 
   for _skill in \
+    apple-mail \
     calendar-briefing \
-    himalaya-mail \
     mail-triage \
     morning-briefing; do
     [ -f "$REPO_ROOT/hermes/secretary/skills/secretary/$_skill/SKILL.md" ]
@@ -130,13 +115,18 @@ EOF
   done
 }
 
-@test "The mail connector uses account-scoped Himalaya 2 commands" {
-  local _skill="$REPO_ROOT/hermes/secretary/skills/secretary/himalaya-mail/SKILL.md"
+@test "The mail connector uses bounded Apple Mail commands" {
+  local _skill="$REPO_ROOT/hermes/secretary/skills/secretary/apple-mail/SKILL.md"
 
+  grep -Fq 'apple-mail accounts' "$_skill"
+  grep -Fq 'apple-mail unread --limit LIMIT' "$_skill"
   grep -Fq \
-    'himalaya --account ACCOUNT --json envelope list --page-size LIMIT' \
+    'apple-mail get --account ACCOUNT --mailbox MAILBOX --id MESSAGE_ID' \
     "$_skill"
-  ! grep -Fq -- '--output json' "$_skill"
+  grep -Fq -- '--include-body --max-body-bytes MAX_BYTES' "$_skill"
+  grep -Fq \
+    'apple-mail move --account ACCOUNT --mailbox MAILBOX --id MESSAGE_ID --to DESTINATION' \
+    "$_skill"
 }
 
 @test "The morning routine is a read-only Hermes blueprint" {

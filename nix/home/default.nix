@@ -6,6 +6,7 @@
   dotfilesDir,
   unstable,
   llm-agents,
+  appleMailCliPackage,
   hermesAgentPackage,
   herdrPackage,
   histerPackage,
@@ -192,7 +193,7 @@ in
     marp-cli
 
     # Personal secretary integrations
-    unstable.himalaya
+    appleMailCliPackage
 
     # AI coding agents
     llm-agents.packages.${system}.claude-code
