@@ -2,46 +2,94 @@
   "version": 1,
   "rules": [
     {
-      "decision": "allow",
+      "decision": "ask",
       "prefix": ["actionlint"],
       "examples": ["actionlint .github/workflows/ci.yml"],
-      "justification": "Allowed by the shared agent command permissions."
+      "justification": "Run workflow verification only after user approval."
     },
     {
-      "decision": "allow",
-      "prefix": ["autocorrect"],
+      "decision": "ask",
+      "prefix": ["autocorrect", "--lint"],
       "examples": ["autocorrect --lint README.md"],
-      "justification": "Allowed by the shared agent command permissions."
+      "justification": "Run prose lint verification manually only after user approval."
     },
     {
-      "decision": "allow",
+      "decision": "ask",
       "prefix": ["bats"],
       "examples": ["bats tests/agents/hooks/claude/guard_allowed_commands.bats"],
-      "justification": "Allowed by the shared agent command permissions."
+      "justification": "Run tests manually only after user approval; Stop hooks own automatic verification."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["bash", "-n"],
+      "examples": ["bash -n agents/hooks/run_related_tests.sh"],
+      "justification": "Run shell syntax verification manually only after user approval."
     },
     {
       "decision": "allow",
-      "prefix": ["cargo"],
-      "examples": ["cargo test", "cargo fmt --check", "cargo clippy", "cargo check"],
-      "justification": "Allowed by the shared agent command permissions."
+      "prefix": ["cargo", "build"],
+      "examples": ["cargo build"],
+      "justification": "Allow explicit Rust artifact builds that are not verification gates."
     },
     {
       "decision": "allow",
+      "prefix": ["cargo", "metadata"],
+      "examples": ["cargo metadata --format-version 1"],
+      "justification": "Allow read-only Rust workspace metadata queries."
+    },
+    {
+      "decision": "allow",
+      "prefix": ["cargo", "run"],
+      "examples": ["cargo run --bin example"],
+      "justification": "Allow explicit Rust program execution that is not a verification gate."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["cargo", "test"],
+      "examples": ["cargo test"],
+      "justification": "Run Rust tests manually only after user approval; Stop hooks own automatic verification."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["cargo", "check"],
+      "examples": ["cargo check"],
+      "justification": "Run Rust checks manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["cargo", "clippy"],
+      "examples": ["cargo clippy"],
+      "justification": "Run Rust lint verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["cargo", "fmt", "--check"],
+      "examples": ["cargo fmt --check"],
+      "justification": "Run Rust format verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
       "prefix": ["commitlint"],
       "examples": ["commitlint --from HEAD~1 --to HEAD"],
-      "justification": "Allowed by the shared agent command permissions."
+      "justification": "Run commit-message verification manually only after user approval."
     },
     {
-      "decision": "allow",
+      "decision": "ask",
       "prefix": ["deadnix"],
       "examples": ["deadnix nix"],
-      "justification": "Allowed by the shared agent command permissions."
+      "justification": "Run dead-code verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["dprint", "check"],
+      "examples": ["dprint check"],
+      "justification": "Run dprint verification manually only after user approval."
     },
     {
       "decision": "allow",
-      "prefix": ["dprint"],
-      "examples": ["dprint check", "dprint fmt README.md"],
-      "justification": "Allowed by the shared agent command permissions."
+      "prefix": ["dprint", "fmt"],
+      "examples": ["dprint fmt README.md"],
+      "justification": "Allow explicit formatting because it changes files instead of duplicating verification."
     },
     {
       "decision": "allow",
@@ -131,40 +179,190 @@
       "justification": "Allowed only through hooks for isolated task branch worktrees."
     },
     {
-      "decision": "allow",
-      "prefix": ["nixfmt"],
-      "examples": ["nixfmt nix/home/default.nix"],
-      "justification": "Allowed by the shared agent command permissions."
+      "decision": "ask",
+      "prefix": ["nixfmt", "--check"],
+      "examples": ["nixfmt --check nix/home/default.nix"],
+      "justification": "Run Nix format verification manually only after user approval."
     },
     {
-      "decision": "allow",
-      "prefix": ["npm", "run"],
-      "examples": ["npm run test", "npm run lint", "npm run knip"],
-      "justification": "Allowed by the shared agent command permissions."
+      "decision": "ask",
+      "prefix": ["npm", "run", "test"],
+      "examples": ["npm run test"],
+      "justification": "Run package tests manually only after user approval; Stop hooks own automatic verification."
     },
     {
-      "decision": "allow",
+      "decision": "ask",
       "prefix": ["npm", "test"],
       "examples": ["npm test"],
-      "justification": "Allowed by the shared agent command permissions."
+      "justification": "Run package tests manually only after user approval; Stop hooks own automatic verification."
     },
     {
-      "decision": "allow",
-      "prefix": ["oxfmt"],
+      "decision": "ask",
+      "prefix": ["npm", "run", "lint"],
+      "examples": ["npm run lint"],
+      "justification": "Run package lint verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["npm", "run", "format-check"],
+      "examples": ["npm run format-check"],
+      "justification": "Run package format verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["npm", "run", "format:check"],
+      "examples": ["npm run format:check"],
+      "justification": "Run package format verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["npm", "run", "typecheck"],
+      "examples": ["npm run typecheck"],
+      "justification": "Run package type verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["npm", "run", "check"],
+      "examples": ["npm run check"],
+      "justification": "Run package verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["npm", "run", "knip"],
+      "examples": ["npm run knip"],
+      "justification": "Run package dependency verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["npm", "exec", "--", "vitest"],
+      "examples": ["npm exec -- vitest run"],
+      "justification": "Run Vitest manually only after user approval; Stop hooks own automatic verification."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["npm", "exec", "--", "jest"],
+      "examples": ["npm exec -- jest"],
+      "justification": "Run Jest manually only after user approval; Stop hooks own automatic verification."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["node", "--test"],
+      "examples": ["node --test"],
+      "justification": "Run Node tests manually only after user approval; Stop hooks own automatic verification."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["oxfmt", "--check"],
       "examples": ["oxfmt --check src"],
-      "justification": "Allowed by the shared agent command permissions."
+      "justification": "Run JavaScript format verification manually only after user approval."
     },
     {
-      "decision": "allow",
+      "decision": "ask",
       "prefix": ["oxlint"],
       "examples": ["oxlint src"],
-      "justification": "Allowed by the shared agent command permissions."
+      "justification": "Run JavaScript lint verification manually only after user approval."
     },
     {
-      "decision": "allow",
-      "prefix": ["pnpm"],
-      "examples": ["pnpm test", "pnpm lint", "pnpm run knip"],
-      "justification": "Allowed by the shared agent command permissions."
+      "decision": "ask",
+      "prefix": ["pnpm", "test"],
+      "examples": ["pnpm test"],
+      "justification": "Run package tests manually only after user approval; Stop hooks own automatic verification."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["pnpm", "lint"],
+      "examples": ["pnpm lint"],
+      "justification": "Run package lint verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["pnpm", "format-check"],
+      "examples": ["pnpm format-check"],
+      "justification": "Run package format verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["pnpm", "typecheck"],
+      "examples": ["pnpm typecheck"],
+      "justification": "Run package type verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["pnpm", "run", "test"],
+      "examples": ["pnpm run test"],
+      "justification": "Run package tests manually only after user approval; Stop hooks own automatic verification."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["pnpm", "run", "lint"],
+      "examples": ["pnpm run lint"],
+      "justification": "Run package lint verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["pnpm", "run", "format-check"],
+      "examples": ["pnpm run format-check"],
+      "justification": "Run package format verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["pnpm", "run", "format:check"],
+      "examples": ["pnpm run format:check"],
+      "justification": "Run package format verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["pnpm", "run", "typecheck"],
+      "examples": ["pnpm run typecheck"],
+      "justification": "Run package type verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["pnpm", "check"],
+      "examples": ["pnpm check"],
+      "justification": "Run package verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["pnpm", "run", "check"],
+      "examples": ["pnpm run check"],
+      "justification": "Run package verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["pnpm", "run", "knip"],
+      "examples": ["pnpm run knip"],
+      "justification": "Run package dependency verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["pnpm", "exec", "vitest"],
+      "examples": ["pnpm exec vitest run"],
+      "justification": "Run Vitest manually only after user approval; Stop hooks own automatic verification."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["pnpm", "exec", "tsc"],
+      "examples": ["pnpm exec tsc --noEmit"],
+      "justification": "Run TypeScript verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["pnpm", "exec", "oxlint"],
+      "examples": ["pnpm exec oxlint src"],
+      "justification": "Run JavaScript lint verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["pnpm", "exec", "oxfmt", "--check"],
+      "examples": ["pnpm exec oxfmt --check src"],
+      "justification": "Run JavaScript format verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["pnpm", "exec", "tsgolint"],
+      "examples": ["pnpm exec tsgolint --project tsconfig.json"],
+      "justification": "Run TypeScript lint verification manually only after user approval."
     },
     {
       "decision": "allow",
@@ -173,57 +371,118 @@
       "justification": "Allowed by the shared agent command permissions."
     },
     {
-      "decision": "allow",
+      "decision": "ask",
       "prefix": ["selene"],
       "examples": ["selene nvim"],
-      "justification": "Allowed by the shared agent command permissions."
+      "justification": "Run Lua lint verification manually only after user approval."
     },
     {
-      "decision": "allow",
+      "decision": "ask",
       "prefix": ["shellcheck"],
       "examples": ["shellcheck agents/hooks/guard_allowed_commands.sh"],
-      "justification": "Allowed by the shared agent command permissions."
+      "justification": "Run shell verification manually only after user approval."
     },
     {
       "decision": "allow",
-      "prefix": ["shfmt"],
+      "prefix": ["shfmt", "-w"],
       "examples": ["shfmt -w agents/hooks/guard_allowed_commands.sh"],
-      "justification": "Allowed by the shared agent command permissions."
+      "justification": "Allow explicit shell formatting because it changes files instead of duplicating verification."
     },
     {
-      "decision": "allow",
+      "decision": "ask",
+      "prefix": ["shfmt", "-d"],
+      "examples": ["shfmt -d agents/hooks/guard_allowed_commands.sh"],
+      "justification": "Run shell format verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
       "prefix": ["statix"],
       "examples": ["statix check nix"],
-      "justification": "Allowed by the shared agent command permissions."
+      "justification": "Run Nix static verification manually only after user approval."
     },
     {
-      "decision": "allow",
-      "prefix": ["stylua"],
+      "decision": "ask",
+      "prefix": ["stylua", "--check"],
       "examples": ["stylua --check nvim"],
-      "justification": "Allowed by the shared agent command permissions."
+      "justification": "Run Lua format verification manually only after user approval."
     },
     {
-      "decision": "allow",
-      "prefix": ["tex-fmt"],
+      "decision": "ask",
+      "prefix": ["tex-fmt", "--check"],
       "examples": ["tex-fmt --check docs/main.tex"],
-      "justification": "Allowed by the shared agent command permissions."
+      "justification": "Run TeX format verification manually only after user approval."
     },
     {
-      "decision": "allow",
+      "decision": "ask",
       "prefix": ["tsgolint"],
       "examples": ["tsgolint --project tsconfig.json"],
-      "justification": "Allowed by the shared agent command permissions."
+      "justification": "Run TypeScript lint verification manually only after user approval."
     },
     {
       "decision": "allow",
-      "prefix": ["uv", "run"],
-      "examples": [
-        "uv run pytest",
-        "uv run ruff check",
-        "uv run ty check",
-        "uv run --group audit deptry ."
-      ],
-      "justification": "Allowed by the shared agent command permissions."
+      "prefix": ["uv", "run", "python"],
+      "examples": ["uv run python scripts/run_audit.py prepare --provider codex"],
+      "justification": "Allow explicit Python program execution that is not a verification gate."
+    },
+    {
+      "decision": "allow",
+      "prefix": ["uv", "run", "--frozen", "python"],
+      "examples": ["uv run --frozen python scripts/run_audit.py prepare --provider codex"],
+      "justification": "Allow reproducible Python program execution that is not a verification gate."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["uv", "run", "pytest"],
+      "examples": ["uv run pytest"],
+      "justification": "Run Python tests manually only after user approval; Stop hooks own automatic verification."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["uv", "run", "--frozen", "pytest"],
+      "examples": ["uv run --frozen pytest"],
+      "justification": "Run Python tests manually only after user approval; Stop hooks own automatic verification."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["uv", "run", "ruff"],
+      "examples": ["uv run ruff check"],
+      "justification": "Run Python lint or format verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["uv", "run", "--frozen", "ruff"],
+      "examples": ["uv run --frozen ruff check"],
+      "justification": "Run Python lint or format verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["uv", "run", "ty"],
+      "examples": ["uv run ty check"],
+      "justification": "Run Python type verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["uv", "run", "--frozen", "ty"],
+      "examples": ["uv run --frozen ty check"],
+      "justification": "Run Python type verification manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["uv", "run", "--frozen", "--with", "pytest", "pytest"],
+      "examples": ["uv run --frozen --with pytest pytest tests"],
+      "justification": "Run injected Python tests manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["uv", "run", "--with", "pytest", "pytest"],
+      "examples": ["uv run --with pytest pytest tests"],
+      "justification": "Run injected Python tests manually only after user approval."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["uv", "run", "--frozen", "--group", "audit"],
+      "examples": ["uv run --frozen --group audit deptry ."],
+      "justification": "Run Python audit verification manually only after user approval."
     },
     {
       "decision": "deny",

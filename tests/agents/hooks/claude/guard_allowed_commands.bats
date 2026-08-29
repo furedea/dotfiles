@@ -72,7 +72,7 @@ run_hook() {
   [[ "$output" == *"invalid project allowed command rules"* ]]
 }
 
-@test "allows Python TDD commands" {
+@test "leaves Python verification commands for provider approval" {
   run_hook "uv run --frozen ruff check"
   [ "$status" -eq 0 ]
 
@@ -101,7 +101,7 @@ run_hook() {
   [ "$status" -eq 0 ]
 }
 
-@test "allows Python and TypeScript audit commands" {
+@test "leaves audit commands for provider approval" {
   run_hook "uv run --frozen --group audit deptry ."
   [ "$status" -eq 0 ]
 
@@ -137,7 +137,7 @@ run_hook() {
   [ "$status" -eq 0 ]
 }
 
-@test "allows local test lint and format tools from home packages" {
+@test "leaves verification commands for provider approval" {
   run_hook "bats tests/agents/hooks/claude/guard_allowed_commands.bats"
   [ "$status" -eq 0 ]
 

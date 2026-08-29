@@ -54,9 +54,9 @@ check_rule() {
 }
 
 @test "codex execpolicy allows representative development commands" {
-  check_rule allow uv run pytest
-  check_rule allow uv run --with pytest pytest tests
   check_rule allow uv run python scripts/run_audit.py prepare --provider codex
+  check_rule allow cargo build
+  check_rule allow cargo metadata --format-version 1
   check_rule allow gh pr list
   check_rule allow gh pr create -f --base main
   check_rule allow git add path/to/file
@@ -66,6 +66,39 @@ check_rule() {
   check_rule allow git rebase origin/main
   check_rule allow git worktree list
   check_rule allow git worktree add -b feat/example ../repo-feat-example origin/main
+}
+
+@test "codex execpolicy prompts before manual verification" {
+  check_rule prompt bats tests/agents/hooks/claude/run_related_tests.bats
+  check_rule prompt bash -n agents/hooks/run_related_tests.sh
+  check_rule prompt uv run pytest
+  check_rule prompt uv run --frozen ruff check
+  check_rule prompt uv run --frozen ty check
+  check_rule prompt cargo test
+  check_rule prompt cargo check
+  check_rule prompt cargo clippy
+  check_rule prompt cargo fmt --check
+  check_rule prompt npm test
+  check_rule prompt npm run lint
+  check_rule prompt npm exec -- vitest run
+  check_rule prompt node --test
+  check_rule prompt pnpm test
+  check_rule prompt pnpm run typecheck
+  check_rule prompt actionlint .github/workflows/ci.yml
+  check_rule prompt autocorrect --lint README.md
+  check_rule prompt commitlint --from HEAD~1 --to HEAD
+  check_rule prompt statix check nix
+  check_rule prompt deadnix nix
+  check_rule prompt nixfmt --check nix/home/default.nix
+  check_rule prompt shellcheck agents/hooks/run_related_tests.sh
+  check_rule prompt shfmt -d agents/hooks/run_related_tests.sh
+  check_rule prompt dprint check
+  check_rule prompt oxlint src
+  check_rule prompt oxfmt --check src
+  check_rule prompt tsgolint --project tsconfig.json
+  check_rule prompt stylua --check nvim
+  check_rule prompt selene nvim
+  check_rule prompt tex-fmt --check docs/main.tex
 }
 
 @test "codex execpolicy prompts before publishing changes" {

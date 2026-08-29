@@ -28,6 +28,10 @@ get_policy_allow_prefixes() {
   jq -r '.rules[] | select(.decision == "allow") | .prefix | join(" ")' "$COMMAND_PERMISSIONS"
 }
 
+get_policy_ask_prefixes() {
+  jq -r '.rules[] | select(.decision == "ask") | .prefix | join(" ")' "$COMMAND_PERMISSIONS"
+}
+
 get_allowed_patterns() {
   jq -r '.rules[].patterns[]' "$ALLOWED_RULES"
 }
@@ -86,4 +90,72 @@ assert_lines_contain() {
     printf '  - %s\n' "${missing[@]}"
     return 1
   fi
+}
+
+@test "manual verification prefixes render only as Claude ask permissions" {
+  local expected
+  expected=$(cat <<'EOF'
+actionlint
+autocorrect --lint
+bats
+bash -n
+cargo test
+cargo check
+cargo clippy
+cargo fmt --check
+commitlint
+deadnix
+dprint check
+nixfmt --check
+npm test
+npm run test
+npm run lint
+npm run format-check
+npm run typecheck
+node --test
+oxfmt --check
+oxlint
+pnpm test
+pnpm run test
+pnpm run lint
+pnpm run format-check
+pnpm run typecheck
+selene
+shellcheck
+shfmt -d
+statix
+stylua --check
+tex-fmt --check
+tsgolint
+uv run pytest
+uv run ruff
+uv run ty
+EOF
+)
+
+  assert_lines_contain "$expected" "$(get_policy_ask_prefixes)" \
+    "Manual verification prefixes missing from shared ask rules:"
+
+  local generated_ask
+  generated_ask=$(read_settings -r '.permissions.ask[]' | sed -E 's/^Bash\(([^:]+):\*\)$/\1/')
+  assert_lines_contain "$expected" "$generated_ask" \
+    "Manual verification prefixes missing from generated Claude ask permissions:"
+
+  local generated_allow
+  generated_allow=$(get_settings_allow_prefixes)
+  while IFS= read -r prefix; do
+    ! echo "$generated_allow" | grep -qxF "$prefix"
+  done <<<"$expected"
+}
+
+@test "manual verification ask prefixes have no ancestor allow prefix" {
+  local ask_prefix
+  local allow_prefix
+
+  while IFS= read -r ask_prefix; do
+    while IFS= read -r allow_prefix; do
+      [[ "$ask_prefix" != "$allow_prefix" ]]
+      [[ "$ask_prefix" != "$allow_prefix "* ]]
+    done <<<"$(get_policy_allow_prefixes)"
+  done <<<"$(get_policy_ask_prefixes)"
 }
