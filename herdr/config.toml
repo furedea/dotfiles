@@ -41,13 +41,33 @@ height = "85%"
 key = "prefix+ctrl+p"
 type = "popup"
 command = '''
-gh pr merge --auto --squash \
-  --match-head-commit "$(git rev-parse HEAD)" || {
+pr_summary="$(
+  gh pr view --json number,title \
+    --template 'PR #{{.number}}: {{.title}}'
+)" || {
   status=$?
   printf "\nPress Enter to close..."
-  read _
+  read -r _
   exit "$status"
 }
+
+printf '%s\n\nQueue this PR for squash auto-merge? [y/N] ' "$pr_summary"
+IFS= read -r answer
+
+case "$answer" in
+  y|Y)
+    gh pr merge --auto --squash --delete-branch \
+      --match-head-commit "$(git rev-parse HEAD)" || {
+      status=$?
+      printf "\nPress Enter to close..."
+      read -r _
+      exit "$status"
+    }
+    ;;
+  *)
+    printf 'Cancelled.\n'
+    ;;
+esac
 '''
 description = "queue current PR for squash auto-merge"
 width = "85%"
