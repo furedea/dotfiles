@@ -86,41 +86,22 @@ setup() {
   [ "$output" = "true" ]
 }
 
-@test "Herdr queues the current PR for squash auto-merge in a standard popup" {
+@test "Herdr opens the pull-request merge helper in a standard popup" {
   run --separate-stderr nix eval --impure --json --expr "
     let
       config = builtins.fromTOML (builtins.readFile \"$REPO_ROOT/herdr/config.toml\");
       merge = builtins.head (builtins.filter
-        (item: item.description == \"queue current PR for squash auto-merge\")
+        (item: item.description == \"squash-merge current PR\")
         config.keys.command);
-      normalizedCommand = builtins.replaceStrings [ \"\\n\" ] [ \" \" ] merge.command;
     in
     merge.key == \"prefix+ctrl+p\"
       && merge.type == \"popup\"
       && merge.width == \"85%\"
       && merge.height == \"85%\"
       && builtins.match
-        \".*gh pr merge --auto --squash --delete-branch.*\"
-        normalizedCommand != null
-  "
-
-  [ "$status" -eq 0 ]
-  [ "$output" = "true" ]
-}
-
-@test "Herdr requires confirmation before PR auto-merge" {
-  run --separate-stderr nix eval --impure --json --expr "
-    let
-      config = builtins.fromTOML (builtins.readFile \"$REPO_ROOT/herdr/config.toml\");
-      merge = builtins.head (builtins.filter
-        (item: item.description == \"queue current PR for squash auto-merge\")
-        config.keys.command);
-      normalizedCommand = builtins.replaceStrings [ \"\\n\" ] [ \" \" ] merge.command;
-    in
-    builtins.match \".*\\[y/N\\].*read -r answer.*\" normalizedCommand != null
-      && builtins.match
-        \".*case .*answer.* in.*y.Y\\).*gh pr merge.*\"
-        normalizedCommand != null
+        \".*\\.local/libexec/herdr_merge_pull_request\\.sh.*\"
+        merge.command != null
+      && builtins.match \".*gh pr merge.*\" merge.command == null
   "
 
   [ "$status" -eq 0 ]

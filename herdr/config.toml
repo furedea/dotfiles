@@ -41,35 +41,13 @@ height = "85%"
 key = "prefix+ctrl+p"
 type = "popup"
 command = '''
-pr_summary="$(
-  gh pr view --json number,title \
-    --template 'PR #{{.number}}: {{.title}}'
-)" || {
-  status=$?
-  printf "\nPress Enter to close..."
-  read -r _
-  exit "$status"
-}
-
-printf '%s\n\nQueue this PR for squash auto-merge? [y/N] ' "$pr_summary"
-IFS= read -r answer
-
-case "$answer" in
-  y|Y)
-    gh pr merge --auto --squash --delete-branch \
-      --match-head-commit "$(git rev-parse HEAD)" || {
-      status=$?
-      printf "\nPress Enter to close..."
-      read -r _
-      exit "$status"
-    }
-    ;;
-  *)
-    printf 'Cancelled.\n'
-    ;;
-esac
+BASH_XTRACEFD=9 \
+  GH_BIN="/etc/profiles/per-user/kaito/bin/gh" \
+  GIT_BIN="/etc/profiles/per-user/kaito/bin/git" \
+  exec "$HOME/.local/libexec/herdr_merge_pull_request.sh" \
+    "${HERDR_ACTIVE_PANE_CWD:-$PWD}" 9>/dev/null
 '''
-description = "queue current PR for squash auto-merge"
+description = "squash-merge current PR"
 width = "85%"
 height = "85%"
 
