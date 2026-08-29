@@ -573,12 +573,18 @@ in
     '';
     herdrPlugins = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
       BASH_XTRACEFD=9 \
+        PATH="${
+          lib.makeBinPath [
+            pkgs.bash
+            pkgs.git
+          ]
+        }:/usr/bin:/bin" \
         HERDR_BIN="${herdrPackage}/bin/herdr" \
         JQ_BIN="${pkgs.jq}/bin/jq" \
         HERDR_PLUGIN_SYNC_STATE_FILE="${config.xdg.stateHome}/home-manager/herdr_plugins" \
         ${pkgs.bash}/bin/bash \
         "${config.home.homeDirectory}/.local/libexec/sync_herdr_plugins.sh" \
-        ${herdrPluginArgs} 9>/dev/null || true
+        ${herdrPluginArgs} 9>/dev/null
     '';
     moshiHomebrewServiceMigration = lib.mkIf enableMoshiService (
       lib.hm.dag.entryBetween [ "setupLaunchAgents" ] [ "writeBoundary" ] ''

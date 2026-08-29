@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euxCo pipefail
 cd "$(dirname "$0")"
 
@@ -20,6 +20,7 @@ readonly HERDR_BIN="${HERDR_BIN:-herdr}"
 readonly JQ_BIN="${JQ_BIN:-jq}"
 readonly STATE_FILE="${HERDR_PLUGIN_SYNC_STATE_FILE:-${XDG_STATE_HOME:-${HOME}/.local/state}/home-manager/herdr_plugins}"
 plugins_json=""
+state_file_tmp=""
 
 function validate_arguments() {
   if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
@@ -74,7 +75,20 @@ function uninstall_removed_plugins() {
   done <"$STATE_FILE"
 }
 
+function report_install_failure() {
+  local _plugin_id="$1"
+  local _source="$2"
+  local _git_ref="$3"
+  printf '%s\n' \
+    "Failed to synchronize Herdr plugin:" \
+    "  id: $_plugin_id" \
+    "  source: $_source" \
+    "  ref: $_git_ref" >&2
+}
+
 function install_plugins() {
+  local _next_state_file="$1"
+  shift
   while (($# > 0)); do
     local _plugin_id="$1"
     local _source="$2"
@@ -82,22 +96,42 @@ function install_plugins() {
     local _installed_commit
     _installed_commit="$(installed_commit "$_plugin_id")"
     if [[ "$_installed_commit" != "$_git_ref" ]]; then
-      "$HERDR_BIN" plugin install "$_source" --ref "$_git_ref" --yes
+      local _status=0
+      if "$HERDR_BIN" plugin install "$_source" --ref "$_git_ref" --yes; then
+        :
+      else
+        _status="$?"
+        report_install_failure "$_plugin_id" "$_source" "$_git_ref"
+        return "$_status"
+      fi
     fi
-    printf '%s\n' "$_plugin_id" >>"$STATE_FILE"
+    printf '%s\n' "$_plugin_id" >>"$_next_state_file"
     shift 3
   done
+}
+
+function cleanup_state_file_tmp() {
+  if [[ -n "$state_file_tmp" ]]; then
+    rm -f "$state_file_tmp"
+  fi
+}
+
+function replace_managed_state() {
+  mv -f "$state_file_tmp" "$STATE_FILE"
+  state_file_tmp=""
 }
 
 function main() {
   validate_arguments "$@"
   mkdir -p "$(dirname "$STATE_FILE")"
+  state_file_tmp="$(mktemp "${STATE_FILE}.tmp.XXXXXX")"
+  trap cleanup_state_file_tmp EXIT
   set +x
   plugins_json="$("$HERDR_BIN" plugin list --json)"
   set -x
+  install_plugins "$state_file_tmp" "$@"
   uninstall_removed_plugins "$@"
-  : >|"$STATE_FILE"
-  install_plugins "$@"
+  replace_managed_state
 }
 
 main "$@"
