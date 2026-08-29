@@ -281,6 +281,12 @@
     },
     {
       "decision": "deny",
+      "prefix": ["home-manager", "switch"],
+      "examples": ["home-manager switch --flake ./#kaito"],
+      "justification": "Do not activate Home Manager configurations from an agent. Ask the user to review and run the switch manually."
+    },
+    {
+      "decision": "deny",
       "prefix": ["open"],
       "examples": ["open ."],
       "justification": "Do not launch GUI applications from Codex. Ask the user to open them manually."

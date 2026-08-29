@@ -140,6 +140,13 @@ JSON
   done
 }
 
+@test "global prefix rules block Home Manager activation" {
+  run run_hook_with_global_rules "home-manager switch --flake ./#kaito"
+
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"Do not activate Home Manager configurations"* ]]
+}
+
 @test "blocks rm prefix" {
   run run_hook "rm codex/hooks.json"
   [ "$status" -eq 2 ]
