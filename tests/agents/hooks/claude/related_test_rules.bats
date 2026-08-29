@@ -108,9 +108,17 @@ setup() {
   [[ "$result" == *adapt_guard_secret_paths.bats* ]]
 }
 
-@test "settings.base.json triggers allowlist tests" {
+@test "provider settings trigger their policy tests" {
   result=$(jq -r '."agents/claude/settings.base.json"[]' "$RULES")
   [[ "$result" == *guard_allowed_commands.bats* ]]
+  [[ "$result" == *notifications.bats* ]]
+
+  result=$(jq -r '."agents/codex/config.toml"[]' "$RULES")
+  [[ "$result" == *notifications.bats* ]]
+
+  result=$(jq -r '."agents/hooks.json"[]' "$RULES")
+  [[ "$result" == *notifications.bats* ]]
+  [[ "$result" == *related_test_rules.bats* ]]
 }
 
 @test "command permissions data triggers runtime tests on both providers" {

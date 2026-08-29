@@ -9,6 +9,7 @@
     "defaultMode": "auto"
   },
   "model": "opus",
+  "preferredNotifChannel": "auto",
   "enableAllProjectMcpServers": false,
   "statusLine": {
     "type": "command",
