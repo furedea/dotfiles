@@ -19,10 +19,12 @@ setup() {
   [ "$output" = "$PRIMARY_DOTFILES/herdr/merge_pull_request.sh" ]
 }
 
-@test "Home Manager installs the Herdr pull-request merge helper as executable" {
-  run --separate-stderr nix eval --no-write-lock-file --json \
-    "$REPO_ROOT#$HOME_CONFIG.home.file.\".local/libexec/herdr_merge_pull_request.sh\".executable"
+@test "Home Manager builds with the out-of-store Herdr pull-request merge helper" {
+  run --separate-stderr nix build --no-link --print-out-paths \
+    "$REPO_ROOT#homeConfigurations.kaito.activationPackage"
 
+  if [ "$status" -ne 0 ]; then
+    printf '%s\n' "$stderr" >&2
+  fi
   [ "$status" -eq 0 ]
-  [ "$output" = "true" ]
 }
