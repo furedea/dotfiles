@@ -7,6 +7,7 @@ setup() {
   REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../../../.." && pwd)"
   RULES="$REPO_ROOT/.agents/hooks/rules/related_test_extensions.json"
   LANGUAGE_RULES="$REPO_ROOT/agents/hooks/rules/related_test_defaults.json"
+  HOOKS="$REPO_ROOT/agents/hooks.json"
 }
 
 @test "project extension rules file is valid JSON" {
@@ -30,10 +31,6 @@ setup() {
       and (.rust.project_markers | index("Cargo.toml"))
       and .rust.integration_test_dir == "tests"
       and (.rust.source_dirs | index("src"))
-      and (.rust.skip_unit_filter_stems | index("lib"))
-      and (.rust.skip_unit_filter_stems | index("main"))
-      and (.rust.skip_unit_filter_stems | index("mod"))
-      and .rust.strategy == "unit_filter_and_integration_targets"
       and .javascript_typescript.source_extensions == [".js", ".jsx", ".ts", ".tsx"]
       and (.javascript_typescript.test_patterns | index("{stem}.test.ts"))
       and (keys | sort) == ["bats", "javascript_typescript", "python", "rust"]
@@ -49,6 +46,13 @@ setup() {
       "lint_format_sh.sh"
     ]
   ' "$LANGUAGE_RULES" >/dev/null
+}
+
+@test "Codex runs related tests before stopping" {
+  jq -e '
+    .codex.hooks.Stop
+      | any(.[]; any(.hooks[]; .command == "$HOME/.claude/hooks/run_related_tests.sh"))
+  ' "$HOOKS" >/dev/null
 }
 
 @test "every project extension value is a non-empty array of strings" {

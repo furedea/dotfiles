@@ -483,6 +483,167 @@ EOF
   [[ "$output" == *'test_value'* ]]
 }
 
+@test "run_related_tests runs the related Vitest file" {
+  cd "$TEST_TMPDIR"
+  git init --quiet
+  git config user.email t@t
+  git config user.name t
+  git config commit.gpgsign false
+  mkdir -p bin src tests
+  cat > bin/pnpm <<'EOF'
+#!/bin/bash
+printf '%s\n' "$*" > pnpm_args.txt
+exit 0
+EOF
+  chmod +x bin/pnpm
+  export PATH="$TEST_TMPDIR/bin:$PATH"
+  cat > package.json <<'EOF'
+{
+  "packageManager": "pnpm@10.0.0",
+  "devDependencies": { "vitest": "1.0.0" },
+  "scripts": { "test": "vitest run" }
+}
+EOF
+  printf 'export const value = 1\n' > src/app.ts
+  printf 'test("value", () => {})\n' > tests/app.test.ts
+  git add . && git commit --quiet -m i
+  printf '\n' >> src/app.ts
+
+  run bash "$HOOK" <<< "$(make_stop_input false)"
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  [ "$(cat pnpm_args.txt)" = "exec vitest run ./tests/app.test.ts" ]
+}
+
+@test "run_related_tests falls back to the full Vitest suite" {
+  cd "$TEST_TMPDIR"
+  git init --quiet
+  git config user.email t@t
+  git config user.name t
+  git config commit.gpgsign false
+  mkdir -p bin src tests
+  cat > bin/pnpm <<'EOF'
+#!/bin/bash
+printf '%s\n' "$*" > pnpm_args.txt
+exit 0
+EOF
+  chmod +x bin/pnpm
+  export PATH="$TEST_TMPDIR/bin:$PATH"
+  cat > package.json <<'EOF'
+{
+  "packageManager": "pnpm@10.0.0",
+  "devDependencies": { "vitest": "1.0.0" },
+  "scripts": { "test": "vitest run" }
+}
+EOF
+  printf 'export const value = 1\n' > src/app.ts
+  printf 'test("other", () => {})\n' > tests/other.test.ts
+  git add . && git commit --quiet -m i
+  printf '\n' >> src/app.ts
+
+  run bash "$HOOK" <<< "$(make_stop_input false)"
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  [ "$(cat pnpm_args.txt)" = "exec vitest run" ]
+}
+
+@test "run_related_tests falls back to the declared JavaScript test script" {
+  cd "$TEST_TMPDIR"
+  git init --quiet
+  git config user.email t@t
+  git config user.name t
+  git config commit.gpgsign false
+  mkdir -p bin src
+  cat > bin/pnpm <<'EOF'
+#!/bin/bash
+printf '%s:%s\n' "$CI" "$*" > pnpm_args.txt
+exit 0
+EOF
+  chmod +x bin/pnpm
+  export PATH="$TEST_TMPDIR/bin:$PATH"
+  cat > package.json <<'EOF'
+{
+  "packageManager": "pnpm@10.0.0",
+  "scripts": { "test": "custom-test-runner" }
+}
+EOF
+  printf 'export const value = 1\n' > src/app.ts
+  git add . && git commit --quiet -m i
+  printf '\n' >> src/app.ts
+
+  run bash "$HOOK" <<< "$(make_stop_input false)"
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  [ "$(cat pnpm_args.txt)" = "1:test" ]
+}
+
+@test "run_related_tests runs the related Jest file with npm" {
+  cd "$TEST_TMPDIR"
+  git init --quiet
+  git config user.email t@t
+  git config user.name t
+  git config commit.gpgsign false
+  mkdir -p bin src tests
+  cat > bin/npm <<'EOF'
+#!/bin/bash
+printf '%s\n' "$*" > npm_args.txt
+exit 0
+EOF
+  chmod +x bin/npm
+  export PATH="$TEST_TMPDIR/bin:$PATH"
+  cat > package.json <<'EOF'
+{
+  "packageManager": "npm@11.0.0",
+  "devDependencies": { "jest": "30.0.0" },
+  "scripts": { "test": "jest" }
+}
+EOF
+  printf 'export const value = 1\n' > src/app.js
+  printf 'test("value", () => {})\n' > tests/app.spec.js
+  git add . && git commit --quiet -m i
+  printf '\n' >> src/app.js
+
+  run bash "$HOOK" <<< "$(make_stop_input false)"
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  [ "$(cat npm_args.txt)" = "exec -- jest ./tests/app.spec.js" ]
+}
+
+@test "run_related_tests runs the related Node test file" {
+  cd "$TEST_TMPDIR"
+  git init --quiet
+  git config user.email t@t
+  git config user.name t
+  git config commit.gpgsign false
+  mkdir -p bin src tests
+  cat > bin/node <<'EOF'
+#!/bin/bash
+printf '%s\n' "$*" > node_args.txt
+exit 0
+EOF
+  chmod +x bin/node
+  export PATH="$TEST_TMPDIR/bin:$PATH"
+  cat > package.json <<'EOF'
+{
+  "scripts": { "test": "node --test" }
+}
+EOF
+  printf 'export const value = 1\n' > src/app.js
+  printf 'import test from "node:test"\n' > tests/app.test.js
+  git add . && git commit --quiet -m i
+  printf '\n' >> src/app.js
+
+  run bash "$HOOK" <<< "$(make_stop_input false)"
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  [ "$(cat node_args.txt)" = "--test ./tests/app.test.js" ]
+}
+
 @test "run_related_tests runs changed Rust integration test target" {
   cd "$TEST_TMPDIR"
   git init --quiet
@@ -537,11 +698,11 @@ EOF
   run bash "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision"'* ]]
-  [[ "$output" == *'cargo test parser'* ]]
+  [[ "$output" == *'cargo test --test parser'* ]]
   [[ "$output" == *'parser integration failed'* ]]
 }
 
-@test "run_related_tests runs Rust unit filter for changed source without matching integration test" {
+@test "run_related_tests falls back to the full Rust suite without a matching integration test" {
   cd "$TEST_TMPDIR"
   git init --quiet
   git config user.email t@t
@@ -568,10 +729,10 @@ EOF
   run bash "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
-  [ "$(cat cargo_args.txt)" = "test parser --quiet" ]
+  [ "$(cat cargo_args.txt)" = "test --quiet" ]
 }
 
-@test "run_related_tests skips Rust unit filter for generic source stems" {
+@test "run_related_tests falls back to the full Rust suite for generic source stems" {
   cd "$TEST_TMPDIR"
   git init --quiet
   git config user.email t@t
@@ -580,8 +741,8 @@ EOF
   mkdir -p bin src
   cat > bin/cargo <<'EOF'
 #!/bin/bash
-echo "unexpected cargo"
-exit 1
+printf '%s\n' "$*" > cargo_args.txt
+exit 0
 EOF
   chmod +x bin/cargo
   export PATH="$TEST_TMPDIR/bin:$PATH"
@@ -594,4 +755,5 @@ EOF
   run bash "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
+  [ "$(cat cargo_args.txt)" = "test --quiet" ]
 }

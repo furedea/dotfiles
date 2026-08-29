@@ -48,6 +48,7 @@ emit_block() {
 
 # --- 1. Project extension rules: dispatch JSON-mapped tests by runner. ---
 declare -a PROJECT_BATS=()
+declare -a PROJECT_JS=()
 declare -a PROJECT_PY=()
 declare -a PROJECT_RS=()
 RULES_FILE="$GIT_ROOT/.agents/hooks/rules/related_test_extensions.json"
@@ -64,6 +65,7 @@ if [ -f "$RULES_FILE" ] && jq empty "$RULES_FILE" 2>/dev/null; then
             *.bats) PROJECT_BATS+=("$t") ;;
             *.py) PROJECT_PY+=("$t") ;;
             *.rs) PROJECT_RS+=("$t") ;;
+            *.js | *.jsx | *.ts | *.tsx) PROJECT_JS+=("$t") ;;
           esac
         done < <(jq -r --arg k "$pattern" '.[$k][]' "$RULES_FILE")
       fi
@@ -152,6 +154,9 @@ find_language_tests() {
       python)
         find "$test_dir" -type f \( "${_find_args[@]}" \) -not -path './.venv/*' -not -path './node_modules/*' 2>/dev/null
         ;;
+      javascript_typescript)
+        find "$test_dir" -type f \( "${_find_args[@]}" \) -not -path './node_modules/*' -not -path './.git/*' 2>/dev/null
+        ;;
       *)
         find "$test_dir" -type f \( "${_find_args[@]}" \) 2>/dev/null
         ;;
@@ -193,6 +198,42 @@ run_with_timeout() {
     printf '%s timed out after %ss\n' "$_label" "$TIMEOUT_SECONDS"
   fi
   return "$_status"
+}
+
+javascript_package_manager() {
+  local _declared
+  _declared=$(jq -r '.packageManager // "" | split("@")[0]' package.json)
+  if [ -n "$_declared" ]; then
+    echo "$_declared"
+    return 0
+  fi
+
+  [ -f pnpm-lock.yaml ] && echo "pnpm" && return 0
+  [ -f yarn.lock ] && echo "yarn" && return 0
+  { [ -f bun.lock ] || [ -f bun.lockb ]; } && echo "bun" && return 0
+  echo "npm"
+}
+
+javascript_test_runner() {
+  if jq -e '(.dependencies.vitest // .devDependencies.vitest // null) != null' \
+    package.json >/dev/null 2>&1; then
+    echo "vitest"
+    return 0
+  fi
+  if jq -e '(.dependencies.jest // .devDependencies.jest // null) != null' \
+    package.json >/dev/null 2>&1; then
+    echo "jest"
+    return 0
+  fi
+  if jq -e '
+    .scripts.test
+      | type == "string"
+      and test("(^|[[:space:]])node[[:space:]]+--test([[:space:]]|$)")
+  ' package.json >/dev/null 2>&1; then
+    echo "node"
+    return 0
+  fi
+  return 1
 }
 
 # --- 2. Bats: project rules + basename heuristic; full-suite fallback. ---
@@ -277,9 +318,70 @@ if [ $need_pytest -eq 1 ] && has_project_marker python && command -v uv >/dev/nu
   fi
 fi
 
-# --- 4. Rust: project rules, unit-name filters, and integration-test targets. `cargo test foo`
-# is a substring filter over test names/module paths, so skip generic stems
-# like lib/main/mod and use explicit mappings for wider project fan-out.
+# --- 4. JavaScript and TypeScript: related tests, then the full suite. ---
+need_javascript=0
+has_changed_extension javascript_typescript && need_javascript=1
+[ ${#PROJECT_JS[@]} -gt 0 ] && need_javascript=1
+if [ $need_javascript -eq 1 ] && [ -f package.json ]; then
+  declare -a JS_TARGETS=()
+  [ ${#PROJECT_JS[@]} -gt 0 ] && JS_TARGETS+=("${PROJECT_JS[@]}")
+  while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    case "$f" in
+      *.js | *.jsx | *.ts | *.tsx) ;;
+      *) continue ;;
+    esac
+    if is_self_test_file javascript_typescript "$f" && [ -f "$f" ]; then
+      JS_TARGETS+=("$f")
+      continue
+    fi
+    stem="${f##*/}"
+    stem="${stem%.*}"
+    while IFS= read -r match; do
+      JS_TARGETS+=("$match")
+    done < <(find_language_tests javascript_typescript "$stem")
+  done <<<"$CHANGED"
+
+  JS_PACKAGE_MANAGER=$(javascript_package_manager)
+  JS_RUNNER=$(javascript_test_runner || true)
+  if [ -n "$JS_RUNNER" ]; then
+    if [ ${#JS_TARGETS[@]} -gt 0 ]; then
+      mapfile -t JS_TARGETS < <(printf '%s\n' "${JS_TARGETS[@]}" | sort -u)
+    fi
+    JS_OUT=""
+    declare -a JS_COMMAND=()
+    if [ "$JS_RUNNER" = "node" ]; then
+      JS_COMMAND=(node --test)
+    else
+      case "$JS_PACKAGE_MANAGER" in
+        pnpm) JS_COMMAND=(pnpm exec "$JS_RUNNER") ;;
+        npm) JS_COMMAND=(npm exec -- "$JS_RUNNER") ;;
+        yarn) JS_COMMAND=(yarn exec "$JS_RUNNER") ;;
+        bun) JS_COMMAND=(bun x "$JS_RUNNER") ;;
+        *) JS_COMMAND=(false) ;;
+      esac
+      [ "$JS_RUNNER" = "vitest" ] && JS_COMMAND+=("run")
+    fi
+    JS_COMMAND+=("${JS_TARGETS[@]}")
+    if ! JS_OUT=$(run_with_timeout "$JS_RUNNER" env CI=1 "${JS_COMMAND[@]}" 2>&1); then
+      FAILURES+="$JS_RUNNER:"$'\n'"$JS_OUT"$'\n\n'
+    fi
+  elif jq -e '.scripts.test | type == "string" and length > 0' package.json >/dev/null 2>&1; then
+    JS_OUT=""
+    declare -a JS_COMMAND=()
+    case "$JS_PACKAGE_MANAGER" in
+      pnpm | npm | yarn) JS_COMMAND=("$JS_PACKAGE_MANAGER" test) ;;
+      bun) JS_COMMAND=(bun run test) ;;
+      *) JS_COMMAND=(false) ;;
+    esac
+    if ! JS_OUT=$(run_with_timeout "$JS_PACKAGE_MANAGER test" \
+      env CI=1 "${JS_COMMAND[@]}" 2>&1); then
+      FAILURES+="$JS_PACKAGE_MANAGER test:"$'\n'"$JS_OUT"$'\n\n'
+    fi
+  fi
+fi
+
+# --- 5. Rust: explicit project mappings, integration targets, then the full suite. ---
 need_rust=0
 has_changed_extension rust && need_rust=1
 [ ${#PROJECT_RS[@]} -gt 0 ] && need_rust=1
@@ -306,22 +408,19 @@ if [ $need_rust -eq 1 ] && has_project_marker rust && command -v cargo >/dev/nul
         CARGO_TEST_TARGETS+=("$stem")
         ;;
       src/*.rs)
-        skip_filter=false
-        while IFS= read -r skipped_stem; do
-          [ -z "$skipped_stem" ] && continue
-          if [ "$stem" = "$skipped_stem" ]; then
-            skip_filter=true
-            break
-          fi
-        done < <(language_rule rust ".[\$language].skip_unit_filter_stems[]?")
-        [ "$skip_filter" = false ] && CARGO_UNIT_FILTERS+=("$stem")
-
         if [ -f "tests/${stem}.rs" ]; then
           CARGO_TEST_TARGETS+=("$stem")
         fi
         ;;
     esac
   done <<<"$CHANGED"
+
+  if [ ${#CARGO_UNIT_FILTERS[@]} -eq 0 ] && [ ${#CARGO_TEST_TARGETS[@]} -eq 0 ]; then
+    CARGO_OUT=""
+    if ! CARGO_OUT=$(run_with_timeout "cargo test" cargo test --quiet 2>&1); then
+      FAILURES+="cargo test:"$'\n'"$CARGO_OUT"$'\n\n'
+    fi
+  fi
 
   if [ ${#CARGO_UNIT_FILTERS[@]} -gt 0 ]; then
     mapfile -t CARGO_UNIT_FILTERS < <(printf '%s\n' "${CARGO_UNIT_FILTERS[@]}" | sort -u)
