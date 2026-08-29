@@ -297,6 +297,50 @@ After the first switch, configure as needed:
 - run `gh auth login`
 - run `esa auth login --scopes "read:post write:post"`
 - configure Atuin synchronization credentials if history sync is wanted
+- on MacBook Pro, generate a Hister access token and copy it to the clipboard:
+
+    ```sh
+    /usr/bin/openssl rand -hex 32 | /usr/bin/pbcopy
+    ```
+
+- on MacBook Pro, save that token in the login Keychain without placing it in
+  shell history or a process argument; paste it at the password prompt:
+
+    ```sh
+    /usr/bin/security add-generic-password \
+      -U \
+      -a "$USER" \
+      -s "org.furedea.hister.access-token" \
+      -w
+    ```
+
+- apply the `mbp` nix-darwin configuration; its Hister LaunchAgent reads the
+  token from Keychain at runtime and refuses to start when the item is absent
+- on MacBook Pro, publish Hister to the tailnet and inspect the resulting route:
+
+    ```sh
+    tailscale serve --bg --yes 4433
+    tailscale serve status
+    ```
+
+- install the Hister browser extension on both Macs, set its server URL to
+  `https://mbp.tailbb556b.ts.net/`, and paste the same access token into its
+  authentication setting
+- retrieve the token for extension enrollment or rotation without printing it:
+
+    ```sh
+    /usr/bin/security find-generic-password \
+      -a "$USER" \
+      -s "org.furedea.hister.access-token" \
+      -w | /usr/bin/pbcopy
+    ```
+
+- clear the clipboard after enrolling both extensions:
+
+    ```sh
+    printf '' | /usr/bin/pbcopy
+    ```
+
 - pair Moshi Hook with the iPhone app when restoring a host
 - configure Night Shift, True Tone, display resolution, and Accessibility
   display options in System Settings
