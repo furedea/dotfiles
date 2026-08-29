@@ -229,13 +229,13 @@ in
       # Homerow: keyboard-driven macOS navigation
       "com.superultra.Homerow" = {
         "launch-at-login" = true;
-        "scroll-shortcut" = "⇧⌘J";
-        "non-search-shortcut" = "⇧⌘F";
-        "scroll-px-per-ms" = 1.5;
+        "scroll-shortcut" = "⌃⌘J";
+        "non-search-shortcut" = "⌃⌘F";
+        "scroll-px-per-ms" = 1;
         "theme-id" = "original";
         "auto-switch-input-source-id" = "com.google.inputmethod.Japanese.Roman";
         "use-search-predicate" = true;
-        "dash-speed-multiplier" = 1;
+        "dash-speed-multiplier" = 0.5;
         "map-arrow-keys-to-scroll" = false;
       };
     };
