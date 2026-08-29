@@ -638,10 +638,7 @@ in
     ".config/karabiner/karabiner.json".source = link "karabiner/karabiner.json";
     ".config/herdr/config.toml".source = link "herdr/config.toml";
     ".config/herdr/plugins/config/persiyanov.reviewr/config.toml".source = link "herdr/reviewr.toml";
-    ".local/libexec/herdr_merge_pull_request.sh" = {
-      source = link "herdr/merge_pull_request.sh";
-      executable = true;
-    };
+    ".local/libexec/herdr_merge_pull_request.sh".source = link "herdr/merge_pull_request.sh";
     ".local/libexec/sync_herdr_plugins.sh".source = link "herdr/sync_plugins.sh";
 
     # Hermes secretary files remain editable by Hermes and visible to Git.
