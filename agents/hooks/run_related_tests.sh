@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 # run_related_tests.sh
-# Stop hook: differential test gate. Blocks completion if relevant tests fail.
+# Stop hook: differential test gate. Blocks completion when relevant verification
+# fails, times out, or cannot run.
 # Always exits 0 (block signal is JSON, not status).
 #
 # Test selection combines three sources:
@@ -23,12 +24,7 @@
 
 set -eo pipefail
 
-INPUT=$(cat)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Loop guard: if Stop hook already fired in this turn, do not re-trigger.
-STOP_ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active // false')
-[ "$STOP_ACTIVE" = "true" ] && exit 0
 
 # Must be inside a git repo to detect changes; otherwise skip.
 GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
@@ -42,8 +38,33 @@ CHANGED=$(
 
 emit_block() {
   local _failures="$1"
-  jq -cn --arg reason "Differential tests failed before completion."$'\n\n'"$_failures" \
+  jq -cn --arg reason "Verification did not pass before completion."$'\n\n'"$_failures" \
     '{decision:"block", reason:$reason}'
+}
+
+append_result() {
+  local _runner="$1"
+  local _status="$2"
+  local _target="$3"
+  local _command="$4"
+  local _result="$5"
+
+  FAILURES+="status: $_status"$'\n'
+  FAILURES+="runner: $_runner"$'\n'
+  FAILURES+="target: $_target"$'\n'
+  FAILURES+="command: $_command"$'\n'
+  FAILURES+="result: $_result"$'\n\n'
+}
+
+format_command() {
+  local _formatted=""
+  local _argument
+
+  for _argument in "$@"; do
+    printf -v _argument '%q' "$_argument"
+    _formatted+="${_formatted:+ }$_argument"
+  done
+  printf '%s\n' "$_formatted"
 }
 
 # --- 1. Project extension rules: dispatch JSON-mapped tests by runner. ---
@@ -165,39 +186,76 @@ find_language_tests() {
 }
 
 FAILURES=""
-# Runner timeouts are opportunistic: GNU `timeout` (Linux) or `gtimeout`
-# (macOS coreutils) enables the cap; if neither exists, the gate keeps the
-# previous direct-run behavior. Override with RUN_RELATED_TESTS_TIMEOUT_SECONDS.
 TIMEOUT_SECONDS="${RUN_RELATED_TESTS_TIMEOUT_SECONDS:-120}"
 
 timeout_bin() {
+  local _managed_timeout="${XDG_CONFIG_HOME:-$HOME/.config}/agent-harness/bin/timeout"
+
+  if [ "${RUN_RELATED_TESTS_TIMEOUT_BIN+x}" = "x" ]; then
+    command -v "$RUN_RELATED_TESTS_TIMEOUT_BIN" 2>/dev/null || return 1
+    return 0
+  fi
   if command -v timeout >/dev/null 2>&1; then
-    echo "timeout"
+    command -v timeout
     return 0
   fi
   if command -v gtimeout >/dev/null 2>&1; then
-    echo "gtimeout"
+    command -v gtimeout
+    return 0
+  fi
+  if [ -x "$_managed_timeout" ]; then
+    printf '%s\n' "$_managed_timeout"
     return 0
   fi
   return 1
 }
 
-run_with_timeout() {
+run_verification() {
   local _label="$1"
-  shift
+  local _target="$2"
+  shift 2
+
+  local _command
+  _command=$(format_command "$@")
 
   local _timeout_bin
   if ! _timeout_bin=$(timeout_bin); then
-    "$@"
-    return $?
+    append_result "$_label" unavailable "$_target" "$_command" \
+      "timeout enforcement is unavailable"
+    return 0
   fi
 
-  "$_timeout_bin" "$TIMEOUT_SECONDS" "$@"
-  local _status=$?
-  if [ "$_status" -eq 124 ]; then
-    printf '%s timed out after %ss\n' "$_label" "$TIMEOUT_SECONDS"
+  local _output=""
+  local _status=0
+  _output=$("$_timeout_bin" "$TIMEOUT_SECONDS" "$@" 2>&1) || _status=$?
+
+  if [ "$_status" -eq 0 ]; then
+    return 0
   fi
-  return "$_status"
+
+  if [ "$_status" -eq 124 ]; then
+    append_result "$_label" timeout "$_target" "$_command" \
+      "timed out after ${TIMEOUT_SECONDS}s${_output:+$'\n'$_output}"
+    return 0
+  fi
+
+  append_result "$_label" failed "$_target" "$_command" \
+    "${_output:-exited with status $_status}"
+}
+
+require_runner() {
+  local _label="$1"
+  local _runner="$2"
+  local _target="$3"
+  shift 3
+
+  if command -v "$_runner" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  append_result "$_label" unavailable "$_target" "$(format_command "$@")" \
+    "$_runner is not available"
+  return 1
 }
 
 javascript_package_manager() {
@@ -240,7 +298,8 @@ javascript_test_runner() {
 need_bats=0
 has_changed_extension bats && need_bats=1
 [ ${#PROJECT_BATS[@]} -gt 0 ] && need_bats=1
-if [ $need_bats -eq 1 ] && [ -d tests ] && command -v bats >/dev/null 2>&1; then
+if [ $need_bats -eq 1 ] && [ -d tests ]; then
+  BATS_BIN="${RUN_RELATED_TESTS_BATS_BIN:-bats}"
   declare -a BATS_TARGETS=()
   [ ${#PROJECT_BATS[@]} -gt 0 ] && BATS_TARGETS+=("${PROJECT_BATS[@]}")
   while IFS= read -r f; do
@@ -264,15 +323,18 @@ if [ $need_bats -eq 1 ] && [ -d tests ] && command -v bats >/dev/null 2>&1; then
       [ -f "$t" ] && BATS_EXIST+=("$t")
     done
     if [ ${#BATS_EXIST[@]} -gt 0 ]; then
-      BATS_OUT=""
-      if ! BATS_OUT=$(run_with_timeout "bats" bats "${BATS_EXIST[@]}" 2>&1); then
-        FAILURES+="bats:"$'\n'"$BATS_OUT"$'\n\n'
+      if require_runner bats "$BATS_BIN" "${BATS_EXIST[*]}" \
+        "$BATS_BIN" "${BATS_EXIST[@]}"; then
+        run_verification bats "${BATS_EXIST[*]}" "$BATS_BIN" "${BATS_EXIST[@]}"
       fi
+    else
+      append_result bats unavailable "${BATS_TARGETS[*]}" \
+        "$(format_command "$BATS_BIN" "${BATS_TARGETS[@]}")" \
+        "selected test targets do not exist"
     fi
   elif has_changed_extension bats; then
-    BATS_OUT=""
-    if ! BATS_OUT=$(run_with_timeout "bats" bats tests/ --recursive 2>&1); then
-      FAILURES+="bats:"$'\n'"$BATS_OUT"$'\n\n'
+    if require_runner bats "$BATS_BIN" "tests/" "$BATS_BIN" tests/ --recursive; then
+      run_verification bats "tests/" "$BATS_BIN" tests/ --recursive
     fi
   fi
 fi
@@ -281,7 +343,7 @@ fi
 need_pytest=0
 has_changed_extension python && need_pytest=1
 [ ${#PROJECT_PY[@]} -gt 0 ] && need_pytest=1
-if [ $need_pytest -eq 1 ] && has_project_marker python && command -v uv >/dev/null 2>&1; then
+if [ $need_pytest -eq 1 ] && has_project_marker python; then
   declare -a PY_TARGETS=()
   [ ${#PROJECT_PY[@]} -gt 0 ] && PY_TARGETS+=("${PROJECT_PY[@]}")
   while IFS= read -r f; do
@@ -305,15 +367,19 @@ if [ $need_pytest -eq 1 ] && has_project_marker python && command -v uv >/dev/nu
       [ -f "$t" ] && PY_EXIST+=("$t")
     done
     if [ ${#PY_EXIST[@]} -gt 0 ]; then
-      PYTEST_OUT=""
-      if ! PYTEST_OUT=$(run_with_timeout "pytest" uv run --frozen pytest --no-header -q "${PY_EXIST[@]}" 2>&1); then
-        FAILURES+="pytest:"$'\n'"$PYTEST_OUT"$'\n\n'
+      if require_runner pytest uv "${PY_EXIST[*]}" \
+        uv run --frozen pytest --no-header -q "${PY_EXIST[@]}"; then
+        run_verification pytest "${PY_EXIST[*]}" \
+          uv run --frozen pytest --no-header -q "${PY_EXIST[@]}"
       fi
+    else
+      append_result pytest unavailable "${PY_TARGETS[*]}" \
+        "$(format_command uv run --frozen pytest --no-header -q "${PY_TARGETS[@]}")" \
+        "selected test targets do not exist"
     fi
   elif has_changed_extension python; then
-    PYTEST_OUT=""
-    if ! PYTEST_OUT=$(run_with_timeout "pytest" uv run --frozen pytest --no-header -q 2>&1); then
-      FAILURES+="pytest:"$'\n'"$PYTEST_OUT"$'\n\n'
+    if require_runner pytest uv "full suite" uv run --frozen pytest --no-header -q; then
+      run_verification pytest "full suite" uv run --frozen pytest --no-header -q
     fi
   fi
 fi
@@ -348,7 +414,6 @@ if [ $need_javascript -eq 1 ] && [ -f package.json ]; then
     if [ ${#JS_TARGETS[@]} -gt 0 ]; then
       mapfile -t JS_TARGETS < <(printf '%s\n' "${JS_TARGETS[@]}" | sort -u)
     fi
-    JS_OUT=""
     declare -a JS_COMMAND=()
     if [ "$JS_RUNNER" = "node" ]; then
       JS_COMMAND=(node --test)
@@ -363,21 +428,27 @@ if [ $need_javascript -eq 1 ] && [ -f package.json ]; then
       [ "$JS_RUNNER" = "vitest" ] && JS_COMMAND+=("run")
     fi
     JS_COMMAND+=("${JS_TARGETS[@]}")
-    if ! JS_OUT=$(run_with_timeout "$JS_RUNNER" env CI=1 "${JS_COMMAND[@]}" 2>&1); then
-      FAILURES+="$JS_RUNNER:"$'\n'"$JS_OUT"$'\n\n'
+    JS_TARGET="${JS_TARGETS[*]:-full suite}"
+    JS_EXECUTABLE="${JS_COMMAND[0]}"
+    if require_runner "$JS_RUNNER" "$JS_EXECUTABLE" "$JS_TARGET" \
+      env CI=1 "${JS_COMMAND[@]}"; then
+      run_verification "$JS_RUNNER" "$JS_TARGET" env CI=1 "${JS_COMMAND[@]}"
     fi
   elif jq -e '.scripts.test | type == "string" and length > 0' package.json >/dev/null 2>&1; then
-    JS_OUT=""
     declare -a JS_COMMAND=()
     case "$JS_PACKAGE_MANAGER" in
       pnpm | npm | yarn) JS_COMMAND=("$JS_PACKAGE_MANAGER" test) ;;
       bun) JS_COMMAND=(bun run test) ;;
       *) JS_COMMAND=(false) ;;
     esac
-    if ! JS_OUT=$(run_with_timeout "$JS_PACKAGE_MANAGER test" \
-      env CI=1 "${JS_COMMAND[@]}" 2>&1); then
-      FAILURES+="$JS_PACKAGE_MANAGER test:"$'\n'"$JS_OUT"$'\n\n'
+    if require_runner "$JS_PACKAGE_MANAGER test" "${JS_COMMAND[0]}" "full suite" \
+      env CI=1 "${JS_COMMAND[@]}"; then
+      run_verification "$JS_PACKAGE_MANAGER test" "full suite" \
+        env CI=1 "${JS_COMMAND[@]}"
     fi
+  else
+    append_result javascript_typescript unavailable "full suite" "package test script" \
+      "test command could not be determined"
   fi
 fi
 
@@ -385,7 +456,7 @@ fi
 need_rust=0
 has_changed_extension rust && need_rust=1
 [ ${#PROJECT_RS[@]} -gt 0 ] && need_rust=1
-if [ $need_rust -eq 1 ] && has_project_marker rust && command -v cargo >/dev/null 2>&1; then
+if [ $need_rust -eq 1 ] && has_project_marker rust; then
   declare -a CARGO_UNIT_FILTERS=()
   declare -a CARGO_TEST_TARGETS=()
   for t in "${PROJECT_RS[@]}"; do
@@ -416,18 +487,16 @@ if [ $need_rust -eq 1 ] && has_project_marker rust && command -v cargo >/dev/nul
   done <<<"$CHANGED"
 
   if [ ${#CARGO_UNIT_FILTERS[@]} -eq 0 ] && [ ${#CARGO_TEST_TARGETS[@]} -eq 0 ]; then
-    CARGO_OUT=""
-    if ! CARGO_OUT=$(run_with_timeout "cargo test" cargo test --quiet 2>&1); then
-      FAILURES+="cargo test:"$'\n'"$CARGO_OUT"$'\n\n'
+    if require_runner rust cargo "full suite" cargo test --quiet; then
+      run_verification rust "full suite" cargo test --quiet
     fi
   fi
 
   if [ ${#CARGO_UNIT_FILTERS[@]} -gt 0 ]; then
     mapfile -t CARGO_UNIT_FILTERS < <(printf '%s\n' "${CARGO_UNIT_FILTERS[@]}" | sort -u)
     for filter in "${CARGO_UNIT_FILTERS[@]}"; do
-      CARGO_OUT=""
-      if ! CARGO_OUT=$(run_with_timeout "cargo test $filter" cargo test "$filter" --quiet 2>&1); then
-        FAILURES+="cargo test $filter:"$'\n'"$CARGO_OUT"$'\n\n'
+      if require_runner rust cargo "$filter" cargo test "$filter" --quiet; then
+        run_verification rust "$filter" cargo test "$filter" --quiet
       fi
     done
   fi
@@ -435,9 +504,8 @@ if [ $need_rust -eq 1 ] && has_project_marker rust && command -v cargo >/dev/nul
   if [ ${#CARGO_TEST_TARGETS[@]} -gt 0 ]; then
     mapfile -t CARGO_TEST_TARGETS < <(printf '%s\n' "${CARGO_TEST_TARGETS[@]}" | sort -u)
     for target in "${CARGO_TEST_TARGETS[@]}"; do
-      CARGO_OUT=""
-      if ! CARGO_OUT=$(run_with_timeout "cargo test --test $target" cargo test --test "$target" --quiet 2>&1); then
-        FAILURES+="cargo test --test $target:"$'\n'"$CARGO_OUT"$'\n\n'
+      if require_runner rust cargo "$target" cargo test --test "$target" --quiet; then
+        run_verification rust "$target" cargo test --test "$target" --quiet
       fi
     done
   fi

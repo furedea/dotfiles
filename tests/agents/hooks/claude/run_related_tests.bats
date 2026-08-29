@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 # Stop hook: differential test gate. Blocks completion when changed files'
-# tests fail; emits {decision:"block", reason:...} JSON on block.
+# verification fails or is unavailable; emits {decision:"block", reason:...} JSON.
 # Always exits 0 (block signal is JSON, not status).
 
 setup() {
@@ -19,10 +19,40 @@ make_stop_input() {
   jq -n --argjson a "$_active" '{"stop_hook_active":$a,"session_id":"test"}'
 }
 
-@test "run_related_tests exits 0 silently when stop_hook_active is true" {
+@test "run_related_tests revalidates changes when stop_hook_active is true" {
+  cd "$TEST_TMPDIR"
+  git init --quiet
+  git config user.email t@t
+  git config user.name t
+  git config commit.gpgsign false
+  mkdir -p bin tests
+  cat > bin/timeout <<'EOF'
+#!/bin/bash
+shift
+"$@"
+EOF
+  cat > bin/bats <<'EOF'
+#!/bin/bash
+echo "revalidated after continuation"
+exit 1
+EOF
+  chmod +x bin/timeout bin/bats
+  cat > tests/script.bats <<'EOF'
+@test "would fail" { false; }
+EOF
+  cat > script.sh <<'EOF'
+#!/bin/bash
+echo hi
+EOF
+  git add . && git commit --quiet -m i
+  printf '#!/bin/bash\necho changed\n' > script.sh
+  export PATH="$TEST_TMPDIR/bin:$PATH"
+
   run bash "$HOOK" <<< "$(make_stop_input true)"
+
   [ "$status" -eq 0 ]
-  [ -z "$output" ]
+  [[ "$output" == *'"decision":"block"'* ]]
+  [[ "$output" == *'revalidated after continuation'* ]]
 }
 
 @test "run_related_tests exits 0 silently when not in a git repository" {
@@ -57,6 +87,31 @@ make_stop_input() {
   [ -z "$output" ]
 }
 
+@test "run_related_tests blocks when a JavaScript project has no test command" {
+  cd "$TEST_TMPDIR"
+  git init --quiet
+  git config user.email t@t
+  git config user.name t
+  git config commit.gpgsign false
+  mkdir src
+  cat > package.json <<'EOF'
+{
+  "scripts": {}
+}
+EOF
+  printf 'export const value = 1\n' > src/app.ts
+  git add . && git commit --quiet -m i
+  printf '\n' >> src/app.ts
+
+  run bash "$HOOK" <<< "$(make_stop_input false)"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'"decision":"block"'* ]]
+  [[ "$output" == *'status: unavailable'* ]]
+  [[ "$output" == *'runner: javascript_typescript'* ]]
+  [[ "$output" == *'result: test command could not be determined'* ]]
+}
+
 @test "run_related_tests emits block JSON when bats tests fail" {
   cd "$TEST_TMPDIR"
   git init --quiet
@@ -79,6 +134,108 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision"'* ]]
   [[ "$output" == *'block'* ]]
+  [[ "$output" == *'status: failed'* ]]
+  [[ "$output" == *'runner: bats'* ]]
+  [[ "$output" == *'command: bats tests/ --recursive'* ]]
+  [[ "$output" == *'target: tests/'* ]]
+}
+
+@test "run_related_tests blocks when a required runner is unavailable" {
+  cd "$TEST_TMPDIR"
+  git init --quiet
+  git config user.email t@t
+  git config user.name t
+  git config commit.gpgsign false
+  mkdir tests
+  cat > tests/script.bats <<'EOF'
+@test "would pass" { true; }
+EOF
+  cat > script.sh <<'EOF'
+#!/bin/bash
+echo hi
+EOF
+  git add . && git commit --quiet -m i
+  printf '#!/bin/bash\necho changed\n' > script.sh
+  export RUN_RELATED_TESTS_BATS_BIN=missing-bats-runner
+
+  run bash "$HOOK" <<< "$(make_stop_input false)"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'"decision":"block"'* ]]
+  [[ "$output" == *'status: unavailable'* ]]
+  [[ "$output" == *'runner: bats'* ]]
+  [[ "$output" == *'result: missing-bats-runner is not available'* ]]
+}
+
+@test "run_related_tests blocks when timeout enforcement is unavailable" {
+  cd "$TEST_TMPDIR"
+  git init --quiet
+  git config user.email t@t
+  git config user.name t
+  git config commit.gpgsign false
+  mkdir -p bin tests
+  cat > bin/bats <<'EOF'
+#!/bin/bash
+exit 0
+EOF
+  chmod +x bin/bats
+  cat > tests/script.bats <<'EOF'
+@test "would pass" { true; }
+EOF
+  cat > script.sh <<'EOF'
+#!/bin/bash
+echo hi
+EOF
+  git add . && git commit --quiet -m i
+  printf '#!/bin/bash\necho changed\n' > script.sh
+  export PATH="$TEST_TMPDIR/bin:$PATH"
+  export RUN_RELATED_TESTS_TIMEOUT_BIN=missing-timeout-runner
+
+  run bash "$HOOK" <<< "$(make_stop_input false)"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'"decision":"block"'* ]]
+  [[ "$output" == *'status: unavailable'* ]]
+  [[ "$output" == *'runner: bats'* ]]
+  [[ "$output" == *'result: timeout enforcement is unavailable'* ]]
+}
+
+@test "run_related_tests uses the Home Manager timeout outside PATH" {
+  cd "$TEST_TMPDIR"
+  git init --quiet
+  git config user.email t@t
+  git config user.name t
+  git config commit.gpgsign false
+  mkdir -p bin home/.config/agent-harness/bin tests
+  for _dependency in git jq sort find; do
+    ln -s "$(command -v "$_dependency")" "bin/$_dependency"
+  done
+  cat > home/.config/agent-harness/bin/timeout <<'EOF'
+#!/bin/bash
+shift
+"$@"
+EOF
+  cat > bin/bats <<'EOF'
+#!/bin/bash
+exit 0
+EOF
+  chmod +x home/.config/agent-harness/bin/timeout bin/bats
+  cat > tests/script.bats <<'EOF'
+@test "would pass" { true; }
+EOF
+  cat > script.sh <<'EOF'
+#!/bin/bash
+echo hi
+EOF
+  git add . && git commit --quiet -m i
+  printf '#!/bin/bash\necho changed\n' > script.sh
+  export HOME="$TEST_TMPDIR/home"
+  export PATH="$TEST_TMPDIR/bin:/usr/bin:/bin"
+
+  run /bin/bash "$HOOK" <<< '{"stop_hook_active":false,"session_id":"test"}'
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
 }
 
 @test "run_related_tests blocks when bats runner times out" {
@@ -113,7 +270,9 @@ EOF
 
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision"'* ]]
-  [[ "$output" == *'bats timed out after 1s'* ]]
+  [[ "$output" == *'status: timeout'* ]]
+  [[ "$output" == *'runner: bats'* ]]
+  [[ "$output" == *'timed out after 1s'* ]]
 }
 
 @test "run_related_tests exits 0 silently when bats tests pass" {

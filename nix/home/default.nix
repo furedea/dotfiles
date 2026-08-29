@@ -590,6 +590,7 @@ in
   # Mirror to the XDG path so the home-manager-generated config is actually used.
   xdg.configFile."lazygit/config.yml".source =
     config.home.file."Library/Application Support/lazygit/config.yml".source;
+  xdg.configFile."agent-harness/bin/timeout".source = lib.getExe' pkgs.coreutils "timeout";
 
   home.file = {
     # Zsh（dotfileに実ファイル，直接編集可能）
