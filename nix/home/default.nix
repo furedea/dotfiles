@@ -8,6 +8,8 @@
   llm-agents,
   hermesAgentPackage,
   herdrPackage,
+  histerPackage,
+  histerServerUrl,
   agent-harness,
   system,
   enableMoshiService,
@@ -16,6 +18,7 @@
 let
   link = path: config.lib.file.mkOutOfStoreSymlink "${dotfilesDir}/${path}";
   esaCliPackage = pkgs.callPackage ../packages/esa_cli.nix { };
+  ghStackPackage = pkgs.callPackage ../packages/gh_stack.nix { };
   gitWtPackage = unstable.callPackage ../packages/git_wt.nix { gitWt = unstable.git-wt; };
   rootsPackage = pkgs.callPackage ../packages/roots.nix { };
   terminalBrowserPackage = pkgs.callPackage ../packages/terminal_browser.nix { };
@@ -153,6 +156,7 @@ in
     eza
     fd
     fzf
+    histerPackage
     ripgrep
 
     # Editors
@@ -351,6 +355,7 @@ in
 
     gh = {
       enable = true;
+      extensions = [ ghStackPackage ];
       settings = {
         git_protocol = "https";
         prompt = "enabled";
@@ -603,6 +608,11 @@ in
 
     # Git ignore
     ".config/git/ignore".source = link "git/ignore";
+
+    # Hister client
+    "Library/Preferences/hister/config.yml".text = builtins.toJSON {
+      server.base_url = histerServerUrl;
+    };
 
     # Neovim（多ファイル・頻繁に編集）
     ".config/nvim".source = link "nvim";
