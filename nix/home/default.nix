@@ -8,6 +8,8 @@
   llm-agents,
   hermesAgentPackage,
   herdrPackage,
+  histerPackage,
+  histerServerUrl,
   agent-harness,
   system,
   enableMoshiService,
@@ -154,6 +156,7 @@ in
     eza
     fd
     fzf
+    histerPackage
     ripgrep
 
     # Editors
@@ -412,9 +415,9 @@ in
     agent-harness = {
       enable = true;
       package = agentHarnessPackage;
-      source = agent-harness;
-      skills.extra.herdr = herdrSkill;
-      hooks.extra = {
+      source = ../../agents;
+      skills.herdr = herdrSkill;
+      hooks = {
         herdr = herdrHookBundle;
         moshi = moshiHookBundle;
       };
@@ -592,6 +595,7 @@ in
   # Mirror to the XDG path so the home-manager-generated config is actually used.
   xdg.configFile."lazygit/config.yml".source =
     config.home.file."Library/Application Support/lazygit/config.yml".source;
+  xdg.configFile."agent-harness/bin/timeout".source = lib.getExe' pkgs.coreutils "timeout";
 
   home.file = {
     # Zsh（dotfileに実ファイル，直接編集可能）
@@ -604,6 +608,11 @@ in
 
     # Git ignore
     ".config/git/ignore".source = link "git/ignore";
+
+    # Hister client
+    "Library/Preferences/hister/config.yml".text = builtins.toJSON {
+      server.base_url = histerServerUrl;
+    };
 
     # Neovim（多ファイル・頻繁に編集）
     ".config/nvim".source = link "nvim";

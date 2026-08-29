@@ -137,13 +137,15 @@ commit-pinned Herdr plugin set.
 
 ### AI Agent Environment
 
-[agent-harness](https://github.com/furedea/agent-harness) owns the shared Claude
-Code and Codex instructions, policies, hooks, skills, and generated files. This
-repository builds release-matched Herdr and Moshi hook bundles, then passes them
-through the module's generic `hooks.extra` boundary. Herdr comes from the pinned
-flake input. Moshi Hook 0.2.87 is pinned in Nix for deterministic hook generation,
-while the Homebrew installation remains the runtime daemon used by generated hooks.
-Pairing tokens and mutable Moshi state are never added to the Nix store.
+The [`agents/`](agents) directory owns the personal Claude Code and Codex source:
+instructions, policies, hooks, skills, and provider settings. The
+[agent-harness](https://github.com/furedea/agent-harness) flake renders and deploys
+that source for both providers. This repository also builds release-matched Herdr
+and Moshi hook bundles and composes them through the module's generic `hooks`
+boundary. Herdr comes from the pinned flake input. Moshi Hook 0.2.87 is pinned in
+Nix for deterministic hook generation, while the Homebrew installation remains the
+runtime daemon used by generated hooks. Pairing tokens and mutable Moshi state are
+never added to the Nix store.
 
 Herdr is pinned as a flake input and replaces tmux for local and managed remote
 terminal sessions. The local configuration uses `ctrl+a` as its prefix and adds
@@ -180,7 +182,7 @@ The following repository sources are linked directly into the home directory:
 | `prettier/.prettierrc`                       | `~/.prettierrc`                        |
 | `.editorconfig`                              | `~/.editorconfig`                      |
 
-Git, GitHub CLI, Lazygit, Atuin, Yazi, Zsh plugin paths, and agent-harness files
+Git, GitHub CLI, Lazygit, Atuin, Yazi, Zsh plugin paths, and rendered agent files
 are generated from Home Manager modules rather than linked from similarly named
 reference files.
 
@@ -200,6 +202,7 @@ These tracked files are not applied by Home Manager or nix-darwin:
 .
 ├── flake.nix                  # Flake inputs and outputs
 ├── nix/                       # nix-darwin, Home Manager, and local packages
+├── agents/                    # Personal cross-provider agent source
 ├── docs/adr/                  # Durable architecture decisions
 ├── zsh/ and bash/             # Interactive shell configuration
 ├── nvim/ and vim/             # Editor configuration
@@ -271,12 +274,15 @@ bats tests/github
 bats tests/herdr
 bats tests/esa
 bats tests/nix
+AGENT_HARNESS_BIN=agent-harness bats --recursive tests/agents
+uv run --frozen pytest tests/agents/python
 ```
 
-CI checks GitHub scripts with Bats and ShellCheck, checks Lua with Selene and
-StyLua, checks Nix with Statix, deadnix, and nixfmt, checks JSON/TOML with
-dprint, and lints prose with AutoCorrect. GitHub Actions are also checked with
-actionlint, zizmor, and CodeQL.
+CI checks GitHub and personal agent scripts with Bats, checks agent skill scripts
+with Ruff, ty, and pytest, checks shell scripts with ShellCheck, checks Lua with
+Selene and StyLua, checks Nix with Statix, deadnix, and nixfmt, checks JSON/TOML
+with dprint, and lints prose with AutoCorrect. GitHub Actions are also checked
+with actionlint, zizmor, and CodeQL.
 
 dprint intentionally owns JSON and TOML only. Markdown is formatted with
 prettierd because its four-space nested-list indentation matches the preferred
@@ -291,6 +297,50 @@ After the first switch, configure as needed:
 - run `gh auth login`
 - run `esa auth login --scopes "read:post write:post"`
 - configure Atuin synchronization credentials if history sync is wanted
+- on MacBook Pro, generate a Hister access token and copy it to the clipboard:
+
+    ```sh
+    /usr/bin/openssl rand -hex 32 | /usr/bin/pbcopy
+    ```
+
+- on MacBook Pro, save that token in the login Keychain without placing it in
+  shell history or a process argument; paste it at the password prompt:
+
+    ```sh
+    /usr/bin/security add-generic-password \
+      -U \
+      -a "$USER" \
+      -s "org.furedea.hister.access-token" \
+      -w
+    ```
+
+- apply the `mbp` nix-darwin configuration; its Hister LaunchAgent reads the
+  token from Keychain at runtime and refuses to start when the item is absent
+- on MacBook Pro, publish Hister to the tailnet and inspect the resulting route:
+
+    ```sh
+    tailscale serve --bg --yes 4433
+    tailscale serve status
+    ```
+
+- install the Hister browser extension on both Macs, set its server URL to
+  `https://mbp.tailbb556b.ts.net/`, and paste the same access token into its
+  authentication setting
+- retrieve the token for extension enrollment or rotation without printing it:
+
+    ```sh
+    /usr/bin/security find-generic-password \
+      -a "$USER" \
+      -s "org.furedea.hister.access-token" \
+      -w | /usr/bin/pbcopy
+    ```
+
+- clear the clipboard after enrolling both extensions:
+
+    ```sh
+    printf '' | /usr/bin/pbcopy
+    ```
+
 - pair Moshi Hook with the iPhone app when restoring a host
 - configure Night Shift, True Tone, display resolution, and Accessibility
   display options in System Settings
