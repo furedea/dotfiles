@@ -204,55 +204,59 @@ run_hook() {
   [ "$status" -eq 0 ]
 }
 
-@test "blocks shell metacharacters in local quality commands" {
+@test "leaves verification commands with shell metacharacters for provider approval" {
   run_hook "cargo test > /tmp/blocked"
-  [ "$status" -eq 2 ]
+  [ "$status" -eq 0 ]
 
   run_hook 'pnpm test $(touch /tmp/blocked)'
-  [ "$status" -eq 2 ]
+  [ "$status" -eq 0 ]
+}
 
+@test "blocks shell metacharacters in automatically allowed formatting commands" {
   run_hook 'dprint fmt README.md $(touch /tmp/blocked)'
   [ "$status" -eq 2 ]
 }
 
-@test "blocks shell metacharacters in broad pytest command" {
+@test "leaves broad Python verification commands for provider approval" {
   run_hook 'uv run --frozen pytest $(touch /tmp/blocked)'
-  [ "$status" -eq 2 ]
+  [ "$status" -eq 0 ]
 
   run_hook 'uv run --frozen pytest `touch /tmp/blocked`'
-  [ "$status" -eq 2 ]
+  [ "$status" -eq 0 ]
 
   run_hook "uv run --frozen pytest > /tmp/blocked"
-  [ "$status" -eq 2 ]
+  [ "$status" -eq 0 ]
 
   run_hook 'uv run --frozen --with pytest pytest $(touch /tmp/blocked)'
-  [ "$status" -eq 2 ]
+  [ "$status" -eq 0 ]
 
   run_hook 'uv run --with ruff ruff check'
-  [ "$status" -eq 2 ]
+  [ "$status" -eq 0 ]
+}
 
+@test "blocks Python execution outside the precise project allowlist" {
   run_hook 'uv run python -c "print(1)"'
   [ "$status" -eq 2 ]
 }
 
-@test "blocks uv run commands without frozen" {
+@test "leaves non-frozen verification commands for provider approval" {
   run_hook "uv run ruff check"
-  [ "$status" -eq 2 ]
+  [ "$status" -eq 0 ]
 
   run_hook "uv run ty check"
-  [ "$status" -eq 2 ]
+  [ "$status" -eq 0 ]
 
   run_hook "uv run pytest"
-  [ "$status" -eq 2 ]
+  [ "$status" -eq 0 ]
 
   run_hook "uv run --with pytest pytest"
-  [ "$status" -eq 2 ]
+  [ "$status" -eq 0 ]
 
   run_hook "uv run --group audit deptry ."
-  [ "$status" -eq 2 ]
+  [ "$status" -eq 0 ]
 
   run_hook "uv run python scripts/run_audit.py prepare"
-  [ "$status" -eq 2 ]
+  [ "$status" -eq 0 ]
 }
 
 @test "blocks command substitution in double quoted git commit messages" {
