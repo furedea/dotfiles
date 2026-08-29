@@ -120,7 +120,7 @@ let
     {
       id = "persiyanov.reviewr";
       source = "persiyanov/herdr-reviewr";
-      rev = "160ad607a195ee35ac9450e887974b3b5ddc4479";
+      rev = "8db4c8e4a0a287a63b8265aea7da4bfe7a8d0f3a";
     }
   ];
   herdrPluginArgs = lib.escapeShellArgs (
