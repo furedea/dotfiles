@@ -56,6 +56,19 @@ assert_lines_contain() {
   fi
 }
 
+@test "generated runtime command permissions are accepted by the shell guard" {
+  local _runtime_permissions="$BATS_TEST_TMPDIR/command_permissions.json"
+
+  "$AGENT_HARNESS_BIN" --profile minimal generate-command-permissions \
+    --source "$REPO_ROOT/agents" \
+    --output "$_runtime_permissions"
+
+  run env AGENT_COMMAND_PERMISSIONS="$_runtime_permissions" \
+    bash "$HOOK_DIR/guard_allowed_commands.sh" <<<"$(make_input "gh pr list")"
+
+  [ "$status" -eq 0 ]
+}
+
 @test "every generated Bash allow has a shared allow prefix" {
   assert_lines_contain \
     "$(get_settings_allow_prefixes)" \
