@@ -7,14 +7,38 @@ setup() {
   REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
 }
 
-@test "MacBook Pro starts the Hister service at login" {
+@test "MacBook Pro starts Hister through the authenticated launcher at login" {
   run --separate-stderr nix eval --no-write-lock-file --json \
     "$REPO_ROOT#darwinConfigurations.mbp.config.launchd.user.agents.hister.serviceConfig"
 
   [ "$status" -eq 0 ]
   run jq -e '
     .RunAtLoad == true
-      and .ProgramArguments[-1] == "listen"
+      and (.ProgramArguments[0] | endswith("/bin/run_hister_server"))
+      and (.ProgramArguments[1] | endswith("/bin/hister"))
+      and .ProgramArguments[2] == "kaito"
+      and .ThrottleInterval == 60
+  ' <<<"$output"
+  [ "$status" -eq 0 ]
+}
+
+@test "MacBook Pro keeps the Hister token out of generated settings" {
+  run --separate-stderr nix eval --no-write-lock-file --json \
+    "$REPO_ROOT#darwinConfigurations.mbp.config.services.hister.settings" \
+    --apply 'settings: builtins.hasAttr "access_token" (settings.app or { })'
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "false" ]
+}
+
+@test "MacBook Pro keeps credentials out of the Hister LaunchAgent environment" {
+  run --separate-stderr nix eval --no-write-lock-file --json \
+    "$REPO_ROOT#darwinConfigurations.mbp.config.launchd.user.agents.hister.serviceConfig.EnvironmentVariables"
+
+  [ "$status" -eq 0 ]
+  run jq -e '
+    keys
+      | all(test("token|password|credential|secret"; "i") | not)
   ' <<<"$output"
   [ "$status" -eq 0 ]
 }
