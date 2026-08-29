@@ -12,3 +12,11 @@ setup() {
   [ "$status" -eq 0 ]
   ! [[ "$output" == *"|| true"* ]]
 }
+
+@test "provides plugin installer commands during activation" {
+  run nix eval --raw \
+    "$REPO_ROOT#homeConfigurations.kaito.config.home.activation.herdrPlugins.data"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'-git-'*'/bin:/usr/bin:/bin'* ]]
+}

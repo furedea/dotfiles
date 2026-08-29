@@ -17,6 +17,7 @@ if [[ "$*" == "plugin list --json" ]]; then
 fi
 
 if [[ "$*" == "plugin install "* ]] && [[ "${HERDR_INSTALL_EXIT_CODE:-0}" -ne 0 ]]; then
+  echo "plugin install failed" >&2
   exit "${HERDR_INSTALL_EXIT_CODE}"
 fi
 STUB

@@ -99,7 +99,11 @@ function main() {
   set -x
   local _next_state_file
   _next_state_file="$(mktemp "${STATE_FILE}.XXXXXX")"
-  trap 'rm -f "$_next_state_file"' EXIT
+  local _cleanup_command
+  printf -v _cleanup_command 'rm -f -- %q' "$_next_state_file"
+  # Expand now because the local variable is unavailable when EXIT runs.
+  # shellcheck disable=SC2064
+  trap "$_cleanup_command" EXIT
   install_plugins "$_next_state_file" "$@"
   uninstall_removed_plugins "$@"
   mv "$_next_state_file" "$STATE_FILE"
