@@ -15,6 +15,10 @@ echo "$*" >>"${HERDR_LOG}"
 if [[ "$*" == "plugin list --json" ]]; then
   echo "${HERDR_PLUGIN_LIST_JSON}"
 fi
+
+if [[ "$*" == "plugin install "* ]] && [[ "${HERDR_INSTALL_EXIT_CODE:-0}" -ne 0 ]]; then
+  exit "${HERDR_INSTALL_EXIT_CODE}"
+fi
 STUB
   chmod +x "$HERDR_STUB_DIR/herdr"
   export HERDR_LOG HERDR_PLUGIN_SYNC_STATE_FILE
