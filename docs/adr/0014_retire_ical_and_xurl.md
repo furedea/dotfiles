@@ -1,6 +1,6 @@
 # ADR-0014: Retire ical and xurl
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-08-24
 - Supersedes: ADR-0012, ADR-0013
 

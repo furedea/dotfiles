@@ -1,11 +1,39 @@
 {
   pkgs,
   config,
+  lib,
+  enableHisterService,
+  histerServerUrl,
   username,
   ...
 }:
+let
+  histerServerLauncher = pkgs.writeTextFile {
+    name = "run-hister-server";
+    destination = "/bin/run_hister_server";
+    executable = true;
+    text = builtins.readFile ../../scripts/hister/run_hister_server.sh;
+  };
+in
 {
   environment.systemPackages = [ pkgs.vim ];
+
+  services.hister = {
+    enable = enableHisterService;
+    settings.server = {
+      address = "127.0.0.1:4433";
+      base_url = histerServerUrl;
+    };
+  };
+
+  launchd.user.agents.hister.serviceConfig = lib.mkIf enableHisterService {
+    ProgramArguments = lib.mkForce [
+      "${histerServerLauncher}/bin/run_hister_server"
+      (lib.getExe config.services.hister.package)
+      username
+    ];
+    ThrottleInterval = 60;
+  };
 
   programs.zsh = {
     enableBashCompletion = false;
@@ -201,13 +229,13 @@
       # Homerow: keyboard-driven macOS navigation
       "com.superultra.Homerow" = {
         "launch-at-login" = true;
-        "scroll-shortcut" = "⇧⌘J";
-        "non-search-shortcut" = "⇧⌘F";
-        "scroll-px-per-ms" = 1.5;
+        "scroll-shortcut" = "⌃⌘J";
+        "non-search-shortcut" = "⌃⌘F";
+        "scroll-px-per-ms" = 1;
         "theme-id" = "original";
         "auto-switch-input-source-id" = "com.google.inputmethod.Japanese.Roman";
         "use-search-predicate" = true;
-        "dash-speed-multiplier" = 1;
+        "dash-speed-multiplier" = 0.5;
         "map-arrow-keys-to-scroll" = false;
       };
     };

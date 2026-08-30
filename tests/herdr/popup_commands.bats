@@ -73,3 +73,37 @@ setup() {
   [ "$status" -eq 0 ]
   [ "$output" = "true" ]
 }
+
+@test "reviewr starts with branch changes" {
+  run --separate-stderr nix eval --impure --json --expr "
+    let
+      config = builtins.fromTOML (builtins.readFile \"$REPO_ROOT/herdr/reviewr.toml\");
+    in
+    config.default_scope == \"branch\"
+  "
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "true" ]
+}
+
+@test "Herdr opens the pull-request merge helper in a standard popup" {
+  run --separate-stderr nix eval --impure --json --expr "
+    let
+      config = builtins.fromTOML (builtins.readFile \"$REPO_ROOT/herdr/config.toml\");
+      merge = builtins.head (builtins.filter
+        (item: item.description == \"squash-merge current PR\")
+        config.keys.command);
+    in
+    merge.key == \"prefix+ctrl+p\"
+      && merge.type == \"popup\"
+      && merge.width == \"85%\"
+      && merge.height == \"85%\"
+      && builtins.match
+        \".*\\.local/libexec/herdr_merge_pull_request\\.sh.*\"
+        merge.command != null
+      && builtins.match \".*gh pr merge.*\" merge.command == null
+  "
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "true" ]
+}

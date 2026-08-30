@@ -28,6 +28,23 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          python-version: "3.14.6"
+          enable-cache: true
+          cache-python: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22.22.3
+
+      - name: Setup shfmt
+        uses: mfinelli/setup-shfmt@a25fda4c1fe115aec0f85e04126610841bc3141d # v4.0.1
+        with:
+          shfmt-version: "3.13.1"
+
       - name: Install Bats
         uses: bats-core/bats-action@77d6fb60505b4d0d1d73e48bd035b55074bbfb43 # 4.0.0
         with:
@@ -37,8 +54,131 @@ jobs:
           detik-install: "false"
           file-install: "false"
 
+      - name: Install agent test tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends jq ripgrep shellcheck
+          uv tool install --python 3.14.6 ruff==0.16.3
+          uv tool dir --bin >> "$GITHUB_PATH"
+          npm ci --ignore-scripts
+          echo "$PWD/node_modules/.bin" >> "$GITHUB_PATH"
+
+      - name: Resolve locked agent-harness revision
+        id: agent_harness
+        run: |
+          agent_harness_rev="$(
+            jq -er '.nodes["agent-harness"].locked.rev | select(test("^[0-9a-f]{40}$"))' flake.lock
+          )"
+          echo "revision=$agent_harness_rev" >> "$GITHUB_OUTPUT"
+
+      - name: Cache agent-harness
+        id: agent_harness_cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ${{ runner.temp }}/agent-harness/bin/agent-harness
+          key: agent-harness-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.agent_harness.outputs.revision }}
+
+      - name: Install Rust toolchain
+        if: steps.agent_harness_cache.outputs.cache-hit != 'true'
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+        with:
+          toolchain: stable
+          rustflags: ""
+
+      - name: Install locked agent-harness
+        if: steps.agent_harness_cache.outputs.cache-hit != 'true'
+        env:
+          AGENT_HARNESS_REV: ${{ steps.agent_harness.outputs.revision }}
+        run: |
+          cargo install \
+            --git https://github.com/furedea/agent-harness \
+            --rev "$AGENT_HARNESS_REV" \
+            --locked \
+            --root "$RUNNER_TEMP/agent-harness" \
+            agent-harness
+
+      - name: Add agent-harness to PATH
+        run: |
+          echo "$RUNNER_TEMP/agent-harness/bin" >> "$GITHUB_PATH"
+
       - name: Run Bats tests
-        run: bats tests/github
+        env:
+          AGENT_HARNESS_BIN: agent-harness
+          CODEX_BIN: codex
+          REQUIRE_CODEX_EXECPOLICY: "1"
+        run: bats --print-output-on-failure --recursive tests/github tests/agents
+
+  lint-python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          python-version: "3.14.6"
+          enable-cache: true
+          cache-python: true
+
+      - name: Run ruff format
+        run: uv run --python 3.14.6 --frozen ruff format --check agents/skills tests/agents/python
+
+      - name: Run ruff check
+        run: uv run --python 3.14.6 --frozen ruff check agents/skills tests/agents/python
+
+      - name: Run ty
+        run: uv run --python 3.14.6 --frozen ty check
+
+  test-python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          python-version: "3.14.6"
+          enable-cache: true
+          cache-python: true
+
+      - name: Run Python skill tests
+        run: uv run --python 3.14.6 --frozen pytest tests/agents/python
+
+  audit-python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          python-version: "3.14.6"
+          enable-cache: true
+          cache-python: true
+
+      - name: Run deptry
+        run: uv run --python 3.14.6 --group audit deptry .
+
+      - name: Run vulture
+        run: uv run --python 3.14.6 --group audit vulture
 
   shell-lint:
     runs-on: ubuntu-latest

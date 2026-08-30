@@ -16,10 +16,20 @@
     nix-homebrew.inputs.brew-src.follows = "brew-src";
     llm-agents.url = "github:numtide/llm-agents.nix";
     hermes-agent.url = "github:NousResearch/hermes-agent";
-    agent-harness = {
-      url = "github:furedea/agent-harness";
+    google-workspace-cli = {
+      url = "github:googleworkspace/cli";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    apple-mail-cli = {
+      url = "github:furedea/apple-mail-cli";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    agent-harness = {
+      url = "github:furedea/agent-harness";
+      inputs.home-manager.follows = "home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    hister.url = "github:asciimoo/hister";
   };
 
   outputs =
@@ -31,13 +41,17 @@
       nix-homebrew,
       llm-agents,
       hermes-agent,
+      google-workspace-cli,
+      apple-mail-cli,
       agent-harness,
+      hister,
       ...
     }:
     let
       username = "kaito";
       system = "aarch64-darwin";
       dotfilesDir = "/Users/${username}/ghq/github.com/furedea/dotfiles";
+      histerServerUrl = "https://mbp.tailbb556b.ts.net";
       allowUnfreePredicate =
         pkg:
         builtins.elem pkg.pname [
@@ -55,26 +69,42 @@
       };
       herdrPackage = llm-agents.packages.${system}.herdr;
       hermesAgentPackage = hermes-agent.packages.${system}.minimal;
+      gwsPackage = google-workspace-cli.packages.${system}.default;
+      appleMailCliPackage = apple-mail-cli.packages.${system}.default;
+      histerPackage = hister.packages.${system}.default;
       homeSpecialArgs = {
         inherit
           username
           dotfilesDir
           unstable
           llm-agents
+          appleMailCliPackage
+          gwsPackage
           hermesAgentPackage
           herdrPackage
+          histerPackage
+          histerServerUrl
           agent-harness
           system
           ;
       };
       mkDarwinConfiguration =
-        { enableMoshiService }:
+        {
+          enableHisterService,
+          enableMoshiService,
+        }:
         nix-darwin.lib.darwinSystem {
           specialArgs = {
-            inherit username enableMoshiService;
+            inherit
+              username
+              enableHisterService
+              enableMoshiService
+              histerServerUrl
+              ;
           };
           modules = [
             ./nix/darwin/default.nix
+            hister.darwinModules.default
             nix-homebrew.darwinModules.nix-homebrew
             home-manager.darwinModules.home-manager
             {
@@ -106,8 +136,14 @@
     in
     {
       darwinConfigurations = {
-        mba = mkDarwinConfiguration { enableMoshiService = false; };
-        mbp = mkDarwinConfiguration { enableMoshiService = true; };
+        mba = mkDarwinConfiguration {
+          enableHisterService = false;
+          enableMoshiService = false;
+        };
+        mbp = mkDarwinConfiguration {
+          enableHisterService = true;
+          enableMoshiService = true;
+        };
       };
 
       homeConfigurations.${username} = home-manager.lib.homeManagerConfiguration {

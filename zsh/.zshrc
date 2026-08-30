@@ -101,11 +101,11 @@ eval "$(direnv hook zsh)"
 eval "$(atuin init zsh --disable-up-arrow)"
 
 # ghq + roots + fzf: Ctrl-G to fuzzy-cd into a managed repository, monorepo
-# subproject, or worktree. `roots` expands each ghq path to all detected
-# project markers (.git/config, go.mod, package.json, Cargo.toml).
+# subproject, or worktree. `roots` expands primary ghq checkouts while linked
+# ghq worktrees bypass it.
 function ghq-fzf() {
   local selected
-  selected=$(ghq list -p | roots | fzf \
+  selected=$(_repository_search_candidates | fzf \
     --height=80% \
     --reverse \
     --preview "
@@ -126,5 +126,35 @@ function ghq-fzf() {
   zle accept-line
   zle reset-prompt
 }
+
+function _repository_search_candidates() {
+  local -a _git_paths _repository_roots _worktree_roots
+  local _git_common_dir _git_details _git_dir _ghq_path
+
+  for _ghq_path in "${(@f)$(ghq list -p)}"; do
+    if ! _git_details=$(command git -C "$_ghq_path" rev-parse \
+      --path-format=absolute --git-dir --git-common-dir 2>/dev/null); then
+      _repository_roots+=("$_ghq_path")
+      continue
+    fi
+    _git_paths=("${(@f)_git_details}")
+    _git_dir="${_git_paths[1]}"
+    _git_common_dir="${_git_paths[2]}"
+
+    if [[ "$_git_dir" == "$_git_common_dir" ]]; then
+      _repository_roots+=("$_ghq_path")
+    else
+      _worktree_roots+=("$_ghq_path")
+    fi
+  done
+
+  if (( ${#_repository_roots[@]} > 0 )); then
+    print -rl -- "${_repository_roots[@]}" | roots
+  fi
+  if (( ${#_worktree_roots[@]} > 0 )); then
+    print -rl -- "${_worktree_roots[@]}"
+  fi
+}
+
 zle -N ghq-fzf
 bindkey '^G' ghq-fzf

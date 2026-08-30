@@ -54,3 +54,34 @@ setup() {
   [[ "$(herdr_calls)" == *"plugin uninstall persiyanov.reviewr"* ]]
   [ ! -s "$HERDR_PLUGIN_SYNC_STATE_FILE" ]
 }
+
+@test "preserves managed state when plugin installation fails" {
+  echo "existing.plugin" >"$HERDR_PLUGIN_SYNC_STATE_FILE"
+  export HERDR_INSTALL_EXIT_CODE=17
+
+  run bash "$SCRIPT" new.plugin owner/new-plugin deadbeef
+
+  [ "$status" -eq 17 ]
+  [ "$(cat "$HERDR_PLUGIN_SYNC_STATE_FILE")" = "existing.plugin" ]
+}
+
+@test "reports only the original plugin installation failure" {
+  export HERDR_INSTALL_EXIT_CODE=17
+
+  run bash "$SCRIPT" new.plugin owner/new-plugin deadbeef
+
+  [ "$status" -eq 17 ]
+  [[ "$output" == *"plugin install failed"* ]]
+  ! [[ "$output" == *"unbound variable"* ]]
+}
+
+@test "keeps removed plugins installed when a declared plugin cannot be installed" {
+  echo "existing.plugin" >"$HERDR_PLUGIN_SYNC_STATE_FILE"
+  export HERDR_PLUGIN_LIST_JSON='{"result":{"plugins":[{"plugin_id":"existing.plugin","source":{"resolved_commit":"cafebabe"}}]}}'
+  export HERDR_INSTALL_EXIT_CODE=17
+
+  run bash "$SCRIPT" new.plugin owner/new-plugin deadbeef
+
+  [ "$status" -eq 17 ]
+  ! [[ "$(herdr_calls)" == *"plugin uninstall existing.plugin"* ]]
+}

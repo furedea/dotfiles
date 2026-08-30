@@ -75,6 +75,8 @@ function uninstall_removed_plugins() {
 }
 
 function install_plugins() {
+  local _next_state_file="$1"
+  shift
   while (($# > 0)); do
     local _plugin_id="$1"
     local _source="$2"
@@ -84,7 +86,7 @@ function install_plugins() {
     if [[ "$_installed_commit" != "$_git_ref" ]]; then
       "$HERDR_BIN" plugin install "$_source" --ref "$_git_ref" --yes
     fi
-    printf '%s\n' "$_plugin_id" >>"$STATE_FILE"
+    printf '%s\n' "$_plugin_id" >>"$_next_state_file"
     shift 3
   done
 }
@@ -95,9 +97,17 @@ function main() {
   set +x
   plugins_json="$("$HERDR_BIN" plugin list --json)"
   set -x
+  local _next_state_file
+  _next_state_file="$(mktemp "${STATE_FILE}.XXXXXX")"
+  local _cleanup_command
+  printf -v _cleanup_command 'rm -f -- %q' "$_next_state_file"
+  # Expand now because the local variable is unavailable when EXIT runs.
+  # shellcheck disable=SC2064
+  trap "$_cleanup_command" EXIT
+  install_plugins "$_next_state_file" "$@"
   uninstall_removed_plugins "$@"
-  : >|"$STATE_FILE"
-  install_plugins "$@"
+  mv "$_next_state_file" "$STATE_FILE"
+  trap - EXIT
 }
 
 main "$@"

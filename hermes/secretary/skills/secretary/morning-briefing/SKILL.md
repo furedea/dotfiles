@@ -13,13 +13,13 @@ metadata:
         blueprint:
             schedule: "0 8 * * *"
             deliver: origin
-            prompt: Prepare today's morning briefing using this skill. Keep provider access read-only.
-            enabled_toolsets: [web, terminal, skills]
+            prompt: Prepare today's briefing. Keep providers read-only; only local digest state may change.
+            enabled_toolsets: [terminal, skills]
 ---
 
 # Morning Briefing
 
-Combine the calendar, mail, research, and technology workflows into one concise
+Combine calendar, mail, research, and technology workflows into one concise
 report. The blueprint is a versioned routine definition; instantiated cron and
 digest state remain local.
 
@@ -33,10 +33,10 @@ digest state remain local.
 1. Load `calendar-briefing` and summarize today's schedule.
 2. Load `mail-triage` and summarize important mail with complete expected-
    account coverage. Do not mutate messages during the briefing.
-3. Load `research-digest`. Keep its AI4SE and LLM or agent benchmark tracks
-   distinct, and let it update only its local cutoff and disposition state.
-4. Load `tech-digest`. Report only its daily P0 and P1 changes, and let it
-   update only its local cutoff and disposition state.
+3. Load `research-digest`. Keep its AI4SE and LLM or agent benchmark sections
+   separate. It may update only its local digest state.
+4. Load `tech-digest`. Report only daily P0 and P1 changes. It may update only
+   its local digest state.
 5. Produce one concise report in this order:
     - attention now
     - today's schedule
@@ -46,18 +46,24 @@ digest state remain local.
     - material technology changes
     - coverage gaps
 
+## Authority Policy
+
+Provider access remains read-only. A scheduled run cannot change calendar,
+mail, dotfiles, dependencies, packages, or external accounts. The only allowed
+writes are the two profile-local digest state files defined by the related
+Skills.
+
 ## Pitfalls
 
-- Inferring permission to mutate calendar, mail, Zotero, or dotfiles from a
-  scheduled run.
-- Hiding a failed account or calendar query behind a partial summary.
+- Inferring permission to mutate a provider or dotfiles from a scheduled run.
+- Hiding a failed account, calendar, or source query behind a partial summary.
 - Filling a failed or quiet research source with general news.
 - Mixing benchmark research into product and tool release updates.
-- Reading cron memory for settings that belong in local Skill config.
+- Reading cron memory for settings owned by a Skill.
 
 ## Verification
 
-- All four workflows completed or their failures are named.
-- The scheduled run made no provider, Zotero, or dotfiles mutation.
-- Only the research and technology local state files may have changed.
+- All four related workflows completed or their failures are named.
+- Calendar and mail provider access remained read-only.
+- Only the two local digest state files may have changed.
 - The report was delivered by local Hermes cron state, not written to dotfiles.

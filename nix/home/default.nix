@@ -6,8 +6,12 @@
   dotfilesDir,
   unstable,
   llm-agents,
+  appleMailCliPackage,
+  gwsPackage,
   hermesAgentPackage,
   herdrPackage,
+  histerPackage,
+  histerServerUrl,
   agent-harness,
   system,
   enableMoshiService,
@@ -16,6 +20,7 @@
 let
   link = path: config.lib.file.mkOutOfStoreSymlink "${dotfilesDir}/${path}";
   esaCliPackage = pkgs.callPackage ../packages/esa_cli.nix { };
+  ghStackPackage = pkgs.callPackage ../packages/gh_stack.nix { };
   gitWtPackage = unstable.callPackage ../packages/git_wt.nix { gitWt = unstable.git-wt; };
   rootsPackage = pkgs.callPackage ../packages/roots.nix { };
   terminalBrowserPackage = pkgs.callPackage ../packages/terminal_browser.nix { };
@@ -117,7 +122,7 @@ let
     {
       id = "persiyanov.reviewr";
       source = "persiyanov/herdr-reviewr";
-      rev = "160ad607a195ee35ac9450e887974b3b5ddc4479";
+      rev = "8db4c8e4a0a287a63b8265aea7da4bfe7a8d0f3a";
     }
   ];
   herdrPluginArgs = lib.escapeShellArgs (
@@ -153,6 +158,7 @@ in
     eza
     fd
     fzf
+    histerPackage
     ripgrep
 
     # Editors
@@ -185,10 +191,10 @@ in
     # Content and media
     esaCliPackage
     ffmpeg
-    marp-cli
 
     # Personal secretary integrations
-    unstable.himalaya
+    appleMailCliPackage
+    gwsPackage
 
     # AI coding agents
     llm-agents.packages.${system}.claude-code
@@ -351,6 +357,7 @@ in
 
     gh = {
       enable = true;
+      extensions = [ ghStackPackage ];
       settings = {
         git_protocol = "https";
         prompt = "enabled";
@@ -410,9 +417,9 @@ in
     agent-harness = {
       enable = true;
       package = agentHarnessPackage;
-      source = agent-harness;
-      skills.extra.herdr = herdrSkill;
-      hooks.extra = {
+      source = ../../agents;
+      skills.herdr = herdrSkill;
+      hooks = {
         herdr = herdrHookBundle;
         moshi = moshiHookBundle;
       };
@@ -567,13 +574,14 @@ in
       fi
     '';
     herdrPlugins = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
-      BASH_XTRACEFD=9 \
+      PATH="${lib.makeBinPath [ pkgs.git ]}:/usr/bin:/bin" \
+        BASH_XTRACEFD=9 \
         HERDR_BIN="${herdrPackage}/bin/herdr" \
         JQ_BIN="${pkgs.jq}/bin/jq" \
         HERDR_PLUGIN_SYNC_STATE_FILE="${config.xdg.stateHome}/home-manager/herdr_plugins" \
         ${pkgs.bash}/bin/bash \
         "${config.home.homeDirectory}/.local/libexec/sync_herdr_plugins.sh" \
-        ${herdrPluginArgs} 9>/dev/null || true
+        ${herdrPluginArgs} 9>/dev/null
     '';
     moshiHomebrewServiceMigration = lib.mkIf enableMoshiService (
       lib.hm.dag.entryBetween [ "setupLaunchAgents" ] [ "writeBoundary" ] ''
@@ -590,6 +598,7 @@ in
   # Mirror to the XDG path so the home-manager-generated config is actually used.
   xdg.configFile."lazygit/config.yml".source =
     config.home.file."Library/Application Support/lazygit/config.yml".source;
+  xdg.configFile."agent-harness/bin/timeout".source = lib.getExe' pkgs.coreutils "timeout";
 
   home.file = {
     # Zsh（dotfileに実ファイル，直接編集可能）
@@ -602,6 +611,11 @@ in
 
     # Git ignore
     ".config/git/ignore".source = link "git/ignore";
+
+    # Hister client
+    "Library/Preferences/hister/config.yml".text = builtins.toJSON {
+      server.base_url = histerServerUrl;
+    };
 
     # Neovim（多ファイル・頻繁に編集）
     ".config/nvim".source = link "nvim";
@@ -626,6 +640,7 @@ in
     ".config/karabiner/karabiner.json".source = link "karabiner/karabiner.json";
     ".config/herdr/config.toml".source = link "herdr/config.toml";
     ".config/herdr/plugins/config/persiyanov.reviewr/config.toml".source = link "herdr/reviewr.toml";
+    ".local/libexec/herdr_merge_pull_request.sh".source = link "herdr/merge_pull_request.sh";
     ".local/libexec/sync_herdr_plugins.sh".source = link "herdr/sync_plugins.sh";
 
     # Hermes secretary files remain editable by Hermes and visible to Git.

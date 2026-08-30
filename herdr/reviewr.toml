@@ -1,5 +1,5 @@
 theme = "catppuccin"
-default_scope = "uncommitted"
+default_scope = "branch"
 navigator_position = "right"
 toggle_placement = "split"
 toggle_direction = "right"
