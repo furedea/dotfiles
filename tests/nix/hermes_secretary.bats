@@ -58,35 +58,6 @@ EOF
   [ ! -e "$_home/.local/bin/secretary" ]
 }
 
-@test "Home Manager installs only the mail secretary data client" {
-  run --separate-stderr nix eval --no-write-lock-file --json \
-    "$REPO_ROOT#$HOME_CONFIG.home.packages" \
-    --apply \
-    'packages:
-      builtins.filter
-        (name: builtins.elem name [ "himalaya" "ical" "khal" "vdirsyncer" "xurl" ])
-        (map (package: package.pname or package.name) packages)'
-
-  [ "$status" -eq 0 ]
-  run jq -e 'sort == ["himalaya"]' <<<"$output"
-  [ "$status" -eq 0 ]
-}
-
-@test "Home Manager installs Himalaya 2" {
-  run --separate-stderr nix eval --no-write-lock-file --json \
-    "$REPO_ROOT#$HOME_CONFIG.home.packages" \
-    --apply \
-    'packages:
-      map
-        (package: package.version)
-        (builtins.filter
-          (package: (package.pname or package.name) == "himalaya")
-          packages)'
-
-  [ "$status" -eq 0 ]
-  [ "$output" = '["2.0.0"]' ]
-}
-
 @test "Home Manager installs a dedicated secretary CLI" {
   local _secretary_path
 
@@ -118,8 +89,8 @@ EOF
   local _skill
 
   for _skill in \
+    apple-mail \
     calendar-briefing \
-    himalaya-mail \
     mail-triage \
     morning-briefing; do
     [ -f "$REPO_ROOT/hermes/secretary/skills/secretary/$_skill/SKILL.md" ]
@@ -128,15 +99,6 @@ EOF
     grep -Fq '## When to Use' \
       "$REPO_ROOT/hermes/secretary/skills/secretary/$_skill/SKILL.md"
   done
-}
-
-@test "The mail connector uses account-scoped Himalaya 2 commands" {
-  local _skill="$REPO_ROOT/hermes/secretary/skills/secretary/himalaya-mail/SKILL.md"
-
-  grep -Fq \
-    'himalaya --account ACCOUNT --json envelope list --page-size LIMIT' \
-    "$_skill"
-  ! grep -Fq -- '--output json' "$_skill"
 }
 
 @test "The morning routine is a read-only Hermes blueprint" {

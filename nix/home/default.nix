@@ -6,6 +6,7 @@
   dotfilesDir,
   unstable,
   llm-agents,
+  appleMailCliPackage,
   hermesAgentPackage,
   herdrPackage,
   histerPackage,
@@ -189,10 +190,9 @@ in
     # Content and media
     esaCliPackage
     ffmpeg
-    marp-cli
 
     # Personal secretary integrations
-    unstable.himalaya
+    appleMailCliPackage
 
     # AI coding agents
     llm-agents.packages.${system}.claude-code

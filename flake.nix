@@ -16,6 +16,10 @@
     nix-homebrew.inputs.brew-src.follows = "brew-src";
     llm-agents.url = "github:numtide/llm-agents.nix";
     hermes-agent.url = "github:NousResearch/hermes-agent";
+    apple-mail-cli = {
+      url = "github:furedea/apple-mail-cli";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     agent-harness = {
       url = "github:furedea/agent-harness";
       inputs.home-manager.follows = "home-manager";
@@ -33,6 +37,7 @@
       nix-homebrew,
       llm-agents,
       hermes-agent,
+      apple-mail-cli,
       agent-harness,
       hister,
       ...
@@ -59,6 +64,7 @@
       };
       herdrPackage = llm-agents.packages.${system}.herdr;
       hermesAgentPackage = hermes-agent.packages.${system}.minimal;
+      appleMailCliPackage = apple-mail-cli.packages.${system}.default;
       histerPackage = hister.packages.${system}.default;
       homeSpecialArgs = {
         inherit
@@ -66,6 +72,7 @@
           dotfilesDir
           unstable
           llm-agents
+          appleMailCliPackage
           hermesAgentPackage
           herdrPackage
           histerPackage

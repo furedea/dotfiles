@@ -23,6 +23,26 @@
         "type": "github"
       }
     },
+    "apple-mail-cli": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1788019158,
+        "narHash": "sha256-0HwxR/uwaX3Mta6JteD+Mhsw10Sn71iIsZ7lYrHBwWo=",
+        "owner": "furedea",
+        "repo": "apple-mail-cli",
+        "rev": "b8bb3f17e592cfd27afe6b9aefccd6b26ceabfae",
+        "type": "github"
+      },
+      "original": {
+        "owner": "furedea",
+        "repo": "apple-mail-cli",
+        "type": "github"
+      }
+    },
     "brew-src": {
       "flake": false,
       "locked": {
@@ -416,6 +436,7 @@
     "root": {
       "inputs": {
         "agent-harness": "agent-harness",
+        "apple-mail-cli": "apple-mail-cli",
         "brew-src": "brew-src",
         "hermes-agent": "hermes-agent",
         "hister": "hister",
