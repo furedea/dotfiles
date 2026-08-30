@@ -98,7 +98,23 @@ concurrency:
 
 This is most useful for `pull_request` and `push` triggers where users push multiple commits in quick succession. Each branch/PR gets its own group, so cancellation is scoped — PR #42 runs do not affect PR #43 runs.
 
-## 7. Runner: Blacksmith
+## 7. Cache Design
+
+- Measure representative cold and warm runs before adding a cache. Prefer
+  GitHub's cache backend; use an external backend only when self-hosted runner
+  locality and measured transfer time justify its credentials and operating
+  cost.
+- Include every compatibility boundary in the primary key. Use partial matches
+  only when the consumer validates and reconciles stale contents; otherwise
+  require an exact match. Always keep a correct cache-miss fallback.
+- Account for cache scope: pull-request caches are scoped to their merge refs
+  and are not reusable by the default branch or sibling pull requests.
+- Treat default-branch cache contents as readable by pull requests. Do not
+  cache broad paths that may contain credentials. When using an external shared
+  backend, do not let untrusted workflows write caches that privileged
+  workflows later execute.
+
+## 8. Runner: Blacksmith
 
 For GitHub Organizations, Blacksmith is a drop-in replacement for `ubuntu-latest` (faster CPU + local NVMe cache). Single line change:
 
