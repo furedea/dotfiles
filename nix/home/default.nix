@@ -7,6 +7,7 @@
   unstable,
   llm-agents,
   appleMailCliPackage,
+  gogCliPackage,
   hermesAgentPackage,
   herdrPackage,
   histerPackage,
@@ -193,6 +194,7 @@ in
 
     # Personal secretary integrations
     appleMailCliPackage
+    gogCliPackage
 
     # AI coding agents
     llm-agents.packages.${system}.claude-code

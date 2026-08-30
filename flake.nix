@@ -16,6 +16,10 @@
     nix-homebrew.inputs.brew-src.follows = "brew-src";
     llm-agents.url = "github:numtide/llm-agents.nix";
     hermes-agent.url = "github:NousResearch/hermes-agent";
+    nix-openclaw-tools = {
+      url = "github:openclaw/nix-openclaw-tools";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     apple-mail-cli = {
       url = "github:furedea/apple-mail-cli";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -37,6 +41,7 @@
       nix-homebrew,
       llm-agents,
       hermes-agent,
+      nix-openclaw-tools,
       apple-mail-cli,
       agent-harness,
       hister,
@@ -64,6 +69,7 @@
       };
       herdrPackage = llm-agents.packages.${system}.herdr;
       hermesAgentPackage = hermes-agent.packages.${system}.minimal;
+      gogCliPackage = nix-openclaw-tools.packages.${system}.gogcli;
       appleMailCliPackage = apple-mail-cli.packages.${system}.default;
       histerPackage = hister.packages.${system}.default;
       homeSpecialArgs = {
@@ -73,6 +79,7 @@
           unstable
           llm-agents
           appleMailCliPackage
+          gogCliPackage
           hermesAgentPackage
           herdrPackage
           histerPackage

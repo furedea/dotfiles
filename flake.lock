@@ -282,6 +282,26 @@
         "type": "github"
       }
     },
+    "nix-openclaw-tools": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1787945958,
+        "narHash": "sha256-cNBcAluTNwtjmDkzCubpYGkBosr1yYpfQKstBC/D7kM=",
+        "owner": "openclaw",
+        "repo": "nix-openclaw-tools",
+        "rev": "7fff4620dfc7c765a7299def2d0d03c5c927379a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "openclaw",
+        "repo": "nix-openclaw-tools",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1785318670,
@@ -444,6 +464,7 @@
         "llm-agents": "llm-agents",
         "nix-darwin": "nix-darwin",
         "nix-homebrew": "nix-homebrew",
+        "nix-openclaw-tools": "nix-openclaw-tools",
         "nixpkgs": "nixpkgs_4",
         "nixpkgs-unstable": "nixpkgs-unstable"
       }
