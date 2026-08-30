@@ -1,7 +1,7 @@
 ---
 name: google-calendar
 description: Read the primary Google Calendar through the gws CLI.
-version: 0.2.0
+version: 0.2.1
 author: furedea
 license: MIT
 platforms: [macos]
@@ -36,6 +36,16 @@ they are retrieved and disclosed.
 Run `gws calendar +agenda --help` before constructing a command. The installed
 CLI help is the source of truth for flags, output, and exit codes.
 
+Resolve the calendar ID from the active secretary profile at runtime:
+
+```bash
+secretary config get skills.config.secretary.calendar.id
+```
+
+Require a successful exit and one non-empty output line. Treat that line as the
+exact calendar ID. If resolution fails, request local setup instead of
+enumerating calendars or guessing an ID.
+
 Use an explicit bounded selector and the configured calendar ID:
 
 ```bash
@@ -43,16 +53,16 @@ gws calendar +agenda --today --calendar CALENDAR_ID --format json
 gws calendar +agenda --days DAYS --calendar CALENDAR_ID --format json
 ```
 
-Replace `CALENDAR_ID` with `secretary.calendar.id` from injected Skill config.
-Never run bare `+agenda`, because it queries every calendar. Use `--today`,
-`--tomorrow`, `--week`, or the smallest practical `--days` value. If the
-requested range cannot be represented safely, report the limitation instead of
-broadening the query.
+Replace `CALENDAR_ID` with the resolved output as one argument. Never run bare
+`+agenda`, because it queries every calendar. Use `--today`, `--tomorrow`,
+`--week`, or the smallest practical `--days` value. If the requested range
+cannot be represented safely, report the limitation instead of broadening the
+query.
 
 ## Procedure
 
-1. Read `secretary.calendar.id` from injected Skill config. If it is empty,
-   request local setup instead of enumerating calendars or guessing an ID.
+1. Resolve the calendar ID with
+   `secretary config get skills.config.secretary.calendar.id`.
 2. Inspect `gws calendar +agenda --help` and query only that exact ID for the
    smallest requested forward range.
 3. Report an authentication failure instead of starting or changing OAuth from
@@ -91,7 +101,7 @@ broadening the query.
 ## Verification
 
 - Authentication and the bounded provider query both succeeded.
-- Every returned event belongs to `secretary.calendar.id` and falls within the
-  requested range.
+- Every returned event belongs to the resolved calendar ID and falls within
+  the requested range.
 - The command used JSON output and the configured `--calendar` value.
 - No Google or local state was changed.
