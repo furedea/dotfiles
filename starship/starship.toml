@@ -87,6 +87,7 @@ format = '[$symbol($version)]($style) '
 format = '[$symbol($version)]($style) '
 
 [gcloud]
+disabled = true
 format = '[$symbol$account(@$domain)(\($region\))]($style) '
 
 [gleam]
