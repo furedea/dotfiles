@@ -91,6 +91,7 @@ EOF
   for _skill in \
     apple-mail \
     calendar-briefing \
+    google-calendar \
     mail-triage \
     morning-briefing; do
     [ -f "$REPO_ROOT/hermes/secretary/skills/secretary/$_skill/SKILL.md" ]
