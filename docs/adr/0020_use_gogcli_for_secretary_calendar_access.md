@@ -1,6 +1,6 @@
 # ADR-0020: Use gogcli for secretary calendar access
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-08-30
 
 In the context of a Hermes secretary that reads the single Google calendar
