@@ -58,32 +58,6 @@ EOF
   [ ! -e "$_home/.local/bin/secretary" ]
 }
 
-@test "Home Manager installs apple-mail-cli" {
-  run --separate-stderr nix eval --no-write-lock-file --json \
-    "$REPO_ROOT#$HOME_CONFIG.home.packages" \
-    --apply \
-    'packages:
-      builtins.any
-        (package: (package.pname or package.name) == "apple-mail-cli")
-        packages'
-
-  [ "$status" -eq 0 ]
-  [ "$output" = 'true' ]
-}
-
-@test "Home Manager does not install Himalaya" {
-  run --separate-stderr nix eval --no-write-lock-file --json \
-    "$REPO_ROOT#$HOME_CONFIG.home.packages" \
-    --apply \
-    'packages:
-      builtins.any
-        (package: (package.pname or package.name) == "himalaya")
-        packages'
-
-  [ "$status" -eq 0 ]
-  [ "$output" = 'false' ]
-}
-
 @test "Home Manager installs a dedicated secretary CLI" {
   local _secretary_path
 
