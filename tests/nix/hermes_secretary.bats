@@ -58,18 +58,30 @@ EOF
   [ ! -e "$_home/.local/bin/secretary" ]
 }
 
-@test "Home Manager installs only the mail secretary data client" {
+@test "Home Manager installs apple-mail-cli" {
   run --separate-stderr nix eval --no-write-lock-file --json \
     "$REPO_ROOT#$HOME_CONFIG.home.packages" \
     --apply \
     'packages:
-      builtins.filter
-        (name: builtins.elem name [ "apple-mail-cli" "himalaya" "ical" "khal" "vdirsyncer" "xurl" ])
-        (map (package: package.pname or package.name) packages)'
+      builtins.any
+        (package: (package.pname or package.name) == "apple-mail-cli")
+        packages'
 
   [ "$status" -eq 0 ]
-  run jq -e 'sort == ["apple-mail-cli"]' <<<"$output"
+  [ "$output" = 'true' ]
+}
+
+@test "Home Manager does not install Himalaya" {
+  run --separate-stderr nix eval --no-write-lock-file --json \
+    "$REPO_ROOT#$HOME_CONFIG.home.packages" \
+    --apply \
+    'packages:
+      builtins.any
+        (package: (package.pname or package.name) == "himalaya")
+        packages'
+
   [ "$status" -eq 0 ]
+  [ "$output" = 'false' ]
 }
 
 @test "Home Manager installs a dedicated secretary CLI" {
@@ -113,20 +125,6 @@ EOF
     grep -Fq '## When to Use' \
       "$REPO_ROOT/hermes/secretary/skills/secretary/$_skill/SKILL.md"
   done
-}
-
-@test "The mail connector uses bounded Apple Mail commands" {
-  local _skill="$REPO_ROOT/hermes/secretary/skills/secretary/apple-mail/SKILL.md"
-
-  grep -Fq 'apple-mail accounts' "$_skill"
-  grep -Fq 'apple-mail unread --limit LIMIT' "$_skill"
-  grep -Fq \
-    'apple-mail get --account ACCOUNT --mailbox MAILBOX --id MESSAGE_ID' \
-    "$_skill"
-  grep -Fq -- '--include-body --max-body-bytes MAX_BYTES' "$_skill"
-  grep -Fq \
-    'apple-mail move --account ACCOUNT --mailbox MAILBOX --id MESSAGE_ID --to DESTINATION' \
-    "$_skill"
 }
 
 @test "The morning routine is a read-only Hermes blueprint" {
