@@ -1,7 +1,7 @@
 ---
 name: tech-digest
 description: Curate material updates to the local engineering toolchain.
-version: 0.2.1
+version: 0.2.2
 author: furedea
 license: MIT
 platforms: [macos]
@@ -100,7 +100,9 @@ Classify every candidate before reporting it:
   compatibility, performance, policy, or price change
 - P2: useful feature or ecosystem direction worth a weekly review
 
-The daily digest contains P0 and P1 only. Keep P2 candidates in local state for
+The daily digest contains every P0 and at most five P1 changes. When more than
+five P1 candidates qualify, rank confirmed impact on the current setup first
+and persist the remainder as `deferred`. Keep P2 candidates in local state for
 a later weekly review. Ignore routine commits, low-impact patches, preview
 churn, popularity-only stories, and repeated coverage of one underlying change.
 
@@ -138,10 +140,12 @@ Use exactly this profile-local file:
 ~/.hermes/profiles/secretary/state/tech-digest.json
 ```
 
-The state contains schema version `1`, per-source successful cutoffs,
-dispositions keyed by upstream event identifier, and a P2 review queue. On the
-first run, inspect the previous seven days. Later runs use each source cutoff
-with a 48-hour overlap. Surface at most five daily P0 or P1 changes. These
+The state contains schema version `2`, per-source successful cutoffs,
+dispositions keyed by upstream event identifier, and a P2 review queue. Each
+disposition records `status`, `priority`, and the upstream event date. Valid
+statuses are `surfaced`, `deferred`, `queued_p2`, and `dismissed`. On the first
+run, inspect the previous seven days. Later runs use each source cutoff with a
+48-hour overlap. Surface every P0 and at most five daily P1 changes. These
 values and the dotfiles path are policy, not runtime configuration.
 
 `surfaced` means that the change appears in the final report from that same
@@ -163,17 +167,22 @@ cron memory, packages, or an external service.
    failures instead of broadening the window or using general search.
 4. Normalize by project and release, advisory, proposal, or announcement ID.
    Collapse mirrors and articles about the same event.
-5. Determine whether the current configuration is affected. Separate confirmed
+5. Reconsider deferred P1 items together with newly discovered candidates.
+   Determine whether the current configuration is affected. Separate confirmed
    impact from inference and name missing evidence.
-6. Assign P0, P1, P2, or ignore. Select at most five P0 or P1 changes, then
-   freeze the final report's upstream identifier set. Do not fill the quota
-   with low-value items.
+6. Assign P0, P1, P2, or ignore. Include every P0. Rank P1 candidates by
+   confirmed impact on the current setup and select at most five; persist any
+   remaining relevant P1 candidate as `deferred`. Freeze the final report's
+   upstream identifier set.
 7. Build the report from that frozen set. Atomically mark exactly those
    identifiers as newly `surfaced`, queue retained P2 items as `queued_p2`,
    and advance only successful-source cutoffs.
-8. Read back and validate the state before delivering the report. Require set
-   equality between newly surfaced identifiers and final P0 or P1 report
-   identifiers. If the atomic write or validation fails, preserve the previous
+8. Before replacing the previous state, compare it with the candidate state.
+   Derive identifiers whose disposition changed from missing or non-surfaced
+   to `surfaced`. Require set equality with final report identifiers and count
+   newly surfaced P1 identifiers; reject the candidate state when that count
+   exceeds five. Read the committed state back and repeat the same validation
+   before delivering the report. If any check fails, preserve the previous
    state and report the state failure. Do not fall back to `write_file`, a
    direct overwrite, or another non-atomic write.
 9. Never update packages, `flake.lock`, Neovim plugins, configuration, or an
@@ -198,4 +207,5 @@ instead of filling the report with P2 noise.
 - Evidence supports every P0 or P1 classification.
 - Duplicate coverage appears once and source failures are explicit.
 - Newly surfaced identifiers exactly match final P0 and P1 report items.
+- Every P0 is present and no more than five newly surfaced items are P1.
 - Only `tech-digest.json` may have changed.
