@@ -539,36 +539,6 @@ in
         ${lib.getExe hermesAgentPackage} profile create secretary --no-skills --no-alias
         /bin/rm -f "$HOME/.hermes/profiles/secretary/SOUL.md"
       fi
-
-      profile_dir="$HOME/.hermes/profiles/secretary"
-      profile_env="$profile_dir/.env"
-      bundled_plugins="${hermesAgentPackage}/share/hermes-agent/plugins"
-
-      ${pkgs.coreutils}/bin/touch "$profile_env"
-      /bin/chmod 0600 "$profile_env"
-      profile_env_tmp="$(${pkgs.coreutils}/bin/mktemp "$profile_dir/.env.XXXXXX")"
-      trap '${pkgs.coreutils}/bin/rm -f "$profile_env_tmp"' EXIT
-
-      ${pkgs.gawk}/bin/awk -v bundled_plugins="$bundled_plugins" '
-        BEGIN { written = 0 }
-        /^HERMES_BUNDLED_PLUGINS=/ {
-          if (!written) {
-            print "HERMES_BUNDLED_PLUGINS=" bundled_plugins
-            written = 1
-          }
-          next
-        }
-        { print }
-        END {
-          if (!written) {
-            print "HERMES_BUNDLED_PLUGINS=" bundled_plugins
-          }
-        }
-      ' "$profile_env" >| "$profile_env_tmp"
-
-      /bin/chmod 0600 "$profile_env_tmp"
-      ${pkgs.coreutils}/bin/mv "$profile_env_tmp" "$profile_env"
-      trap - EXIT
     '';
     zshCache = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
       BASH_XTRACEFD=9 \

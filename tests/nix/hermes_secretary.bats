@@ -63,9 +63,29 @@ EOF
   [ "$output" = 'true' ]
 }
 
-@test "Home Manager initializes the secretary profile for service execution" {
+@test "Home Manager leaves the existing Hermes profile environment untouched" {
   local _activation
-  local _hermes_venv
+  local _env_file="$BATS_TEST_TMPDIR/home/.hermes/profiles/secretary/.env"
+  local _home="$BATS_TEST_TMPDIR/home"
+  local _inode
+
+  mkdir -p "$(dirname "$_env_file")"
+  printf '%s\n' 'SLACK_BOT_TOKEN=local-credential' >"$_env_file"
+  _inode="$(stat -f '%i' "$_env_file")"
+
+  run --separate-stderr get_hermes_activation
+  [ "$status" -eq 0 ]
+  _activation="$output"
+
+  run env HOME="$_home" bash -c "$_activation"
+
+  [ "$status" -eq 0 ]
+  [ "$(stat -f '%i' "$_env_file")" = "$_inode" ]
+  [ "$(<"$_env_file")" = 'SLACK_BOT_TOKEN=local-credential' ]
+}
+
+@test "Home Manager initializes the secretary with the Hermes profile CLI" {
+  local _activation
   local _home="$BATS_TEST_TMPDIR/home"
 
   run --separate-stderr get_hermes_activation
@@ -82,19 +102,6 @@ EOF
   [ -f "$_home/.hermes/profiles/secretary/.no-bundled-skills" ]
   [ ! -e "$_home/.hermes/profiles/secretary/SOUL.md" ]
   [ ! -e "$_home/.local/bin/secretary" ]
-
-  run --separate-stderr build_hermes_venv
-  [ "$status" -eq 0 ]
-  _hermes_venv="$output"
-
-  run env HOME="$_home" \
-    "$_hermes_venv/bin/python3" \
-    -m hermes_cli.main \
-    --profile secretary \
-    plugins list --plain
-
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"slack-platform"* ]]
 }
 
 @test "Home Manager installs a dedicated secretary CLI" {
