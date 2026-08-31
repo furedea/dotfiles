@@ -882,7 +882,7 @@ EOF
     "run --frozen pytest --no-header -q tests/test_app.py" ]
 }
 
-@test "run_related_tests summarizes successful pytest targets" {
+@test "run_related_tests summarizes successful pytest targets without blank lines" {
   cd "$TEST_TMPDIR"
   git init --quiet
   git config user.email t@t
@@ -909,11 +909,10 @@ EOF
 
   [ "$status" -eq 0 ]
   message="$(jq -r '.systemMessage' <<<"$output")"
-  [[ "$message" == *'passed: pytest (2 related files)'* ]]
-  [[ "$message" == *'command: uv run --frozen pytest --no-header -q <2 targets>'* ]]
-  ! [[ "$message" == *'tests/test_first.py'* ]]
-  ! [[ "$message" == *'runner:'* ]]
-  ! [[ "$message" == *'target:'* ]]
+  expected=$'Verification passed before completion.\n'
+  expected+=$'passed: pytest (2 related files)\n'
+  expected+='command: uv run --frozen pytest --no-header -q <2 targets>'
+  [ "$message" = "$expected" ]
 }
 
 @test "run_related_tests matches python <stem>_test.py convention from default rules" {

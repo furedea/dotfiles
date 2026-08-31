@@ -34,20 +34,20 @@ HAS_FAILURES=0
 
 emit_block() {
   local _results="$1"
-  jq -cn --arg reason "Verification did not pass before completion."$'\n\n'"$_results" \
+  jq -cn --arg reason "Verification did not pass before completion."$'\n'"$_results" \
     '{decision:"block", reason:$reason}'
 }
 
 emit_success() {
   local _results="$1"
-  jq -cn --arg message "Verification passed before completion."$'\n\n'"$_results" \
+  jq -cn --arg message "Verification passed before completion."$'\n'"$_results" \
     '{systemMessage:$message}'
 }
 
 emit_skip() {
   local _reason="$1"
   local _message="Verification skipped before completion."
-  _message+=$'\n\n'
+  _message+=$'\n'
   _message+="skipped: $_reason"
 
   jq -cn --arg message "$_message" \
@@ -61,14 +61,15 @@ append_result() {
   local _command="$4"
   local _result="$5"
 
+  [ -n "$RESULTS" ] && RESULTS+=$'\n'
   RESULTS+="$_status: $_check"
   [ -n "$_scope" ] && RESULTS+=" ($_scope)"
   RESULTS+=$'\n'
-  RESULTS+="command: $_command"$'\n'
+  RESULTS+="command: $_command"
   if [ -n "$_result" ]; then
-    RESULTS+="result: $(truncate_result "$_result")"$'\n'
+    RESULTS+=$'\n'
+    RESULTS+="result: $(truncate_result "$_result")"
   fi
-  RESULTS+=$'\n'
 
   case "$_status" in
     passed | skipped) ;;
