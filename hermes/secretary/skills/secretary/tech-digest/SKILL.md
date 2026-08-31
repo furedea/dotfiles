@@ -1,7 +1,7 @@
 ---
 name: tech-digest
 description: Curate material updates to the local engineering toolchain.
-version: 0.2.0
+version: 0.2.1
 author: furedea
 license: MIT
 platforms: [macos]
@@ -144,6 +144,11 @@ first run, inspect the previous seven days. Later runs use each source cutoff
 with a 48-hour overlap. Surface at most five daily P0 or P1 changes. These
 values and the dotfiles path are policy, not runtime configuration.
 
+`surfaced` means that the change appears in the final report from that same
+run. The set of identifiers newly marked `surfaced` must equal the final P0 and
+P1 report identifiers. Persist an omitted P2 item as `queued_p2`, not
+`surfaced`.
+
 Initialize the parent directory only when needed. Update the file atomically
 through a temporary file in the same directory. Never write state to dotfiles,
 cron memory, packages, or an external service.
@@ -160,11 +165,18 @@ cron memory, packages, or an external service.
    Collapse mirrors and articles about the same event.
 5. Determine whether the current configuration is affected. Separate confirmed
    impact from inference and name missing evidence.
-6. Assign P0, P1, P2, or ignore. Select at most five P0 or P1 changes without
-   filling the quota with low-value items.
-7. Prepare the report, then atomically record events and advance only
-   successful-source cutoffs. Keep failed-source cutoffs unchanged.
-8. Never update packages, `flake.lock`, Neovim plugins, configuration, or an
+6. Assign P0, P1, P2, or ignore. Select at most five P0 or P1 changes, then
+   freeze the final report's upstream identifier set. Do not fill the quota
+   with low-value items.
+7. Build the report from that frozen set. Atomically mark exactly those
+   identifiers as newly `surfaced`, queue retained P2 items as `queued_p2`,
+   and advance only successful-source cutoffs.
+8. Read back and validate the state before delivering the report. Require set
+   equality between newly surfaced identifiers and final P0 or P1 report
+   identifiers. If the atomic write or validation fails, preserve the previous
+   state and report the state failure. Do not fall back to `write_file`, a
+   direct overwrite, or another non-atomic write.
+9. Never update packages, `flake.lock`, Neovim plugins, configuration, or an
    external account during a digest run.
 
 ## Output Shape
@@ -185,4 +197,5 @@ instead of filling the report with P2 noise.
 - The current version was checked when impact depends on it.
 - Evidence supports every P0 or P1 classification.
 - Duplicate coverage appears once and source failures are explicit.
+- Newly surfaced identifiers exactly match final P0 and P1 report items.
 - Only `tech-digest.json` may have changed.

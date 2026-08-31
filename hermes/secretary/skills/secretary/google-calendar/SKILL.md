@@ -1,7 +1,7 @@
 ---
 name: google-calendar
 description: Read the primary Google Calendar through the gws CLI.
-version: 0.2.1
+version: 0.2.2
 author: furedea
 license: MIT
 platforms: [macos]
@@ -97,11 +97,13 @@ query.
   events only for matching calendars. An exact ID prevents ambiguous matches.
 - A valid local token does not prove an API query succeeded.
 - Relative dates can cross a timezone or daylight-saving boundary.
+- An event need not start inside the requested range. Preserve events whose
+  intervals overlap it, including events already in progress at range start.
 
 ## Verification
 
 - Authentication and the bounded provider query both succeeded.
-- Every returned event belongs to the resolved calendar ID and falls within
-  the requested range.
+- Every returned event belongs to the resolved calendar ID and overlaps the
+  requested range.
 - The command used JSON output and the configured `--calendar` value.
 - No Google or local state was changed.

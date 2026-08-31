@@ -1,7 +1,7 @@
 ---
 name: research-digest
 description: Curate AI4SE and LLM or agent benchmark research.
-version: 0.2.0
+version: 0.2.1
 author: furedea
 license: MIT
 platforms: [macos]
@@ -110,6 +110,11 @@ identifier. On the first run, inspect the previous seven days. Later runs use
 each source cutoff with a 48-hour overlap for delayed indexing. Surface at most
 three papers per track. These values are policy, not runtime configuration.
 
+`surfaced` means that the work appears in the final report from that same run.
+The set of identifiers newly marked `surfaced` must equal the set of works in
+the final report. Record a screened but omitted work as `dismissed` or
+`deferred` when its disposition must persist; never call it `surfaced`.
+
 Initialize the parent directory only when needed. Update the file atomically
 through a temporary file in the same directory. Never write state to dotfiles,
 cron memory, a paper manager, or an external service.
@@ -129,10 +134,18 @@ cron memory, a paper manager, or an external service.
 6. Assess relevance, novelty, methodology, evidence, reproducibility, and
    likely practical impact. Citation count may add context but cannot decide
    inclusion.
-7. Select at most three useful papers per track. Do not fill a quota with weak
+7. Select at most three useful papers per track. Freeze the final report's
+   stable identifier set before changing state. Do not fill a quota with weak
    candidates.
-8. Prepare the report, then atomically record surfaced identifiers and advance
-   only successful source cutoffs. Keep failed-source cutoffs unchanged.
+8. Build the report from that frozen set. Atomically record exactly those
+   identifiers as newly `surfaced`; use another disposition for any persisted
+   work omitted from the report. Advance only successful source cutoffs and
+   keep failed-source cutoffs unchanged.
+9. Read back and validate the state before delivering the report. Require set
+   equality between newly surfaced identifiers and final report identifiers.
+   If the atomic write or validation fails, preserve the previous state and
+   report the state failure. Do not fall back to `write_file`, a direct
+   overwrite, or another non-atomic write.
 
 ## Output Shape
 
@@ -153,4 +166,5 @@ version, venue decision, correction, or retraction; explain the change.
 - Every factual claim has a stable primary or bibliographic source link.
 - Duplicate identifiers and cross-listed versions appear only once.
 - Failed sources are named and their cutoffs remain unchanged.
+- Newly surfaced identifiers exactly match the works in the final report.
 - Only `research-digest.json` may have changed.
