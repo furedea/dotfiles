@@ -1,7 +1,7 @@
 ---
 name: morning-briefing
 description: Summarize today's calendar, mail, research, and technology changes.
-version: 0.4.0
+version: 0.4.1
 author: furedea
 license: MIT
 platforms: [macos]
@@ -37,7 +37,7 @@ digest state remain local.
    separate. It may update only its local digest state.
 4. Load `tech-digest`. Report only daily P0 and P1 changes. It may update only
    its local digest state.
-5. Produce one concise report in this order:
+5. Produce one concise Japanese report in this order:
     - attention now
     - today's schedule
     - mail requiring a decision

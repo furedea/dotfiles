@@ -251,3 +251,9 @@ raise SystemExit(result.returncode)
     "$_skill"
   grep -Fq 'enabled_toolsets: [terminal, skills]' "$_skill"
 }
+
+@test "The morning routine requests a Japanese report" {
+  local _skill="$REPO_ROOT/hermes/secretary/skills/secretary/morning-briefing/SKILL.md"
+
+  grep -Eq '^5\. Produce one concise .*Japanese report' "$_skill"
+}
