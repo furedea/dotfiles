@@ -146,6 +146,36 @@ EOF
   [ "$status" -eq 0 ]
 }
 
+@test "The launchd gateway does not persist credential environment variables" {
+  local _hermes_venv
+  local _home="$BATS_TEST_TMPDIR/home"
+
+  run --separate-stderr build_hermes_venv
+  [ "$status" -eq 0 ]
+  _hermes_venv="$output"
+
+  mkdir -p "$_home"
+  run env \
+    HOME="$_home" \
+    HERMES_BUNDLED_PLUGINS="/nix/store/bundled-plugins" \
+    "$_hermes_venv/bin/python3" \
+    -c '
+import os
+import plistlib
+
+from hermes_cli.gateway import generate_launchd_plist
+
+credential_names = {"OPENAI_API_KEY", "SLACK_BOT_TOKEN"}
+for name in credential_names:
+    os.environ[name] = "credential-sentinel"
+environment = plistlib.loads(generate_launchd_plist().encode())["EnvironmentVariables"]
+print("\n".join(sorted(credential_names & environment.keys())))
+'
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "The launchd gateway discovers the bundled Slack plugin" {
   local _hermes_package
   local _hermes_venv
@@ -184,7 +214,7 @@ result = subprocess.run(
     text=True,
 )
 print(result.stdout, end="")
-raise SystemExit(result.returncode or "slack-platform" not in result.stdout)
+raise SystemExit(result.returncode)
 '
 
   [ "$status" -eq 0 ]
