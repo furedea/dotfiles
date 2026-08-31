@@ -93,6 +93,28 @@ EOF
   grep -Fq 'exec hermes -p secretary "$@"' "$_secretary_path/bin/secretary"
 }
 
+@test "The Hermes secretary can load the Slack gateway dependencies" {
+  local _hermes_venv
+
+  run --separate-stderr nix build --no-link --print-out-paths --impure --expr \
+    'let
+      flake = builtins.getFlake "path:'"$REPO_ROOT"'";
+      packages = flake.homeConfigurations.kaito.config.home.packages;
+      hermes = builtins.head (
+        builtins.filter
+          (package: (package.pname or package.name) == "hermes-agent")
+          packages
+      );
+    in hermes.hermesVenv'
+
+  [ "$status" -eq 0 ]
+  _hermes_venv="$output"
+
+  run "$_hermes_venv/bin/python3" -c 'import slack_bolt, slack_sdk'
+
+  [ "$status" -eq 0 ]
+}
+
 @test "The Hermes secretary exposes focused skills" {
   local _skill
 

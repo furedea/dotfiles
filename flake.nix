@@ -68,7 +68,7 @@
         config = { inherit allowUnfreePredicate; };
       };
       herdrPackage = llm-agents.packages.${system}.herdr;
-      hermesAgentPackage = hermes-agent.packages.${system}.minimal;
+      hermesAgentPackage = hermes-agent.packages.${system}.messaging;
       gwsPackage = google-workspace-cli.packages.${system}.default;
       appleMailCliPackage = apple-mail-cli.packages.${system}.default;
       histerPackage = hister.packages.${system}.default;
