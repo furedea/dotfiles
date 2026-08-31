@@ -9,17 +9,35 @@ setup() {
   HOME_CONFIG="homeConfigurations.kaito.config"
 }
 
-function build_hermes_venv() {
+function build_home_package_output() {
+  local _package_name="${1:?package name is required}"
+  local _output="${2:?output is required}"
+
   nix build --no-link --print-out-paths --impure --expr \
-    'let
-      flake = builtins.getFlake "path:'"$REPO_ROOT"'";
+    '{ output, packageName }:
+    let
+      flake = builtins.getFlake "git+file://'"$REPO_ROOT"'";
       packages = flake.homeConfigurations.kaito.config.home.packages;
-      hermes = builtins.head (
+      package = builtins.head (
         builtins.filter
-          (package: (package.pname or package.name) == "hermes-agent")
+          (candidate: (candidate.pname or candidate.name) == packageName)
           packages
       );
-    in hermes.hermesVenv'
+    in if output == "package" then package else builtins.getAttr output package' \
+    --argstr output "$_output" \
+    --argstr packageName "$_package_name"
+}
+
+function build_hermes_package() {
+  build_home_package_output hermes-agent package
+}
+
+function build_hermes_venv() {
+  build_home_package_output hermes-agent hermesVenv
+}
+
+function build_secretary_package() {
+  build_home_package_output secretary package
 }
 
 function get_hermes_activation() {
@@ -107,27 +125,10 @@ EOF
 @test "Home Manager installs a dedicated secretary CLI" {
   local _secretary_path
 
-  run --separate-stderr nix eval --no-write-lock-file --json \
-    "$REPO_ROOT#$HOME_CONFIG.home.packages" \
-    --apply \
-    'packages:
-      builtins.filter
-        (name: name == "secretary")
-        (map (package: package.pname or package.name) packages)'
-
-  [ "$status" -eq 0 ]
-  [ "$output" = '["secretary"]' ]
-
-  run --separate-stderr nix eval --no-write-lock-file --raw \
-    "$REPO_ROOT#$HOME_CONFIG.home.packages" \
-    --apply \
-    'packages:
-      (builtins.head
-        (builtins.filter
-          (package: (package.pname or package.name) == "secretary")
-          packages)).outPath'
+  run --separate-stderr build_secretary_package
   [ "$status" -eq 0 ]
   _secretary_path="$output"
+
   grep -Fq 'exec hermes -p secretary "$@"' "$_secretary_path/bin/secretary"
 }
 
@@ -143,6 +144,51 @@ EOF
     'from plugins.platforms.slack.adapter import SLACK_AVAILABLE; raise SystemExit(not SLACK_AVAILABLE)'
 
   [ "$status" -eq 0 ]
+}
+
+@test "The launchd gateway discovers the bundled Slack plugin" {
+  local _hermes_package
+  local _hermes_venv
+  local _home="$BATS_TEST_TMPDIR/home"
+
+  run --separate-stderr build_hermes_package
+  [ "$status" -eq 0 ]
+  _hermes_package="$output"
+
+  run --separate-stderr build_hermes_venv
+  [ "$status" -eq 0 ]
+  _hermes_venv="$output"
+
+  mkdir -p "$_home"
+  run env \
+    HOME="$_home" \
+    HERMES_BUNDLED_PLUGINS="$_hermes_package/share/hermes-agent/plugins" \
+    "$_hermes_venv/bin/python3" \
+    -c '
+import os
+import plistlib
+import subprocess
+import sys
+
+from hermes_cli.gateway import generate_launchd_plist
+
+service = plistlib.loads(generate_launchd_plist().encode())
+service_environment = os.environ.copy()
+service_environment.pop("HERMES_BUNDLED_PLUGINS", None)
+service_environment.update(service["EnvironmentVariables"])
+result = subprocess.run(
+    [sys.executable, "-m", "hermes_cli.main", "plugins", "list", "--plain"],
+    capture_output=True,
+    check=False,
+    env=service_environment,
+    text=True,
+)
+print(result.stdout, end="")
+raise SystemExit(result.returncode or "slack-platform" not in result.stdout)
+'
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"slack-platform"* ]]
 }
 
 @test "The Hermes secretary exposes focused skills" {
