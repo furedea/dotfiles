@@ -1,0 +1,46 @@
+Backport: https://github.com/NousResearch/hermes-agent/pull/85365
+Head-Commit: 9c938204ba5f5bdf379ef9bb389a72841951447b
+Scope: macOS launchd resource propagation
+
+diff --git a/hermes_cli/gateway.py b/hermes_cli/gateway.py
+--- a/hermes_cli/gateway.py
++++ b/hermes_cli/gateway.py
+@@ -19,1 +19,2 @@
+-from pathlib import Path
++from pathlib import Path
++from xml.sax.saxutils import escape as _xml_escape
+@@ -4184,1 +4185,20 @@
+-def generate_launchd_plist() -> str:
++_BUNDLED_RESOURCE_ENV_VARS = (
++    "HERMES_BUNDLED_PLUGINS",
++    "HERMES_BUNDLED_SKILLS",
++    "HERMES_BUNDLED_LOCALES",
++    "HERMES_OPTIONAL_SKILLS",
++    "HERMES_TUI_DIR",
++)
++
++
++def _bundled_resource_env_pairs() -> list[tuple[str, str]]:
++    """Return packaged resource environment variables that are currently set."""
++    pairs: list[tuple[str, str]] = []
++    for name in _BUNDLED_RESOURCE_ENV_VARS:
++        value = os.environ.get(name, "").strip()
++        if value:
++            pairs.append((name, value))
++    return pairs
++
++
++def generate_launchd_plist() -> str:
+@@ -4228,1 +4248,6 @@
+-    prog_args_xml = "\n        ".join(prog_args)
++    prog_args_xml = "\n        ".join(prog_args)
++
++    bundled_env_xml = "".join(
++        f"\n        <key>{name}</key>\n        <string>{_xml_escape(value)}</string>"
++        for name, value in _bundled_resource_env_pairs()
++    )
+@@ -4273,3 +4298,3 @@
+         <key>HERMES_HOME</key>
+-        <string>{hermes_home}</string>
++        <string>{hermes_home}</string>{bundled_env_xml}
+     </dict>

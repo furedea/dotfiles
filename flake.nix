@@ -68,7 +68,26 @@
         config = { inherit allowUnfreePredicate; };
       };
       herdrPackage = llm-agents.packages.${system}.herdr;
-      hermesAgentPackage = hermes-agent.packages.${system}.messaging;
+      hermesPkgs = import hermes-agent.inputs.nixpkgs { inherit system; };
+      hermesAgentBasePackage = hermes-agent.packages.${system}.messaging;
+      # Remove this backport when the pinned Hermes revision contains
+      # NousResearch/hermes-agent#85365.
+      hermesAgentPatchedSource = pkgs.applyPatches {
+        name = "hermes-agent-python-source";
+        src = hermesAgentBasePackage.hermesNpmLib.pythonSrc;
+        patches = [ ./nix/patches/hermes_gateway_service_resources.patch ];
+      };
+      hermesAgentCallPackage =
+        path: overrides:
+        hermesPkgs.callPackage path (
+          overrides
+          // nixpkgs.lib.optionalAttrs (builtins.baseNameOf path == "python.nix") {
+            pythonSrc = hermesAgentPatchedSource;
+          }
+        );
+      hermesAgentPackage = hermesAgentBasePackage.override {
+        callPackage = hermesAgentCallPackage;
+      };
       gwsPackage = google-workspace-cli.packages.${system}.default;
       appleMailCliPackage = apple-mail-cli.packages.${system}.default;
       histerPackage = hister.packages.${system}.default;
