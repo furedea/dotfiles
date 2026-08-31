@@ -27,14 +27,22 @@ setup() {
 EOF
 }
 
-@test "Home Manager keeps Hermes cron state local" {
+@test "Home Manager keeps mutable Hermes profile state local" {
   run --separate-stderr nix eval --no-write-lock-file --json \
     "$REPO_ROOT#$HOME_CONFIG.home.file" \
     --apply \
-    'files: builtins.hasAttr ".hermes/profiles/secretary/cron" files'
+    'files:
+      builtins.all
+        (path: !(builtins.hasAttr path files))
+        [
+          ".hermes/profiles/secretary/cron"
+          ".hermes/profiles/secretary/state"
+          ".hermes/profiles/secretary/.env"
+          ".hermes/profiles/secretary/config.yaml"
+        ]'
 
   [ "$status" -eq 0 ]
-  [ "$output" = 'false' ]
+  [ "$output" = 'true' ]
 }
 
 @test "Home Manager initializes the secretary with the Hermes profile CLI" {
@@ -93,7 +101,9 @@ EOF
     calendar-briefing \
     google-calendar \
     mail-triage \
-    morning-briefing; do
+    morning-briefing \
+    research-digest \
+    tech-digest; do
     [ -f "$REPO_ROOT/hermes/secretary/skills/secretary/$_skill/SKILL.md" ]
     grep -Fq "name: $_skill" \
       "$REPO_ROOT/hermes/secretary/skills/secretary/$_skill/SKILL.md"
@@ -102,12 +112,14 @@ EOF
   done
 }
 
-@test "The morning routine is a read-only Hermes blueprint" {
+@test "The morning routine limits writes to local digest state" {
   local _skill="$REPO_ROOT/hermes/secretary/skills/secretary/morning-briefing/SKILL.md"
 
   grep -Fq 'blueprint:' "$_skill"
   grep -Fq 'schedule: "0 8 * * *"' "$_skill"
   grep -Fq 'prompt: Prepare today' "$_skill"
-  grep -Fq 'Keep the run read-only.' "$_skill"
+  grep -Fq \
+    'Keep providers read-only; only local digest state may change.' \
+    "$_skill"
   grep -Fq 'enabled_toolsets: [terminal, skills]' "$_skill"
 }
