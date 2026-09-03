@@ -59,17 +59,22 @@ setup() {
   jq -e 'to_entries | all(.value | type == "array" and length > 0 and all(. | type == "string"))' "$RULES" >/dev/null
 }
 
-@test "every project extension test file exists" {
+@test "every project extension test target exists" {
   cd "$REPO_ROOT"
   missing=()
   while IFS= read -r t; do
-    [ -f "$t" ] || missing+=("$t")
+    [ -e "$t" ] || missing+=("$t")
   done < <(jq -r 'values[] | .[]' "$RULES" | sort -u)
   if [ "${#missing[@]}" -gt 0 ]; then
     printf 'missing test files referenced by rules:\n' >&2
     printf '  %s\n' "${missing[@]}" >&2
     return 1
   fi
+}
+
+@test "Nix changes map to the Nix Bats domain" {
+  [ "$(jq -r '."flake.nix"[]' "$RULES")" = "tests/nix" ]
+  [ "$(jq -r '."nix/**"[]' "$RULES")" = "tests/nix" ]
 }
 
 @test "library files fan out to their consumers" {

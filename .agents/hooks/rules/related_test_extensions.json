@@ -92,5 +92,11 @@
     "tests/agents/python/skills/skill-auditor/test_collect_transcripts.py",
     "tests/agents/python/skills/skill-auditor/test_generate_report.py",
     "tests/agents/python/skills/skill-auditor/test_run_audit.py"
+  ],
+  "flake.nix": [
+    "tests/nix"
+  ],
+  "nix/**": [
+    "tests/nix"
   ]
 }

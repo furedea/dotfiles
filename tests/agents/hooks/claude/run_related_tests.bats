@@ -7,6 +7,7 @@ setup() {
   load test-helper/setup
   HOOK="$HOOK_DIR/run_related_tests.sh"
   TEST_TMPDIR="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/gate.XXXXXX")"
+  export RUN_RELATED_TESTS_BASE_REF=HEAD
 }
 
 teardown() {
@@ -17,6 +18,15 @@ teardown() {
 make_stop_input() {
   local _active="${1:-false}"
   jq -n --argjson a "$_active" '{"stop_hook_active":$a,"session_id":"test"}'
+}
+
+assert_verification_passed() {
+  local _message
+  _message="$(jq -r '.systemMessage // empty' <<<"$output")"
+  if [[ "$_message" != *'passed:'* ]]; then
+    printf '%s\n' "$output"
+    return 1
+  fi
 }
 
 @test "run_related_tests revalidates changes when stop_hook_active is true" {
@@ -55,14 +65,139 @@ EOF
   [[ "$output" == *'revalidated after continuation'* ]]
 }
 
-@test "run_related_tests exits 0 silently when not in a git repository" {
+@test "run_related_tests revalidates committed changes since the branch base" {
+  cd "$TEST_TMPDIR"
+  git init --quiet
+  git config user.email t@t
+  git config user.name t
+  git config commit.gpgsign false
+  mkdir -p bin tests
+  cat > bin/timeout <<'EOF'
+#!/bin/bash
+shift
+"$@"
+EOF
+  cat > bin/bats <<'EOF'
+#!/bin/bash
+echo "committed change was verified"
+exit 1
+EOF
+  chmod +x bin/timeout bin/bats
+  cat > tests/script.bats <<'EOF'
+@test "would fail" { false; }
+EOF
+  cat > script.sh <<'EOF'
+#!/bin/bash
+echo base
+EOF
+  git add . && git commit --quiet -m base
+  git update-ref refs/remotes/origin/main HEAD
+  printf '#!/bin/bash\necho changed\n' > script.sh
+  git add script.sh && git commit --quiet -m change
+  export PATH="$TEST_TMPDIR/bin:$PATH"
+  export RUN_RELATED_TESTS_BASE_REF=origin/main
+
+  run bash "$HOOK" <<< "$(make_stop_input false)"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'"decision":"block"'* ]]
+  [[ "$output" == *'committed change was verified'* ]]
+}
+
+@test "run_related_tests blocks when the branch base is unavailable" {
+  cd "$TEST_TMPDIR"
+  git init --quiet
+  git config user.email t@t
+  git config user.name t
+  git config commit.gpgsign false
+  touch tracked
+  git add tracked && git commit --quiet -m base
+  export RUN_RELATED_TESTS_BASE_REF=origin/missing
+
+  run bash "$HOOK" <<< "$(make_stop_input false)"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'"decision":"block"'* ]]
+  [[ "$output" == *'unavailable: git (branch base origin/missing)'* ]]
+  [[ "$output" == *'command: git merge-base HEAD origin/missing'* ]]
+}
+
+@test "run_related_tests verifies staged changes" {
+  cd "$TEST_TMPDIR"
+  git init --quiet
+  git config user.email t@t
+  git config user.name t
+  git config commit.gpgsign false
+  mkdir -p bin tests
+  cat > bin/timeout <<'EOF'
+#!/bin/bash
+shift
+"$@"
+EOF
+  cat > bin/bats <<'EOF'
+#!/bin/bash
+echo "staged change was verified"
+exit 1
+EOF
+  chmod +x bin/timeout bin/bats
+  cat > tests/script.bats <<'EOF'
+@test "would fail" { false; }
+EOF
+  printf '#!/bin/bash\necho base\n' > script.sh
+  git add . && git commit --quiet -m base
+  printf '#!/bin/bash\necho staged\n' > script.sh
+  git add script.sh
+  export PATH="$TEST_TMPDIR/bin:$PATH"
+
+  run bash "$HOOK" <<< "$(make_stop_input false)"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'"decision":"block"'* ]]
+  [[ "$output" == *'staged change was verified'* ]]
+}
+
+@test "run_related_tests verifies untracked changes" {
+  cd "$TEST_TMPDIR"
+  git init --quiet
+  git config user.email t@t
+  git config user.name t
+  git config commit.gpgsign false
+  mkdir -p bin tests
+  cat > bin/timeout <<'EOF'
+#!/bin/bash
+shift
+"$@"
+EOF
+  cat > bin/bats <<'EOF'
+#!/bin/bash
+echo "untracked change was verified"
+exit 1
+EOF
+  chmod +x bin/timeout bin/bats
+  cat > tests/new_script.bats <<'EOF'
+@test "would fail" { false; }
+EOF
+  touch base
+  git add . && git commit --quiet -m base
+  printf '#!/bin/bash\necho untracked\n' > new_script.sh
+  export PATH="$TEST_TMPDIR/bin:$PATH"
+
+  run bash "$HOOK" <<< "$(make_stop_input false)"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'"decision":"block"'* ]]
+  [[ "$output" == *'untracked change was verified'* ]]
+}
+
+@test "run_related_tests reports that a non-Git directory was skipped" {
   cd "$TEST_TMPDIR"
   run bash "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
-  [ -z "$output" ]
+  message="$(jq -r '.systemMessage' <<<"$output")"
+  [[ "$message" == *'skipped: not inside a Git repository'* ]]
 }
 
-@test "run_related_tests exits 0 silently when working tree is clean" {
+@test "run_related_tests reports when there are no branch changes" {
   cd "$TEST_TMPDIR"
   git init --quiet
   git config user.email t@t
@@ -71,10 +206,11 @@ EOF
   touch f && git add f && git commit --quiet -m i
   run bash "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
-  [ -z "$output" ]
+  message="$(jq -r '.systemMessage' <<<"$output")"
+  [[ "$message" == *'skipped: no changes since HEAD'* ]]
 }
 
-@test "run_related_tests exits 0 silently when no test framework detected" {
+@test "run_related_tests reports when no related test runner is detected" {
   cd "$TEST_TMPDIR"
   git init --quiet
   git config user.email t@t
@@ -84,7 +220,30 @@ EOF
   printf 'console.log(1)\n' > app.js  # untracked change, no test framework
   run bash "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
-  [ -z "$output" ]
+  message="$(jq -r '.systemMessage' <<<"$output")"
+  [[ "$message" == *'skipped: no related test runner matched changed paths'* ]]
+}
+
+@test "run_related_tests does not treat JSON as JavaScript" {
+  cd "$TEST_TMPDIR"
+  git init --quiet
+  git config user.email t@t
+  git config user.name t
+  git config commit.gpgsign false
+  cat > package.json <<'EOF'
+{
+  "scripts": {}
+}
+EOF
+  printf '{"enabled":true}\n' > settings.json
+  git add . && git commit --quiet -m i
+  printf '\n' >> settings.json
+
+  run bash "$HOOK" <<< "$(make_stop_input false)"
+
+  [ "$status" -eq 0 ]
+  message="$(jq -r '.systemMessage' <<<"$output")"
+  [[ "$message" == *'skipped: no related test runner matched changed paths'* ]]
 }
 
 @test "run_related_tests blocks when a JavaScript project has no test command" {
@@ -107,8 +266,7 @@ EOF
 
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision":"block"'* ]]
-  [[ "$output" == *'status: unavailable'* ]]
-  [[ "$output" == *'runner: javascript_typescript'* ]]
+  [[ "$output" == *'unavailable: javascript_typescript (full suite)'* ]]
   [[ "$output" == *'result: test command could not be determined'* ]]
 }
 
@@ -134,10 +292,46 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision"'* ]]
   [[ "$output" == *'block'* ]]
-  [[ "$output" == *'status: failed'* ]]
-  [[ "$output" == *'runner: bats'* ]]
+  [[ "$output" == *'failed: bats (full suite)'* ]]
   [[ "$output" == *'command: bats tests/ --recursive'* ]]
-  [[ "$output" == *'target: tests/'* ]]
+}
+
+@test "run_related_tests limits failed verification output" {
+  cd "$TEST_TMPDIR"
+  git init --quiet
+  git config user.email t@t
+  git config user.name t
+  git config commit.gpgsign false
+  mkdir -p bin tests
+  cat > bin/timeout <<'EOF'
+#!/bin/bash
+shift
+"$@"
+EOF
+  cat > bin/bats <<'EOF'
+#!/bin/bash
+line=1
+while [ "$line" -le 60 ]; do
+  printf 'failure line %02d\n' "$line"
+  line=$((line + 1))
+done
+exit 1
+EOF
+  chmod +x bin/timeout bin/bats
+  export PATH="$TEST_TMPDIR/bin:$PATH"
+  printf '@test "fails" { false; }\n' > tests/script.bats
+  printf '#!/bin/bash\n' > script.sh
+  git add . && git commit --quiet -m i
+  printf '\n' >> script.sh
+
+  run bash "$HOOK" <<< "$(make_stop_input false)"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'failed: bats (1 related targets)'* ]]
+  [[ "$output" == *'command: bats tests/script.bats'* ]]
+  [[ "$output" == *'[output truncated'* ]]
+  ! [[ "$output" == *'failure line 01'* ]]
+  [[ "$output" == *'failure line 60'* ]]
 }
 
 @test "run_related_tests blocks when a required runner is unavailable" {
@@ -162,8 +356,7 @@ EOF
 
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision":"block"'* ]]
-  [[ "$output" == *'status: unavailable'* ]]
-  [[ "$output" == *'runner: bats'* ]]
+  [[ "$output" == *'unavailable: bats (1 related targets)'* ]]
   [[ "$output" == *'result: missing-bats-runner is not available'* ]]
 }
 
@@ -195,8 +388,7 @@ EOF
 
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision":"block"'* ]]
-  [[ "$output" == *'status: unavailable'* ]]
-  [[ "$output" == *'runner: bats'* ]]
+  [[ "$output" == *'unavailable: bats (1 related targets)'* ]]
   [[ "$output" == *'result: timeout enforcement is unavailable'* ]]
 }
 
@@ -207,9 +399,19 @@ EOF
   git config user.name t
   git config commit.gpgsign false
   mkdir -p bin home/.config/agent-harness/bin tests
-  for _dependency in git jq sort find; do
+  for _dependency in bash dirname find grep jq rm sort; do
     ln -s "$(command -v "$_dependency")" "bin/$_dependency"
   done
+  cat > bin/git <<EOF
+#!/bin/bash
+case "\$*" in
+  "rev-parse --show-toplevel") printf '%s\n' "$TEST_TMPDIR" ;;
+  "merge-base HEAD HEAD") printf '%s\n' base ;;
+  "diff --name-only base --") printf '%s\n' script.sh ;;
+  "ls-files --others --exclude-standard") exit 0 ;;
+  *) exit 1 ;;
+esac
+EOF
   cat > home/.config/agent-harness/bin/timeout <<'EOF'
 #!/bin/bash
 shift
@@ -219,7 +421,7 @@ EOF
 #!/bin/bash
 exit 0
 EOF
-  chmod +x home/.config/agent-harness/bin/timeout bin/bats
+  chmod +x home/.config/agent-harness/bin/timeout bin/bats bin/git
   cat > tests/script.bats <<'EOF'
 @test "would pass" { true; }
 EOF
@@ -229,13 +431,13 @@ echo hi
 EOF
   git add . && git commit --quiet -m i
   printf '#!/bin/bash\necho changed\n' > script.sh
-  export HOME="$TEST_TMPDIR/home"
-  export PATH="$TEST_TMPDIR/bin:/usr/bin:/bin"
-
-  run /bin/bash "$HOOK" <<< '{"stop_hook_active":false,"session_id":"test"}'
+  run env \
+    XDG_CONFIG_HOME="$TEST_TMPDIR/home/.config" \
+    PATH="$TEST_TMPDIR/bin" \
+    bash "$HOOK" <<< '{"stop_hook_active":false,"session_id":"test"}'
 
   [ "$status" -eq 0 ]
-  [ -z "$output" ]
+  assert_verification_passed
 }
 
 @test "run_related_tests blocks when bats runner times out" {
@@ -270,12 +472,11 @@ EOF
 
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision"'* ]]
-  [[ "$output" == *'status: timeout'* ]]
-  [[ "$output" == *'runner: bats'* ]]
+  [[ "$output" == *'timeout: bats (1 related targets)'* ]]
   [[ "$output" == *'timed out after 1s'* ]]
 }
 
-@test "run_related_tests exits 0 silently when bats tests pass" {
+@test "run_related_tests reports successful Bats verification" {
   cd "$TEST_TMPDIR"
   git init --quiet
   git config user.email t@t
@@ -295,7 +496,9 @@ EOF
   printf '#!/bin/bash\necho changed\n' > script.sh
   run bash "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
-  [ -z "$output" ]
+  message="$(jq -r '.systemMessage' <<<"$output")"
+  [[ "$message" == *'passed: bats (full suite)'* ]]
+  [[ "$message" == *'command: bats tests/ --recursive'* ]]
 }
 
 # --- project extension rules file (.agents/hooks/rules/related_test_extensions.json) ---
@@ -331,7 +534,7 @@ EOF
   [[ "$output" == *'fan-out target fails'* ]]
 }
 
-@test "run_related_tests is silent when JSON-mapped tests pass" {
+@test "run_related_tests reports successful JSON-mapped tests" {
   cd "$TEST_TMPDIR"
   git init --quiet
   git config user.email t@t
@@ -353,7 +556,7 @@ EOF
   printf 'changed\n' >> lib/shared.sh
   run bash "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
-  [ -z "$output" ]
+  assert_verification_passed
 }
 
 @test "run_related_tests combines JSON rules with basename heuristic" {
@@ -405,7 +608,7 @@ EOF
   printf 'changed\n' >> script.sh
   run bash "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
-  [ -z "$output" ]
+  assert_verification_passed
 }
 
 @test "run_related_tests matches JSON glob patterns" {
@@ -431,6 +634,43 @@ EOF
   run bash "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   [[ "$output" == *'config check fails'* ]]
+}
+
+@test "run_related_tests runs a Bats directory mapped by JSON rules" {
+  cd "$TEST_TMPDIR"
+  git init --quiet
+  git config user.email t@t
+  git config user.name t
+  git config commit.gpgsign false
+  mkdir -p .agents/hooks/rules bin nix tests/nix
+  cat > .agents/hooks/rules/related_test_extensions.json <<'EOF'
+{
+  "nix/**": ["tests/nix"]
+}
+EOF
+  cat > bin/timeout <<'EOF'
+#!/bin/bash
+shift
+"$@"
+EOF
+  cat > bin/bats <<'EOF'
+#!/bin/bash
+printf '%s\n' "$*" > bats_args.txt
+exit 0
+EOF
+  chmod +x bin/timeout bin/bats
+  cat > tests/nix/module.bats <<'EOF'
+@test "module passes" { true; }
+EOF
+  printf '{ }\n' > nix/module.nix
+  git add . && git commit --quiet -m base
+  printf '\n' >> nix/module.nix
+  export PATH="$TEST_TMPDIR/bin:$PATH"
+
+  run bash "$HOOK" <<< "$(make_stop_input false)"
+
+  [ "$status" -eq 0 ]
+  [ "$(cat bats_args.txt)" = "tests/nix" ]
 }
 
 @test "run_related_tests runs Rust integration tests mapped from non-Rust changes" {
@@ -461,7 +701,7 @@ EOF
   run bash "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
-  [ -z "$output" ]
+  assert_verification_passed
   [ "$(cat cargo_args.txt)" = "test --test claude_materialization --quiet" ]
 }
 
@@ -493,7 +733,7 @@ EOF
   printf 'changed\n' >> script.sh
   run bash "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
-  [ -z "$output" ]
+  assert_verification_passed
 }
 
 @test "run_related_tests falls back to full bats when basename does not match" {
@@ -545,7 +785,7 @@ EOF
   printf 'changed\n' >> script.sh
   run bash "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
-  [ -z "$output" ]
+  assert_verification_passed
 }
 
 @test "run_related_tests runs the changed bats file itself" {
@@ -565,7 +805,7 @@ EOF
   printf '\n@test "still passes" { true; }\n' >> tests/changed.bats
   run bash "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
-  [ -z "$output" ]
+  assert_verification_passed
 }
 
 @test "run_related_tests matches python test_<stem>.py convention from default rules" {
@@ -607,7 +847,72 @@ EOF
   printf '\n' >> app.py
   run bash "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
-  [ -z "$output" ]
+  assert_verification_passed
+}
+
+@test "run_related_tests normalizes duplicate pytest target paths" {
+  cd "$TEST_TMPDIR"
+  git init --quiet
+  git config user.email t@t
+  git config user.name t
+  git config commit.gpgsign false
+  mkdir -p .agents/hooks/rules bin tests
+  cat > .agents/hooks/rules/related_test_extensions.json <<'EOF'
+{
+  "app.py": ["tests/test_app.py"]
+}
+EOF
+  cat > bin/uv <<'EOF'
+#!/bin/bash
+printf '%s\n' "$*" > uv_args.txt
+exit 0
+EOF
+  chmod +x bin/uv
+  export PATH="$TEST_TMPDIR/bin:$PATH"
+  touch pyproject.toml
+  printf 'def value():\n    return 1\n' > app.py
+  printf 'def test_value():\n    assert True\n' > tests/test_app.py
+  git add . && git commit --quiet -m i
+  printf '\n' >> app.py
+
+  run bash "$HOOK" <<< "$(make_stop_input false)"
+
+  [ "$status" -eq 0 ]
+  [ "$(cat uv_args.txt)" = \
+    "run --frozen pytest --no-header -q tests/test_app.py" ]
+}
+
+@test "run_related_tests summarizes successful pytest targets without blank lines" {
+  cd "$TEST_TMPDIR"
+  git init --quiet
+  git config user.email t@t
+  git config user.name t
+  git config commit.gpgsign false
+  mkdir -p .agents/hooks/rules bin config tests
+  cat > .agents/hooks/rules/related_test_extensions.json <<'EOF'
+{
+  "config/*.toml": ["tests/test_first.py", "tests/test_second.py"]
+}
+EOF
+  cat > bin/uv <<'EOF'
+#!/bin/bash
+exit 0
+EOF
+  chmod +x bin/uv
+  export PATH="$TEST_TMPDIR/bin:$PATH"
+  touch pyproject.toml tests/test_first.py tests/test_second.py
+  printf 'enabled = true\n' > config/app.toml
+  git add . && git commit --quiet -m i
+  printf '\n' >> config/app.toml
+
+  run bash "$HOOK" <<< "$(make_stop_input false)"
+
+  [ "$status" -eq 0 ]
+  message="$(jq -r '.systemMessage' <<<"$output")"
+  expected=$'Verification passed before completion.\n'
+  expected+=$'passed: pytest (2 related files)\n'
+  expected+='command: uv run --frozen pytest --no-header -q <2 targets>'
+  [ "$message" = "$expected" ]
 }
 
 @test "run_related_tests matches python <stem>_test.py convention from default rules" {
@@ -642,7 +947,7 @@ EOF
   [[ "$output" == *'test_value'* ]]
 }
 
-@test "run_related_tests runs the related Vitest file" {
+@test "run_related_tests runs named and import-related Vitest tests" {
   cd "$TEST_TMPDIR"
   git init --quiet
   git config user.email t@t
@@ -651,7 +956,7 @@ EOF
   mkdir -p bin src tests
   cat > bin/pnpm <<'EOF'
 #!/bin/bash
-printf '%s\n' "$*" > pnpm_args.txt
+printf '%s\n' "$*" >> pnpm_args.txt
 exit 0
 EOF
   chmod +x bin/pnpm
@@ -671,11 +976,11 @@ EOF
   run bash "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
-  [ -z "$output" ]
-  [ "$(cat pnpm_args.txt)" = "exec vitest run ./tests/app.test.ts" ]
+  assert_verification_passed
+  [ "$(cat pnpm_args.txt)" = $'exec vitest run tests/app.test.ts\nexec vitest related --run --passWithNoTests src/app.ts' ]
 }
 
-@test "run_related_tests falls back to the full Vitest suite" {
+@test "run_related_tests uses Vitest related without a named test" {
   cd "$TEST_TMPDIR"
   git init --quiet
   git config user.email t@t
@@ -704,8 +1009,9 @@ EOF
   run bash "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
-  [ -z "$output" ]
-  [ "$(cat pnpm_args.txt)" = "exec vitest run" ]
+  assert_verification_passed
+  [ "$(cat pnpm_args.txt)" = \
+    "exec vitest related --run --passWithNoTests src/app.ts" ]
 }
 
 @test "run_related_tests falls back to the declared JavaScript test script" {
@@ -735,7 +1041,7 @@ EOF
   run bash "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
-  [ -z "$output" ]
+  assert_verification_passed
   [ "$(cat pnpm_args.txt)" = "1:test" ]
 }
 
@@ -768,8 +1074,8 @@ EOF
   run bash "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
-  [ -z "$output" ]
-  [ "$(cat npm_args.txt)" = "exec -- jest ./tests/app.spec.js" ]
+  assert_verification_passed
+  [ "$(cat npm_args.txt)" = "exec -- jest tests/app.spec.js" ]
 }
 
 @test "run_related_tests runs the related Node test file" {
@@ -799,8 +1105,8 @@ EOF
   run bash "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
-  [ -z "$output" ]
-  [ "$(cat node_args.txt)" = "--test ./tests/app.test.js" ]
+  assert_verification_passed
+  [ "$(cat node_args.txt)" = "--test tests/app.test.js" ]
 }
 
 @test "run_related_tests runs changed Rust integration test target" {
@@ -826,7 +1132,7 @@ EOF
   printf '\n' >> tests/parser.rs
   run bash "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
-  [ -z "$output" ]
+  assert_verification_passed
   [ "$(cat cargo_args.txt)" = "test --test parser --quiet" ]
 }
 
@@ -887,7 +1193,7 @@ EOF
   printf '\n' >> src/parser.rs
   run bash "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
-  [ -z "$output" ]
+  assert_verification_passed
   [ "$(cat cargo_args.txt)" = "test --quiet" ]
 }
 
@@ -913,6 +1219,6 @@ EOF
   printf '\n' >> src/lib.rs
   run bash "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
-  [ -z "$output" ]
+  assert_verification_passed
   [ "$(cat cargo_args.txt)" = "test --quiet" ]
 }
