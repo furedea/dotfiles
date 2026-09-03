@@ -431,10 +431,10 @@ echo hi
 EOF
   git add . && git commit --quiet -m i
   printf '#!/bin/bash\necho changed\n' > script.sh
-  export XDG_CONFIG_HOME="$TEST_TMPDIR/home/.config"
-  export PATH="$TEST_TMPDIR/bin"
-
-  run bash "$HOOK" <<< '{"stop_hook_active":false,"session_id":"test"}'
+  run env \
+    XDG_CONFIG_HOME="$TEST_TMPDIR/home/.config" \
+    PATH="$TEST_TMPDIR/bin" \
+    bash "$HOOK" <<< '{"stop_hook_active":false,"session_id":"test"}'
 
   [ "$status" -eq 0 ]
   assert_verification_passed
