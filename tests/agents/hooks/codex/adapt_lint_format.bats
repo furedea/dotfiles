@@ -185,6 +185,35 @@ EOF
   [[ "$output" == *"plain-text hook output"* ]]
 }
 
+@test "adapter resolves lint hooks from the harness root" {
+  local _home
+  _home="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/home.XXXXXX")"
+  local _harness_root
+  _harness_root="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/harness.XXXXXX")"
+  local _file="$_home/x.sh"
+  printf '#!/usr/bin/env bash\necho hi\n' >"$_file"
+
+  mkdir -p "$_harness_root/.claude/hooks"
+  cat >"$_harness_root/.claude/hooks/lint_format_sh.sh" <<'STUB'
+#!/usr/bin/env bash
+set -euxCo pipefail
+cd "$(dirname "$0")"
+
+echo "harness-root hook"
+STUB
+  chmod +x "$_harness_root/.claude/hooks/lint_format_sh.sh"
+
+  local _input
+  _input=$(jq -n --arg cwd "$_home" --arg cmd "*** Update File: x.sh" \
+    '{cwd:$cwd, tool_input:{command:$cmd}}')
+
+  run env -i HOME="$_home" AGENT_HARNESS_ROOT="$_harness_root" PATH="$PATH" \
+    "$HOOK" <<<"$_input"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"harness-root hook"* ]]
+}
+
 @test "adapter emits no stdout when hook is silent (clean lint)" {
   local _tmp
   _tmp="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/codex.XXXXXX")"

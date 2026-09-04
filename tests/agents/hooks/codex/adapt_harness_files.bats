@@ -93,6 +93,24 @@ install_shared_hook() {
   [ -z "$output" ]
 }
 
+@test "resolves the shared hook from the harness root" {
+  local _home
+  _home="$(mktemp -d "$BATS_TEST_TMPDIR/home.XXXXXX")"
+  local _harness_root
+  _harness_root="$(mktemp -d "$BATS_TEST_TMPDIR/harness.XXXXXX")"
+  install_shared_hook "$_harness_root"
+
+  local _input
+  _input="$(jq -n --arg cwd "$REPO_ROOT" \
+    '{cwd:$cwd,tool_input:{command:"*** Update File: src/app.py"},session_id:"sess-codex"}')"
+
+  run env HOME="$_home" AGENT_HARNESS_ROOT="$_harness_root" \
+    CLAUDE_PROJECT_DIR="$_home" bash -c "printf '%s' '$_input' | '$HOOK'"
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "blocks when shared hook is missing" {
   local _tmp
   _tmp="$(mktemp -d "$BATS_TEST_TMPDIR/codex.XXXXXX")"

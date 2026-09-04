@@ -16,7 +16,8 @@ EOF
   exit 1
 }
 
-readonly SHARED_HOOK="$HOME/.claude/hooks/guard_harness_files.sh"
+readonly HARNESS_ROOT="${AGENT_HARNESS_ROOT:-$HOME}"
+readonly SHARED_HOOK="$HARNESS_ROOT/.claude/hooks/guard_harness_files.sh"
 
 function patch_paths() {
   local _input="$1"
