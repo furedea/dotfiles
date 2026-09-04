@@ -17,7 +17,8 @@ EOF
 }
 
 readonly MODE="${1:-}"
-readonly SHARED_SCANNER="$HOME/.claude/hooks/guard_secret_content.sh"
+readonly HARNESS_ROOT="${AGENT_HARNESS_ROOT:-$HOME}"
+readonly SHARED_SCANNER="$HARNESS_ROOT/.claude/hooks/guard_secret_content.sh"
 
 function added_patch_text() {
   local _input="$1"

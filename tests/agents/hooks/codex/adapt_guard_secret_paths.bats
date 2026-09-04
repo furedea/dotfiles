@@ -34,6 +34,24 @@ install_policy() {
   [[ "$output" == *".env"* ]]
 }
 
+@test "command mode resolves policy assets from the harness root" {
+  local _home
+  _home="$(mktemp -d "$BATS_TEST_TMPDIR/home.XXXXXX")"
+  local _harness_root
+  _harness_root="$(mktemp -d "$BATS_TEST_TMPDIR/harness.XXXXXX")"
+  install_policy "$_harness_root"
+
+  local _input
+  _input="$(jq -n --arg cwd "$REPO_ROOT" \
+    '{cwd:$cwd,tool_input:{command:"cat .env"},session_id:"sess-codex"}')"
+
+  run env HOME="$_home" AGENT_HARNESS_ROOT="$_harness_root" \
+    CLAUDE_PROJECT_DIR="$_home" bash -c "printf '%s' '$_input' | '$HOOK' command"
+
+  [ "$status" -eq 2 ]
+  [[ "$output" == *".env"* ]]
+}
+
 @test "command mode blocks home credential paths" {
   local _tmp
   _tmp="$(mktemp -d "$BATS_TEST_TMPDIR/codex.XXXXXX")"

@@ -50,6 +50,29 @@ STUB
   [[ "$output" == *"CALLED:prompt"* ]]
 }
 
+@test "prompt mode resolves the shared scanner from the harness root" {
+  local _home
+  _home="$(mktemp -d "$BATS_TEST_TMPDIR/home.XXXXXX")"
+  local _harness_root
+  _harness_root="$(mktemp -d "$BATS_TEST_TMPDIR/harness.XXXXXX")"
+  mkdir -p "$_harness_root/.claude/hooks"
+  cat >"$_harness_root/.claude/hooks/guard_secret_content.sh" <<'STUB'
+#!/usr/bin/env bash
+set -euxCo pipefail
+cd "$(dirname "$0")"
+
+printf 'CALLED:%s\n' "$1"
+cat >/dev/null
+STUB
+  chmod +x "$_harness_root/.claude/hooks/guard_secret_content.sh"
+
+  run env HOME="$_home" AGENT_HARNESS_ROOT="$_harness_root" \
+    bash -c "echo '{\"prompt\":\"hello\"}' | '$HOOK' prompt"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"CALLED:prompt"* ]]
+}
+
 @test "prompt mode does not emit shell trace when scanner is silent" {
   STUB_DIR="$(mktemp -d "$BATS_TEST_TMPDIR/stub.XXXXXX")"
   mkdir -p "$STUB_DIR/.claude/hooks"

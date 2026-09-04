@@ -16,7 +16,8 @@ EOF
   exit 1
 }
 
-readonly CLAUDE_HOOKS_DIR="$HOME/.claude/hooks"
+readonly HARNESS_ROOT="${AGENT_HARNESS_ROOT:-$HOME}"
+readonly CLAUDE_HOOKS_DIR="$HARNESS_ROOT/.claude/hooks"
 
 function patch_paths() {
   local _input="$1"

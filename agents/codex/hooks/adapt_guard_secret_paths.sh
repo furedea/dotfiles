@@ -17,9 +17,10 @@ EOF
 }
 
 readonly MODE="${1:-}"
-readonly DEFAULT_POLICY_FILE="$HOME/.claude/hooks/rules/secret_path_policy.json"
+readonly HARNESS_ROOT="${AGENT_HARNESS_ROOT:-$HOME}"
+readonly DEFAULT_POLICY_FILE="$HARNESS_ROOT/.claude/hooks/rules/secret_path_policy.json"
 readonly POLICY_FILE="${AGENT_SECRET_PATH_POLICY:-$DEFAULT_POLICY_FILE}"
-readonly AUDIT_LOG="$HOME/.claude/hooks/lib/audit_log.sh"
+readonly AUDIT_LOG="$HARNESS_ROOT/.claude/hooks/lib/audit_log.sh"
 
 if [[ -f "$AUDIT_LOG" ]]; then
   # shellcheck disable=SC1090
