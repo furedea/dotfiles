@@ -373,9 +373,7 @@ def merge_skill_report(by_skill: dict[str, dict], incoming: dict) -> None:
 
 
 def merge_competition_pair(pairs: dict[tuple[str, str], dict], key: tuple[str, str], incoming: dict) -> None:
-    current = pairs.setdefault(key, dict(incoming))
-    if current is incoming:
-        return
+    current = pairs.setdefault(key, {**incoming, "incidents": 0})
     current["incidents"] = int(current.get("incidents", 0)) + int(incoming.get("incidents", 0))
     if incoming.get("boundary_suggestion") and incoming["boundary_suggestion"] not in current.get(
         "boundary_suggestion", ""
@@ -387,9 +385,7 @@ def merge_competition_pair(pairs: dict[tuple[str, str], dict], key: tuple[str, s
 
 def merge_coverage_gap(gaps: dict[str, dict], incoming: dict) -> None:
     intent = incoming.get("unmet_intent", "")
-    current = gaps.setdefault(intent, dict(incoming))
-    if current is incoming:
-        return
+    current = gaps.setdefault(intent, {**incoming, "frequency": 0, "related_sessions": []})
     current["frequency"] = int(current.get("frequency", 0)) + int(incoming.get("frequency", 0))
     sessions = set(current.get("related_sessions", []))
     sessions.update(incoming.get("related_sessions", []))
