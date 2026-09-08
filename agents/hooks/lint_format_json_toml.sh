@@ -16,16 +16,11 @@ FILE_DIR=$(dirname "$FILE_PATH")
 FILE_BASE=$(basename "$FILE_PATH")
 # dprint resolves config from CWD; cd to the file's directory and override includes.
 (cd "$FILE_DIR" &&
-  dprint fmt --config "$HOME/dprint.json" \
+  run_quality_step "dprint format" dprint fmt --config "$HOME/dprint.json" \
     --includes-override "$FILE_BASE" \
-    --allow-no-files) >/dev/null 2>&1 || true
+    --allow-no-files)
 
-VIOLATIONS=""
-if ! VIOLATIONS=$(
-  cd "$FILE_DIR" &&
-    dprint check --config "$HOME/dprint.json" \
-      --includes-override "$FILE_BASE" \
-      --allow-no-files 2>&1
-); then
-  emit_post_tool_context "dprint" "$VIOLATIONS"
-fi
+(cd "$FILE_DIR" &&
+  run_quality_step "dprint lint" dprint check --config "$HOME/dprint.json" \
+    --includes-override "$FILE_BASE" \
+    --allow-no-files)

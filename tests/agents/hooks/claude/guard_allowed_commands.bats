@@ -72,7 +72,7 @@ run_hook() {
   [[ "$output" == *"invalid project allowed command rules"* ]]
 }
 
-@test "leaves Python verification commands for provider approval" {
+@test "allows Python verification commands" {
   run_hook "uv run --frozen ruff check"
   [ "$status" -eq 0 ]
 
@@ -101,7 +101,7 @@ run_hook() {
   [ "$status" -eq 0 ]
 }
 
-@test "leaves audit commands for provider approval" {
+@test "leaves broad audit execution for provider approval and allows named package checks" {
   run_hook "uv run --frozen --group audit deptry ."
   [ "$status" -eq 0 ]
 
@@ -137,7 +137,26 @@ run_hook() {
   [ "$status" -eq 0 ]
 }
 
-@test "leaves verification commands for provider approval" {
+@test "allows quoted test selection and colon-named package checks" {
+  run_hook 'uv run --frozen pytest tests/test_main.py -k "test_main or test_error"'
+  [ "$status" -eq 0 ]
+
+  run_hook "npm run format:check"
+  [ "$status" -eq 0 ]
+
+  run_hook "pnpm run format:check"
+  [ "$status" -eq 0 ]
+}
+
+@test "blocks unrelated subcommands within verification tool prefixes" {
+  run_hook "uv run --frozen ty server"
+  [ "$status" -eq 2 ]
+
+  run_hook "uv run --frozen ruff clean"
+  [ "$status" -eq 2 ]
+}
+
+@test "allows local verification commands" {
   run_hook "bats tests/agents/hooks/claude/guard_allowed_commands.bats"
   [ "$status" -eq 0 ]
 
@@ -204,12 +223,12 @@ run_hook() {
   [ "$status" -eq 0 ]
 }
 
-@test "leaves verification commands with shell metacharacters for provider approval" {
+@test "blocks shell metacharacters in automatically allowed verification commands" {
   run_hook "cargo test > /tmp/blocked"
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 2 ]
 
   run_hook 'pnpm test $(touch /tmp/blocked)'
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 2 ]
 }
 
 @test "blocks shell metacharacters in automatically allowed formatting commands" {
@@ -217,21 +236,15 @@ run_hook() {
   [ "$status" -eq 2 ]
 }
 
-@test "leaves broad Python verification commands for provider approval" {
+@test "blocks shell metacharacters in automatically allowed Python verification" {
   run_hook 'uv run --frozen pytest $(touch /tmp/blocked)'
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 2 ]
 
   run_hook 'uv run --frozen pytest `touch /tmp/blocked`'
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 2 ]
 
   run_hook "uv run --frozen pytest > /tmp/blocked"
-  [ "$status" -eq 0 ]
-
-  run_hook 'uv run --frozen --with pytest pytest $(touch /tmp/blocked)'
-  [ "$status" -eq 0 ]
-
-  run_hook 'uv run --with ruff ruff check'
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 2 ]
 }
 
 @test "blocks Python execution outside the precise project allowlist" {
@@ -239,24 +252,39 @@ run_hook() {
   [ "$status" -eq 2 ]
 }
 
-@test "leaves non-frozen verification commands for provider approval" {
-  run_hook "uv run ruff check"
-  [ "$status" -eq 0 ]
-
-  run_hook "uv run ty check"
-  [ "$status" -eq 0 ]
-
-  run_hook "uv run pytest"
-  [ "$status" -eq 0 ]
-
-  run_hook "uv run --with pytest pytest"
-  [ "$status" -eq 0 ]
-
+@test "leaves other execution commands to their existing policies" {
   run_hook "uv run --group audit deptry ."
   [ "$status" -eq 0 ]
 
   run_hook "uv run python scripts/run_audit.py prepare"
   [ "$status" -eq 0 ]
+}
+
+@test "allows syntax checks of one explicit relative file" {
+  run_hook "bash -n -- ./agents/hooks/run_related_tests.sh"
+  [ "$status" -eq 0 ]
+
+  run_hook 'bash -n -- "./path with spaces/script.sh"'
+  [ "$status" -eq 0 ]
+}
+
+@test "blocks syntax check option overrides and additional arguments" {
+  local command
+  for command in \
+    "bash -n" \
+    "bash -n ./script.sh" \
+    "bash -n +n -- ./script.sh" \
+    "bash -n -i -- ./script.sh" \
+    "bash -n -c 'echo example'" \
+    "bash -n -- ./first.sh ./second.sh" \
+    "bash -n -- ./script.sh +n" \
+    'bash -n -- ./script.sh > /tmp/output'; do
+    run_hook "$command"
+    [ "$status" -eq 2 ] || {
+      echo "Unexpectedly allowed: $command"
+      return 1
+    }
+  done
 }
 
 @test "blocks command substitution in double quoted git commit messages" {

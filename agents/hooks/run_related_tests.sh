@@ -27,28 +27,210 @@
 set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly RESULT_MAX_LINES=50
-readonly RESULT_MAX_CHARS=4000
+HOOK_STARTED_AT="${EPOCHREALTIME:-$(date +%s)}"
+# Opt in via .agents/hooks/rules/verification_reuse.json {"enabled":true} only
+# for stable local inputs. RUN_RELATED_TESTS_REUSE=0 overrides project adoption.
+# Ignored fixtures and dependency/environment changes are not fingerprinted;
+# use RUN_RELATED_TESTS_FORCE=1 after those changes, or disable reuse.
+# No interpreter provisioning: unavailable offline Python keeps the original gate.
+function verification_reuse_enabled() {
+  if [ "${RUN_RELATED_TESTS_REUSE+x}" = x ]; then
+    [ "$RUN_RELATED_TESTS_REUSE" = 1 ]
+    return
+  fi
+  local _root
+  _root=$(git rev-parse --show-toplevel 2>/dev/null) || return 1
+  jq -e 'type == "object" and .enabled == true' \
+    "$_root/.agents/hooks/rules/verification_reuse.json" >/dev/null 2>&1
+}
+
+if verification_reuse_enabled && [ -r "$SCRIPT_DIR/lib/verification_reuse.py" ] && command -v uv >/dev/null 2>&1; then
+  if uv run --no-project --offline python -B -c 'import sys; assert sys.version_info >= (3, 14)' >/dev/null 2>&1; then
+    export AGENT_VERIFICATION_STARTED_AT="$HOOK_STARTED_AT"
+    exec uv run --no-project --offline python -B "$SCRIPT_DIR/lib/verification_reuse.py" "$SCRIPT_DIR/run_related_tests.sh"
+  fi
+fi
 RESULTS=""
 HAS_FAILURES=0
+HAS_PASSES=0
+LOG_DIRECTORY=""
+LOG_ATTEMPTED=0
+EVENT_NUMBER=0
+ERRORS=""
+RUN_COUNTS=""
+RUN_DURATION=""
+# Retention is lazy: prune completed logs when this worktree saves another failure.
+readonly LOG_RETENTION_SECONDS=604800
+readonly LOG_LIMIT_KIB=102400
+readonly LOG_OUTPUT_LIMIT_BYTES=1048576
+
+elapsed_seconds() {
+  awk -v start="$1" -v end="${EPOCHREALTIME:-$(date +%s)}" 'BEGIN { printf "%.1f", end - start }'
+}
+
+report_footer() {
+  if [ -n "$LOG_DIRECTORY" ]; then
+    if ! printf '%s\n' "$(date +%s)" >"$LOG_DIRECTORY/.complete"; then
+      printf 'Details: unavailable (log storage failed)\n'
+      return
+    fi
+    prune_failure_logs "${LOG_DIRECTORY%/*}"
+    if [ ! -d "$LOG_DIRECTORY" ]; then
+      printf 'Details: unavailable (retention limit reached)\n'
+      return
+    fi
+    printf 'Details: %s\n' "$LOG_DIRECTORY"
+  elif [ "$LOG_ATTEMPTED" -eq 1 ]; then
+    printf 'Details: unavailable (log storage failed)\n'
+  fi
+}
+
+# Only completed directories from this format are eligible. No recursive removal.
+remove_failure_log() {
+  local _directory="$1" _file
+  [ ! -L "$_directory" ] && [ -d "$_directory" ] || return 0
+  [ ! -L "$_directory/.complete" ] && [ -f "$_directory/.complete" ] || return 0
+  for _file in "$_directory"/* "$_directory"/.[!.]* "$_directory"/..?*; do
+    [ -e "$_file" ] || [ -L "$_file" ] || continue
+    [[ "${_file##*/}" =~ ^([0-9]+\.(command|output)\.log|\.complete)$ ]] || return 0
+    [ -f "$_file" ] && [ ! -L "$_file" ] || return 0
+  done
+  # Claim the completed directory before removing its known files.
+  local _claimed="${_directory%/*}/.pruning-${_directory##*/}"
+  [ ! -e "$_claimed" ] && [ ! -L "$_claimed" ] || return 0
+  mv "$_directory" "$_claimed" 2>/dev/null || return 0
+  for _file in "$_claimed"/*.log "$_claimed/.complete"; do
+    [ -f "$_file" ] && [ ! -L "$_file" ] && rm -f -- "$_file"
+  done
+  rmdir "$_claimed" 2>/dev/null || true
+}
+
+prune_failure_logs() {
+  local _base="$1" _directory _completed _size _total=0
+  local _now
+  _now=$(date +%s)
+  # Newest first: retain recent completed failures up to the per-worktree budget.
+  while IFS= read -r _directory; do
+    [ ! -L "$_directory/.complete" ] && [ -f "$_directory/.complete" ] || continue
+    _completed=$(<"$_directory/.complete")
+    [[ "$_completed" =~ ^[0-9]{1,10}$ ]] || continue
+    _size=$(du -sk "$_directory" 2>/dev/null | awk '{print $1}')
+    [[ "$_size" =~ ^[0-9]+$ ]] || continue
+    if ((_now - 10#$_completed > LOG_RETENTION_SECONDS || _total + _size > LOG_LIMIT_KIB)); then
+      remove_failure_log "$_directory"
+    else
+      _total=$((_total + _size))
+    fi
+  done < <(find "$_base" -mindepth 1 -maxdepth 1 -type d -name 'failure-*' -print | LC_ALL=C sort -r)
+}
+
+prepare_log_directory() {
+  [ "$LOG_ATTEMPTED" -eq 1 ] && return 0
+  LOG_ATTEMPTED=1
+  local _base="${XDG_STATE_HOME:-$HOME/.local/state}/agent-harness/verification"
+  local _parent="$_base"
+  while [ ! -d "$_parent" ]; do
+    _parent=$(dirname "$_parent")
+  done
+  _parent=$(cd "$_parent" && pwd -P) || return 0
+  local _root
+  _root=$(cd "$GIT_ROOT" && pwd -P) || return 0
+  # Logs must not become repository inputs and invalidate their own verification.
+  case "$_parent/" in "$_root/"*) return 0 ;; esac
+  local _slug _key
+  _slug=$(printf '%s' "${_root##*/}" | LC_ALL=C tr -cs 'A-Za-z0-9_-' '-' | cut -c 1-48)
+  _key=$(printf '%s' "$_root" | git hash-object --stdin) || return 0
+  _base="$_base/${_slug:-project}-$_key"
+  [ ! -L "$_base" ] || return 0
+  LOG_DIRECTORY=$(
+    umask 077
+    mkdir -p "$_base" && mktemp -d "$_base/failure-$(date +%s)-XXXXXXXX"
+  ) || LOG_DIRECTORY=""
+}
+
+test_counts() {
+  local _label="$1"
+  local _output="$2"
+  printf '%s\n' "$_output" | awk -v label="$_label" '
+    { gsub(/\033\[[0-9;]*[[:alpha:]]/, "") }
+    label == "bats" && /^1\.\.[0-9]+/ { plan = substr($0, 4) + 0; planned = 1 }
+    label == "bats" && /^(not )?ok [0-9]+( |$)/ {
+      if (tolower($0) ~ /# *skip( |$)/) skipped++
+      else if ($0 ~ /^not ok/) failed++
+      else passed++
+      observed++
+    }
+    label == "pytest" && /^[= ]*[0-9]+ (passed|failed|skipped|error|xfailed|xpassed|deselected)/ { summary = $0 }
+    label != "bats" && label != "pytest" && /^ *(Tests:|Tests +|test result:|# (tests|pass|fail|skipped|todo|cancelled) [0-9])/ {
+      summary = summary (summary == "" ? "" : "; ") $0
+    }
+    END {
+      if (label == "bats" && (observed || planned)) {
+        printf "%d passed", passed
+        if (failed) printf ", %d failed", failed
+        if (skipped) printf ", %d skipped", skipped
+        if (planned && observed != plan) printf " (partial results; %d planned)", plan
+        printf "\n"
+      } else if (summary != "") {
+        gsub(/^[= ]+|[= ]+$/, "", summary)
+        sub(/ in [0-9.]+s.*$/, "", summary)
+        gsub(/, 0 (failed|skipped)/, "", summary)
+        print summary
+      } else print "test count unavailable"
+    }
+  '
+}
 
 emit_block() {
   local _results="$1"
-  jq -cn --arg reason "Verification did not pass before completion."$'\n'"$_results" \
+  jq -cn --arg reason "Verification failed · total $(elapsed_seconds "$HOOK_STARTED_AT")s"$'\n'"$_results${ERRORS:+$'\n'$ERRORS}"$'\n'"$(report_footer)" \
     '{decision:"block", reason:$reason}'
+}
+
+# Count observations, not merely collected or skipped tests. Unknown formats stay unknown.
+executed_test_count() {
+  local _label="$1"
+  awk -v label="$_label" '
+    { gsub(/\033\[[0-9;]*[[:alpha:]]/, "") }
+    label == "bats" && /^1\.\.[0-9]+/ { known = 1 }
+    label == "bats" && /^(not )?ok [0-9]+( |$)/ {
+      known = 1
+      if (tolower($0) !~ /# *skip( |$)/) executed++
+    }
+    label == "rust" && /^test result:/ {
+      known = 1
+      for (i = 1; i < NF; i++) if ($(i+1) ~ /^(passed|failed);/) executed += $i
+    }
+    label == "pytest" && /^[= ]*[0-9]+ (passed|failed|skipped|error|xfailed|xpassed|deselected)/ {
+      known = 1; executed = 0
+      for (i = 1; i < NF; i++)
+        if ($(i+1) ~ /^(passed|failed|xfailed|xpassed)(,|$)/) executed += $i
+    }
+    (label == "vitest" || label == "jest") && /^ *(Tests:|Tests +)/ {
+      known = 1
+      for (i = 1; i < NF; i++) if ($(i+1) ~ /^(passed|failed)([, )]|$)/) executed += $i
+    }
+    (label == "vitest" || label == "jest") && /^ *No test (files|suites|tests)? *found/ { known = 1 }
+    label == "node" && /^# (pass|fail) [0-9]+/ { known = 1; executed += $3 }
+    END { if (known) print executed + 0; else print "unknown" }
+  '
 }
 
 emit_success() {
   local _results="$1"
-  jq -cn --arg message "Verification passed before completion."$'\n'"$_results" \
+  jq -cn --arg message "Verification passed · total $(elapsed_seconds "$HOOK_STARTED_AT")s"$'\n'"$_results" \
     '{systemMessage:$message}'
 }
 
 emit_skip() {
   local _reason="$1"
-  local _message="Verification skipped before completion."
+  local _message
+  _message="Verification skipped · total $(elapsed_seconds "$HOOK_STARTED_AT")s"
   _message+=$'\n'
-  _message+="skipped: $_reason"
+  _message+="Reason: $_reason"
+  local _footer
+  _footer=$(report_footer)
+  [ -n "$_footer" ] && _message+=$'\n'"$_footer"
 
   jq -cn --arg message "$_message" \
     '{systemMessage:$message}'
@@ -61,39 +243,55 @@ append_result() {
   local _command="$4"
   local _result="$5"
 
-  [ -n "$RESULTS" ] && RESULTS+=$'\n'
-  RESULTS+="$_status: $_check"
-  [ -n "$_scope" ] && RESULTS+=" ($_scope)"
-  RESULTS+=$'\n'
-  RESULTS+="command: $_command"
-  if [ -n "$_result" ]; then
-    RESULTS+=$'\n'
-    RESULTS+="result: $(truncate_result "$_result")"
+  if [ "$_status" != passed ] && [ "$_status" != skipped ]; then
+    prepare_log_directory
   fi
+  if [ "$_status" != passed ] && [ "$_status" != skipped ] && [ -n "$LOG_DIRECTORY" ]; then
+    EVENT_NUMBER=$((EVENT_NUMBER + 1))
+    (
+      umask 077
+      printf 'runner: %s\nstatus: %s\nscope: %s\ncwd: %s\ncommand: %s\nduration: %ss\n' \
+        "$_check" "$_status" "$_scope" "$GIT_ROOT" "$_command" "$RUN_DURATION" >"$LOG_DIRECTORY/$EVENT_NUMBER.command.log" || exit 1
+      local _bytes
+      _bytes=$(printf '%s\n' "$_result" | wc -c)
+      if [ "$_bytes" -gt "$LOG_OUTPUT_LIMIT_BYTES" ]; then
+        printf '[Output truncated; retaining the final %s bytes]\n' "$LOG_OUTPUT_LIMIT_BYTES"
+        printf '%s\n' "$_result" | tail -c "$LOG_OUTPUT_LIMIT_BYTES"
+      else
+        printf '%s\n' "$_result"
+      fi >"$LOG_DIRECTORY/$EVENT_NUMBER.output.log"
+    ) || LOG_DIRECTORY=""
+  fi
+  [ "$_check" = bats ] && _check=Bats
+  _scope="${_scope/ related targets/ targets}"
+  _scope="${_scope/ related files/ files}"
+  [ -n "$RESULTS" ] && RESULTS+=$'\n'
+  RESULTS+="$_check: ${RUN_COUNTS:-$_status}"
+  [ -n "$_scope" ] && RESULTS+=" · $_scope"
+  if [ -n "$RUN_COUNTS" ] && [ "$_status" != passed ]; then
+    RESULTS+=" · $_status"
+  fi
+  [ -n "$RUN_DURATION" ] && RESULTS+=" · ${RUN_DURATION}s"
+  if [ -n "$_result" ] && [ "$_status" != passed ]; then
+    local _error
+    _error=$(printf '%s\n' "$_result" | awk '
+      {gsub(/\033\[[0-9;]*[[:alpha:]]/, "")}
+      NF && !first {first = $0}
+      /^(not ok [0-9]+|FAILED |E +)/ && !failure {failure = $0}
+      END {print substr(failure ? failure : first, 1, 240)}
+    ')
+    [ -n "$ERRORS" ] && ERRORS+=$'\n'
+    ERRORS+="Error: $_check: $_error"
+    [ -n "$_command" ] && ERRORS+=$'\n'"Command: $_command"
+  fi
+  RUN_COUNTS=""
+  RUN_DURATION=""
 
   case "$_status" in
-    passed | skipped) ;;
+    passed) HAS_PASSES=1 ;;
+    skipped) ;;
     *) HAS_FAILURES=1 ;;
   esac
-}
-
-truncate_result() {
-  local _result="$1"
-  local _truncated
-  local _was_truncated=false
-
-  _truncated=$(printf '%s\n' "$_result" | tail -n "$RESULT_MAX_LINES")
-  [ "$_truncated" != "$_result" ] && _was_truncated=true
-  if [ "${#_truncated}" -gt "$RESULT_MAX_CHARS" ]; then
-    _truncated="${_truncated: -$RESULT_MAX_CHARS}"
-    _was_truncated=true
-  fi
-
-  if [ "$_was_truncated" = true ]; then
-    printf '[output truncated; showing at most %s lines and %s characters]\n' \
-      "$RESULT_MAX_LINES" "$RESULT_MAX_CHARS"
-  fi
-  printf '%s\n' "$_truncated"
 }
 
 format_command() {
@@ -105,21 +303,6 @@ format_command() {
     _formatted+="${_formatted:+ }$_argument"
   done
   printf '%s\n' "$_formatted"
-}
-
-format_command_summary() {
-  local _target_count="$1"
-  shift
-
-  if [ "$_target_count" -eq 0 ]; then
-    format_command "$@"
-    return 0
-  fi
-
-  local _prefix_count
-  _prefix_count=$(($# - _target_count))
-  local -a _prefix=("${@:1:$_prefix_count}")
-  printf '%s <%s targets>\n' "$(format_command "${_prefix[@]}")" "$_target_count"
 }
 
 normalize_targets() {
@@ -146,7 +329,9 @@ if ! GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null); then
 fi
 cd "$GIT_ROOT"
 
-BASE_REF="${RUN_RELATED_TESTS_BASE_REF:-origin/main}"
+# origin/HEAD is local remote-default metadata; never fetch or guess a branch.
+# An explicit (even invalid) override must not silently select a different base.
+BASE_REF="${RUN_RELATED_TESTS_BASE_REF-refs/remotes/origin/HEAD}"
 if ! BASE_COMMIT=$(git merge-base HEAD "$BASE_REF" 2>/dev/null); then
   append_result git unavailable "branch base $BASE_REF" \
     "$(format_command git merge-base HEAD "$BASE_REF")" \
@@ -167,7 +352,32 @@ declare -a PROJECT_PY=()
 declare -a PROJECT_RS=()
 RULES_FILE="$GIT_ROOT/.agents/hooks/rules/related_test_extensions.json"
 LANGUAGE_RULES_FILE="$SCRIPT_DIR/rules/related_test_defaults.json"
-if [ -f "$RULES_FILE" ] && jq empty "$RULES_FILE" 2>/dev/null; then
+if ! jq -e '
+  def strings: type == "array" and all(.[]; type == "string" and length > 0);
+  type == "object" and
+  has("bats") and has("python") and has("javascript_typescript") and has("rust") and
+  all(.[]; type == "object" and (.source_extensions | strings) and
+    all(to_entries[];
+      if (.key | IN("test_dirs", "test_patterns", "self_test_extensions", "self_test_globs",
+                    "exclude_dirs", "project_markers", "source_dirs"))
+      then .value | strings else true end))
+' "$LANGUAGE_RULES_FILE" >/dev/null 2>&1; then
+  append_result configuration unavailable "default test rules" "" \
+    "Missing or invalid configuration: $LANGUAGE_RULES_FILE"
+  emit_block "$RESULTS"
+  exit 0
+fi
+if [ -e "$RULES_FILE" ] && ! jq -e '
+  type == "object" and all(to_entries[];
+    (.key | length > 0) and
+    (.value | type == "array" and all(.[]; type == "string" and length > 0)))
+' "$RULES_FILE" >/dev/null 2>&1; then
+  append_result configuration unavailable "project test rules" "" \
+    "Invalid configuration: $RULES_FILE. Expected an object mapping patterns to arrays of nonempty test paths."
+  emit_block "$RESULTS"
+  exit 0
+fi
+if [ -f "$RULES_FILE" ]; then
   mapfile -t PATTERNS < <(jq -r 'keys[]' "$RULES_FILE")
   while IFS= read -r f; do
     [ -z "$f" ] && continue
@@ -175,6 +385,11 @@ if [ -f "$RULES_FILE" ] && jq empty "$RULES_FILE" 2>/dev/null; then
       # shellcheck disable=SC2053  # intentional glob match
       if [[ "$f" == $pattern ]]; then
         while IFS= read -r t; do
+          if [ ! -e "$t" ]; then
+            append_result configuration unavailable "explicit test target" "" \
+              "Configured test target does not exist: $t"
+            continue
+          fi
           if [ -d "$t" ]; then
             PROJECT_BATS+=("$t")
             continue
@@ -184,6 +399,10 @@ if [ -f "$RULES_FILE" ] && jq empty "$RULES_FILE" 2>/dev/null; then
             *.py) PROJECT_PY+=("$t") ;;
             *.rs) PROJECT_RS+=("$t") ;;
             *.js | *.jsx | *.ts | *.tsx) PROJECT_JS+=("$t") ;;
+            *)
+              append_result configuration unavailable "explicit test target" "" \
+                "Unsupported configured test target: $t"
+              ;;
           esac
         done < <(jq -r --arg k "$pattern" '.[$k][]' "$RULES_FILE")
       fi
@@ -196,9 +415,7 @@ language_rule() {
   local _query="$2"
 
   # shellcheck disable=SC2016  # jq programs intentionally reference $language
-  if [ -f "$LANGUAGE_RULES_FILE" ] && jq empty "$LANGUAGE_RULES_FILE" 2>/dev/null; then
-    jq -r --arg language "$_language" "$_query" "$LANGUAGE_RULES_FILE"
-  fi
+  jq -r --arg language "$_language" "$_query" "$LANGUAGE_RULES_FILE"
 }
 
 has_changed_extension() {
@@ -286,8 +503,6 @@ find_language_tests() {
   done < <(language_rule "$_language" ".[\$language].test_dirs[]?")
 }
 
-TIMEOUT_SECONDS="${RUN_RELATED_TESTS_TIMEOUT_SECONDS:-120}"
-
 timeout_bin() {
   local _managed_timeout="${XDG_CONFIG_HOME:-$HOME/.config}/agent-harness/bin/timeout"
 
@@ -313,13 +528,10 @@ timeout_bin() {
 run_verification() {
   local _label="$1"
   local _scope="$2"
-  local _target_count="$3"
   shift 3
 
   local _command
   _command=$(format_command "$@")
-  local _command_summary
-  _command_summary=$(format_command_summary "$_target_count" "$@")
 
   local _timeout_bin
   if ! _timeout_bin=$(timeout_bin); then
@@ -330,16 +542,38 @@ run_verification() {
 
   local _output=""
   local _status=0
-  _output=$("$_timeout_bin" "$TIMEOUT_SECONDS" "$@" 2>&1) || _status=$?
+  # Bats executes the selected shell-test files serially; their aggregate runtime
+  # can exceed two minutes even when individual tests finish promptly.
+  local _default_timeout=120
+  [ "$_label" = bats ] && _default_timeout=300
+  local _timeout_seconds="${RUN_RELATED_TESTS_TIMEOUT_SECONDS:-$_default_timeout}"
+  local _started_at="${EPOCHREALTIME:-$(date +%s)}"
+  local _duration
+  _output=$("$_timeout_bin" "$_timeout_seconds" "$@" 2>&1) || _status=$?
+  _duration=$(elapsed_seconds "$_started_at")
+  RUN_COUNTS="$(test_counts "$_label" "$_output")"
+  RUN_DURATION="$_duration"
 
   if [ "$_status" -eq 0 ]; then
-    append_result "$_label" passed "$_scope" "$_command_summary" ""
+    local _executed
+    _executed=$(executed_test_count "$_label" <<<"$_output")
+    if [ "$_executed" = 0 ]; then
+      if [ "$_label" = vitest ] && [[ "$_scope" == *" changed files" ]] &&
+        [[ "$_output" == *"No test files found"* ]]; then
+        append_result "$_label" skipped "$_scope" "$_command" "No related tests executed."
+      else
+        append_result "$_label" unavailable "$_scope" "$_command" \
+          "No tests executed; selected tests were absent or all skipped."
+      fi
+      return 0
+    fi
+    append_result "$_label" passed "$_scope" "$_command" ""
     return 0
   fi
 
   if [ "$_status" -eq 124 ]; then
     append_result "$_label" timeout "$_scope" "$_command" \
-      "timed out after ${TIMEOUT_SECONDS}s${_output:+$'\n'$_output}"
+      "timed out after ${_timeout_seconds}s${_output:+$'\n'$_output}"
     return 0
   fi
 
@@ -446,6 +680,10 @@ if [ $need_bats -eq 1 ] && [ -d tests ]; then
 fi
 
 # --- 3. Pytest: project rules + basename heuristic; full pytest fallback. ---
+if [ ${#PROJECT_PY[@]} -gt 0 ] && ! has_project_marker python; then
+  append_result pytest unavailable "explicit test targets" "" \
+    "Configured Python tests require a project marker such as pyproject.toml."
+fi
 need_pytest=0
 has_changed_extension python && need_pytest=1
 [ ${#PROJECT_PY[@]} -gt 0 ] && need_pytest=1
@@ -492,6 +730,10 @@ if [ $need_pytest -eq 1 ] && has_project_marker python; then
 fi
 
 # --- 4. JavaScript and TypeScript: related tests, then the full suite. ---
+if [ ${#PROJECT_JS[@]} -gt 0 ] && [ ! -f package.json ]; then
+  append_result javascript_typescript unavailable "explicit test targets" "" \
+    "Configured JavaScript or TypeScript tests require package.json."
+fi
 need_javascript=0
 has_changed_extension javascript_typescript && need_javascript=1
 [ ${#PROJECT_JS[@]} -gt 0 ] && need_javascript=1
@@ -598,6 +840,10 @@ if [ $need_javascript -eq 1 ] && [ -f package.json ]; then
 fi
 
 # --- 5. Rust: explicit project mappings, integration targets, then the full suite. ---
+if [ ${#PROJECT_RS[@]} -gt 0 ] && ! has_project_marker rust; then
+  append_result rust unavailable "explicit test targets" "" \
+    "Configured Rust tests require a project marker such as Cargo.toml."
+fi
 need_rust=0
 has_changed_extension rust && need_rust=1
 [ ${#PROJECT_RS[@]} -gt 0 ] && need_rust=1
@@ -660,8 +906,10 @@ fi
 
 if [ "$HAS_FAILURES" -eq 1 ]; then
   emit_block "$RESULTS"
-elif [ -n "$RESULTS" ]; then
+elif [ "$HAS_PASSES" -eq 1 ]; then
   emit_success "$RESULTS"
+elif [ -n "$RESULTS" ]; then
+  emit_skip "$RESULTS"
 else
   emit_skip "no related test runner matched changed paths"
 fi

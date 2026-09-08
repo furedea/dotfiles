@@ -11,10 +11,7 @@ source "$(dirname "$0")/lib/lint_format.sh"
 load_file_path # sets FILE_PATH, FILENAME
 
 require_cmd shfmt
-shfmt -w "$FILE_PATH" >/dev/null 2>&1 || true
+run_quality_step "shfmt format" shfmt -w "$FILE_PATH"
 
 require_cmd shellcheck
-VIOLATIONS=""
-if ! VIOLATIONS=$(shellcheck -x -P SCRIPTDIR "$FILE_PATH" 2>&1); then
-  emit_post_tool_context "shellcheck" "$VIOLATIONS"
-fi
+run_quality_step "shellcheck lint" shellcheck -x -P SCRIPTDIR "$FILE_PATH"

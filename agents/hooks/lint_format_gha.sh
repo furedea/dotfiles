@@ -18,7 +18,4 @@ case "$FILE_PATH" in
 esac
 
 require_cmd actionlint
-VIOLATIONS=""
-if ! VIOLATIONS=$(actionlint -oneline "$FILE_PATH" 2>&1); then
-  emit_post_tool_context "actionlint" "$VIOLATIONS"
-fi
+run_quality_step "actionlint lint" actionlint -oneline "$FILE_PATH"

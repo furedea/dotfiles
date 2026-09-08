@@ -42,18 +42,31 @@ function find_project_root() {
 # Assert a command exists; emit agent-readable context and exit 0 if not found.
 function require_cmd() {
   command -v "$1" &>/dev/null || {
-    emit_post_tool_context "$1" "$1 not found in PATH."
+    emit_post_tool_context "Quality check unavailable"$'\n'"$1 · ${FILE_PATH:-unknown target}"$'\n'"Reason: $1 not found in PATH."
     exit 0
   }
 }
 
-# Emit a PostToolUse additionalContext JSON line for the agent's self-correction loop.
-# Args: <tool_label> <violations_text>
-# Outputs nothing when violations_text is empty (no-op). Returns 0 either way.
+# Preserve a failed quality step without rejecting an already completed edit.
+function run_quality_step() {
+  local _label="$1"
+  shift
+  local _output _status=0
+  _output=$("$@" 2>&1) || _status=$?
+  if [ "$_status" -ne 0 ]; then
+    emit_quality_failure "$_label" "$_status" "$_output"
+  fi
+  return 0
+}
+
+function emit_quality_failure() {
+  local _label="$1" _status="$2" _output="$3"
+  emit_post_tool_context "Quality check failed"$'\n'"$_label · ${FILE_PATH:-unknown target} · exit $_status"$'\n'"Error: ${_output:-No diagnostic output.}"
+}
+
+# Preserve the provider envelope while sharing one human-readable message format.
 function emit_post_tool_context() {
-  local _tool="$1"
-  local _violations="$2"
-  [ -z "$_violations" ] && return 0
-  jq -cn --arg ctx "$_tool: $_violations" \
+  [ -z "$1" ] && return 0
+  jq -cn --arg ctx "$1" \
     '{hookSpecificOutput:{hookEventName:"PostToolUse",additionalContext:$ctx}}'
 }

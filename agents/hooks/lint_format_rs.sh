@@ -11,4 +11,4 @@ source "$(dirname "$0")/lib/lint_format.sh"
 load_file_path # sets FILE_PATH, FILENAME
 
 require_cmd rustfmt
-rustfmt "$FILE_PATH" >/dev/null 2>&1 || true
+run_quality_step "rustfmt format" rustfmt "$FILE_PATH"

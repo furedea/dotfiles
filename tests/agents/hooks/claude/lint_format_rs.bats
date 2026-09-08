@@ -31,3 +31,20 @@ teardown() {
   run bash "$HOOK" <<< '{"tool_input":{}}'
   [ "$status" -eq 0 ]
 }
+
+@test "lint_format_rs reports formatter failure without blocking the edit" {
+  mkdir -p "$TEST_TMPDIR/bin"
+  printf '#!/usr/bin/env bash\necho "cannot parse source" >&2\nexit 1\n' > "$TEST_TMPDIR/bin/rustfmt"
+  chmod +x "$TEST_TMPDIR/bin/rustfmt"
+  touch "$TEST_TMPDIR/source.rs"
+  export PATH="$TEST_TMPDIR/bin:$PATH"
+
+  run bash "$HOOK" <<< "$(make_post_tool_input "$TEST_TMPDIR/source.rs")"
+
+  [ "$status" -eq 0 ]
+  local _context
+  _context=$(jq -r '.hookSpecificOutput.additionalContext' <<< "$output")
+  [[ "$_context" == *"failed"* ]]
+  [[ "$_context" == *"source.rs"* ]]
+  [[ "$_context" == *"cannot parse source"* ]]
+}

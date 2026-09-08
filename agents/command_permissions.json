@@ -2,24 +2,24 @@
   "version": 1,
   "rules": [
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["actionlint"],
-      "justification": "Run workflow verification only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["autocorrect", "--lint"],
-      "justification": "Run prose lint verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["bats"],
-      "justification": "Run tests manually only after user approval; Stop hooks own automatic verification."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["bash", "-n"],
-      "justification": "Run shell syntax verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
@@ -37,39 +37,39 @@
       "justification": "Allow explicit Rust program execution that is not a verification gate."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["cargo", "test"],
-      "justification": "Run Rust tests manually only after user approval; Stop hooks own automatic verification."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["cargo", "check"],
-      "justification": "Run Rust checks manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["cargo", "clippy"],
-      "justification": "Run Rust lint verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["cargo", "fmt", "--check"],
-      "justification": "Run Rust format verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["commitlint"],
-      "justification": "Run commit-message verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["deadnix"],
-      "justification": "Run dead-code verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["dprint", "check"],
-      "justification": "Run dprint verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
@@ -147,159 +147,159 @@
       "justification": "Allowed only through hooks for isolated task branch worktrees."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["nixfmt", "--check"],
-      "justification": "Run Nix format verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["npm", "run", "test"],
-      "justification": "Run package tests manually only after user approval; Stop hooks own automatic verification."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["npm", "test"],
-      "justification": "Run package tests manually only after user approval; Stop hooks own automatic verification."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["npm", "run", "lint"],
-      "justification": "Run package lint verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["npm", "run", "format-check"],
-      "justification": "Run package format verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["npm", "run", "format:check"],
-      "justification": "Run package format verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["npm", "run", "typecheck"],
-      "justification": "Run package type verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["npm", "run", "check"],
-      "justification": "Run package verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["npm", "run", "knip"],
-      "justification": "Run package dependency verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["npm", "exec", "--", "vitest"],
-      "justification": "Run Vitest manually only after user approval; Stop hooks own automatic verification."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["npm", "exec", "--", "jest"],
-      "justification": "Run Jest manually only after user approval; Stop hooks own automatic verification."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["node", "--test"],
-      "justification": "Run Node tests manually only after user approval; Stop hooks own automatic verification."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["oxfmt", "--check"],
-      "justification": "Run JavaScript format verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["oxlint"],
-      "justification": "Run JavaScript lint verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["pnpm", "test"],
-      "justification": "Run package tests manually only after user approval; Stop hooks own automatic verification."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["pnpm", "lint"],
-      "justification": "Run package lint verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["pnpm", "format-check"],
-      "justification": "Run package format verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["pnpm", "typecheck"],
-      "justification": "Run package type verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["pnpm", "run", "test"],
-      "justification": "Run package tests manually only after user approval; Stop hooks own automatic verification."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["pnpm", "run", "lint"],
-      "justification": "Run package lint verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["pnpm", "run", "format-check"],
-      "justification": "Run package format verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["pnpm", "run", "format:check"],
-      "justification": "Run package format verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["pnpm", "run", "typecheck"],
-      "justification": "Run package type verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["pnpm", "check"],
-      "justification": "Run package verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["pnpm", "run", "check"],
-      "justification": "Run package verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["pnpm", "run", "knip"],
-      "justification": "Run package dependency verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["pnpm", "exec", "vitest"],
-      "justification": "Run Vitest manually only after user approval; Stop hooks own automatic verification."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["pnpm", "exec", "tsc"],
-      "justification": "Run TypeScript verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["pnpm", "exec", "oxlint"],
-      "justification": "Run JavaScript lint verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["pnpm", "exec", "oxfmt", "--check"],
-      "justification": "Run JavaScript format verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["pnpm", "exec", "tsgolint"],
-      "justification": "Run TypeScript lint verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
@@ -307,14 +307,14 @@
       "justification": "Allowed by the shared agent command permissions."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["selene"],
-      "justification": "Run Lua lint verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["shellcheck"],
-      "justification": "Run shell verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
@@ -322,29 +322,29 @@
       "justification": "Allow explicit shell formatting because it changes files instead of duplicating verification."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["shfmt", "-d"],
-      "justification": "Run shell format verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["statix"],
-      "justification": "Run Nix static verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["stylua", "--check"],
-      "justification": "Run Lua format verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["tex-fmt", "--check"],
-      "justification": "Run TeX format verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["tsgolint"],
-      "justification": "Run TypeScript lint verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
@@ -357,44 +357,19 @@
       "justification": "Allow reproducible Python program execution that is not a verification gate."
     },
     {
-      "decision": "ask",
-      "prefix": ["uv", "run", "pytest"],
-      "justification": "Run Python tests manually only after user approval; Stop hooks own automatic verification."
-    },
-    {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["uv", "run", "--frozen", "pytest"],
-      "justification": "Run Python tests manually only after user approval; Stop hooks own automatic verification."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
-      "prefix": ["uv", "run", "ruff"],
-      "justification": "Run Python lint or format verification manually only after user approval."
-    },
-    {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["uv", "run", "--frozen", "ruff"],
-      "justification": "Run Python lint or format verification manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
-      "prefix": ["uv", "run", "ty"],
-      "justification": "Run Python type verification manually only after user approval."
-    },
-    {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["uv", "run", "--frozen", "ty"],
-      "justification": "Run Python type verification manually only after user approval."
-    },
-    {
-      "decision": "ask",
-      "prefix": ["uv", "run", "--frozen", "--with", "pytest", "pytest"],
-      "justification": "Run injected Python tests manually only after user approval."
-    },
-    {
-      "decision": "ask",
-      "prefix": ["uv", "run", "--with", "pytest", "pytest"],
-      "justification": "Run injected Python tests manually only after user approval."
+      "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "ask",
