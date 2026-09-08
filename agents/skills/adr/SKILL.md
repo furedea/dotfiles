@@ -1,7 +1,8 @@
 ---
 name: adr
 description: >
-    Architecture Decision Record (ADR) operation skill. Load when a task involves architectural decisions, decision records, ADRs, docs/adr/, library or framework selection, durable project constraints, rejected alternatives, superseding or deprecating previous decisions, or when TSDD says a broad Why belongs in an ADR. This skill turns decision-relevant changes into docs/adr/ entries instead of leaving ADR creation implicit.
+    Use to decide whether a broad design decision needs an Architecture Decision Record (ADR),
+    or to create, review, update, supersede, or deprecate ADRs.
 ---
 
 # Architecture Decision Records
@@ -14,7 +15,8 @@ Use this together with `tsdd` when the work involves both executable behavior an
 
 When a change introduces or reverses a broad project decision, create or update an ADR under `docs/adr/` as part of the same task.
 
-Do not leave ADR creation as an optional follow-up. If the rationale matters for future maintainers or future agents, record it before finishing the work.
+When Decision Test identifies a broad decision requiring an ADR, record its rationale before
+finishing the work rather than leaving it as an optional follow-up.
 
 ## When To Load
 
@@ -23,7 +25,7 @@ Load this skill before making or reviewing changes involving:
 - Architecture Decision Records, decision records, ADRs, or `docs/adr/`.
 - Library, framework, database, protocol, hosting, or tooling selection where real alternatives exist.
 - Architectural patterns such as server-rendered vs SPA, sessions vs tokens, monolith vs services, sync vs async, polling vs events, or generated vs handwritten artifacts.
-- Durable constraints that are not obvious from code, such as "no runtime dependencies", "Nix owns this configuration", or "tests are the only requirements source".
+- Durable constraints that are not obvious from code, such as "no runtime dependencies", "Nix owns this configuration", or "requirement intent remains independent of executable test evidence".
 - Reversing, superseding, deprecating, or intentionally rejecting a previous decision.
 
 Do not load it for a local implementation detail that can be understood from the code in under a minute.
@@ -37,7 +39,10 @@ Before writing an ADR, ask:
 3. Were meaningful alternatives considered or rejected?
 4. Would an inline comment either be too narrow or need to be repeated in several places?
 
-If any answer is yes, create an ADR. If all answers are no, prefer code, tests, or a local comment.
+Use these questions to assess significance, not as independent automatic triggers. Create an ADR
+for a broad decision that constrains future changes, affects multiple components or workflows, or
+is costly to reverse. Merely considering alternatives does not require an ADR for a local,
+easily reversible implementation choice; prefer code, tests, or a local comment in that case.
 
 ## Repository Inspection
 
@@ -58,9 +63,9 @@ Store ADRs here:
 ```text
 docs/
 └── adr/
-    ├── 0001-record-architecture-decisions.md
-    ├── 0002-<decision-kebab-case>.md
-    └── 0003-<decision-kebab-case>.md
+    ├── 0001_record_architecture_decisions.md
+    ├── 0002_<decision_snake_case>.md
+    └── 0003_<decision_snake_case>.md
 ```
 
 Rules:
@@ -69,9 +74,10 @@ Rules:
 - Use sequential four-digit IDs.
 - Never reuse an ID.
 - Never delete old ADRs to hide history.
-- Use kebab-case for the filename decision slug.
+- Follow existing repository naming conventions. Otherwise use underscores between the ID and
+  decision words, as shown above. Do not rename existing ADRs solely to normalize filenames.
 - Create `docs/adr/` if it does not exist.
-- If the repository has no ADRs yet and the task adopts ADRs as a practice, create `0001-record-architecture-decisions.md` first.
+- If the repository has no ADRs yet and the task adopts ADRs as a practice, create `0001_record_architecture_decisions.md` first.
 
 ## Status Rules
 
@@ -139,7 +145,8 @@ Use the longer template only when a Y-Statement would be too compressed:
 
 - Write ADRs in English for public repositories.
 - Record Why, not What or How.
-- Do not duplicate requirements that belong in tests.
+- Do not duplicate requirement details or executable behavior evidence. Link to the independent
+  requirement source and tests where needed; tests are evidence, not the origin of requirements.
 - Do not duplicate implementation details that belong in code and types.
 - Name rejected alternatives explicitly.
 - State the accepted trade-off plainly.
@@ -155,7 +162,7 @@ For decision-relevant implementation tasks:
 3. Inspect existing ADRs before choosing or recording the decision.
 4. Implement the code change.
 5. Create or supersede the ADR before finishing.
-6. Run the relevant verification gate.
+6. Confirm the relevant verification results. Follow `tsdd`'s Automatic Verification policy for execution needs and reuse of successful hook evidence.
 7. Report the ADR path and the verification result.
 
 For documentation-only decision tasks:
@@ -163,7 +170,7 @@ For documentation-only decision tasks:
 1. Inspect existing ADRs.
 2. Decide whether this is a new decision, a duplicate, or a supersession.
 3. Create or update only the necessary ADR files.
-4. Run the repository's markdown or generated-artifact checks when available.
+4. Confirm the repository's markdown or generated-artifact check results when available. Follow `tsdd`'s Automatic Verification policy for execution needs and reuse of successful hook evidence.
 5. Report the ADR path.
 
 ## Non-Goals

@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="{{LANG}}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="explain-visually-authority" content="derived-view">
+  <meta name="explain-visually-source" content="{{SOURCE}}">
+  <meta name="explain-visually-revision" content="{{REVISION}}">
+  <title>{{TITLE}}</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --background: #f4f1e8;
+      --surface: #fffdf7;
+      --surface-raised: #ffffff;
+      --foreground: #17211d;
+      --muted: #66736d;
+      --line: #cdd4ce;
+      --accent: #176b58;
+      --accent-soft: #dceee7;
+      --fact: #2463a2;
+      --fact-soft: #e4f0fb;
+      --interpretation: #80571a;
+      --interpretation-soft: #f7ebce;
+      --unverified: #9b3c45;
+      --unverified-soft: #f9e2e4;
+      --code: #edf0ec;
+      --shadow: 0 18px 60px rgb(31 47 39 / 10%);
+      --radius: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      background: var(--background);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.65;
+    }
+
+    body {
+      color: var(--foreground);
+      margin: 0;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration-thickness: 0.08em;
+      text-underline-offset: 0.18em;
+    }
+
+    code {
+      background: var(--code);
+      border-radius: 5px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.9em;
+      overflow-wrap: anywhere;
+      padding: 0.12em 0.38em;
+    }
+
+    pre {
+      background: var(--code);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow-x: auto;
+      padding: 16px 18px;
+    }
+
+    pre code {
+      background: transparent;
+      padding: 0;
+    }
+
+    .page {
+      margin: 0 auto;
+      max-width: 1120px;
+      padding: 56px 40px 80px;
+    }
+
+    .hero {
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: calc(var(--radius) + 4px);
+      box-shadow: var(--shadow);
+      padding: 36px 40px;
+    }
+
+    .eyebrow {
+      color: var(--accent);
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      margin: 0 0 12px;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3 {
+      line-height: 1.2;
+      margin-top: 0;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 3.6rem);
+      letter-spacing: -0.045em;
+      margin-bottom: 24px;
+    }
+
+    h2 {
+      font-size: clamp(1.35rem, 3vw, 2rem);
+      letter-spacing: -0.025em;
+    }
+
+    h3 {
+      font-size: 1.05rem;
+    }
+
+    .provenance {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: max-content minmax(0, 1fr);
+      margin: 0;
+    }
+
+    .provenance dt {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 750;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .provenance dd {
+      margin: 0;
+      min-width: 0;
+    }
+
+    .derived-note {
+      background: var(--interpretation-soft);
+      border-left: 4px solid var(--interpretation);
+      border-radius: 0 10px 10px 0;
+      margin-top: 24px;
+      padding: 14px 18px;
+    }
+
+    main {
+      display: grid;
+      gap: 28px;
+      margin-top: 32px;
+    }
+
+    section {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+    }
+
+    .section-heading {
+      align-items: baseline;
+      display: flex;
+      gap: 12px;
+    }
+
+    .section-number {
+      color: var(--accent);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+
+    .tldr {
+      font-size: clamp(1.15rem, 2.5vw, 1.55rem);
+      font-weight: 650;
+      line-height: 1.45;
+      margin: 0;
+    }
+
+    .headline {
+      background: var(--accent-soft);
+      border-radius: 10px;
+      margin-top: 18px;
+      padding: 14px 18px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+
+    .card {
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      padding: 18px;
+    }
+
+    .card > :last-child,
+    .callout > :last-child {
+      margin-bottom: 0;
+    }
+
+    .card-heading {
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: space-between;
+    }
+
+    .label,
+    .id {
+      border-radius: 999px;
+      display: inline-flex;
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      padding: 3px 9px;
+      text-transform: uppercase;
+    }
+
+    .label.fact {
+      background: var(--fact-soft);
+      color: var(--fact);
+    }
+
+    .label.interpretation {
+      background: var(--interpretation-soft);
+      color: var(--interpretation);
+    }
+
+    .label.unverified {
+      background: var(--unverified-soft);
+      color: var(--unverified);
+    }
+
+    .id {
+      background: var(--foreground);
+      color: var(--surface-raised);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .flow {
+      align-items: stretch;
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+
+    .step {
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      min-width: 0;
+      padding: 14px;
+      position: relative;
+    }
+
+    .step-number {
+      color: var(--accent);
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .layers {
+      display: grid;
+      gap: 10px;
+    }
+
+    .layer {
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-left: 5px solid var(--accent);
+      border-radius: 8px;
+      padding: 14px 18px;
+    }
+
+    .layer + .layer {
+      margin-left: 28px;
+    }
+
+    .diagram {
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow-x: auto;
+      padding: 16px;
+    }
+
+    .diagram svg {
+      display: block;
+      height: auto;
+      margin: 0 auto;
+      max-width: 100%;
+    }
+
+    .figcaption {
+      color: var(--muted);
+      font-size: 0.82rem;
+      margin-top: 10px;
+    }
+
+    table {
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      width: 100%;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    .callout {
+      border-left: 4px solid var(--accent);
+      padding: 2px 0 2px 18px;
+    }
+
+    .callout.unverified {
+      border-left-color: var(--unverified);
+    }
+
+    .coverage-list,
+    .question-list {
+      padding-left: 1.25rem;
+    }
+
+    .coverage-list li,
+    .question-list li {
+      margin: 0.45rem 0;
+    }
+
+    .ask {
+      border: 1px dashed var(--accent);
+      border-radius: 10px;
+      color: var(--muted);
+      padding: 16px 18px;
+    }
+
+    footer {
+      color: var(--muted);
+      font-size: 0.8rem;
+      margin-top: 28px;
+      text-align: center;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --background: #111815;
+        --surface: #17201c;
+        --surface-raised: #1c2722;
+        --foreground: #ecf3ef;
+        --muted: #a9b6af;
+        --line: #36443d;
+        --accent: #79cfb4;
+        --accent-soft: #1d4035;
+        --fact: #9ac9f1;
+        --fact-soft: #1d354b;
+        --interpretation: #e6bf75;
+        --interpretation-soft: #46371d;
+        --unverified: #f0a0a8;
+        --unverified-soft: #4a2529;
+        --code: #222e28;
+        --shadow: 0 18px 60px rgb(0 0 0 / 30%);
+      }
+    }
+
+    @media (max-width: 720px) {
+      .page {
+        padding: 24px 16px 48px;
+      }
+
+      .hero,
+      section {
+        padding: 22px 20px;
+      }
+
+      .provenance {
+        grid-template-columns: 1fr;
+      }
+
+      .provenance dd + dt {
+        margin-top: 6px;
+      }
+
+      .layer + .layer {
+        margin-left: 12px;
+      }
+    }
+
+    @media print {
+      :root {
+        color-scheme: light;
+      }
+
+      .page {
+        max-width: none;
+        padding: 0;
+      }
+
+      .hero,
+      section {
+        break-inside: avoid;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <p class="eyebrow">Explain visually · Derived view</p>
+      <h1>{{TITLE}}</h1>
+      <dl class="provenance">
+        <dt>Source</dt>
+        <dd><code>{{SOURCE}}</code></dd>
+        <dt>Revision</dt>
+        <dd><code>{{REVISION}}</code></dd>
+      </dl>
+      <div class="derived-note">
+        <strong>This page is not authoritative.</strong>
+        Verify decisions and requirements against the identified source revision.
+      </div>
+    </header>
+
+    <main>
+      {{BODY}}
+    </main>
+
+    <footer>Regenerate this derived view when the source changes instead of maintaining it manually.</footer>
+  </div>
+  <script>
+    const reportPageHeight = () => {
+      document.body.dataset.pageHeight = String(Math.ceil(document.documentElement.scrollHeight));
+    };
+    window.addEventListener("load", reportPageHeight);
+    new ResizeObserver(reportPageHeight).observe(document.body);
+  </script>
+</body>
+</html>

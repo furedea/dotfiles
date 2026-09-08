@@ -1,6 +1,19 @@
 {
   "version": 1,
   "skills": {
+    "explain-visually": {
+      "claude": {
+        "frontmatter": {
+          "argument-hint": "<PR, issue, or document>",
+          "disable-model-invocation": true
+        }
+      },
+      "codex": {
+        "openai": {
+          "allow_implicit_invocation": false
+        }
+      }
+    },
     "git-commit-split": {
       "claude": {
         "frontmatter": {
@@ -20,6 +33,19 @@
     "github-ci-init": {
       "claude": {
         "frontmatter": {
+          "disable-model-invocation": true
+        }
+      },
+      "codex": {
+        "openai": {
+          "allow_implicit_invocation": false
+        }
+      }
+    },
+    "grilling": {
+      "claude": {
+        "frontmatter": {
+          "argument-hint": "[plan, decision, or idea]",
           "disable-model-invocation": true
         }
       },

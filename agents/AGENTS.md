@@ -6,7 +6,7 @@
 - File names: Use underscores (\_) as separators (ex: lint_format.sh)
 - Write documentation, code comments, and commit messages in English for public repositories
 - When writing commit messages, follow Conventional Commits rules
-- Implement based on Test-Spec Driven Development (TSDD)
+- Implement based on Test-Specification-Driven Development (TSDD)
 
 # Coding Guidelines
 
