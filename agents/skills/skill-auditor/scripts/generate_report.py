@@ -77,6 +77,7 @@ def generate_report(workspace: str, template_path: str | None = None) -> str:
 
     # Inject data
     json_data = json.dumps(data, indent=2, ensure_ascii=False, default=str)
+    json_data = json_data.replace("<", "\\u003c").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
     html = html.replace("/*__EMBEDDED_DATA__*/", f"const REPORT_DATA = {json_data};")
 
     return html
@@ -143,6 +144,7 @@ def _builtin_template() -> str:
 <div class="meta" id="meta"></div>
 
 <div class="summary-bar" id="summary-bar"></div>
+<div class="card" id="evidence-limitations"></div>
 
 <h2>Per-Skill Health</h2>
 <div id="skill-cards"></div>
@@ -189,6 +191,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Summary bar
   const health = portfolio.portfolio_health || {};
+  const limits = [...(audit.limitations || []), ...(meta.limitations || []), ...(manifest.limitations || [])];
+  document.getElementById('evidence-limitations').textContent =
+    [health.summary || '', ...limits].filter(Boolean).join(' / ');
   const healthBadge = {
     'healthy': 'badge-good', 'needs_attention': 'badge-warn', 'critical': 'badge-bad'
   }[health.overall_score] || 'badge-info';
@@ -199,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="stat-label">Portfolio Health</div>
     </div>
     <div class="stat">
-      <div class="stat-value">${health.routing_accuracy_avg != null ? (health.routing_accuracy_avg * 100).toFixed(0) + '%' : '?'}</div>
+      <div class="stat-value">${health.routing_accuracy_avg != null ? (health.routing_accuracy_avg * 100).toFixed(0) + '%' : 'Not assessable'}</div>
       <div class="stat-label">Avg Accuracy</div>
     </div>
     <div class="stat">
@@ -227,8 +232,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderCard(r) {
     const s = r.stats || {};
-    const acc = s.accuracy != null ? (s.accuracy * 100).toFixed(0) : '?';
-    const accClass = s.accuracy >= 0.9 ? 'badge-good' : s.accuracy >= 0.7 ? 'badge-warn' : 'badge-bad';
+    const acc = s.accuracy != null ? (s.accuracy * 100).toFixed(0) + '%' : 'Not assessable';
+    const accClass = s.accuracy == null ? 'badge-info' : s.accuracy >= 0.9 ? 'badge-good' : s.accuracy >= 0.7 ? 'badge-warn' : 'badge-bad';
     let incidentsHtml = '';
     for (const inc of (r.incidents || []).slice(0, 5)) {
       const cls = inc.verdict === 'false_positive' ? 'incident-fp' :
@@ -237,7 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const skillPath = r.skill_path || (scopeMap[r.skill_name] || {}).filepath || '';
     return `<div class="card">
-      <div class="card-header"><h3>${esc(r.skill_name)}</h3><span class="badge ${accClass}">${acc}%</span></div>
+      <div class="card-header"><h3>${esc(r.skill_name)}</h3><span class="badge ${accClass}">${acc}</span></div>
       ${skillPath ? `<div style="font-size:0.7rem;color:var(--muted);margin-bottom:4px;word-break:break-all">${esc(skillPath)}</div>` : ''}
       <div style="font-size:0.85rem;color:var(--muted);margin-bottom:0.5rem">${esc(r.description_excerpt || '')}</div>
       <div style="font-size:0.85rem">Fires: ${s.total_fires || 0} | FP: ${s.false_positives || 0} | FN: ${s.false_negatives || 0}</div>

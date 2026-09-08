@@ -15,6 +15,7 @@ description optimization, which tests in isolation.
 - **Adding keywords** to Skill A that already appear in Skill B increases confusion
 
 For each proposed change, you MUST state:
+
 1. What it fixes (the specific routing error from the audit)
 2. What it might break (potential side effects on other skills)
 3. Why the net effect is positive
@@ -29,6 +30,10 @@ For each proposed change, you MUST state:
 5. Write results as JSON
 
 ## Principles for Good Description Edits
+
+Honor evidence limitations from the audit. Missing observations and unknown historical
+availability cannot justify routing fixes or skill deletion. Structural suggestions
+must be labeled as such, not as proven accuracy improvements. No change is valid.
 
 1. **Add, don't remove**: When fixing false negatives, ADD trigger phrases
    rather than rewriting. The existing description works for its current
@@ -53,12 +58,12 @@ For each proposed change, you MUST state:
    instructions the model must attend to), not raw token count. A 200-token
    description with 2 clear directives causes less attention competition
    than a 100-token description with 8 terse directives. Therefore:
-   - Do NOT propose "shorten description to save tokens" as an improvement.
-     Shorter is not inherently better.
-   - DO propose removing **redundant or conflicting directives** — e.g.,
-     duplicate trigger phrases that overlap with another skill.
-   - DO propose consolidating scattered instructions into fewer, clearer ones.
-   - The `token_delta` field is informational, not an optimization target.
+    - Do NOT propose "shorten description to save tokens" as an improvement.
+      Shorter is not inherently better.
+    - DO propose removing **redundant or conflicting directives** — e.g.,
+      duplicate trigger phrases that overlap with another skill.
+    - DO propose consolidating scattered instructions into fewer, clearer ones.
+    - The `token_delta` field is informational, not an optimization target.
 
 7. **Coordinated pairs**: When two overlapping skills need fixes, propose
    BOTH patches together. Fixing only one side of a competition pair is
@@ -82,46 +87,46 @@ Write results as JSON to the path specified by the coordinator:
 
 ```json
 {
-  "patches": [
-    {
-      "skill_name": "string",
-      "skill_path": "string",
-      "priority": "high | medium | low",
-      "fixes_issues": ["which audit findings this addresses"],
-      "current_description": "string",
-      "proposed_description": "string",
-      "changes_made": ["human-readable list of what changed"],
-      "cascade_risk": "string — side effects on other skills",
-      "expected_impact": "string — projected improvement",
-      "token_delta": 0,
-      "coordinated_with": "string | null — name of paired skill if coordinated fix"
+    "patches": [
+        {
+            "skill_name": "string",
+            "skill_path": "string",
+            "priority": "high | medium | low",
+            "fixes_issues": ["which audit findings this addresses"],
+            "current_description": "string",
+            "proposed_description": "string",
+            "changes_made": ["human-readable list of what changed"],
+            "cascade_risk": "string — side effects on other skills",
+            "expected_impact": "string — projected improvement",
+            "token_delta": 0,
+            "coordinated_with": "string | null — name of paired skill if coordinated fix"
+        }
+    ],
+    "no_change_needed": [
+        {
+            "skill_name": "string",
+            "reason": "string"
+        }
+    ],
+    "new_skill_suggestions": [
+        {
+            "suggested_name": "string",
+            "rationale": "string",
+            "suggested_description": "string",
+            "suggested_body_outline": "string",
+            "coverage_gap_incidents": 0,
+            "related_sessions": ["session_id"],
+            "overlap_risk": "string"
+        }
+    ],
+    "optimization_summary": {
+        "skills_modified": 0,
+        "skills_unchanged": 0,
+        "new_skills_suggested": 0,
+        "total_token_delta": 0,
+        "highest_risk_change": "string",
+        "estimated_accuracy_improvement": "string"
     }
-  ],
-  "no_change_needed": [
-    {
-      "skill_name": "string",
-      "reason": "string"
-    }
-  ],
-  "new_skill_suggestions": [
-    {
-      "suggested_name": "string",
-      "rationale": "string",
-      "suggested_description": "string",
-      "suggested_body_outline": "string",
-      "coverage_gap_incidents": 0,
-      "related_sessions": ["session_id"],
-      "overlap_risk": "string"
-    }
-  ],
-  "optimization_summary": {
-    "skills_modified": 0,
-    "skills_unchanged": 0,
-    "new_skills_suggested": 0,
-    "total_token_delta": 0,
-    "highest_risk_change": "string",
-    "estimated_accuracy_improvement": "string"
-  }
 }
 ```
 

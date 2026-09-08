@@ -54,6 +54,7 @@ CLAUDE_SKILL_DIRS = [
 
 
 CODEX_SKILL_DIRS = [
+    "~/.agents/skills",
     "~/.codex/skills",
     "~/.codex/plugins/cache",
     "~/.codex/vendor_imports/skills",
@@ -70,7 +71,7 @@ def default_skill_dirs(provider: str) -> list[str]:
     raise ValueError(f"Unsupported provider: {provider}")
 
 
-def parse_skill_md(filepath: str) -> dict | None:
+def parse_skill_md(filepath: str, provider: str = DEFAULT_PROVIDER) -> dict | None:
     """Parse a SKILL.md file and extract structured metadata."""
     try:
         with open(filepath, "r", encoding="utf-8") as f:
@@ -122,6 +123,9 @@ def parse_skill_md(filepath: str) -> dict | None:
     # Check disable-model-invocation flag
     dmi = result.get("disable-model-invocation", "")
     result["disable_model_invocation"] = str(dmi).lower() in ("true", "yes", "1")
+    result["policy_source"] = "frontmatter" if dmi else "provider-default"
+    if provider == "codex":
+        _read_codex_policy(Path(filepath), result)
 
     # Token counting for attention budget analysis
     raw_desc = result.get("description", "")
@@ -129,6 +133,77 @@ def parse_skill_md(filepath: str) -> dict | None:
     result["description_tokens"] = count_tokens(desc) if desc else 0
 
     return result
+
+
+def _source_policy_path(filepath: Path) -> Path | None:
+    for parent in filepath.parents:
+        if parent.name == "skills" and parent.parent.name == "agents":
+            candidate = parent.parent / "skill_rendering.json"
+            if candidate.is_file():
+                return candidate
+    return None
+
+
+def _read_codex_policy(filepath: Path, result: dict) -> None:
+    policy_file = filepath.parent / "agents/openai.yaml"
+    if policy_file.is_file():
+        content = policy_file.read_text(encoding="utf-8")
+        block = re.search(r"^policy:\s*\n((?:[ \t]+[^\n]*\n?|\n)*)", content, re.MULTILINE)
+        match = (
+            re.search(r"^\s+allow_implicit_invocation:\s*(true|false)\s*(?:#.*)?$", block.group(1), re.MULTILINE)
+            if block
+            else None
+        )
+        if match:
+            result["disable_model_invocation"] = match.group(1) == "false"
+            result["policy_source"] = str(policy_file)
+        elif "allow_implicit_invocation" in content:
+            result["policy_warning"] = "Invocation policy syntax not recognized; do not infer automatic availability."
+        return
+    source_policy = _source_policy_path(filepath)
+    if source_policy:
+        config = json.loads(source_policy.read_text(encoding="utf-8"))
+        allow = (
+            config.get("skills", {})
+            .get(result["name"], {})
+            .get("codex", {})
+            .get("openai", {})
+            .get("allow_implicit_invocation")
+        )
+        if isinstance(allow, bool):
+            result["disable_model_invocation"] = not allow
+            result["policy_source"] = str(source_policy)
+
+
+def _inventory_origin(filepath: str) -> str:
+    if "/plugins/cache/" in filepath or "/vendor_imports/" in filepath:
+        return "cached"
+    if _source_policy_path(Path(filepath)):
+        return "source"
+    return "installed"
+
+
+def _deduplicate_inventory(skills: list[dict]) -> list[dict]:
+    grouped: dict[tuple, dict] = {}
+    # Installed definitions win over repository sources and inactive cache copies.
+    for skill in sorted(skills, key=lambda item: item["inventory_origin"] != "installed"):
+        key = (skill.get("project_path"), skill["name"])
+        evidence = {
+            field: skill.get(field)
+            for field in (
+                "filepath",
+                "filepath_resolved",
+                "inventory_origin",
+                "policy_source",
+                "disable_model_invocation",
+            )
+        }
+        if key in grouped:
+            grouped[key]["provenance"].append(evidence)
+        else:
+            skill["provenance"] = [evidence]
+            grouped[key] = skill
+    return list(grouped.values())
 
 
 def _parse_yaml_simple(text: str) -> dict:
@@ -171,13 +246,29 @@ def _finalize_value(lines: list[str], is_multiline: bool) -> str:
 def discover_project_skill_dirs(
     verbose: bool = False,
     provider: str = DEFAULT_PROVIDER,
+    project_paths: list[str] | None = None,
 ) -> list[tuple[str, str]]:
     """Discover .claude/skills/ directories inside known project roots.
 
     Returns list of (skill_dir, project_root) tuples.
     """
     if provider == "codex":
-        return []
+        results = set()
+        global_roots = {
+            (Path.home() / ".agents/skills").resolve(),
+            (Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex"))) / "skills").resolve(),
+            (Path.home() / ".codex/skills").resolve(),
+        }
+        for project in project_paths or []:
+            candidate = Path(project).expanduser().absolute()
+            for directory in (candidate, *candidate.parents):
+                for relative in (".agents/skills", ".codex/skills"):
+                    skills = directory / relative
+                    if skills.is_dir() and skills.resolve() not in global_roots:
+                        results.add((str(skills), str(directory)))
+                if (directory / ".git").exists():
+                    break
+        return sorted(results)
 
     claude_projects = os.path.expanduser("~/.claude/projects")
     if not os.path.isdir(claude_projects):
@@ -216,6 +307,7 @@ def find_skills(
     skill_dirs: list[str],
     project_skill_dirs: list[tuple[str, str]] | None = None,
     verbose: bool = False,
+    provider: str = DEFAULT_PROVIDER,
 ) -> list[dict]:
     """Find all SKILL.md files in the given directories.
 
@@ -232,19 +324,26 @@ def find_skills(
                 print(f"  Skipping (not found): {base_dir}", file=sys.stderr)
             return
 
+        walked = set()
         for root, dirs, files in os.walk(base_dir, followlinks=True):
+            resolved_root = os.path.realpath(root)
+            if resolved_root in walked:
+                dirs[:] = []
+                continue
+            walked.add(resolved_root)
             if "SKILL.md" in files:
                 fp = os.path.join(root, "SKILL.md")
                 real_fp = os.path.realpath(fp)
-                if real_fp in seen_paths:
+                identity = (real_fp, scope, project_path)
+                if identity in seen_paths:
                     continue
-                seen_paths.add(real_fp)
+                seen_paths.add(identity)
 
                 if verbose:
                     print(f"  Found: {fp}", file=sys.stderr)
 
-                parsed = parse_skill_md(fp)
-                if parsed:
+                parsed = parse_skill_md(fp, provider=provider)
+                if parsed and not parsed.get("error"):
                     if "/public/" in fp:
                         parsed["category"] = "public"
                     elif "/private/" in fp:
@@ -256,6 +355,10 @@ def find_skills(
                     else:
                         parsed["category"] = "other"
                     parsed["scope"] = scope
+                    parsed["inventory_origin"] = _inventory_origin(fp) if provider == "codex" else "installed"
+                    if scope == "global" and parsed["inventory_origin"] != "installed":
+                        parsed["scope"] = "catalog"
+                    parsed["visibility_basis"] = "current-filesystem-only"
                     parsed["project_path"] = project_path
                     skills.append(parsed)
 
@@ -265,7 +368,7 @@ def find_skills(
     for pdir, project_root in project_skill_dirs or []:
         _scan(pdir, scope="project-local", project_path=project_root)
 
-    return skills
+    return _deduplicate_inventory(skills)
 
 
 def collect(
@@ -273,6 +376,7 @@ def collect(
     verbose: bool = False,
     include_project_skills: bool = True,
     provider: str = DEFAULT_PROVIDER,
+    project_paths: list[str] | None = None,
 ) -> dict:
     """Main collection function. Returns structured manifest with attention budget."""
     global_dirs = list(skill_dirs or default_skill_dirs(provider))
@@ -281,11 +385,13 @@ def collect(
         project_skill_dirs = discover_project_skill_dirs(
             verbose=verbose,
             provider=provider,
+            project_paths=project_paths,
         )
     skills = find_skills(
         global_dirs,
         project_skill_dirs=project_skill_dirs,
         verbose=verbose,
+        provider=provider,
     )
 
     skills.sort(key=lambda s: (s.get("scope", ""), s.get("category", ""), s.get("name", "")))
@@ -377,6 +483,12 @@ def collect(
         "collected_at": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
         "skill_dirs_scanned": all_dirs,
         "skills": skills,
+        "limitations": [
+            "Current filesystem inventory does not establish historical per-session skill visibility.",
+            "Source and cached definitions are catalog entries, not evidence of active installation.",
+            "Same-name copies are grouped with provenance; historical versions and precedence may differ.",
+            "Description token totals estimate inventory size, not actual per-turn context usage.",
+        ],
         "summary": {
             "total_skills": len(skills),
             "by_category": _count_by(skills, "category"),
@@ -432,6 +544,12 @@ def main():
         help="Print progress details",
     )
     parser.add_argument(
+        "--project-paths",
+        nargs="*",
+        default=None,
+        help="Known session working directories for project-local discovery",
+    )
+    parser.add_argument(
         "--no-project-skills",
         action="store_true",
         help="Skip scanning project-local .claude/skills/ directories",
@@ -443,6 +561,7 @@ def main():
         verbose=args.verbose,
         include_project_skills=not args.no_project_skills,
         provider=args.provider,
+        project_paths=args.project_paths,
     )
 
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)

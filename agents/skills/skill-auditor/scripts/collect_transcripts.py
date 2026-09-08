@@ -37,6 +37,12 @@ from typing import cast
 
 DEFAULT_PROVIDER = "claude"
 
+SCRIPT_DIR = str(Path(__file__).resolve().parent)
+if SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, SCRIPT_DIR)
+
+from codex_observations import collect_session
+
 
 def encode_project_path(working_dir: str) -> str:
     """Convert a working directory to Claude's encoded project directory name.
@@ -598,6 +604,7 @@ def collect_codex(
         }
 
     all_sessions = []
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days) if days > 0 else None
     parse_errors = []
     jsonl_files = _codex_session_files(root)
     if verbose:
@@ -609,24 +616,19 @@ def collect_codex(
         if not _codex_project_matches(project_path, cwd):
             continue
 
-        session = parse_jsonl_session(fp, verbose=verbose, provider="codex")
-        if session is None:
+        try:
+            session = collect_session(fp, cutoff)
+        except OSError:
             parse_errors.append(fp)
             continue
+        if session.get("parse_errors"):
+            parse_errors.append(fp)
 
         session["session_id"] = str(meta.get("id") or session["session_id"])
         session["project_dir"] = cwd
+        session["forked_from_id"] = meta.get("forked_from_id")
         if session["user_turn_count"] >= min_turns:
             all_sessions.append(session)
-
-    if days > 0:
-        before = len(all_sessions)
-        all_sessions = filter_by_date(all_sessions, days)
-        if verbose:
-            print(
-                f"Date filter: {before} -> {len(all_sessions)} sessions (last {days} days)",
-                file=sys.stderr,
-            )
 
     all_sessions.sort(
         key=lambda s: s.get("first_timestamp") or "",
@@ -640,7 +642,9 @@ def collect_codex(
         all_skills.update(s["skills_loaded"])
         total_turns += s["user_turn_count"]
         slim = {k: v for k, v in s.items() if k not in ("messages", "user_turns")}
-        slim["turn_skill_map"] = _build_turn_skill_map(s["messages"])
+        slim["turn_skill_map"] = s["turn_skill_map"]
+        for turn in slim["turn_skill_map"]:
+            turn["is_builtin_command"] = _is_builtin_command(turn["user_message"])
         slim["project_dir"] = s.get("project_dir")
         sessions_slim.append(slim)
 
@@ -653,6 +657,14 @@ def collect_codex(
         "project_path": project_path,
         "collected_at": datetime.now(timezone.utc).isoformat(),
         "config": {"days": days, "min_turns": min_turns, "provider": "codex"},
+        "limitations": [
+            "Read observations are not proof of automatic invocation or complete reading.",
+            "skills_loaded_after includes unverified attempts; consult skill_read_evidence.",
+            "Missing reads do not prove non-use: injected, retained, dynamic, and provider-specific reads may be absent.",
+            "Historical skill availability is unknown; current inventory cannot establish false negatives.",
+            "Sessions without user_message events use response-item fallback and may contain replayed history.",
+            "The date window applies to user-turn timestamps; unknown timestamps are excluded when filtering.",
+        ],
         "sessions": sessions_slim,
         "summary": {
             "total_sessions": len(sessions_slim),
