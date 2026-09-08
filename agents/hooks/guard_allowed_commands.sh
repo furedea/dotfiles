@@ -60,7 +60,7 @@ fi
 
 # Normalize a command segment: trim whitespace and strip trailing shell redirections.
 function normalize_segment() {
-  echo "$1" | sed -E 's/^[[:space:]]+|[[:space:]]+$//; s/[[:space:]]+(2>&1|2>\/dev\/null|>&2)[[:space:]]*$//'
+  printf '%s\n' "$1" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//; s/[[:space:]]+(2>&1|2>\/dev\/null|>&2)[[:space:]]*$//'
 }
 
 PROJECT_RULES_FILE=$(command_rules_project_file allowed_commands.json || true)

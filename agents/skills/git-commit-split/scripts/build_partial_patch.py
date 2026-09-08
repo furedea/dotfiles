@@ -24,6 +24,7 @@ Exit codes:
 
 from __future__ import annotations
 
+import codecs
 import json
 import re
 import sys
@@ -47,7 +48,7 @@ def parse_diff(text: str) -> list[dict]:
     in_hunk = False
     for line in text.splitlines(keepends=True):
         if _FILE_HEADER.match(line):
-            current = {"path": _extract_path(line), "header": [line], "hunks": []}
+            current = {"path": None, "header": [line], "hunks": []}
             files.append(current)
             in_hunk = False
             continue
@@ -61,20 +62,47 @@ def parse_diff(text: str) -> list[dict]:
             current["hunks"][-1].append(line)
         else:
             current["header"].append(line)
+            if line.startswith(("--- ", "+++ ")) and line[4:].strip() != "/dev/null":
+                current["path"] = _strip_prefix(_decode_path(line[4:].rstrip("\n").split("\t")[0]))
+            elif line.startswith(("rename to ", "copy to ")):
+                current["path"] = _decode_path(line.split(" to ", 1)[1].rstrip("\n"))
+    for file in files:
+        if file["path"] is None:
+            file["path"] = _extract_path(file["header"][0])
     return files
 
 
 def _extract_path(diff_git_line: str) -> str:
-    # `diff --git <prefix>/<path> <prefix>/<path>` — prefix is `a`/`b` by default,
-    # but user config (diff.mnemonicPrefix) can change it to `i`/`w`/`c`/`o`.
-    # Take the last whitespace-separated token and strip everything up to the
-    # first `/` so any prefix works.
-    parts = diff_git_line.rstrip("\n").split(" ")
-    last = parts[-1]
-    slash = last.find("/")
-    if slash >= 0:
-        return last[slash + 1 :]
+    # Binary and mode-only diffs have no +++ marker. Their paths agree unless
+    # rename/copy metadata already supplied the destination.
+    paths = diff_git_line.removeprefix("diff --git ").rstrip("\n")
+    for boundary, character in enumerate(paths):
+        if character != " ":
+            continue
+        try:
+            source = _strip_prefix(_decode_path(paths[:boundary]))
+            target = _strip_prefix(_decode_path(paths[boundary + 1 :]))
+        except ValueError:
+            continue
+        if source == target:
+            return target
     raise ValueError(f"cannot parse path from: {diff_git_line!r}")
+
+
+def _decode_path(path: str) -> str:
+    if not path.startswith('"'):
+        return path
+    if not path.endswith('"'):
+        raise ValueError(f"unterminated Git path: {path!r}")
+    # Git quotes UTF-8 bytes with C-style escapes, including octal sequences.
+    return codecs.escape_decode(path[1:-1].encode())[0].decode("utf-8", errors="surrogateescape")
+
+
+def _strip_prefix(path: str) -> str:
+    prefix, separator, relative = path.partition("/")
+    if not separator or not prefix or any(character.isspace() for character in prefix):
+        raise ValueError(f"missing Git diff path prefix: {path!r}")
+    return relative
 
 
 def build_partial(files: list[dict], selection: list[dict]) -> str:

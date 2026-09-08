@@ -519,6 +519,16 @@ run_hook() {
   [ "$status" -eq 0 ]
 }
 
+@test "trims both ends of commands matched by anchored rules" {
+  run_hook "  git branch --show-current  "
+  [ "$status" -eq 0 ]
+}
+
+@test "allows anchored commands between compound separators" {
+  run_hook "git status && git branch --show-current && git worktree list"
+  [ "$status" -eq 0 ]
+}
+
 @test "trims whitespace in piped segments" {
   run_hook "  gh pr list  |  head -5  "
   [ "$status" -eq 0 ]

@@ -26,13 +26,15 @@ in
     };
   };
 
-  launchd.user.agents.hister.serviceConfig = lib.mkIf enableHisterService {
-    ProgramArguments = lib.mkForce [
-      "${histerServerLauncher}/bin/run_hister_server"
-      (lib.getExe config.services.hister.package)
-      username
-    ];
-    ThrottleInterval = 60;
+  launchd.user.agents = lib.mkIf enableHisterService {
+    hister.serviceConfig = {
+      ProgramArguments = lib.mkForce [
+        "${histerServerLauncher}/bin/run_hister_server"
+        (lib.getExe config.services.hister.package)
+        username
+      ];
+      ThrottleInterval = 60;
+    };
   };
 
   programs.zsh = {

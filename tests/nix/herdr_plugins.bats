@@ -6,15 +6,15 @@ setup() {
 }
 
 @test "propagates Herdr plugin synchronization failures" {
-  run nix eval --raw \
+  run nix eval --raw --option eval-cache false \
     "$REPO_ROOT#homeConfigurations.kaito.config.home.activation.herdrPlugins.data"
 
   [ "$status" -eq 0 ]
-  ! [[ "$output" == *"|| true"* ]]
+  [[ "$output" != *"|| true"* ]]
 }
 
 @test "provides plugin installer commands during activation" {
-  run nix eval --raw \
+  run nix eval --raw --option eval-cache false \
     "$REPO_ROOT#homeConfigurations.kaito.config.home.activation.herdrPlugins.data"
 
   [ "$status" -eq 0 ]

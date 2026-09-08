@@ -139,6 +139,35 @@ def test_merge_audit_reports_recalculates_skill_accuracy() -> None:
     assert merged["meta"]["turns_analyzed"] == 5
 
 
+def test_merge_audit_reports_counts_each_competition_incident_once() -> None:
+    reports = [
+        {"competition_pairs": [{"skill_a": "python", "skill_b": "review", "incidents": 2}]},
+        {"competition_pairs": [{"skill_a": "review", "skill_b": "python", "incidents": 3}]},
+    ]
+
+    merged = run_audit.merge_audit_reports(reports)
+
+    assert len(merged["competition_pairs"]) == 1
+    assert merged["competition_pairs"][0]["incidents"] == 5
+    assert reports[0]["competition_pairs"][0]["incidents"] == 2
+
+
+def test_merge_audit_reports_counts_each_coverage_gap_occurrence_once() -> None:
+    reports = [
+        {"coverage_gaps": [{"unmet_intent": "review", "frequency": 2, "related_sessions": ["a"]}]},
+        {"coverage_gaps": [{"unmet_intent": "review", "frequency": 3, "related_sessions": ["b", "a"]}]},
+    ]
+
+    merged = run_audit.merge_audit_reports(reports)
+
+    assert merged["coverage_gaps"] == [{"unmet_intent": "review", "frequency": 5, "related_sessions": ["a", "b"]}]
+    assert reports[0]["coverage_gaps"][0] == {
+        "unmet_intent": "review",
+        "frequency": 2,
+        "related_sessions": ["a"],
+    }
+
+
 def test_write_agent_prompts_includes_the_requested_language_in_every_prompt(tmp_path: Path) -> None:
     batches = [
         {

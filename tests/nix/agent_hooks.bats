@@ -36,8 +36,11 @@ setup() {
   [ -n "$_rendered" ]
   [ -f "$_rendered/.claude/hooks/external/herdr/herdr-agent-state.sh" ]
   [ ! -e "$_generation/home-files/.claude/settings.json" ]
-  grep -Fq 'sync-claude-files' "$_activation"
+  grep -Fq 'sync-claude-settings' "$_activation"
+  grep -Fq -- "--source $_claude_settings" "$_activation"
+  grep -Fq -- "--target \"\$HOME/.claude/settings.json\"" "$_activation"
   cmp "$REPO_ROOT/agents/AGENTS.md" "$_rendered/.claude/CLAUDE.md"
+  # shellcheck disable=SC2016
   grep -Fq -- \
     'bash \"$HOME/.codex/hooks/external/herdr/herdr-agent-state.sh\" session' \
     "$_codex_hooks"
@@ -47,6 +50,8 @@ setup() {
   ' "$_codex_hooks" >/dev/null
   grep -Fq -- "'/opt/homebrew/bin/moshi-hook' codex-hook" "$_codex_hooks"
   grep -Fq -- "'/opt/homebrew/bin/moshi-hook' claude-hook" "$_claude_settings"
-  ! grep -Fq -- '/nix/store' "$_codex_hooks"
-  ! grep -Fq -- '/nix/store' "$_claude_settings"
+  run grep -Fq -- '/nix/store' "$_codex_hooks"
+  [ "$status" -eq 1 ]
+  run grep -Fq -- '/nix/store' "$_claude_settings"
+  [ "$status" -eq 1 ]
 }
