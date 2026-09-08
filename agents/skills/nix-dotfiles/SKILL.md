@@ -1,10 +1,19 @@
 ---
 name: nix-dotfiles
 description: >
-    Nix configuration reference for nix-darwin + home-manager on Apple Silicon macOS. ALWAYS load when the user says "dotfiles" — dotfiles here means nix-managed config. Load for: adding packages, configuring programs, dotfile symlinks, macOS system defaults, activation scripts, unfree packages, darwin-rebuild, home-manager switch, homebrew casks/brews, or any macOS app preference/shortcut change (app prefs like Homerow, Raycast, Ghostty are managed via system.defaults in nix/darwin/default.nix, NOT edited directly). Skip only for standalone non-.nix config files (karabiner.json, starship.toml, nvim/) needing no nix rebuild. Trigger on: "dotfiles", flake.nix, nix/home/default.nix, nix/darwin/default.nix, nixpkgs, home-manager, programs.*, homebrew.casks, homebrew.brews, mkOutOfStoreSymlink, allowUnfree, darwin-rebuild, system.defaults, "nix で管理", "add to nix", app shortcut/preference updates.
+    Use when deciding where or how to change and apply Nix-managed packages, program settings,
+    dotfile links, or macOS preferences on this Apple Silicon nix-darwin/home-manager system.
 ---
 
 # Nix Configuration — Dotfiles Reference
+
+## Scope
+
+This dotfiles repository uses Nix-managed configuration. macOS app preferences and shortcuts
+(including Homerow, Raycast, and Ghostty) are managed through `system.defaults` in
+`nix/darwin/default.nix`, not by directly changing app preferences. Standalone non-Nix config edits
+such as `karabiner.json`, `starship.toml`, or `nvim/` need this reference only when their Nix ownership
+or rebuild requirements are relevant.
 
 ## Architecture
 
@@ -29,15 +38,15 @@ Platform: `aarch64-darwin` (Apple Silicon). Release channel: `25.11` for nixpkgs
 
 ## Flake Inputs
 
-| Input | URL | Purpose |
-| --- | --- | --- |
-| `nixpkgs` | `nixpkgs-25.11-darwin` | Primary package set |
-| `nixpkgs-unstable` | `nixpkgs-unstable` | Packages not yet in 25.11 (e.g. `atuin`, `oxfmt`, `oxlint`, `tsgolint`) |
-| `nix-darwin` | `nix-darwin-25.11` | macOS system management |
-| `home-manager` | `release-25.11` | User-level config management |
-| `nix-homebrew` | `nix-homebrew` | Declarative Homebrew installation |
-| `nix-claude-code` | `ryoppippi/nix-claude-code` | Claude Code CLI (unfree) |
-| `codex-cli-nix` | `sadjow/codex-cli-nix` | Codex CLI |
+| Input              | URL                         | Purpose                                                                 |
+| ------------------ | --------------------------- | ----------------------------------------------------------------------- |
+| `nixpkgs`          | `nixpkgs-25.11-darwin`      | Primary package set                                                     |
+| `nixpkgs-unstable` | `nixpkgs-unstable`          | Packages not yet in 25.11 (e.g. `atuin`, `oxfmt`, `oxlint`, `tsgolint`) |
+| `nix-darwin`       | `nix-darwin-25.11`          | macOS system management                                                 |
+| `home-manager`     | `release-25.11`             | User-level config management                                            |
+| `nix-homebrew`     | `nix-homebrew`              | Declarative Homebrew installation                                       |
+| `nix-claude-code`  | `ryoppippi/nix-claude-code` | Claude Code CLI (unfree)                                                |
+| `codex-cli-nix`    | `sadjow/codex-cli-nix`      | Codex CLI                                                               |
 
 Third-party flake inputs are accessed via `extraSpecialArgs` in home-manager: `nix-claude-code.packages.${system}.default` and `codex-cli-nix.packages.${system}.default`.
 
@@ -76,16 +85,16 @@ Changes to files linked via `mkOutOfStoreSymlink` (e.g. `.zshrc`, `starship.toml
 
 ## Where to Add a Package
 
-| What | Where | Example |
-| --- | --- | --- |
-| CLI tool in nixpkgs stable | `nix/home/default.nix` → `home.packages` | `bat`, `ripgrep` |
-| CLI tool only in unstable | `nix/home/default.nix` → `home.packages` | `unstable.atuin`, `unstable.oxfmt` |
-| Tool from a flake input | `nix/home/default.nix` → `home.packages` | `nix-claude-code.packages.${system}.default` |
-| GUI app (macOS .app) | `nix/darwin/default.nix` → `homebrew.casks` | `"obsidian"`, `"arc"` |
-| Mac App Store app | `nix/darwin/default.nix` → `homebrew.masApps` | `LINE = 539883307` |
-| Homebrew formula (not in nixpkgs) | `nix/darwin/default.nix` → `homebrew.brews` | `"winebarrel/kasa/kasa"` |
-| Homebrew tap | `nix/darwin/default.nix` → `homebrew.taps` | `"winebarrel/kasa"` |
-| System-wide tool (before login) | `nix/darwin/default.nix` → `environment.systemPackages` | `pkgs.vim` |
+| What                              | Where                                                   | Example                                      |
+| --------------------------------- | ------------------------------------------------------- | -------------------------------------------- |
+| CLI tool in nixpkgs stable        | `nix/home/default.nix` → `home.packages`                | `bat`, `ripgrep`                             |
+| CLI tool only in unstable         | `nix/home/default.nix` → `home.packages`                | `unstable.atuin`, `unstable.oxfmt`           |
+| Tool from a flake input           | `nix/home/default.nix` → `home.packages`                | `nix-claude-code.packages.${system}.default` |
+| GUI app (macOS .app)              | `nix/darwin/default.nix` → `homebrew.casks`             | `"obsidian"`, `"arc"`                        |
+| Mac App Store app                 | `nix/darwin/default.nix` → `homebrew.masApps`           | `LINE = 539883307`                           |
+| Homebrew formula (not in nixpkgs) | `nix/darwin/default.nix` → `homebrew.brews`             | `"winebarrel/kasa/kasa"`                     |
+| Homebrew tap                      | `nix/darwin/default.nix` → `homebrew.taps`              | `"winebarrel/kasa"`                          |
+| System-wide tool (before login)   | `nix/darwin/default.nix` → `environment.systemPackages` | `pkgs.vim`                                   |
 
 ### Package organization in home.packages
 
@@ -128,15 +137,15 @@ To add a new unfree package: find its `pname` with `nix eval nixpkgs#pkg-name.pn
 
 Currently configured programs:
 
-| Program | Key settings |
-| --- | --- |
-| `programs.git` | SSH signing, histogram diff, rerere, autoStash rebase, fsmonitor |
-| `programs.delta` | Side-by-side, Catppuccin Mocha colors, line numbers |
-| `programs.gh` | HTTPS protocol, `co` alias for PR checkout |
+| Program           | Key settings                                                            |
+| ----------------- | ----------------------------------------------------------------------- |
+| `programs.git`    | SSH signing, histogram diff, rerere, autoStash rebase, fsmonitor        |
+| `programs.delta`  | Side-by-side, Catppuccin Mocha colors, line numbers                     |
+| `programs.gh`     | HTTPS protocol, `co` alias for PR checkout                              |
 | `programs.direnv` | `nix-direnv.enable = true`, zsh integration disabled (manual in .zshrc) |
-| `programs.atuin` | `package = unstable.atuin`, enter_accept, sync.records |
-| `programs.yazi` | show_hidden, custom keybindings (o=create, Esc=quit) |
-| `programs.tmux` | Mouse, extended-keys, vim-tmux-navigator, Catppuccin pane dimming |
+| `programs.atuin`  | `package = unstable.atuin`, enter_accept, sync.records                  |
+| `programs.yazi`   | show_hidden, custom keybindings (o=create, Esc=quit)                    |
+| `programs.tmux`   | Mouse, extended-keys, vim-tmux-navigator, Catppuccin pane dimming       |
 
 All programs with shell integration have `enableZshIntegration = false` because `.zshrc` is a `mkOutOfStoreSymlink` dotfile — add `eval "$(tool init zsh)"` manually in `zsh/.zshrc`.
 
@@ -201,17 +210,17 @@ home.activation = {
 
 Managed in `nix/darwin/default.nix` → `system.defaults`. Current categories:
 
-| Category | Key settings |
-| --- | --- |
-| `NSGlobalDomain` | Fast key repeat, F1-F12 as standard, disable auto-correct/capitalize/quotes/dashes/periods, Dark mode |
-| `finder` | Show all files, path bar, status bar, column view, folders first |
-| `dock` | Autohide, 128px tiles, no recents, hot corners (Desktop/Notification Center/Lock Screen/Quick Note), persistent-apps list |
-| `trackpad` | Tap to click, light click threshold, momentum scroll, pinch/rotate |
-| `screencapture` | Save to ~/Pictures |
-| `WindowManager` | Stage Manager disabled |
-| `screensaver` | Password immediately |
-| `menuExtraClock` | 24-hour, seconds, date, day of week |
-| `CustomUserPreferences` | Spotlight disabled (Raycast), no .DS_Store on network/USB, Homerow config, mouse speed |
+| Category                | Key settings                                                                                                              |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `NSGlobalDomain`        | Fast key repeat, F1-F12 as standard, disable auto-correct/capitalize/quotes/dashes/periods, Dark mode                     |
+| `finder`                | Show all files, path bar, status bar, column view, folders first                                                          |
+| `dock`                  | Autohide, 128px tiles, no recents, hot corners (Desktop/Notification Center/Lock Screen/Quick Note), persistent-apps list |
+| `trackpad`              | Tap to click, light click threshold, momentum scroll, pinch/rotate                                                        |
+| `screencapture`         | Save to ~/Pictures                                                                                                        |
+| `WindowManager`         | Stage Manager disabled                                                                                                    |
+| `screensaver`           | Password immediately                                                                                                      |
+| `menuExtraClock`        | 24-hour, seconds, date, day of week                                                                                       |
+| `CustomUserPreferences` | Spotlight disabled (Raycast), no .DS_Store on network/USB, Homerow config, mouse speed                                    |
 
 For keys not covered by native nix-darwin options, use `system.defaults.CustomUserPreferences."com.bundle.id"`.
 
@@ -248,13 +257,13 @@ homebrew = {
 
 ## Key Patterns
 
-| Pattern | Usage |
-| --- | --- |
-| `with pkgs;` | Avoids repeating `pkgs.` in `home.packages` list |
-| `unstable.xxx` | Package from `nixpkgs-unstable` (passed via `extraSpecialArgs`) |
-| `input.packages.${system}.default` | Package from a third-party flake input |
-| `link "path"` | Helper for `mkOutOfStoreSymlink` (defined in `let` block) |
-| `${pkgs.xxx}` in `.text` | Embeds Nix store paths into generated files |
-| `enableZshIntegration = false` | All programs — `.zshrc` is a symlink, hook manually |
-| `\|\| true` in activation | Prevents non-fatal errors from aborting rebuild |
-| `homebrew.onActivation.cleanup = "uninstall"` | Declarative cask management |
+| Pattern                                       | Usage                                                           |
+| --------------------------------------------- | --------------------------------------------------------------- |
+| `with pkgs;`                                  | Avoids repeating `pkgs.` in `home.packages` list                |
+| `unstable.xxx`                                | Package from `nixpkgs-unstable` (passed via `extraSpecialArgs`) |
+| `input.packages.${system}.default`            | Package from a third-party flake input                          |
+| `link "path"`                                 | Helper for `mkOutOfStoreSymlink` (defined in `let` block)       |
+| `${pkgs.xxx}` in `.text`                      | Embeds Nix store paths into generated files                     |
+| `enableZshIntegration = false`                | All programs — `.zshrc` is a symlink, hook manually             |
+| `\|\| true` in activation                     | Prevents non-fatal errors from aborting rebuild                 |
+| `homebrew.onActivation.cleanup = "uninstall"` | Declarative cask management                                     |

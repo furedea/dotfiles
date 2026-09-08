@@ -1,7 +1,9 @@
 ---
 name: git-workflow
 description: >
-    Day-to-day Git workflow for code changes, branches, commits, and delivery safety. Use before code changes or branch/commit work, or when the user says "実装", "修正", "直して", "リファクタ", "追加", "更新", "ブランチ", "branch", "コミット", or "commit". Establishes feature-branch naming, Conventional Commits, one-intent commits, TSDD-friendly commit boundaries, and safe push behavior.
+    Git workflow for selecting a branch before edits and carrying out authorized commits, pushes,
+    and pull requests. Use for repository changes or Git delivery tasks; organizing mixed pending
+    changes belongs to git-commit-split.
 ---
 
 # Git Workflow
@@ -12,9 +14,10 @@ This skill governs the default Git shape of implementation work: which branch to
 
 - Inspect Git state before edits: current branch, `git status --porcelain=v1`, and recent commit style when commit messages will be written.
 - Never overwrite, reset, clean, or discard user changes unless the user explicitly asked for that exact destructive action.
-- Do not force-push, merge PRs, or push directly to the default / protected branch.
-- For implementation work, deliver through a feature branch and pull request unless the user explicitly asks for local-only work.
-- Prefer one coherent VCS unit per applicable TSDD path. Both paths end Green. If the task is too small for multiple cycles, one commit is enough.
+- Do not force-push or push directly to the default / protected branch. Ordinary implementation and PR-creation requests do not authorize merging; merge only when explicitly requested and permitted by repository and runtime rules.
+- Complete requested implementation, relevant verification, and fixes for problems caused by the change. Do not stop at the first implementation or first Green when required work remains.
+- Commit, push, and create pull requests only within the user's request or an explicit standing authorization. Permission to execute a command is not authorization to perform that action for the task. Do not repeat confirmation for steps already covered by the authorized workflow; runtime approval requirements still apply.
+- When commits are authorized, group them by reviewable intent. Multiple TSDD cycles may belong to one commit; do not force a commit for every cycle. Both TSDD paths end Green.
 - Keep branch names and commit subjects aligned with the primary intent of the change, not with filenames.
 
 ## Branch Policy
@@ -95,7 +98,7 @@ Commit by intent, not by file.
 - Do not fabricate splits. One cohesive change should be one commit.
 - If one file contains multiple unrelated intents, split hunks or use the `/git-commit-split` custom command when the task is specifically to organize pending changes.
 
-Before committing, verify the relevant test or quality gate is green. If the full suite is too expensive or unrelated failures exist, run the narrowest gate that proves the change and report the limitation.
+Before an authorized commit, confirm relevant Green evidence using TSDD's Automatic Verification policy, including successful hook results. If the full suite is too expensive or unrelated failures exist, use the narrowest appropriate evidence and report the limitation.
 
 ## Conventional Commits
 
@@ -154,14 +157,19 @@ For implementation tasks:
 
 1. Inspect branch and dirty state.
 2. Select the checkout and branch using the Branch Policy above.
-3. Classify the work under TSDD: use Red -> Green -> Refactor -> Green for a real contract gap; otherwise use Green baseline -> behavior-preserving change or Refactor -> Green.
-4. Commit each coherent green unit when the user asked for commits or the repository workflow expects implementation work to be committed.
-5. Unless the user asked for local-only work, push the feature branch and create a pull request:
+3. Follow `tsdd` for development and verification, including path selection and assessing whether refactoring is warranted.
+4. Complete the requested change and its relevant verification, fixing problems caused by the change. Report unrelated failures or unavailable verification without claiming success.
+5. If delivery is authorized under Operating Rules, commit by intent and perform the requested publication steps:
     - `git fetch origin`
     - optionally `git rebase origin/<base>` before the first push when the feature branch should be refreshed onto the latest base
     - `git push -u origin <branch>`
     - `gh pr create -f --base <base>`
 6. Stop before merge; merging is a human decision unless the user explicitly asks for it.
+
+Review-only requests authorize inspection and findings, not edits or delivery. A request to fix a bug
+covers implementation and verification, not commits or publication. A request to fix and commit
+adds local recording; a request to fix and open a PR also covers necessary commits and pushes, but
+not merging.
 
 For explicit commit requests:
 

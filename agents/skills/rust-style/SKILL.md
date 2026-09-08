@@ -1,7 +1,8 @@
 ---
 name: rust-style
 description: >
-    Rust coding conventions: Cargo commands, package layout, tests, rustfmt/clippy, anyhow/thiserror error boundaries, newtypes, enums, ownership, Path/PathBuf filesystem rules, serde config handling, naming, comments, and docs. Load whenever writing, reviewing, refactoring, linting, testing, or discussing Rust code or Rust project style inside an already-bootstrapped project. Do NOT use for initial Nix, direnv, or Cargo project bootstrap; use nix-dev-init first.
+    User-specific conventions for designing, writing, testing, and reviewing code in existing
+    Rust projects. Initial project scaffolding belongs to nix-dev-init.
 ---
 
 # Rust Coding Style Guidelines
@@ -261,27 +262,8 @@ pub enum ProviderError {
 
 ## CLI Code
 
-- Use typed structs and enums for CLI input.
-- Keep argument parsing separate from execution.
-- Do not perform filesystem or network work while parsing CLI arguments.
-- Human-readable command results go to stdout.
-- Progress, warnings, and diagnostics go to stderr.
-- Machine-readable output must not be mixed with human logs.
-- Keep exit codes coarse but meaningful enough for CI.
-
-```rust
-#[derive(Debug, clap::Parser)]
-pub struct Cli {
-    #[command(subcommand)]
-    pub command: Command,
-}
-
-#[derive(Debug, clap::Subcommand)]
-pub enum Command {
-    Render(RenderArgs),
-    Verify(VerifyArgs),
-}
-```
+When designing, writing, or reviewing CLI parsing and execution, read
+[cli.md](references/cli.md).
 
 ## Logging and Diagnostics
 
@@ -293,62 +275,13 @@ pub enum Command {
 
 ## Filesystem Operations
 
-- Use `Path` and `PathBuf` for paths. Do not build paths with string concatenation.
-- Treat source tree traversal and symlink creation as separate behaviors.
-- Do not follow symlinks while traversing source trees unless the behavior is explicitly required and tested.
-- Use `DirEntry::file_type()` instead of `Path::is_dir()` when symlink behavior matters.
-- Keep file-writing operations behind small functions that are easy to test with temporary directories.
-- Distinguish files fully owned by the project from files also modified by users or external tools.
-- Prefer writing to a temporary file and replacing the target when partial writes would be harmful.
-
-Symlink-aware traversal without following symlinks:
-
-```rust
-use anyhow::{Context, Result};
-use std::path::{Path, PathBuf};
-
-pub fn collect_regular_files(dir: &Path) -> Result<Vec<PathBuf>> {
-    let mut files = Vec::new();
-    collect_regular_files_into(dir, &mut files)?;
-    files.sort();
-    Ok(files)
-}
-
-fn collect_regular_files_into(dir: &Path, files: &mut Vec<PathBuf>) -> Result<()> {
-    for entry in std::fs::read_dir(dir)
-        .with_context(|| format!("failed to read directory {}", dir.display()))?
-    {
-        let entry = entry?;
-        let file_type = entry.file_type()?;
-        let path = entry.path();
-
-        if file_type.is_symlink() {
-            continue;
-        }
-        if file_type.is_dir() {
-            collect_regular_files_into(&path, files)?;
-        } else if file_type.is_file() {
-            files.push(path);
-        }
-    }
-    Ok(())
-}
-```
+When designing, writing, or reviewing filesystem operations, read
+[filesystem.md](references/filesystem.md).
 
 ## Config and Serialization
 
-- Use typed structs for project-owned config.
-- Use `serde(deny_unknown_fields)` where unknown input keys should be rejected.
-- Do not reject unknown keys in external-tool-owned config files.
-- Use `#[serde(rename_all = "...")]` to keep serialized field naming consistent.
-- Use `#[serde(default)]` for optional input fields that have stable defaults.
-- Use `#[serde(skip_serializing_if = "Option::is_none")]` when absent values should not appear in output.
-- Use `#[serde(flatten)]` sparingly because it makes schemas less explicit.
-- Separate fully generated files from user-owned files that receive managed updates.
-- Do not overwrite user-owned or external-tool-owned config files wholesale.
-- For managed config sync, update only the keys owned by the project and preserve unknown keys.
-- Use stable ordering for generated output when review diffs or tests depend on order.
-- Use a format-preserving edit strategy when comments, ordering, and unknown future keys must be preserved.
+When designing, writing, or reviewing configuration or serialization, read
+[config_serialization.md](references/config_serialization.md).
 
 ## Cargo Features
 
@@ -433,7 +366,9 @@ fn collect_regular_files_into(dir: &Path, files: &mut Vec<PathBuf>) -> Result<()
 
 ## Quality Gates
 
-Run these before finishing Rust changes unless the project defines a stricter gate:
+Confirm the relevant verification results before finishing Rust changes. Follow `tsdd`'s Automatic
+Verification policy for execution needs and reuse of successful hook evidence. The default commands
+are below; use the project's stricter gate when defined:
 
 ```bash
 cargo fmt --check
