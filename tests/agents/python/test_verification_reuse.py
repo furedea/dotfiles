@@ -478,6 +478,13 @@ def test_unavailable_log_storage_does_not_skip_tests(
     repository: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    _, count = gate
+    binaries = repository.parent / "log-test-bin"
+    binaries.mkdir()
+    runner = binaries / "bats"
+    runner.write_text('#!/usr/bin/env bash\nprintf "run\\n" >> "$REUSE_TEST_COUNT"\nprintf "1..1\\nok 1 example\\n"\n')
+    runner.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{binaries}:{os.environ['PATH']}")
     # Reuse the reporting scenario with an unwritable directory hierarchy.
     blocked = repository.parent / "not-a-directory"
     blocked.write_text("file")
@@ -490,3 +497,4 @@ def test_unavailable_log_storage_does_not_skip_tests(
     message = json.loads(result.stdout)["systemMessage"]
     assert "Bats: 1 passed" in message
     assert "Details:" not in message
+    assert count.read_text().splitlines() == ["run"]
