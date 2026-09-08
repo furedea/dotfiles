@@ -1,4 +1,6 @@
 from pathlib import Path
+import pytest
+from pytest_mock import MockerFixture
 
 from tests.agents.python.conftest import load_script_module
 
@@ -188,3 +190,88 @@ def test_write_agent_prompts_includes_the_requested_language_in_every_prompt(tmp
     for prompt_path in prompt_paths:
         instruction = prompt_path.read_text(encoding="utf-8").split("\n\n", maxsplit=1)[0]
         assert "Japanese" in instruction
+
+
+@pytest.mark.parametrize(
+    "cwd, expected",
+    [
+        ("/tmp/project/subdir", ["local"]),
+        ("/tmp/project-other", []),
+        ("-tmp-project", ["local"]),
+        ("-tmp-project-other", []),
+        ("-something-tmp-project", []),
+    ],
+)
+def test_local_skill_matching_respects_directory_boundaries(cwd: str, expected: list[str]) -> None:
+    skills = [{"name": "local", "scope": "project-local", "project_path": "/tmp/project"}]
+    assert run_audit.local_skill_names(cwd, skills) == expected
+
+
+def test_prepare_passes_observed_project_directories_to_inventory(tmp_path: Path, mocker: MockerFixture) -> None:
+    transcripts = {"sessions": [{"project_dir": "/tmp/project/sub"}]}
+    mocker.patch.object(run_audit.collect_transcripts, "collect", autospec=True, return_value=transcripts)
+    inventory = mocker.patch.object(run_audit.collect_skills, "collect", autospec=True, return_value={"skills": []})
+    mocker.patch.object(run_audit, "print_collection_summary", autospec=True)
+    config = run_audit.RunConfig("codex", "all", 14, 1, "Japanese", None, tmp_path, 60, 12)
+    run_audit.prepare_run(config)
+    inventory.assert_called_once_with(provider="codex", project_paths=["/tmp/project/sub"])
+
+
+def test_merge_preserves_unassessable_accuracy_and_counts_each_incident_once() -> None:
+    report = {
+        "skill_reports": [{"skill_name": "helper", "stats": {"total_fires": 0, "accuracy": None}}],
+        "competition_pairs": [{"skill_a": "one", "skill_b": "two", "incidents": 2}],
+        "coverage_gaps": [{"unmet_intent": "intent", "frequency": 3}],
+    }
+    merged = run_audit.merge_audit_reports([report, report])
+    assert merged["skill_reports"][0]["stats"]["accuracy"] is None
+    assert merged["competition_pairs"][0]["incidents"] == 4
+    assert merged["coverage_gaps"][0]["frequency"] == 6
+
+
+def test_routing_prompt_requires_historical_evidence_not_current_inventory(tmp_path: Path) -> None:
+    batch = {"session_indices": [0], "visible_skill_names": ["helper"], "dmi_skill_names": [], "batch_index": 0}
+    prompt = run_audit.routing_prompt(tmp_path, batch, "Japanese")
+    assert "CURRENT inventory candidates" in prompt
+    assert "historical visibility" in prompt
+    assert "accuracy: null" in prompt
+
+
+def test_catalog_only_skills_are_excluded_from_routing_candidates() -> None:
+    manifest = {"skills": [{"name": "cached", "scope": "catalog"}]}
+    batches = run_audit.build_batches({"sessions": [{"project_dir": "/tmp/project"}]}, manifest)
+    assert batches[0]["visible_skill_names"] == []
+
+
+def test_merge_does_not_turn_selected_examples_into_population_accuracy() -> None:
+    observed = {
+        "skill_reports": [
+            {
+                "skill_name": "helper",
+                "stats": {
+                    "total_fires": 1,
+                    "correct_fires": 1,
+                    "false_positives": 0,
+                    "false_negatives": 0,
+                    "accuracy": 1.0,
+                },
+            }
+        ]
+    }
+    unassessable = {
+        "skill_reports": [
+            {
+                "skill_name": "helper",
+                "stats": {
+                    "total_fires": 0,
+                    "correct_fires": 0,
+                    "false_positives": 0,
+                    "false_negatives": 0,
+                    "accuracy": None,
+                },
+            }
+        ]
+    }
+    merged = run_audit.merge_audit_reports([observed, unassessable])
+    assert merged["skill_reports"][0]["stats"]["correct_fires"] == 1
+    assert merged["skill_reports"][0]["stats"]["accuracy"] is None

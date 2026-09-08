@@ -40,3 +40,14 @@ def test_generate_report_uses_custom_template(tmp_path: Path) -> None:
 
     assert html.startswith("<script>const REPORT_DATA = ")
     assert '"audit_report": null' in html
+
+
+def test_report_escapes_transcript_script_terminators_and_displays_limitations(tmp_path: Path) -> None:
+    (tmp_path / "audit_report.json").write_text(
+        json.dumps({"meta": {"limitations": ["</script><script>alert(1)</script>"]}}), encoding="utf-8"
+    )
+    html = generate_report.generate_report(str(tmp_path))
+    assert "</script><script>alert(1)</script>" not in html
+    assert "\\u003c/script>" in html
+    assert 'id="evidence-limitations"' in html
+    assert "Not assessable" in html

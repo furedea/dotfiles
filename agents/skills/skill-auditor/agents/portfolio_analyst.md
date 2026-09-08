@@ -25,7 +25,13 @@ skills — for systemic issues that individual-skill analysis misses.
 
 ### 1. Attention Budget
 
-Every skill's description is injected into the system prompt simultaneously.
+The current inventory is not a record of descriptions injected into past sessions.
+Exclude catalog-only sources and plugin caches from candidate context budgets, and
+label remaining totals as estimates. Honor manifest and transcript limitations.
+Never calculate routing accuracy when the routing audit marks it unassessable;
+use null. A missing read is not evidence of an unused skill. Distinguish structural
+overlap from confirmed routing conflict, and do not infer deletion from frequency alone.
+
 Attention competition is driven primarily by the **number of competing
 directives** (distinct instructions), not raw token count. A long but
 focused description with few clear directives causes less competition than
@@ -46,10 +52,11 @@ other skills in its own project context, not with local skills from unrelated
 projects.
 
 For each skill, evaluate:
+
 - **Directive density**: How many distinct instructions/triggers does the
   description contain? A skill with 8 overlapping trigger phrases competes
   more aggressively than one with 2 clear triggers, regardless of token count.
-- **Budget share**: What percentage of the *effective* budget (global-only for
+- **Budget share**: What percentage of the _effective_ budget (global-only for
   global skills, global+local for project-local skills) does this skill consume?
   Report this for context but do not use it alone to label skills as "bloated".
 - **Attention-heavy candidates**: Skills whose descriptions contain many
@@ -67,6 +74,7 @@ incidents (from the audit), classify the relationship:
 - **nested**: One skill's scope is a proper subset of another's.
 
 For each non-orthogonal pair, specify:
+
 - Which intents belong to which skill
 - Where the boundary should be drawn
 - Whether coordinated description edits are needed
@@ -74,6 +82,7 @@ For each non-orthogonal pair, specify:
 ### 3. Portfolio Health Score
 
 An overall assessment considering:
+
 - Routing accuracy across all skills
 - Description token efficiency
 - Number of competition conflicts
@@ -85,49 +94,48 @@ Write results as JSON to the path specified by the coordinator:
 
 ```json
 {
-  "attention_budget": {
-    "total_tokens": 0,
-    "mean_tokens": 0,
-    "median_tokens": 0,
-    "per_skill": [
-      {
-        "skill_name": "string",
-        "description_tokens": 0,
-        "budget_share_pct": 0.0,
-        "fires_in_audit": 0,
-        "tokens_per_fire": 0.0,
-        "efficiency_rating": "efficient | acceptable | bloated | unused",
-        "trim_suggestion": "string | null"
-      }
+    "attention_budget": {
+        "total_tokens": 0,
+        "mean_tokens": 0,
+        "median_tokens": 0,
+        "per_skill": [
+            {
+                "skill_name": "string",
+                "description_tokens": 0,
+                "budget_share_pct": 0.0,
+                "fires_in_audit": 0,
+                "tokens_per_fire": 0.0,
+                "efficiency_rating": "efficient | acceptable | bloated | unused",
+                "trim_suggestion": "string | null"
+            }
+        ],
+        "trim_candidates": ["skill names with bloated descriptions"]
+    },
+    "competition_matrix": [
+        {
+            "skill_a": "string",
+            "skill_b": "string",
+            "relationship": "orthogonal | adjacent | overlapping | nested",
+            "evidence": "string — what incidents or keyword overlap support this",
+            "boundary": "string — where the line should be drawn",
+            "coordinated_fix_needed": true
+        }
     ],
-    "trim_candidates": ["skill names with bloated descriptions"]
-  },
-  "competition_matrix": [
-    {
-      "skill_a": "string",
-      "skill_b": "string",
-      "relationship": "orthogonal | adjacent | overlapping | nested",
-      "evidence": "string — what incidents or keyword overlap support this",
-      "boundary": "string — where the line should be drawn",
-      "coordinated_fix_needed": true
+    "portfolio_health": {
+        "overall_score": "healthy | needs_attention | critical",
+        "routing_accuracy_avg": 0.0,
+        "token_efficiency": "efficient | acceptable | bloated",
+        "competition_conflicts": 0,
+        "coverage_gaps": 0,
+        "summary": "2-3 sentence assessment"
     }
-  ],
-  "portfolio_health": {
-    "overall_score": "healthy | needs_attention | critical",
-    "routing_accuracy_avg": 0.0,
-    "token_efficiency": "efficient | acceptable | bloated",
-    "competition_conflicts": 0,
-    "coverage_gaps": 0,
-    "summary": "2-3 sentence assessment"
-  }
 }
 ```
 
 ## Guidelines
 
-1. **Token efficiency is relative, not absolute.** A 150-token description for
-   a daily-use skill is fine. The same for a skill that fired once in 14 days
-   is wasteful.
+1. **Token totals alone do not establish waste.** A rarely used skill can be
+   valuable. Evaluate redundant or conflicting instructions, not a target token budget.
 
 2. **Competition pairs from the audit take priority over keyword overlap.**
    Keyword overlap is a heuristic. Actual routing incidents are evidence.

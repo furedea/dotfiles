@@ -91,7 +91,14 @@ def prepare_run(config: RunConfig) -> Path:
     if "error" in transcripts:
         raise RuntimeError(json.dumps(transcripts, indent=2, ensure_ascii=False))
 
-    manifest = collect_skills.collect(provider=config.provider)
+    project_paths = sorted(
+        {
+            str(session["project_dir"])
+            for session in transcripts.get("sessions", [])
+            if session.get("project_dir") and Path(str(session["project_dir"])).is_absolute()
+        }
+    )
+    manifest = collect_skills.collect(provider=config.provider, project_paths=project_paths)
     write_json(workspace / "transcripts.json", transcripts)
     write_json(workspace / "skill_manifest.json", manifest)
 
@@ -195,7 +202,12 @@ def local_skill_names(project_dir: str, skills: list[dict]) -> list[str]:
             continue
         project_path = str(skill["project_path"])
         encoded = project_path.replace("/", "-").replace(".", "-")
-        if project_dir == project_path or encoded.lstrip("-") in project_dir.lstrip("-"):
+        if Path(project_dir).is_absolute():
+            matches = Path(project_dir).is_relative_to(Path(project_path))
+        else:
+            # Legacy encoding loses separators versus literal hyphens; only exact matches are safe.
+            matches = project_dir.lstrip("-") == encoded.lstrip("-")
+        if matches:
             names.append(skill["name"])
     return sorted(names)
 
@@ -251,10 +263,19 @@ analysis instructions.
 Read {workspace}/skill_manifest.json for skill definitions.
 Read {workspace}/transcripts.json for session data.
 Only analyze sessions with these indices: {batch["session_indices"]}.
-Only evaluate against these skills: {batch["visible_skill_names"]}.
-Ignore skills not in this list; they are not available in this project context.
-These skills have disable-model-invocation: true and NEVER auto-fire:
-{batch["dmi_skill_names"]}. Do NOT flag them as false_negative.
+CURRENT inventory candidates: {batch["visible_skill_names"]}.
+The legacy field visible_skill_names is not evidence of historical visibility.
+Catalog-only source/cache definitions are excluded from these routing candidates.
+Check project scope per session even when a batch merges multiple projects.
+Read manifest and transcript limitations, observation evidence, and context coverage.
+A SKILL.md read alone does not establish automatic routing: distinguish audit reads,
+explicit invocation, supplied skill content, reuse, and automatic selection evidence.
+Do not infer false negatives without historical visibility, applicable policy, and
+sufficient context evidence. Report accuracy: null when no automatic routing
+observations can be classified, not 0 or 100 percent.
+These CURRENT definitions are explicit-only: {batch["dmi_skill_names"]}.
+Do NOT flag them as false_negative based on current metadata; historical behavior
+requires historical evidence. Do not infer a coverage gap from absence in this inventory.
 Write your analysis as JSON to {workspace}/batch_audit_{batch["batch_index"]}.json
 following the exact schema in schemas/schemas.md (audit_report.json section).
 """
@@ -300,6 +321,7 @@ def merge_audit_reports(reports: list[dict]) -> dict:
     never_fired: dict[str, dict] = {}
     competition_pairs: dict[tuple[str, str], dict] = {}
     coverage_gaps: dict[str, dict] = {}
+    limitations: list[str] = []
     meta: dict[str, int | str] = {
         "sessions_analyzed": 0,
         "turns_analyzed": 0,
@@ -310,6 +332,9 @@ def merge_audit_reports(reports: list[dict]) -> dict:
     }
 
     for report in reports:
+        for limitation in report.get("limitations", []):
+            if limitation not in limitations:
+                limitations.append(limitation)
         for skill_report in report.get("skill_reports", []):
             merge_skill_report(by_skill, skill_report)
         for item in report.get("skills_never_fired", []):
@@ -331,6 +356,11 @@ def merge_audit_reports(reports: list[dict]) -> dict:
             int(report.get("meta", {}).get("skills_in_scope", 0)),
         )
 
+    for report in reports:
+        for item in report.get("skill_reports", []):
+            if item.get("stats", {}).get("accuracy") is None:
+                by_skill[item.get("skill_name", "")]["stats"]["accuracy"] = None
+
     return {
         "skill_reports": sorted(by_skill.values(), key=lambda x: x.get("skill_name", "")),
         "skills_never_fired": sorted(never_fired.values(), key=lambda x: x.get("skill_name", "")),
@@ -339,6 +369,7 @@ def merge_audit_reports(reports: list[dict]) -> dict:
         ),
         "coverage_gaps": sorted(coverage_gaps.values(), key=lambda x: x.get("unmet_intent", "")),
         "meta": meta,
+        "limitations": limitations,
     }
 
 
@@ -355,7 +386,7 @@ def merge_skill_report(by_skill: dict[str, dict], incoming: dict) -> None:
                 "correct_fires": 0,
                 "false_positives": 0,
                 "false_negatives": 0,
-                "accuracy": 0.0,
+                "accuracy": None,
             },
             "incidents": [],
             "health_assessment": incoming.get("health_assessment", ""),
@@ -365,7 +396,8 @@ def merge_skill_report(by_skill: dict[str, dict], incoming: dict) -> None:
     for key in ("total_fires", "correct_fires", "false_positives", "false_negatives"):
         current["stats"][key] += int(incoming.get("stats", {}).get(key, 0))
     total = current["stats"]["total_fires"]
-    current["stats"]["accuracy"] = current["stats"]["correct_fires"] / total if total else 0.0
+    classified = current["stats"]["correct_fires"] + current["stats"]["false_positives"]
+    current["stats"]["accuracy"] = current["stats"]["correct_fires"] / total if total and classified else None
     current["incidents"].extend(incoming.get("incidents", []))
     if incoming.get("suggested_fix"):
         current["suggested_fix"] = incoming["suggested_fix"]
@@ -408,7 +440,7 @@ def update_health_history(base_dir: Path, workspace: Path) -> Path:
         "sessions_analyzed": audit.get("meta", {}).get("sessions_analyzed", 0),
         "turns_analyzed": audit.get("meta", {}).get("turns_analyzed", 0),
         "portfolio_health": health.get("overall_score", "unknown"),
-        "routing_accuracy_avg": health.get("routing_accuracy_avg", 0.0),
+        "routing_accuracy_avg": health.get("routing_accuracy_avg"),
         "total_description_tokens": manifest.get("attention_budget", {}).get("total_description_tokens", 0),
         "competition_conflicts": health.get("competition_conflicts", 0),
         "coverage_gaps": health.get("coverage_gaps", 0),
