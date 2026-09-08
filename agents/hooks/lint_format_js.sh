@@ -11,12 +11,9 @@ source "$(dirname "$0")/lib/lint_format.sh"
 load_file_path # sets FILE_PATH, FILENAME
 
 require_cmd oxfmt
-oxfmt --write "$FILE_PATH" >/dev/null 2>&1 || true
+run_quality_step "oxfmt format" oxfmt --write "$FILE_PATH"
 
 require_cmd oxlint
-oxlint --fix "$FILE_PATH" >/dev/null 2>&1 || true
+run_quality_step "oxlint fix" oxlint --fix "$FILE_PATH"
 
-VIOLATIONS=""
-if ! VIOLATIONS=$(oxlint --deny-warnings "$FILE_PATH" 2>&1); then
-  emit_post_tool_context "oxlint" "$VIOLATIONS"
-fi
+run_quality_step "oxlint lint" oxlint --deny-warnings "$FILE_PATH"

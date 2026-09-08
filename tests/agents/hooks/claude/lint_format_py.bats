@@ -58,3 +58,18 @@ teardown() {
   run bash "$HOOK" <<< '{"tool_input":{}}'
   [ "$status" -eq 0 ]
 }
+
+@test "lint_format_py reports format failure even when lint succeeds" {
+  mkdir -p "$TEST_TMPDIR/bin"
+  printf '#!/usr/bin/env bash\ncase "$*" in *format*) echo "formatter crashed" >&2; exit 2;; esac\n' > "$TEST_TMPDIR/bin/ruff"
+  cp "$TEST_TMPDIR/bin/ruff" "$TEST_TMPDIR/bin/uv"
+  chmod +x "$TEST_TMPDIR/bin/ruff" "$TEST_TMPDIR/bin/uv"
+  touch "$TEST_TMPDIR/source.py"
+  export PATH="$TEST_TMPDIR/bin:$PATH"
+
+  run bash "$HOOK" <<< "$(make_post_tool_input "$TEST_TMPDIR/source.py")"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"failed"* ]]
+  [[ "$output" == *"formatter crashed"* ]]
+}

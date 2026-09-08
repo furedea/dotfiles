@@ -11,17 +11,11 @@ source "$(dirname "$0")/lib/lint_format.sh"
 load_file_path # sets FILE_PATH, FILENAME
 
 require_cmd nixfmt
-nixfmt "$FILE_PATH" >/dev/null 2>&1 || true
+run_quality_step "nixfmt format" nixfmt "$FILE_PATH"
 
 require_cmd statix
-statix fix "$FILE_PATH" >/dev/null 2>&1 || true
-STATIX_OUT=""
-if ! STATIX_OUT=$(statix check "$FILE_PATH" 2>&1); then
-  emit_post_tool_context "statix" "$STATIX_OUT"
-fi
+run_quality_step "statix fix" statix fix "$FILE_PATH"
+run_quality_step "statix lint" statix check "$FILE_PATH"
 
 require_cmd deadnix
-DEADNIX_OUT=""
-if ! DEADNIX_OUT=$(deadnix --fail "$FILE_PATH" 2>&1); then
-  emit_post_tool_context "deadnix" "$DEADNIX_OUT"
-fi
+run_quality_step "deadnix lint" deadnix --fail "$FILE_PATH"

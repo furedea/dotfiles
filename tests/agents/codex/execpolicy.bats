@@ -68,41 +68,45 @@ check_rule() {
   check_rule allow git worktree add -b feat/example ../repo-feat-example origin/main
 }
 
-@test "codex execpolicy prompts before manual verification" {
-  check_rule prompt bats tests/agents/hooks/claude/run_related_tests.bats
-  check_rule prompt bash -n agents/hooks/run_related_tests.sh
-  check_rule prompt uv run pytest
-  check_rule prompt uv run --frozen ruff check
-  check_rule prompt uv run --frozen ty check
-  check_rule prompt cargo test
-  check_rule prompt cargo check
-  check_rule prompt cargo clippy
-  check_rule prompt cargo fmt --check
-  check_rule prompt npm test
-  check_rule prompt npm run lint
-  check_rule prompt npm exec -- vitest run
-  check_rule prompt node --test
-  check_rule prompt pnpm test
-  check_rule prompt pnpm run typecheck
-  check_rule prompt actionlint .github/workflows/ci.yml
-  check_rule prompt autocorrect --lint README.md
-  check_rule prompt commitlint --from HEAD~1 --to HEAD
-  check_rule prompt statix check nix
-  check_rule prompt deadnix nix
-  check_rule prompt nixfmt --check nix/home/default.nix
-  check_rule prompt shellcheck agents/hooks/run_related_tests.sh
-  check_rule prompt shfmt -d agents/hooks/run_related_tests.sh
-  check_rule prompt dprint check
-  check_rule prompt oxlint src
-  check_rule prompt oxfmt --check src
-  check_rule prompt tsgolint --project tsconfig.json
-  check_rule prompt stylua --check nvim
-  check_rule prompt selene nvim
-  check_rule prompt tex-fmt --check docs/main.tex
+@test "codex execpolicy allows local verification" {
+  check_rule allow bats tests/agents/hooks/claude/run_related_tests.bats
+  check_rule allow bash -n -- ./agents/hooks/run_related_tests.sh
+  check_rule allow uv run --frozen pytest
+  check_rule allow uv run --frozen ruff check
+  check_rule allow uv run --frozen ty check
+  check_rule allow cargo test
+  check_rule allow cargo check
+  check_rule allow cargo clippy
+  check_rule allow cargo fmt --check
+  check_rule allow npm test
+  check_rule allow npm run lint
+  check_rule allow npm exec -- vitest run
+  check_rule allow node --test
+  check_rule allow pnpm test
+  check_rule allow pnpm run typecheck
+  check_rule allow actionlint .github/workflows/ci.yml
+  check_rule allow autocorrect --lint README.md
+  check_rule allow commitlint --from HEAD~1 --to HEAD
+  check_rule allow statix check nix
+  check_rule allow deadnix nix
+  check_rule allow nixfmt --check nix/home/default.nix
+  check_rule allow shellcheck agents/hooks/run_related_tests.sh
+  check_rule allow shfmt -d agents/hooks/run_related_tests.sh
+  check_rule allow dprint check
+  check_rule allow oxlint src
+  check_rule allow oxfmt --check src
+  check_rule allow tsgolint --project tsconfig.json
+  check_rule allow stylua --check nvim
+  check_rule allow selene nvim
+  check_rule allow tex-fmt --check docs/main.tex
 }
 
 @test "codex execpolicy prompts before publishing changes" {
   check_rule prompt git push -u origin feat/example
+}
+
+@test "codex execpolicy still prompts for broad audit execution" {
+  check_rule prompt uv run --frozen --group audit deptry .
 }
 
 @test "codex execpolicy forbids representative dangerous commands" {

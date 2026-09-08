@@ -1,4 +1,8 @@
 {
+  "agents/hooks/run_related_tests.sh": [
+    "tests/agents/hooks/claude/verification_logs.bats",
+    "tests/agents/hooks/claude/verification_integrity.bats"
+  ],
   "agents/hooks/lib/audit_log.sh": [
     "tests/agents/hooks/claude/guard_allowed_commands.bats",
     "tests/agents/hooks/claude/guard_forbidden_commands.bats",
@@ -16,6 +20,7 @@
     "tests/agents/hooks/claude/guard_forbidden_commands.bats"
   ],
   "agents/hooks/lib/lint_format.sh": [
+    "tests/agents/hooks/claude/quality_step_failures.bats",
     "tests/agents/hooks/claude/lint_format_hooks.bats",
     "tests/agents/hooks/claude/lint_format_js.bats",
     "tests/agents/hooks/claude/lint_format_py.bats",
@@ -45,6 +50,7 @@
     "tests/agents/hooks/claude/guard_forbidden_commands.bats"
   ],
   "agents/hooks/lint_format_*.sh": [
+    "tests/agents/hooks/claude/quality_step_failures.bats",
     "tests/agents/hooks/claude/lint_format_hooks.bats"
   ],
   "agents/hooks/rules/secret_content_patterns.json": [
@@ -57,6 +63,7 @@
     "tests/agents/hooks/claude/related_test_rules.bats"
   ],
   "agents/hooks/rules/related_test_*.json": [
+    "tests/agents/hooks/claude/verification_integrity.bats",
     "tests/agents/hooks/claude/related_test_rules.bats"
   ],
   "agents/claude/settings.base.json": [

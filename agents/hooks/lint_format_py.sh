@@ -13,14 +13,12 @@ load_file_path # sets FILE_PATH, FILENAME
 if PROJECT_DIR=$(find_project_root "$(dirname "$FILE_PATH")" pyproject.toml uv.lock); then
   require_cmd uv
   cd "$PROJECT_DIR"
-  uv run --frozen ruff format "$FILE_PATH" >/dev/null 2>&1 || true
-  uv run --frozen ruff check --fix-only --quiet "$FILE_PATH" >/dev/null 2>&1 || true
-  VIOLATIONS=$(uv run --frozen ruff check --output-format=concise --quiet "$FILE_PATH" 2>&1 || true)
+  run_quality_step "ruff format" uv run --frozen ruff format "$FILE_PATH"
+  run_quality_step "ruff fix" uv run --frozen ruff check --fix-only --quiet "$FILE_PATH"
+  run_quality_step "ruff lint" uv run --frozen ruff check --output-format=concise --quiet "$FILE_PATH"
 else
   require_cmd ruff
-  ruff format "$FILE_PATH" >/dev/null 2>&1 || true
-  ruff check --fix-only --quiet "$FILE_PATH" >/dev/null 2>&1 || true
-  VIOLATIONS=$(ruff check --output-format=concise --quiet "$FILE_PATH" 2>&1 || true)
+  run_quality_step "ruff format" ruff format "$FILE_PATH"
+  run_quality_step "ruff fix" ruff check --fix-only --quiet "$FILE_PATH"
+  run_quality_step "ruff lint" ruff check --output-format=concise --quiet "$FILE_PATH"
 fi
-
-emit_post_tool_context "ruff" "$VIOLATIONS"

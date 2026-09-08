@@ -21,7 +21,7 @@ read_settings() {
 get_settings_allow_prefixes() {
   read_settings -r '.permissions.allow[]' |
     grep '^Bash(' |
-    sed -E 's/^Bash\(([^:]+):\*\)$/\1/'
+    sed -E 's/^Bash\((.+):\*\)$/\1/'
 }
 
 get_policy_allow_prefixes() {
@@ -105,7 +105,7 @@ assert_lines_contain() {
   fi
 }
 
-@test "manual verification prefixes render only as Claude ask permissions" {
+@test "local verification prefixes render only as Claude allow permissions" {
   local expected
   expected=$(cat <<'EOF'
 actionlint
@@ -124,6 +124,7 @@ npm test
 npm run test
 npm run lint
 npm run format-check
+npm run format:check
 npm run typecheck
 node --test
 oxfmt --check
@@ -132,6 +133,7 @@ pnpm test
 pnpm run test
 pnpm run lint
 pnpm run format-check
+pnpm run format:check
 pnpm run typecheck
 selene
 shellcheck
@@ -140,25 +142,37 @@ statix
 stylua --check
 tex-fmt --check
 tsgolint
-uv run pytest
-uv run ruff
-uv run ty
+uv run --frozen pytest
+uv run --frozen ruff
+uv run --frozen ty
 EOF
 )
 
-  assert_lines_contain "$expected" "$(get_policy_ask_prefixes)" \
-    "Manual verification prefixes missing from shared ask rules:"
+  assert_lines_contain "$expected" "$(get_policy_allow_prefixes)" \
+    "Local verification prefixes missing from shared allow rules:"
 
   local generated_ask
-  generated_ask=$(read_settings -r '.permissions.ask[]' | sed -E 's/^Bash\(([^:]+):\*\)$/\1/')
-  assert_lines_contain "$expected" "$generated_ask" \
-    "Manual verification prefixes missing from generated Claude ask permissions:"
-
+  generated_ask=$(read_settings -r '.permissions.ask[]' | sed -E 's/^Bash\((.+):\*\)$/\1/')
   local generated_allow
   generated_allow=$(get_settings_allow_prefixes)
+  assert_lines_contain "$expected" "$generated_allow" \
+    "Local verification prefixes missing from generated Claude allow permissions:"
   while IFS= read -r prefix; do
-    ! echo "$generated_allow" | grep -qxF "$prefix"
+    ! echo "$generated_ask" | grep -qxF "$prefix"
   done <<<"$expected"
+}
+
+@test "obsolete non-frozen and transient pytest rules are absent" {
+  run jq -e '
+    all(.rules[];
+      .prefix != ["uv", "run", "pytest"] and
+      .prefix != ["uv", "run", "ruff"] and
+      .prefix != ["uv", "run", "ty"] and
+      .prefix != ["uv", "run", "--with", "pytest", "pytest"] and
+      .prefix != ["uv", "run", "--frozen", "--with", "pytest", "pytest"]
+    )
+  ' "$COMMAND_PERMISSIONS"
+  [ "$status" -eq 0 ]
 }
 
 @test "manual verification ask prefixes have no ancestor allow prefix" {

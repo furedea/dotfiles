@@ -8,6 +8,7 @@ setup() {
   HOOK="$HOOK_DIR/run_related_tests.sh"
   TEST_TMPDIR="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/gate.XXXXXX")"
   export RUN_RELATED_TESTS_BASE_REF=HEAD
+  export XDG_STATE_HOME="$BATS_TEST_TMPDIR/state"
 }
 
 teardown() {
@@ -23,7 +24,7 @@ make_stop_input() {
 assert_verification_passed() {
   local _message
   _message="$(jq -r '.systemMessage // empty' <<<"$output")"
-  if [[ "$_message" != *'passed:'* ]]; then
+  if [[ "$_message" != 'Verification passed · total '* ]]; then
     printf '%s\n' "$output"
     return 1
   fi
@@ -118,8 +119,8 @@ EOF
 
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision":"block"'* ]]
-  [[ "$output" == *'unavailable: git (branch base origin/missing)'* ]]
-  [[ "$output" == *'command: git merge-base HEAD origin/missing'* ]]
+  [[ "$output" == *'git: unavailable · branch base origin/missing'* ]]
+  [[ "$output" != *'command:'* ]]
 }
 
 @test "run_related_tests verifies staged changes" {
@@ -194,7 +195,7 @@ EOF
   run bash "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   message="$(jq -r '.systemMessage' <<<"$output")"
-  [[ "$message" == *'skipped: not inside a Git repository'* ]]
+  [[ "$message" == *'Reason: not inside a Git repository'* ]]
 }
 
 @test "run_related_tests reports when there are no branch changes" {
@@ -207,7 +208,7 @@ EOF
   run bash "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   message="$(jq -r '.systemMessage' <<<"$output")"
-  [[ "$message" == *'skipped: no changes since HEAD'* ]]
+  [[ "$message" == *'Reason: no changes since HEAD'* ]]
 }
 
 @test "run_related_tests reports when no related test runner is detected" {
@@ -221,7 +222,7 @@ EOF
   run bash "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   message="$(jq -r '.systemMessage' <<<"$output")"
-  [[ "$message" == *'skipped: no related test runner matched changed paths'* ]]
+  [[ "$message" == *'Reason: no related test runner matched changed paths'* ]]
 }
 
 @test "run_related_tests does not treat JSON as JavaScript" {
@@ -243,7 +244,7 @@ EOF
 
   [ "$status" -eq 0 ]
   message="$(jq -r '.systemMessage' <<<"$output")"
-  [[ "$message" == *'skipped: no related test runner matched changed paths'* ]]
+  [[ "$message" == *'Reason: no related test runner matched changed paths'* ]]
 }
 
 @test "run_related_tests blocks when a JavaScript project has no test command" {
@@ -266,8 +267,8 @@ EOF
 
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision":"block"'* ]]
-  [[ "$output" == *'unavailable: javascript_typescript (full suite)'* ]]
-  [[ "$output" == *'result: test command could not be determined'* ]]
+  [[ "$output" == *'javascript_typescript: unavailable · full suite'* ]]
+  [[ "$output" == *'Error: javascript_typescript: test command could not be determined'* ]]
 }
 
 @test "run_related_tests emits block JSON when bats tests fail" {
@@ -292,8 +293,8 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision"'* ]]
   [[ "$output" == *'block'* ]]
-  [[ "$output" == *'failed: bats (full suite)'* ]]
-  [[ "$output" == *'command: bats tests/ --recursive'* ]]
+  [[ "$output" == *'Bats: '* ]]
+  [[ "$output" != *'command:'* ]]
 }
 
 @test "run_related_tests limits failed verification output" {
@@ -327,11 +328,13 @@ EOF
   run bash "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *'failed: bats (1 related targets)'* ]]
-  [[ "$output" == *'command: bats tests/script.bats'* ]]
-  [[ "$output" == *'[output truncated'* ]]
-  ! [[ "$output" == *'failure line 01'* ]]
-  [[ "$output" == *'failure line 60'* ]]
+  [[ "$output" == *'Bats: test count unavailable · 1 targets'* ]]
+  [[ "$output" != *'command:'* ]]
+  [[ "$output" == *'Error: Bats: failure line 01'* ]]
+  [[ "$output" != *'failure line 60'* ]]
+  log_dir="$(jq -r '.reason' <<<"$output" | sed -n 's/^Details: //p')"
+  run rg -l 'failure line 60' "$log_dir"
+  [ "$status" -eq 0 ]
 }
 
 @test "run_related_tests blocks when a required runner is unavailable" {
@@ -356,8 +359,8 @@ EOF
 
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision":"block"'* ]]
-  [[ "$output" == *'unavailable: bats (1 related targets)'* ]]
-  [[ "$output" == *'result: missing-bats-runner is not available'* ]]
+  [[ "$output" == *'Bats: unavailable · 1 targets'* ]]
+  [[ "$output" == *'Error: Bats: missing-bats-runner is not available'* ]]
 }
 
 @test "run_related_tests blocks when timeout enforcement is unavailable" {
@@ -388,8 +391,8 @@ EOF
 
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision":"block"'* ]]
-  [[ "$output" == *'unavailable: bats (1 related targets)'* ]]
-  [[ "$output" == *'result: timeout enforcement is unavailable'* ]]
+  [[ "$output" == *'Bats: unavailable · 1 targets'* ]]
+  [[ "$output" == *'Error: Bats: timeout enforcement is unavailable'* ]]
 }
 
 @test "run_related_tests uses the Home Manager timeout outside PATH" {
@@ -399,7 +402,7 @@ EOF
   git config user.name t
   git config commit.gpgsign false
   mkdir -p bin home/.config/agent-harness/bin tests
-  for _dependency in bash dirname find grep jq rm sort; do
+  for _dependency in awk bash cat date dirname find grep jq mkdir mktemp rm sort; do
     ln -s "$(command -v "$_dependency")" "bin/$_dependency"
   done
   cat > bin/git <<EOF
@@ -472,7 +475,7 @@ EOF
 
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision"'* ]]
-  [[ "$output" == *'timeout: bats (1 related targets)'* ]]
+  [[ "$output" == *'Bats: test count unavailable · 1 targets'* ]]
   [[ "$output" == *'timed out after 1s'* ]]
 }
 
@@ -497,8 +500,8 @@ EOF
   run bash "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   message="$(jq -r '.systemMessage' <<<"$output")"
-  [[ "$message" == *'passed: bats (full suite)'* ]]
-  [[ "$message" == *'command: bats tests/ --recursive'* ]]
+  [[ "$message" == *'Bats: '* ]]
+  [[ "$output" != *'command:'* ]]
 }
 
 # --- project extension rules file (.agents/hooks/rules/related_test_extensions.json) ---
@@ -590,7 +593,7 @@ EOF
   [[ "$output" == *'"decision"'* ]]
 }
 
-@test "run_related_tests ignores invalid JSON and falls back to heuristic" {
+@test "run_related_tests reports invalid JSON instead of using heuristic alone" {
   cd "$TEST_TMPDIR"
   git init --quiet
   git config user.email t@t
@@ -608,7 +611,8 @@ EOF
   printf 'changed\n' >> script.sh
   run bash "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
-  assert_verification_passed
+  [ "$(jq -r '.decision' <<< "$output")" = block ]
+  [[ "$output" == *"Invalid configuration"* ]]
 }
 
 @test "run_related_tests matches JSON glob patterns" {
@@ -909,10 +913,38 @@ EOF
 
   [ "$status" -eq 0 ]
   message="$(jq -r '.systemMessage' <<<"$output")"
-  expected=$'Verification passed before completion.\n'
-  expected+=$'passed: pytest (2 related files)\n'
-  expected+='command: uv run --frozen pytest --no-header -q <2 targets>'
-  [ "$message" = "$expected" ]
+  [[ "$message" == 'Verification passed · total '* ]]
+  [[ "$message" == *'pytest: test count unavailable · 2 files · '* ]]
+  [[ "$message" != *'command:'* ]]
+  [ "$(printf '%s\n' "$message" | wc -l | tr -d ' ')" = 2 ]
+  [[ "$message" != *$'\n\n'* ]]
+}
+
+@test "run_related_tests reports successful cases without storing full logs" {
+  cd "$TEST_TMPDIR"
+  git init --quiet
+  git -c user.name=test -c user.email=test@example.com -c commit.gpgsign=false commit --allow-empty --quiet -m fixture
+  mkdir -p bin tests
+  cat > bin/timeout <<'EOF'
+#!/usr/bin/env bash
+shift
+"$@"
+EOF
+  cat > bin/bats <<'EOF'
+#!/usr/bin/env bash
+printf 'diagnostic before tests\n1..3\nok 1 first\nok 2 second\nok 3 optional # skip unavailable\n'
+EOF
+  chmod +x bin/timeout bin/bats
+  export PATH="$TEST_TMPDIR/bin:$PATH"
+  printf '@test "fixture" { true; }\n' > tests/example.bats
+  run bash "$HOOK" <<< "$(make_stop_input false)"
+  [ "$status" -eq 0 ]
+  message="$(jq -r '.systemMessage' <<<"$output")"
+  [[ "$message" == *'Bats: 2 passed, 1 skipped'* ]]
+  [[ "$message" == *' · '* ]]
+  [[ "$message" == *'· total '* ]]
+  [[ "$message" != *'Details:'* ]]
+  [ ! -d "$XDG_STATE_HOME/agent-harness/verification" ]
 }
 
 @test "run_related_tests matches python <stem>_test.py convention from default rules" {
@@ -1163,8 +1195,10 @@ EOF
   run bash "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision"'* ]]
-  [[ "$output" == *'cargo test --test parser'* ]]
   [[ "$output" == *'parser integration failed'* ]]
+  log_dir="$(jq -r '.reason' <<<"$output" | sed -n 's/^Details: //p')"
+  run rg -l 'cargo test --test parser' "$log_dir"
+  [ "$status" -eq 0 ]
 }
 
 @test "run_related_tests falls back to the full Rust suite without a matching integration test" {

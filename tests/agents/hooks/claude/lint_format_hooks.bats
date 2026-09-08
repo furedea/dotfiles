@@ -160,7 +160,7 @@ setup() {
 }
 
 @test "lint_format_json_toml emits dprint diagnostics through PostToolUse context" {
-  grep -q 'emit_post_tool_context "dprint"' "$HOOK_DIR/lint_format_json_toml.sh"
+  grep -q 'run_quality_step "dprint lint"' "$HOOK_DIR/lint_format_json_toml.sh"
 }
 
 @test "lint_format_rs references rustfmt" {

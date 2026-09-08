@@ -135,7 +135,7 @@ teardown() {
 @test "emit_post_tool_context produces JSON with PostToolUse event name when violations present" {
   run bash -c "
     source '$LIB'
-    emit_post_tool_context 'ruff' 'F401 unused import'
+    emit_post_tool_context 'ruff lint: F401 unused import'
   "
   [ "$status" -eq 0 ]
   [ "$(echo "$output" | jq -r '.hookSpecificOutput.hookEventName')" = "PostToolUse" ]
@@ -144,7 +144,7 @@ teardown() {
 @test "emit_post_tool_context includes tool label and violations in additionalContext" {
   run bash -c "
     source '$LIB'
-    emit_post_tool_context 'ruff' 'F401 unused import'
+    emit_post_tool_context 'ruff lint: F401 unused import'
   "
   [ "$status" -eq 0 ]
   local ctx
@@ -156,7 +156,7 @@ teardown() {
 @test "emit_post_tool_context outputs nothing when violations are empty" {
   run bash -c "
     source '$LIB'
-    emit_post_tool_context 'ruff' ''
+    emit_post_tool_context ''
   "
   [ "$status" -eq 0 ]
   [ -z "$output" ]
@@ -167,7 +167,7 @@ teardown() {
   input="$(printf 'line1\nline2\nline3')"
   run bash -c "
     source '$LIB'
-    emit_post_tool_context 'oxlint' \"$input\"
+    emit_post_tool_context \"$input\"
   "
   [ "$status" -eq 0 ]
   local ctx
