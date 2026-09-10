@@ -1,3 +1,15 @@
+# Remote terminal sessions may not inherit the macOS login agent socket.
+if [[ "$OSTYPE" == darwin* && -z "${SSH_AUTH_SOCK:-}" ]]; then
+  () {
+    local _socket
+    _socket=$(launchctl print "gui/$UID/com.openssh.ssh-agent" 2>/dev/null |
+      awk '$1 == "path" && $2 == "=" && $3 ~ /\/Listeners$/ { print $3 }')
+    if [[ -S "$_socket" && -O "$_socket" && ! -L "$_socket" ]]; then
+      export SSH_AUTH_SOCK="$_socket"
+    fi
+  }
+fi
+
 # Completion
 ZSH_COMPDUMP="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/.zcompdump"
 autoload -Uz compinit
