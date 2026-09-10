@@ -120,6 +120,9 @@ let
   herdrCompatibleCodex = pkgs.writeShellScriptBin "codex" ''
     export CODEX_EXECUTABLE_PATH="$HOME/.local/bin/codex"
     export DISABLE_AUTOUPDATER=1
+    if [ "''${HERDR_ENV:-}" = "1" ]; then
+      set -- -c tui.notifications=false "$@"
+    fi
     exec -a codex ${codexPackage}/bin/codex "$@"
   '';
   herdrPlugins = [
@@ -179,6 +182,7 @@ in
     rootsPackage
     secretaryCli
     terminalBrowserPackage
+    terminal-notifier
 
     # Code quality
     actionlint

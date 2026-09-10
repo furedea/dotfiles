@@ -6,6 +6,9 @@ auto_switch = false
 [ui.toast]
 delivery = "system"
 
+[ui.sound.agents]
+codex = "on"
+
 [keys]
 prefix = "ctrl+a"
 new_workspace = "prefix+ctrl+n"
