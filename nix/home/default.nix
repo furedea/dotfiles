@@ -188,7 +188,6 @@ in
     rootsPackage
     secretaryCli
     terminalBrowserPackage
-    terminal-notifier
 
     # Code quality
     actionlint
