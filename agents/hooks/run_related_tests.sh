@@ -313,6 +313,22 @@ normalize_targets() {
   done | sort -u
 }
 
+normalize_bats_targets() {
+  local _target _file
+
+  for _target in "$@"; do
+    _target="${_target#./}"
+    if [ ! -d "$_target" ]; then
+      printf '%s\n' "$_target"
+      continue
+    fi
+    # Match Bats' nonrecursive directory selection before deduplicating files.
+    for _file in "${_target%/}"/*."${BATS_FILE_EXTENSION:-bats}"; do
+      [ -f "$_file" ] && printf '%s\n' "$_file"
+    done
+  done | sort -u
+}
+
 collect_changed_paths() {
   local _base_commit="$1"
 
@@ -655,7 +671,7 @@ if [ $need_bats -eq 1 ] && [ -d tests ]; then
   done <<<"$CHANGED"
 
   if [ ${#BATS_TARGETS[@]} -gt 0 ]; then
-    mapfile -t BATS_TARGETS < <(normalize_targets "${BATS_TARGETS[@]}")
+    mapfile -t BATS_TARGETS < <(normalize_bats_targets "${BATS_TARGETS[@]}")
     declare -a BATS_EXIST=()
     for t in "${BATS_TARGETS[@]}"; do
       [ -e "$t" ] && BATS_EXIST+=("$t")

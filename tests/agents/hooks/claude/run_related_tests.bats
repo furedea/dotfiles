@@ -506,6 +506,51 @@ EOF
 
 # --- project extension rules file (.agents/hooks/rules/related_test_extensions.json) ---
 
+@test "run_related_tests runs overlapping Bats directory and file targets once" {
+  create_temp_git_repo
+  cd "$TEMP_REPO"
+  mkdir -p .agents/hooks/rules "tests/domain with spaces/nested"
+  cat > .agents/hooks/rules/related_test_extensions.json <<'EOF'
+{"source.sh": ["tests/domain with spaces/", "./tests/domain with spaces/shared.bats"]}
+EOF
+  cat > "tests/domain with spaces/shared.bats" <<'EOF'
+@test "shared test runs once" {
+  mkdir "$BATS_SUITE_TMPDIR/shared-once"
+}
+EOF
+  cat > "tests/domain with spaces/other.bats" <<'EOF'
+@test "sibling test still runs" { true; }
+EOF
+  cat > "tests/domain with spaces/nested/excluded.bats" <<'EOF'
+@test "nonrecursive directory selection excludes nested tests" { false; }
+EOF
+  touch source.sh
+  git add . && git commit --quiet -m base
+  printf '# changed\n' >> source.sh
+  printf '# changed\n' >> "tests/domain with spaces/shared.bats"
+
+  run bash "$HOOK" <<< "$(make_stop_input false)"
+
+  [ "$status" -eq 0 ]
+  assert_verification_passed
+  [[ "$output" == *'Bats: 2 passed'* ]]
+}
+
+@test "run_related_tests blocks when a mapped Bats directory has no test files" {
+  create_temp_git_repo
+  cd "$TEMP_REPO"
+  mkdir -p .agents/hooks/rules tests/empty
+  printf '{"source.sh": ["tests/empty"]}\n' > .agents/hooks/rules/related_test_extensions.json
+  touch source.sh tests/empty/README.md
+  git add . && git commit --quiet -m base
+  printf '# changed\n' >> source.sh
+
+  run bash "$HOOK" <<< "$(make_stop_input false)"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'"decision":"block"'* ]]
+}
+
 @test "run_related_tests runs tests mapped by JSON rules and blocks on failure" {
   cd "$TEST_TMPDIR"
   git init --quiet
@@ -674,7 +719,7 @@ EOF
   run bash "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
-  [ "$(cat bats_args.txt)" = "tests/nix" ]
+  [ "$(cat bats_args.txt)" = "tests/nix/module.bats" ]
 }
 
 @test "run_related_tests runs Rust integration tests mapped from non-Rust changes" {

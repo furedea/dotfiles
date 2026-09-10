@@ -89,7 +89,7 @@ EOF
 
   mkdir -p "$(dirname "$_env_file")"
   printf '%s\n' 'SLACK_BOT_TOKEN=local-credential' >"$_env_file"
-  _inode="$(stat -f '%i' "$_env_file")"
+  _inode="$(/usr/bin/stat -f '%i' "$_env_file")"
 
   run --separate-stderr get_hermes_activation
   [ "$status" -eq 0 ]
@@ -98,7 +98,7 @@ EOF
   run env HOME="$_home" bash -c "$_activation"
 
   [ "$status" -eq 0 ]
-  [ "$(stat -f '%i' "$_env_file")" = "$_inode" ]
+  [ "$(/usr/bin/stat -f '%i' "$_env_file")" = "$_inode" ]
   [ "$(<"$_env_file")" = 'SLACK_BOT_TOKEN=local-credential' ]
 }
 
