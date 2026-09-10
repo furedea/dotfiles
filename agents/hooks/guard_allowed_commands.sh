@@ -28,7 +28,7 @@ BLOCKED: jq is not installed.
 Why: This hook requires jq to parse tool input JSON. Without it, commands cannot be validated.
 
 What to do:
-  Claude Code: Ask the user to install jq.
+  Agent: Ask the user to install jq.
   User: Install jq (e.g., brew install jq on macOS, sudo apt-get install jq on Linux).
 ERRMSG
   exit 2
@@ -52,8 +52,8 @@ BLOCKED: failed to parse tool input JSON.
 Why: The hook received invalid JSON input and cannot validate the command.
 
 What to do:
-  Claude Code: Report this error to the user — it may indicate a Claude Code bug or misconfigured hook.
-  User: Check that .claude/hooks/guard_allowed_commands.sh is correctly registered in settings.json.
+  Agent: Report this error to the user — it may indicate malformed agent input or a misconfigured hook.
+  User: Check that guard_allowed_commands.sh is correctly registered in the active agent hook configuration.
 ERRMSG
   exit 2
 fi
@@ -123,7 +123,7 @@ Why:
   approved by the global or project regex rules.
 
 What to do:
-  Claude Code: Try a different approach, or ask the user whether this command should be allowed.
+  Agent: Try a different approach, or ask the user whether this command should be allowed.
   User: Add an anchored POSIX extended regex to
         <git-root>/.agents/hooks/rules/allowed_commands.json.
 ERRMSG

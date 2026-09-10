@@ -64,8 +64,8 @@ Why: Installed hooks, agent instructions, and generated permission bindings
      regenerate these files instead of editing generated output.
 
 What to do:
-  Claude Code: Change the source under dotfiles/agents, then regenerate the installed
-               files.
+  Agent: Change the source under dotfiles/agents, then regenerate the installed
+         files.
   User: Review and authorize the source change as usual.
 ERRMSG
   exit 2

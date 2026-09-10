@@ -71,8 +71,8 @@ Why: Force push rewrites history and can destroy teammates' commits. Even
      --force-with-lease has a narrow safety window; deny by default.
 
 What to do:
-  Claude Code: Push without --force. If history rewrite is genuinely required,
-               ask the user to run it manually.
+  Agent: Push without --force. If history rewrite is genuinely required,
+         ask the user to run it manually.
   User: Run 'git push --force' manually if you decide it is needed.
 ERRMSG
     return 2
@@ -141,7 +141,7 @@ Why: All changes must go through a pull request. Direct push to
      unexpectedly.
 
 What to do:
-  Claude Code: Switch to a feature branch and open a PR via 'gh pr create'.
+  Agent: Switch to a feature branch and open a PR via 'gh pr create'.
   User: If a direct push is truly needed (emergency revert, etc.), run it
         manually in your terminal.
 ERRMSG
@@ -163,7 +163,7 @@ Why: The '+' prefix on a refspec forces a non-fast-forward update,
      equivalent to --force for that refspec.
 
 What to do:
-  Claude Code: Push without the '+' prefix.
+  Agent: Push without the '+' prefix.
   User: Run the force push manually if you decide it is needed.
 ERRMSG
       return 2
@@ -191,7 +191,7 @@ Why: All changes must go through a pull request. Direct push to '$_target'
      bypasses review and may trigger production CI unexpectedly.
 
 What to do:
-  Claude Code: Switch to a feature branch and open a PR via 'gh pr create'.
+  Agent: Switch to a feature branch and open a PR via 'gh pr create'.
   User: If a direct push is truly needed (emergency revert, etc.), run it
         manually in your terminal.
 ERRMSG
@@ -214,9 +214,9 @@ Segment: $_seg
 Why: $_why.
 
 What to do:
-  Claude Code: Stop and ask the user, or pick a non-destructive alternative
-               (e.g., 'git restore --staged <file>' to unstage, 'git switch
-               <branch>' for branch changes, 'git stash push' to save WIP).
+  Agent: Stop and ask the user, or pick a non-destructive alternative
+         (e.g., 'git restore --staged <file>' to unstage, 'git switch
+         <branch>' for branch changes, 'git stash push' to save WIP).
   User: Run the destructive command manually if you decide it is needed.
 ERRMSG
 }
@@ -362,8 +362,8 @@ Why: This hook cannot statically analyze commands run through a shell wrapper,
      Failing closed.
 
 What to do:
-  Claude Code: Rewrite without the shell wrapper so the command is directly
-               visible, or ask the user to run it manually.
+  Agent: Rewrite without the shell wrapper so the command is directly
+         visible, or ask the user to run it manually.
   User: Run the command manually in your terminal if it is safe.
 ERRMSG
     return 2
@@ -381,8 +381,8 @@ Why: Admin merge is reserved for genuine emergencies and should be a human
      decision, not an agent decision.
 
 What to do:
-  Claude Code: Merge without --admin. If admin merge is genuinely required,
-               stop and ask the user.
+  Agent: Merge without --admin. If admin merge is genuinely required,
+         stop and ask the user.
   User: Run 'gh pr merge --admin' manually if you decide it is needed.
 ERRMSG
     return 2

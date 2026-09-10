@@ -20,7 +20,7 @@ ERROR: jq is not installed.
 Why: This hook requires jq to parse tool input JSON and format the audit log.
 
 What to do:
-  Claude Code: Ask the user to install jq.
+  Agent: Ask the user to install jq.
   User: Install jq (e.g., brew install jq on macOS, sudo apt-get install jq on Linux).
 ERRMSG
   exit 2

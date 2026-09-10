@@ -25,7 +25,7 @@ BLOCKED: jq is not installed.
 Why: This hook requires jq to parse tool input JSON and generated command permission rules.
 
 What to do:
-  Claude Code: Ask the user to install jq.
+  Agent: Ask the user to install jq.
   User: Install jq through the declarative environment.
 ERRMSG
   exit 2
@@ -41,7 +41,7 @@ Why:
   This hook blocks destructive shell commands using Nix-generated rules.
 
 What to do:
-  Claude Code: Ask the user to run the Nix switch so generated agent files are refreshed.
+  Agent: Ask the user to run the Nix switch so generated agent files are refreshed.
 ERRMSG
   exit 2
 fi
@@ -74,7 +74,7 @@ BLOCKED: failed to parse tool input JSON.
 Why: The hook received invalid JSON input and cannot validate the command.
 
 What to do:
-  Claude Code: Report this error to the user.
+  Agent: Report this error to the user.
 ERRMSG
   exit 2
 fi
@@ -119,7 +119,7 @@ Why:
   $BLOCKED_REASON
 
 What to do:
-  Claude Code: Use a non-destructive approach, or ask the user to run this command manually.
+  Agent: Use a non-destructive approach, or ask the user to run this command manually.
 ERRMSG
 
 exit 2
