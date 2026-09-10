@@ -19,6 +19,10 @@
 }:
 let
   link = path: config.lib.file.mkOutOfStoreSymlink "${dotfilesDir}/${path}";
+  gitSshSigner = pkgs.writeShellScript "git-ssh-sign" ''
+    export PATH=/usr/bin:/bin
+    ${builtins.readFile ../../scripts/git/sign_ssh.sh}
+  '';
   esaCliPackage = pkgs.callPackage ../packages/esa_cli.nix { };
   ghStackPackage = pkgs.callPackage ../packages/gh_stack.nix { };
   gitWtPackage = unstable.callPackage ../packages/git_wt.nix { gitWt = unstable.git-wt; };
@@ -270,6 +274,7 @@ in
           signingkey = "~/.ssh/id_ed25519.pub";
         };
         gpg.format = "ssh";
+        gpg.ssh.program = "${gitSshSigner}";
         commit.gpgsign = true;
         tag.gpgsign = true;
         init.defaultBranch = "main";
