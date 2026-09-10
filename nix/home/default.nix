@@ -87,6 +87,12 @@ let
             "claude"
             "codex"
           ];
+      command_replacements = [
+        {
+          from = "bash ";
+          to = "env -u DEVELOPER_DIR -u SDKROOT bash ";
+        }
+      ];
     }
   );
   moshiHookSpec = pkgs.writeText "moshi-hook-bundle-spec.json" (
