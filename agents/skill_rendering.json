@@ -30,18 +30,6 @@
         }
       }
     },
-    "github-ci-init": {
-      "claude": {
-        "frontmatter": {
-          "disable-model-invocation": true
-        }
-      },
-      "codex": {
-        "openai": {
-          "allow_implicit_invocation": false
-        }
-      }
-    },
     "grilling": {
       "claude": {
         "frontmatter": {
@@ -56,18 +44,6 @@
       }
     },
     "nix-dev-init": {
-      "claude": {
-        "frontmatter": {
-          "disable-model-invocation": true
-        }
-      },
-      "codex": {
-        "openai": {
-          "allow_implicit_invocation": false
-        }
-      }
-    },
-    "skill-auditor": {
       "claude": {
         "frontmatter": {
           "disable-model-invocation": true

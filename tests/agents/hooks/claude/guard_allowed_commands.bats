@@ -96,9 +96,6 @@ run_hook() {
 
   run_hook "uv run --frozen --with pytest pytest tests/test_main.py -k test_main"
   [ "$status" -eq 0 ]
-
-  run_hook "uv run --frozen python scripts/run_audit.py prepare --provider codex --days 14"
-  [ "$status" -eq 0 ]
 }
 
 @test "leaves broad audit execution for provider approval and allows named package checks" {
@@ -247,16 +244,19 @@ run_hook() {
   [ "$status" -eq 2 ]
 }
 
-@test "blocks Python execution outside the precise project allowlist" {
+@test "leaves Python execution to provider approval" {
   run_hook 'uv run python -c "print(1)"'
-  [ "$status" -eq 2 ]
+  [ "$status" -eq 0 ]
+
+  run_hook "uv run python scripts/check_project.py"
+  [ "$status" -eq 0 ]
+
+  run_hook "uv run --frozen python scripts/check_project.py"
+  [ "$status" -eq 0 ]
 }
 
 @test "leaves other execution commands to their existing policies" {
   run_hook "uv run --group audit deptry ."
-  [ "$status" -eq 0 ]
-
-  run_hook "uv run python scripts/run_audit.py prepare"
   [ "$status" -eq 0 ]
 }
 

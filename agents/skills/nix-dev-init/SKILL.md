@@ -113,7 +113,7 @@ Read only the ref that matches the project's primary language — the files are 
 
 ## After Setup
 
-- CI is already scaffolded by the template — skip the `github-ci-init` offer for template-repo projects
+- Reuse CI already provided by the template; do not scaffold duplicate workflows.
 - Development follows TSDD, detailed in the tsdd skill
 - Language conventions are in the corresponding \*-style skill
 

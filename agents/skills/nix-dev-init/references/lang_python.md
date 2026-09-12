@@ -10,7 +10,7 @@ Prerequisite: repo created via `cd "$($DOTFILES/github/create_repo.sh <name> --p
 4. `uv sync` — resolves dependencies and creates `.venv/`.
 5. Hand off to the `python-style` skill.
 
-CI (`github-ci-init`) is already scaffolded by the template — skip that offer in the "After Setup" step.
+CI is already scaffolded by the template; reuse its workflows instead of adding duplicates.
 
 ## Why uv is pinned to the nix interpreter
 

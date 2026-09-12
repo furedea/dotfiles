@@ -3,9 +3,7 @@ name = "dotfiles-agent-tools"
 version = "0.1.0"
 description = "Python tooling and tests for personal agent skill scripts."
 requires-python = "==3.14.6"
-dependencies = [
-  "tiktoken==0.12.0",
-]
+dependencies = []
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
@@ -13,12 +11,6 @@ testpaths = ["tests/agents/python"]
 
 [tool.deptry]
 ignore_notebooks = true
-known_first_party = [
-  "codex_observations",
-  "collect_skills",
-  "collect_transcripts",
-  "generate_report",
-]
 
 [tool.vulture]
 paths = ["agents/skills", "tests/agents/python"]

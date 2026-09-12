@@ -347,14 +347,14 @@
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "allow",
+      "decision": "ask",
       "prefix": ["uv", "run", "python"],
-      "justification": "Allow explicit Python program execution that is not a verification gate."
+      "justification": "Require provider approval for Python script execution without global script exceptions."
     },
     {
-      "decision": "allow",
+      "decision": "ask",
       "prefix": ["uv", "run", "--frozen", "python"],
-      "justification": "Allow reproducible Python program execution that is not a verification gate."
+      "justification": "Require provider approval for Python script execution without global script exceptions."
     },
     {
       "decision": "allow",
