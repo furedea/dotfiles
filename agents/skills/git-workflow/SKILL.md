@@ -2,13 +2,13 @@
 name: git-workflow
 description: >
     Git workflow for selecting a branch before edits and carrying out authorized commits, pushes,
-    and pull requests. Use for repository changes or Git delivery tasks; organizing mixed pending
-    changes belongs to git-commit-split.
+    and pull requests, including organizing mixed pending changes. Use for repository changes
+    or Git delivery tasks.
 ---
 
 # Git Workflow
 
-This skill governs the default Git shape of implementation work: which branch to use, how to name it, how to cut commits, and when it is safe to push or open a PR. It is intentionally lighter than the `/git-commit-split` custom command, which is for taking an already-dirty working tree and splitting it into commits or PRs.
+This skill governs the default Git shape of implementation work: which branch to use, how to name it, how to cut commits, and when it is safe to push or open a PR.
 
 ## Operating Rules
 
@@ -96,7 +96,6 @@ Commit by intent, not by file.
 - Generated files and lockfiles belong with the change that caused them.
 - Pure formatting belongs in `style:` when it would obscure a logic review.
 - Do not fabricate splits. One cohesive change should be one commit.
-- If one file contains multiple unrelated intents, split hunks or use the `/git-commit-split` custom command when the task is specifically to organize pending changes.
 
 Before an authorized commit, confirm relevant Green evidence using TSDD's Automatic Verification policy, including successful hook results. If the full suite is too expensive or unrelated failures exist, use the narrowest appropriate evidence and report the limitation.
 
@@ -173,9 +172,10 @@ not merging.
 
 For explicit commit requests:
 
-1. Inspect all pending changes before grouping.
-2. If changes are already mixed across multiple intents, switch to the `/git-commit-split` custom command instead of improvising partial commits here.
-3. Otherwise commit one coherent intent with a Conventional Commits message.
+1. Inspect staged, unstaged, and untracked changes, then group them using Commit Granularity above. Do not assume the existing staging matches the intended commit boundaries.
+2. When unrelated intents share a file, stage only the relevant hunks. Do not rewrite the working file to manufacture a split.
+3. Before each commit, inspect `git diff --cached` and confirm it contains only the intended change, including any changes made by hooks. Commit with a Conventional Commits message.
+4. Before preparing the next commit, regenerate the diff against the current index and HEAD. Do not reuse patches or hunk numbers from before the previous commit.
 
 For explicit PR requests:
 
@@ -189,9 +189,3 @@ For rebase and force-push:
 - `git rebase --continue` and `git rebase --abort` are allowed to complete or recover from that narrow workflow.
 - Interactive rebase, `--onto`, and rebasing onto local branches are outside the default workflow; ask before using them.
 - `git push --force`, `git push --force-with-lease`, and `+refspec` pushes are not part of the default workflow. Stop and ask the user if a remote history rewrite is genuinely required.
-
-## Relationship To `/git-commit-split`
-
-Use this skill for normal work as it is being implemented.
-
-Use the `/git-commit-split` custom command when the user's task is specifically to organize existing pending changes into multiple commits, multiple branches, or one PR per feature. Do not duplicate its hunk-splitting and PR-per-feature execution flow here.

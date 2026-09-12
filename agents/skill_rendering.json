@@ -14,22 +14,6 @@
         }
       }
     },
-    "git-commit-split": {
-      "claude": {
-        "frontmatter": {
-          "argument-hint": "{direct | pr-per-feature}",
-          "disable-model-invocation": true
-        }
-      },
-      "codex": {
-        "frontmatter": {
-          "argument-hint": "{direct | pr-per-feature}"
-        },
-        "openai": {
-          "allow_implicit_invocation": false
-        }
-      }
-    },
     "grilling": {
       "claude": {
         "frontmatter": {
