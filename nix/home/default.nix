@@ -231,11 +231,15 @@ in
     shfmt
 
     # Python tooling
+    python314
     uv
 
     # Rust tooling
+    cargo
+    clippy
     lspmux
-    rustup
+    rustc
+    rustfmt
 
     # TypeScript tooling
     nodePackages."@antfu/ni"
@@ -577,12 +581,6 @@ in
         "${config.home.homeDirectory}/.zshrc" \
         "${config.xdg.cacheHome}/zsh/.zcompdump" \
         9>/dev/null
-    '';
-    rustupInit = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      ${pkgs.rustup}/bin/rustup toolchain install stable --no-self-update 2>/dev/null || true
-    '';
-    uvPythonInstall = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      ${pkgs.uv}/bin/uv python install 2>/dev/null || true
     '';
     sshDirectoryPermissions = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       if [ -d "$HOME/.ssh" ]; then
