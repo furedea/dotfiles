@@ -24,7 +24,7 @@ let
     ${builtins.readFile ../../scripts/git/sign_ssh.sh}
   '';
   esaCliPackage = pkgs.callPackage ../packages/esa_cli.nix { };
-  ghStackPackage = pkgs.callPackage ../packages/gh_stack.nix { };
+  ghStackPackage = unstable.gh-stack;
   gitWtPackage = unstable.callPackage ../packages/git_wt.nix { gitWt = unstable.git-wt; };
   rootsPackage = pkgs.callPackage ../packages/roots.nix { };
   terminalBrowserPackage = pkgs.callPackage ../packages/terminal_browser.nix { };
