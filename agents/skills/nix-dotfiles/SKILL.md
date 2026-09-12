@@ -31,7 +31,7 @@ or rebuild requirements are relevant.
     ├── home.packages                # CLI tools from nixpkgs / unstable / flake inputs
     ├── programs.*                   # declarative program configs (git, delta, gh, direnv, atuin, yazi, tmux)
     ├── home.file.*                  # dotfile symlinks (mkOutOfStoreSymlink)
-    └── home.activation              # post-activation hooks (rustup, uv, ssh-keygen)
+    └── home.activation              # post-activation hooks for mutable runtime state
 ```
 
 Platform: `aarch64-darwin` (Apple Silicon). Release channel: `25.11` for nixpkgs, nix-darwin, and home-manager. `nixpkgs-unstable` is available as `unstable` overlay for packages that need bleeding-edge versions.
@@ -90,6 +90,7 @@ Changes to files linked via `mkOutOfStoreSymlink` (e.g. `.zshrc`, `starship.toml
 | CLI tool in nixpkgs stable        | `nix/home/default.nix` → `home.packages`                | `bat`, `ripgrep`                             |
 | CLI tool only in unstable         | `nix/home/default.nix` → `home.packages`                | `unstable.atuin`, `unstable.oxfmt`           |
 | Tool from a flake input           | `nix/home/default.nix` → `home.packages`                | `nix-claude-code.packages.${system}.default` |
+| Global fallback language runtime  | `nix/home/default.nix` → `home.packages`                | `python314`, `rustc`, `nodejs_24`            |
 | GUI app (macOS .app)              | `nix/darwin/default.nix` → `homebrew.casks`             | `"obsidian"`, `"arc"`                        |
 | Mac App Store app                 | `nix/darwin/default.nix` → `homebrew.masApps`           | `LINE = 539883307`                           |
 | Homebrew formula (not in nixpkgs) | `nix/darwin/default.nix` → `homebrew.brews`             | `"winebarrel/kasa/kasa"`                     |
@@ -182,16 +183,11 @@ Use `.text` when the file content depends on Nix store paths (e.g. plugin source
 
 ## Activation Hooks
 
-Run commands after home-manager writes files:
+Run commands after home-manager writes files when the target is inherently mutable and cannot be
+represented by a package or managed file:
 
 ```nix
 home.activation = {
-  rustupInit = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    ${pkgs.rustup}/bin/rustup toolchain install stable --no-self-update 2>/dev/null || true
-  '';
-  uvPythonInstall = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    ${pkgs.uv}/bin/uv python install 2>/dev/null || true
-  '';
   sshKeyGen = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     if [ ! -f ~/.ssh/id_ed25519 ]; then
       mkdir -p ~/.ssh
@@ -201,6 +197,7 @@ home.activation = {
 };
 ```
 
+- Install language runtimes through `home.packages`; do not download them with activation hooks.
 - Use `${pkgs.xxx}/bin/xxx` to reference the exact Nix store binary.
 - End with `|| true` to prevent rebuild failures from non-fatal errors.
 - `entryAfter [ "writeBoundary" ]` ensures dotfiles are written before the hook runs.

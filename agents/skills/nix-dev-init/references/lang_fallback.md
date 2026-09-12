@@ -38,6 +38,8 @@ Do not do this for a single project. The overhead of maintaining a template repo
 
 ## What NOT to do
 
-- Do not add the language's toolchain to `~/ghq/github.com/furedea/dotfiles/nix/home/default.nix` "temporarily". Temporary global installs have a way of becoming permanent.
+- Do not add project-specific tools to `~/ghq/github.com/furedea/dotfiles/nix/home/default.nix`
+  temporarily. Deliberate global fallback runtimes are allowed, but a project must still declare
+  its complete toolchain in its own devShell.
 - Do not create a new template repo on the first use of a language. Wait for the pattern.
 - Do not skip Phase 1 and go straight to `go mod init` / `mix new` on the host shell "because it's a quick experiment". Experiments that aren't worth a flake aren't worth committing either — use `nix shell nixpkgs#go` as a throwaway instead.

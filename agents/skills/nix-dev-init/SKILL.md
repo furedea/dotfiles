@@ -15,7 +15,9 @@ The workflow has two phases, and the split is load-bearing:
 - **Phase 1 — Nix shell** (this file): `github/create_repo.sh --template` (or manual `flake.nix` → `.envrc`) → `direnv allow`. Language-agnostic.
 - **Phase 2 — Language init** (see `references/lang-<name>.md`): verify toolchain, run language-specific sync/build **inside the direnv-activated shell**.
 
-The whole reason Phase 1 runs before Phase 2 is so the language's commands see the nix-provided toolchain on PATH, not the host's. Do not collapse or reorder the phases.
+The whole reason Phase 1 runs before Phase 2 is so the language's commands see the project
+devShell toolchain on PATH, not the Nix-managed global fallback. Do not collapse or reorder the
+phases.
 
 ## Mandatory Order (Phase 1)
 
@@ -37,20 +39,22 @@ The whole reason Phase 1 runs before Phase 2 is so the language's commands see t
 ### Why this order
 
 - **VCS before flake**: the git repo must exist before `nix flake update` creates `flake.lock`. Use `github/create_repo.sh` for template-backed projects and `gh repo create --clone` for one-off non-template projects instead of `git init` — they set up remote and default branch in one shot. Private repos skip `--license` because an accidental visibility flip with MIT attached grants everyone usage rights.
-- **Toolchain before init**: running language init commands (e.g. `pnpm install`) on the host shell picks up the host's toolchain, whose version leaks into lockfiles. On another machine (or in CI) this silently breaks reproducibility.
+- **Toolchain before init**: running language init commands (e.g. `pnpm install`) on the host shell
+  picks up the global fallback toolchain, whose version may differ from the project. On another
+  machine or in CI this silently breaks reproducibility.
 - **Commit `.envrc` before `direnv allow`**: direnv's trust state is keyed by file hash. Allowing first and editing after immediately invalidates the allow, forcing a re-allow.
 
 ## Template Repos
 
 All supported languages have a GitHub template repo under `furedea/`. Use `github/create_repo.sh --template` to create new projects — it clones, applies rulesets, and patches the project name in config files automatically.
 
-| Project type | Template repo | create_repo.sh post-processing | Ship `flake.lock`? |
-| --- | --- | --- | --- |
-| Python (uv) | `furedea/template-python` | `pyproject.toml` name sub + `ruleset_python` | no |
-| TypeScript / Node (pnpm) | `furedea/template-typescript` | `package.json` name sub + `ruleset_typescript` | no |
-| Rust | `furedea/template-rust` | `Cargo.toml` name sub + `ruleset_rust` | no |
-| TeX / LaTeX | `furedea/template-tex` | `ruleset_tex` only (no name sub) | **yes** (in repo) |
-| Fallback (unlisted languages) | `furedea/template-minimal` | base ruleset only | no |
+| Project type                  | Template repo                 | create_repo.sh post-processing                 | Ship `flake.lock`? |
+| ----------------------------- | ----------------------------- | ---------------------------------------------- | ------------------ |
+| Python (uv)                   | `furedea/template-python`     | `pyproject.toml` name sub + `ruleset_python`   | no                 |
+| TypeScript / Node (pnpm)      | `furedea/template-typescript` | `package.json` name sub + `ruleset_typescript` | no                 |
+| Rust                          | `furedea/template-rust`       | `Cargo.toml` name sub + `ruleset_rust`         | no                 |
+| TeX / LaTeX                   | `furedea/template-tex`        | `ruleset_tex` only (no name sub)               | **yes** (in repo)  |
+| Fallback (unlisted languages) | `furedea/template-minimal`    | base ruleset only                              | no                 |
 
 Non-TeX templates intentionally omit `flake.lock`: `nix flake update` runs on first `direnv allow` to resolve a fresh `nixpkgs` commit. The TeX template includes `flake.lock` for reasons explained below.
 
@@ -97,13 +101,13 @@ plus language-specific entries. For non-template projects (fallback path), add t
 
 After `direnv allow`, hand off to the language-specific reference. Each ref covers verification, sync/build, and language-specific anti-patterns.
 
-| Project type | Reference | Downstream skill |
-| --- | --- | --- |
-| Python (uv) | `references/lang_python.md` | `python-style` |
-| TypeScript / Node (pnpm) | `references/lang_typescript.md` | — |
-| Rust | `references/lang_rust.md` | — |
-| TeX / LaTeX | `references/lang_tex.md` | — |
-| Unlisted languages | `references/lang_fallback.md` | — |
+| Project type             | Reference                       | Downstream skill |
+| ------------------------ | ------------------------------- | ---------------- |
+| Python (uv)              | `references/lang_python.md`     | `python-style`   |
+| TypeScript / Node (pnpm) | `references/lang_typescript.md` | —                |
+| Rust                     | `references/lang_rust.md`       | —                |
+| TeX / LaTeX              | `references/lang_tex.md`        | —                |
+| Unlisted languages       | `references/lang_fallback.md`   | —                |
 
 Read only the ref that matches the project's primary language — the files are intentionally standalone so Phase 2 loads one language's context, not all of them.
 
@@ -117,7 +121,9 @@ Read only the ref that matches the project's primary language — the files are 
 
 - Using `git init` instead of `github/create_repo.sh` or `gh repo create --clone` for new projects → remote URL hand-typing, branch name mismatch (`master` vs `main`), missing license/gitignore.
 - Running `uv init` / `pnpm install` / `cargo build` on the host shell before `direnv allow` → host toolchain leaks into the project.
-- Adding project-only tooling to `~/ghq/github.com/furedea/dotfiles/nix/home/default.nix` → bloats the global user env; keep project tooling in the project's own flake.
+- Adding project-only tooling to `~/ghq/github.com/furedea/dotfiles/nix/home/default.nix` → bloats the
+  global user env; global fallback runtimes belong there, while project-specific tools stay in the
+  project's own flake.
 - Running `darwin-rebuild switch` after editing a project's `flake.nix` → unnecessary. `darwin-rebuild` only reads the dotfiles flake + the nix-darwin modules.
 - Editing files under `.direnv/` by hand → it is a cache; change `flake.nix` instead and let direnv rebuild it on next `cd`.
 - Manually scaffolding files that the template repo already provides (e.g. running `pnpm init` when `template-typescript` already has `package.json`).

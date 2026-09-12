@@ -31,6 +31,7 @@ Do **not** add `rust-analyzer` to the devShell. The globally-installed `rust-ana
 ## What NOT to do
 
 - Do not run `cargo init` — the template repo already provides `Cargo.toml` and `src/main.rs`. Running `cargo init` overwrites them.
-- Do not add `cargo` / `rustc` to `~/ghq/github.com/furedea/dotfiles/nix/home/default.nix`. Per-project pinning is the whole point.
+- Do not rely on the global `cargo` or `rustc` inside a project. The project devShell remains the
+  source of truth even when Home Manager provides global fallbacks.
 - Do not commit `target/`. It is a machine-specific build cache.
 - Do not run `rustup` inside the direnv shell. Nix owns the toolchain; rustup would install a second one into `~/.rustup/` and silently shadow it via `cargo`'s PATH lookup.
