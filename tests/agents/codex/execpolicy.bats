@@ -54,7 +54,7 @@ check_rule() {
 }
 
 @test "codex execpolicy allows representative development commands" {
-  check_rule allow uv run python scripts/run_audit.py prepare --provider codex
+  check_rule allow uv run --frozen pytest tests/test_main.py
   check_rule allow cargo build
   check_rule allow cargo metadata --format-version 1
   check_rule allow gh pr list
@@ -107,6 +107,11 @@ check_rule() {
 
 @test "codex execpolicy still prompts for broad audit execution" {
   check_rule prompt uv run --frozen --group audit deptry .
+}
+
+@test "codex execpolicy prompts for Python script execution" {
+  check_rule prompt uv run python scripts/check_project.py
+  check_rule prompt uv run --frozen python scripts/check_project.py
 }
 
 @test "codex execpolicy forbids representative dangerous commands" {

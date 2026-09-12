@@ -105,7 +105,7 @@ JSON
   run run_hook_with_global_rules ".venv/bin/python -c 'print(1)'"
   [ "$status" -eq 2 ]
 
-  run run_hook_with_global_rules "./.venv/bin/python3 scripts/run_audit.py"
+  run run_hook_with_global_rules "./.venv/bin/python3 scripts/check_project.py"
   [ "$status" -eq 2 ]
 
   run run_hook_with_global_rules "/tmp/project/.venv/bin/python -m pytest"

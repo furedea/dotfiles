@@ -106,9 +106,7 @@
         "^git push origin$",
         "^git push (-u |--set-upstream )?origin [a-zA-Z0-9_./-]+$",
         "^git worktree list$",
-        "^git worktree add -b [a-zA-Z0-9_./-]+ [A-Za-z0-9._/-]+ origin/[a-zA-Z0-9_./-]+$",
-        "^uv run python scripts/(collect_transcripts|collect_skills|generate_report|apply_patches|run_audit)\\.py( [^;&|<>$`]+)?$",
-        "^uv run --frozen python scripts/(collect_transcripts|collect_skills|generate_report|apply_patches|run_audit)\\.py( [^;&|<>$`]+)?$"
+        "^git worktree add -b [a-zA-Z0-9_./-]+ [A-Za-z0-9._/-]+ origin/[a-zA-Z0-9_./-]+$"
       ],
       "justification": "Allow precise command forms within prefixes approved by the shared command permissions."
     }

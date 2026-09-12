@@ -143,12 +143,8 @@ setup() {
   [[ "$forbidden" == *guard_forbidden_commands.bats* ]]
 }
 
-@test "skill sources trigger their Python tests" {
+@test "commit splitting sources trigger their Python tests" {
   commit=$(jq -r '."agents/skills/git-commit-split/*"[]' "$RULES")
   [[ "$commit" == *test_branch_name.py* ]]
   [[ "$commit" == *test_build_partial_patch.py* ]]
-
-  auditor=$(jq -r '."agents/skills/skill-auditor/*"[]' "$RULES")
-  [[ "$auditor" == *test_collect_skills.py* ]]
-  [[ "$auditor" == *test_generate_report.py* ]]
 }
