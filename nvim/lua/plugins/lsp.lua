@@ -41,6 +41,12 @@ return {
         },
       })
       vim.lsp.config("rust_analyzer", {
+        cmd = {
+          "lspmux",
+          "client",
+          "--server-path",
+          vim.fn.expand("~/.local/bin/rust-analyzer"),
+        },
         settings = {
           ["rust-analyzer"] = {
             check = {
