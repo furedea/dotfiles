@@ -142,9 +142,3 @@ setup() {
   forbidden=$(jq -r '."agents/hooks/rules/forbidden_commands.json"[]' "$RULES")
   [[ "$forbidden" == *guard_forbidden_commands.bats* ]]
 }
-
-@test "commit splitting sources trigger their Python tests" {
-  commit=$(jq -r '."agents/skills/git-commit-split/*"[]' "$RULES")
-  [[ "$commit" == *test_branch_name.py* ]]
-  [[ "$commit" == *test_build_partial_patch.py* ]]
-}

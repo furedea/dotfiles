@@ -89,10 +89,6 @@
     "tests/agents/hooks/claude/guard_allowed_commands.bats",
     "tests/agents/hooks/claude/guard_forbidden_commands.bats"
   ],
-  "agents/skills/git-commit-split/*": [
-    "tests/agents/python/skills/git-commit-split/test_branch_name.py",
-    "tests/agents/python/skills/git-commit-split/test_build_partial_patch.py"
-  ],
   "flake.nix": [
     "tests/nix"
   ],
