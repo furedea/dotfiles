@@ -2,7 +2,7 @@
 name = "dotfiles-agent-tools"
 version = "0.1.0"
 description = "Python tooling and tests for personal agent skill scripts."
-requires-python = "==3.14.6"
+requires-python = "==3.14.7"
 dependencies = []
 
 [tool.pytest.ini_options]
