@@ -19,7 +19,7 @@ switch_workspace = "prefix+ctrl+1..9"
 [[keys.command]]
 key = "prefix+ctrl+f"
 type = "popup"
-command = "/etc/profiles/per-user/kaito/bin/yazi"
+command = "/usr/bin/env EDITOR=/etc/profiles/per-user/kaito/bin/nvim VISUAL=/etc/profiles/per-user/kaito/bin/nvim /etc/profiles/per-user/kaito/bin/yazi"
 description = "run yazi"
 width = "85%"
 height = "85%"

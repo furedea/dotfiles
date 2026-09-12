@@ -42,11 +42,31 @@ setup() {
         (builtins.head (builtins.filter
           (item: item.description == description)
           config.keys.command)).command;
-      commands = map commandFor [ \"run yazi\" \"run lazygit\" ];
+      yazi = commandFor \"run yazi\";
+      lazygit = commandFor \"run lazygit\";
     in
-    builtins.all
-      (command: builtins.substring 0 1 command == \"/\" && builtins.pathExists command)
-      commands
+    builtins.substring 0 13 yazi == \"/usr/bin/env \"
+      && builtins.pathExists \"/usr/bin/env\"
+      && builtins.pathExists \"/etc/profiles/per-user/kaito/bin/yazi\"
+      && builtins.substring 0 1 lazygit == \"/\"
+      && builtins.pathExists lazygit
+  "
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "true" ]
+}
+
+@test "Herdr Yazi popup uses Neovim as its editor" {
+  run --separate-stderr nix eval --impure --json --expr "
+    let
+      config = builtins.fromTOML (builtins.readFile \"$REPO_ROOT/herdr/config.toml\");
+      yazi = builtins.head (builtins.filter
+        (item: item.description == \"run yazi\")
+        config.keys.command);
+    in
+    builtins.match
+      \".*/usr/bin/env EDITOR=/etc/profiles/per-user/kaito/bin/nvim VISUAL=/etc/profiles/per-user/kaito/bin/nvim /etc/profiles/per-user/kaito/bin/yazi\"
+      yazi.command != null
   "
 
   [ "$status" -eq 0 ]
