@@ -1,34 +1,26 @@
-# Phase 2: TypeScript / Node (pnpm)
+# TypeScript / Node Setup
 
-Prerequisite: repo created via `cd "$($DOTFILES/github/create_repo.sh <name> --private --template furedea/template-typescript)"`. The template provides `flake.nix`, `.envrc`, `package.json`, `tsconfig.json`, `.oxlintrc.json`, `.oxfmtrc.json`, `vitest.config.ts`, `pnpm-workspace.yaml`, `lefthook.yml`, `.commitlintrc.yml`, CI workflows (lint, format, typecheck, test, CodeQL), and `.gitignore`. `github/create_repo.sh` also patches `package.json`'s `name` field and applies GitHub rulesets.
+Use after [development environment setup](dev_environment.md). The default for new projects is
+`furedea/template-typescript` with pnpm. Preserve an existing project's package-manager choice
+unless migration is requested.
 
-## Steps
+## Setup and Verification
 
-1. `direnv allow` — the template already includes `.envrc` (`use flake`).
-2. Verify `which node` and `which pnpm` resolve under `/nix/store/`.
-3. `pnpm install` — resolves dependencies and creates `node_modules/` + `pnpm-lock.yaml`.
-4. Hand off to relevant downstream conventions if applicable.
+1. Inspect `package.json`, its scripts and package-manager declaration, the lock, and the devShell.
+   Verify effective Node and package-manager versions against those definitions, not a version
+   copied into this reference.
+2. Reuse the manifest, source, and tooling configuration. Initialize only missing project files;
+   do not run `pnpm init` when the manifest already exists.
+3. In the project environment, run `pnpm install` for pnpm projects. Preserve the existing lock
+   and configured registries; inspect necessary lock changes rather than upgrading dependencies.
+4. Confirm the installed dependencies support the project's actual scripts. Reuse hook results
+   for lint, format, typecheck, and tests; use a targeted check if required evidence is missing.
 
-CI is already scaffolded by the template — skip that offer in the "After Setup" step.
+## Defaults and Boundaries
 
-## Why pnpm instead of npm / yarn
-
-pnpm's content-addressable store (`~/.local/share/pnpm/store/`) pairs naturally with nix's store model: both deduplicate by hash, both avoid the "works on my machine" problem that flat `node_modules` causes. The user's dotfiles standardize on pnpm, so staying with it means shared cache across projects.
-
-## Why oxlint / oxfmt instead of eslint / prettier
-
-They are Rust-based, orders of magnitude faster than the JS-native equivalents, and the template already includes their configs. Do not swap them out for eslint / prettier unless the project has a concrete reason (e.g., a shared config from upstream).
-
-## Common first-run checks
-
-- `node --version` should print `v22.x` and resolve under `/nix/store/`.
-- `pnpm install` should succeed without network access to a non-pnpm registry.
-- `pnpm run lint` and `pnpm run format:check` should run cleanly.
-
-## What NOT to do
-
-- Do not run `pnpm init` — the template repo already provides `package.json`. Running `pnpm init` overwrites it and loses the curated config.
-- Do not rely on the global `nodejs` or `pnpm` inside a project. The project devShell remains the
-  source of truth even when Home Manager provides global fallbacks.
-- Do not commit `node_modules/`. pnpm's lockfile + nix's `nodejs_22` pin is what makes the build reproducible.
-- Do not mix package managers (npm install + pnpm install in the same repo). pnpm's lockfile format is not interchangeable with npm's.
+- pnpm is the user's new-project default and shares a content-addressed dependency cache.
+  Reproducibility still depends on the toolchain, lock, and installation settings.
+- Keep the template's oxlint/oxfmt setup unless the project has a concrete reason to use different
+  tooling, such as existing upstream conventions. Do not scaffold competing configurations.
+- Do not mix package managers or introduce a second lock format during environment setup.
+- Do not commit `node_modules/`; retain the project toolchain definition and language lock.

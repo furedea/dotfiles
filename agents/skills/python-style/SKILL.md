@@ -11,11 +11,16 @@ description: >
 
 This skill governs **code written inside an already-bootstrapped Python project** — class design, test authoring, refactoring, code review, naming, imports, docstrings.
 
-Project bootstrap (flake.nix, direnv, `uv init`, initial `pyproject.toml` merge) belongs to the `nix-dev-init` skill. If the project is not yet bootstrapped, defer to `nix-dev-init` first and return here once `direnv allow` succeeds and the shell has `uv` on PATH.
+Requested project initialization or Nix environment setup belongs to `nix-dev-init`. Apply these
+development conventions once the project's selected Python environment and required dependencies
+are usable. Routine Python edits do not authorize introducing Nix or changing GitHub settings;
+preserve the existing environment workflow.
 
 ### Why the split
 
-Keeping bootstrap out of this skill has two benefits: (1) when Claude is triggered to write or refactor Python code in an existing project, it does not read a long bootstrap procedure it does not need; (2) the nix `flake.nix` → `direnv` → `uv init` → `pyproject.toml` ordering is an invariant owned by `nix-dev-init` — duplicating a shortcut here would let it drift.
+Environment setup and verification belong to the setup skill. This skill owns day-to-day Python
+development conventions without duplicating an initialization sequence or requiring one for
+already-configured projects.
 
 ## Package Management
 

@@ -1,37 +1,29 @@
-# Phase 2: Rust (cargo)
+# Rust / Cargo Setup
 
-Prerequisite: repo created via `cd "$($DOTFILES/github/create_repo.sh <name> --private --template furedea/template-rust)"`. The template provides `flake.nix`, `.envrc`, `Cargo.toml`, `src/main.rs`, `lefthook.yml`, `.commitlintrc.yml`, CI workflows (lint, format, test, CodeQL), and `.gitignore`. `github/create_repo.sh` also patches `Cargo.toml`'s `name` field and applies GitHub rulesets.
+Use after [development environment setup](dev_environment.md). The default for new projects is
+`furedea/template-rust`; existing projects retain their manifest, workspace, and toolchain policy.
 
-## Steps
+## Setup and Verification
 
-1. `direnv allow` — the template already includes `.envrc` (`use flake`).
-2. Verify `which cargo` and `which rustc` resolve under `/nix/store/`.
-3. `cargo build` — confirms the nix-provided toolchain works end to end.
+1. Inspect `Cargo.toml`, any workspace configuration, lock, and toolchain requirements. Reuse
+   existing source; use `cargo init` only when initial Cargo scaffolding is actually missing.
+2. Verify Cargo and rustc versions and executable locations inside the project environment.
+   Confirm required components such as rustfmt and Clippy are available from the intended toolchain.
+3. Run the relevant project build inside that environment, such as `direnv exec . cargo build`,
+   when equivalent successful evidence is not already available. Preserve the language lock and
+   inspect necessary changes resulting from template renames or manifest edits.
+4. Once the toolchain and required dependencies work, hand off to `rust-style`.
 
-CI is already scaffolded by the template — skip that offer in the "After Setup" step.
+## Toolchain Ownership
 
-## Why not `rust-overlay` / `fenix` by default
+Prefer nixpkgs' Cargo and rustc for a new Nix-managed project when they satisfy its requirements.
+This avoids an extra flake input. Add an overlay or another toolchain source only for a concrete
+need such as a specific release, nightly feature, or target.
 
-The template uses nixpkgs' `cargo` + `rustc` (stable). This is deliberate:
+Do not create `rust-toolchain.toml` merely because the project uses Rust. If an existing project
+uses that file or rustup, respect its requirements and make the intended Nix integration explicit;
+do not silently replace its toolchain policy. For a Nix-owned toolchain, do not install a competing
+rustup toolchain to bypass a failure.
 
-- Nixpkgs stable is good enough for 95% of projects and avoids an extra flake input.
-- `rust-overlay` / `fenix` add a significant first-build cost (the toolchain derivation is large) and lock you to a fresh evaluation every time.
-- When a project genuinely needs a specific toolchain channel or nightly feature, add `rust-overlay` as a one-off project exception — not a default.
-
-## LSP / rust-analyzer
-
-Do **not** add `rust-analyzer` to the devShell. The globally-installed `rust-analyzer` (from `~/ghq/github.com/furedea/dotfiles`) discovers the project's toolchain via `rustc --print sysroot`, and because direnv has put the nix-store `rustc` on PATH, the global LSP automatically uses the correct sysroot per project. Adding a per-project `rust-analyzer` bloats the closure for no benefit.
-
-## Common first-run checks
-
-- `cargo --version` and `rustc --version` should resolve under `/nix/store/`.
-- `cargo build` should succeed on the starter `main.rs`.
-- `cargo clippy` should run without needing extra installs.
-
-## What NOT to do
-
-- Do not run `cargo init` — the template repo already provides `Cargo.toml` and `src/main.rs`. Running `cargo init` overwrites them.
-- Do not rely on the global `cargo` or `rustc` inside a project. The project devShell remains the
-  source of truth even when Home Manager provides global fallbacks.
-- Do not commit `target/`. It is a machine-specific build cache.
-- Do not run `rustup` inside the direnv shell. Nix owns the toolchain; rustup would install a second one into `~/.rustup/` and silently shadow it via `cargo`'s PATH lookup.
+For rust-analyzer issues, apply the editor guidance in the environment reference and check the
+effective sysroot and component compatibility. Keep `target/` out of version control.

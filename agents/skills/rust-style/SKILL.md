@@ -11,7 +11,10 @@ description: >
 
 This skill governs code written inside an already-bootstrapped Rust project: package commands, module layout, test authoring, refactoring, code review, naming, ownership, errors, filesystem operations, comments, and docs.
 
-Project bootstrap (flake.nix, direnv, initial `Cargo.toml`, initial `rust-toolchain.toml`) belongs to the `nix-dev-init` skill. If the project is not yet bootstrapped, defer to `nix-dev-init` first and return here once `direnv allow` succeeds and Cargo is available.
+Requested project initialization or Nix environment setup belongs to `nix-dev-init`. Apply these
+development conventions once the project's selected Cargo/Rust toolchain and required dependencies
+are usable. Respect the existing toolchain-management policy; routine Rust edits do not authorize
+introducing Nix, creating a competing toolchain definition, or changing GitHub settings.
 
 ### Why the split
 

@@ -1,30 +1,37 @@
-# Phase 2: Python (uv)
+# Python / uv Setup
 
-Prerequisite: repo created via `cd "$($DOTFILES/github/create_repo.sh <name> --private --template furedea/template-python)"`. The template provides `flake.nix`, `.envrc`, `pyproject.toml`, CI workflows, `.gitignore`, `lefthook.yml`, `.commitlintrc.yml`, and `renovate.json`. `github/create_repo.sh` also patches `pyproject.toml`'s `name` field and applies GitHub rulesets.
+Use after [development environment setup](dev_environment.md). The default for new projects is
+`furedea/template-python`; existing projects retain their manifests and layout.
 
-## Steps
+## Setup and Verification
 
-1. `direnv allow` — the template already includes `.envrc` (`use flake`).
-2. Verify `which uv` and `which python3` resolve under `/nix/store/`.
-3. Create `src/<package_name>/` and `tests/` directories.
-4. `uv sync` — resolves dependencies and creates `.venv/`.
-5. Hand off to the `python-style` skill.
+1. Inspect `pyproject.toml`, the lock, and the devShell. Match its Python to `requires-python` and
+   any explicit interpreter selection. Run the following commands in the project environment.
+2. Keep `UV_PYTHON_DOWNLOADS=never` and `UV_PYTHON_PREFERENCE=only-system` for the Nix-managed
+   toolchain. These disable downloads and uv-managed interpreter selection; they do not identify
+   the project's Nix interpreter by themselves. Verify the effective settings and selected Python.
+3. Reuse existing source and tests. Follow `python-style` for any missing layout: do not create
+   `src/<package_name>/` unless the project needs a package namespace. Use `uv init` only when an
+   initial manifest is genuinely missing and setup requires it, not over a template manifest.
+4. Run `uv sync` to prepare dependencies. Preserve the existing lock; review any necessary changes
+   caused by manifest adjustments instead of upgrading dependencies as part of bootstrap.
+5. Check the resulting interpreter, for example with:
 
-CI is already scaffolded by the template; reuse its workflows instead of adding duplicates.
+    ```sh
+    direnv exec . uv run python -c 'import os, sys; print(sys.executable); print(os.path.realpath(sys.executable)); print(sys.base_prefix)'
+    ```
 
-## Why uv is pinned to the nix interpreter
+    Confirm the project virtual environment uses the expected Nix Python. Successful sync without
+    a download is not proof of interpreter identity or of the effective download policy.
 
-The template's `flake.nix` sets `UV_PYTHON_DOWNLOADS=never` + `UV_PYTHON_PREFERENCE=only-system` so uv cannot silently download a `python-build-standalone` binary into `~/.local/share/uv/python/`. Without that, you end up with two interpreters on one machine — nix's and uv's — and neither is reproducible from the other. With it, **nix is the single source of truth** for the interpreter and uv is reduced to resolver + lockfile + venv.
+6. Confirm the required dependency groups are usable and hand off to `python-style`.
 
-If nix's `python3` is too old for `requires-python`, uv fails loudly. That is the correct failure mode — fix it by bumping nixpkgs, not by unsetting the env vars.
+## Interpreter Ownership
 
-## Common first-run checks
+Nix owns the interpreter; uv owns dependency resolution, the language lock, and the virtual
+environment. If Python requirements cannot be met, resolve the project toolchain/requirement
+mismatch rather than disabling the download policy. A nixpkgs upgrade is one possible change,
+not an automatic remedy for every mismatch.
 
-- `uv sync` succeeds **without downloading a Python** — this is the only direct confirmation that `UV_PYTHON_DOWNLOADS=never` is in effect.
-- `python -c "import sys; print(sys.executable)"` prints a path under `.venv/` whose interpreter symlinks back to `/nix/store/...-python3-*`.
-
-## What NOT to do
-
-- Do not run `uv init` — the template repo already provides `pyproject.toml`. Running `uv init` overwrites it and loses the curated tool config.
-- Do not unset `UV_PYTHON_DOWNLOADS` / `UV_PYTHON_PREFERENCE` to "just make it work". Those env vars are load-bearing; removing them silently reintroduces the two-interpreter problem this skill exists to prevent.
-- Do not commit `.venv/` — it is a cache keyed to the nix store path and will rot on any flake update.
+An existing `.venv` may reference an older or non-project interpreter. Diagnose it before replacing
+it, then recreate through the project's normal uv workflow when needed. Do not commit `.venv`.
