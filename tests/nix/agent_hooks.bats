@@ -16,7 +16,7 @@ setup() {
   [ "$output" = '["herdr","moshi"]' ]
 }
 
-@test "rendered hooks use managed Herdr assets and the Homebrew Moshi runtime" {
+@test "rendered hooks use managed Herdr assets and the Nix Moshi runtime" {
   run --separate-stderr nix build --no-link --print-out-paths \
     "$REPO_ROOT#homeConfigurations.kaito.activationPackage"
 
@@ -48,10 +48,10 @@ setup() {
     .hooks.Stop
       | any(.[]; any(.hooks[]; .command == "$HOME/.claude/hooks/run_related_tests.sh"))
   ' "$_codex_hooks" >/dev/null
-  grep -Fq -- "'/opt/homebrew/bin/moshi-hook' codex-hook" "$_codex_hooks"
-  grep -Fq -- "'/opt/homebrew/bin/moshi-hook' claude-hook" "$_claude_settings"
-  run grep -Fq -- '/nix/store' "$_codex_hooks"
-  [ "$status" -eq 1 ]
-  run grep -Fq -- '/nix/store' "$_claude_settings"
-  [ "$status" -eq 1 ]
+  grep -Eq -- "'/nix/store/[a-z0-9]+-moshi-hook-0\\.3\\.21/bin/moshi-hook' codex-hook" \
+    "$_codex_hooks"
+  grep -Eq -- "'/nix/store/[a-z0-9]+-moshi-hook-0\\.3\\.21/bin/moshi-hook' claude-hook" \
+    "$_claude_settings"
+  ! grep -Fq -- '/opt/homebrew/bin/moshi-hook' "$_codex_hooks"
+  ! grep -Fq -- '/opt/homebrew/bin/moshi-hook' "$_claude_settings"
 }
