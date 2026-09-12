@@ -30,8 +30,8 @@ let
   terminalBrowserPackage = pkgs.callPackage ../packages/terminal_browser.nix { };
   codexPackage = llm-agents.packages.${system}.codex;
   agentHarnessPackage = agent-harness.packages.${system}.default;
-  moshiHookGenerator = pkgs.callPackage ../packages/moshi_hook.nix { };
-  moshiHookRuntime = "/opt/homebrew/bin/moshi-hook";
+  moshiHookPackage = pkgs.callPackage ../packages/moshi_hook.nix { };
+  moshiHookRuntime = lib.getExe moshiHookPackage;
   moshiLifecycle = pkgs.writeTextFile {
     name = "manage-moshi-hook";
     destination = "/bin/manage_moshi_hook";
@@ -42,8 +42,6 @@ let
   moshiLifecycleEnvironment = {
     JQ_BIN = lib.getExe pkgs.jq;
     MOSHI_HOOK_BIN = moshiHookRuntime;
-    MOSHI_RUNTIME_STATE_FILE = "${config.xdg.stateHome}/moshi-hook/runtime_path";
-    REALPATH_BIN = lib.getExe' pkgs.coreutils "realpath";
     SLEEP_BIN = lib.getExe' pkgs.coreutils "sleep";
   };
   repoCommand = pkgs.writeShellScriptBin "repo" ''
@@ -100,18 +98,12 @@ let
       version = 1;
       installers = [
         {
-          executable = lib.getExe moshiHookGenerator;
+          executable = moshiHookRuntime;
           arguments = [
             "install"
             "--target"
             "claude,codex"
           ];
-        }
-      ];
-      command_replacements = [
-        {
-          from = lib.getExe moshiHookGenerator;
-          to = moshiHookRuntime;
         }
       ];
     }
@@ -188,6 +180,7 @@ in
     rootsPackage
     secretaryCli
     terminalBrowserPackage
+    moshiHookPackage
 
     # Code quality
     actionlint
@@ -550,20 +543,6 @@ in
         RunAtLoad = true;
       };
     };
-    moshi-hook-updater = {
-      enable = true;
-      config = {
-        ProgramArguments = [
-          moshiLifecycleBin
-          "restart-after-update"
-        ];
-        EnvironmentVariables = moshiLifecycleEnvironment;
-        LimitLoadToSessionType = "Aqua";
-        ProcessType = "Background";
-        ThrottleInterval = 30;
-        WatchPaths = [ "/opt/homebrew/Cellar/moshi-hook" ];
-      };
-    };
   };
 
   home.activation = {
@@ -610,14 +589,6 @@ in
         "${config.home.homeDirectory}/.local/libexec/sync_herdr_plugins.sh" \
         ${herdrPluginArgs} 9>/dev/null
     '';
-    moshiHomebrewServiceMigration = lib.mkIf enableMoshiService (
-      lib.hm.dag.entryBetween [ "setupLaunchAgents" ] [ "writeBoundary" ] ''
-        BASH_XTRACEFD=9 \
-          BREW_BIN="/opt/homebrew/bin/brew" \
-          MOSHI_LEGACY_SERVICE_FILE="$HOME/Library/LaunchAgents/homebrew.mxcl.moshi-hook.plist" \
-          "${moshiLifecycleBin}" migrate-homebrew-service 9>/dev/null
-      ''
-    );
   };
 
   # lazygit reads XDG_CONFIG_HOME/lazygit/config.yml first when XDG_CONFIG_HOME is set
@@ -631,6 +602,7 @@ in
     # Zsh（dotfileに実ファイル，直接編集可能）
     ".zshrc".source = link "zsh/.zshrc";
     ".zshenv".source = link "zsh/.zshenv";
+    ".local/bin/moshi-hook".source = moshiHookRuntime;
     ".zprofile".source = link "zsh/.zprofile";
 
     # Bash

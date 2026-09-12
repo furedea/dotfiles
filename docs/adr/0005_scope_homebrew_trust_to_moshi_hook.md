@@ -1,7 +1,8 @@
 # ADR-0005: Scope Homebrew trust to moshi-hook
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-08-21
+- Superseded by: ADR-0025
 
 In the context of installing Moshi from a third-party Homebrew tap on managed Macs, facing formula
 definitions that execute Ruby with the user's privileges, we decided for formula-scoped trust of
