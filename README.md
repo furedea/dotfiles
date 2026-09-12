@@ -89,6 +89,31 @@ Files managed with `mkOutOfStoreSymlink` update immediately when their source in
 this checkout changes. Nix-generated files and Home Manager program settings
 still require a switch.
 
+### Rust Language Server
+
+Start Neovim from each project's direnv-enabled shell. Rust connections use
+[lspmux](https://codeberg.org/p2502/lspmux); other language servers start directly.
+Home Manager manages its LaunchAgent and native macOS configuration under
+`~/Library/Application Support/lspmux/`. Inspect the service with `lspmux config`,
+`lspmux status --json`, or `~/Library/Logs/lspmux.log`.
+
+The global analyzer is independent of rustup. Keep `rust-analyzer` out of project
+dev shells; provide the project's compiler, Cargo, Clippy, and Rust sources there.
+The environment allowlist in [`nix/home/default.nix`](nix/home/default.nix) forwards
+toolchain and native build settings from Neovim. Add project-specific build
+variables there when needed; arbitrary environment variables are not forwarded.
+Changing directories inside an existing Neovim does not run the shell's direnv
+hook. Open another Neovim from the other project's shell when toolchains differ.
+
+The daemon reuses an analyzer when its workspace, executable, arguments, and
+forwarded environment match. After the last client disconnects, the analyzer
+remains until the configured idle timeout and the next garbage collection check.
+The daemon itself remains available. Restart Neovim from a refreshed shell after
+changing a toolchain or build environment. LSP multi-folder workspaces are not
+supported by lspmux 0.3.0; Cargo workspace members can share their Cargo root.
+If only configuration files change and the forwarded environment stays identical,
+wait for the old instance to expire or restart the service before reconnecting.
+
 ## What Is Managed
 
 ### macOS and Homebrew

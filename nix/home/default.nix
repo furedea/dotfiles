@@ -234,6 +234,7 @@ in
     uv
 
     # Rust tooling
+    lspmux
     rustup
 
     # TypeScript tooling
@@ -504,6 +505,20 @@ in
   };
 
   launchd.agents = {
+    lspmux = {
+      enable = true;
+      config = {
+        ProgramArguments = [
+          (lib.getExe pkgs.lspmux)
+          "server"
+        ];
+        EnvironmentVariables.PATH = "/usr/bin:/bin:/usr/sbin:/sbin";
+        KeepAlive = true;
+        ProcessType = "Background";
+        RunAtLoad = true;
+        StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/lspmux.log";
+      };
+    };
     ssh-agent-loader = {
       enable = true;
       config = {
@@ -633,6 +648,50 @@ in
 
     # Neovim（多ファイル・頻繁に編集）
     ".config/nvim".source = link "nvim";
+
+    # Keep the analyzer independent of rustup and discover sources from the project toolchain.
+    ".local/bin/rust-analyzer".source = lib.getExe' unstable.rust-analyzer-unwrapped "rust-analyzer";
+    # lspmux uses the native macOS config directory, not XDG_CONFIG_HOME.
+    "Library/Application Support/lspmux/config.toml".text = ''
+      instance_timeout = 300
+      pass_environment = [
+        "PATH",
+        "CARGO_HOME",
+        "CARGO_TARGET_DIR",
+        "CARGO_BUILD_TARGET",
+        "CARGO_ENCODED_RUSTFLAGS",
+        "RUSTUP_HOME",
+        "RUSTUP_TOOLCHAIN",
+        "RUSTC",
+        "RUSTC_WRAPPER",
+        "RUSTC_WORKSPACE_WRAPPER",
+        "RUSTDOC",
+        "RUSTDOCFLAGS",
+        "RUSTFLAGS",
+        "RUST_SRC_PATH",
+        "CC",
+        "CXX",
+        "AR",
+        "CFLAGS",
+        "CXXFLAGS",
+        "LDFLAGS",
+        "LIBRARY_PATH",
+        "LD_LIBRARY_PATH",
+        "DYLD_LIBRARY_PATH",
+        "PKG_CONFIG_PATH",
+        "PKG_CONFIG_LIBDIR",
+        "PKG_CONFIG_SYSROOT_DIR",
+        "NIX_CC",
+        "NIX_BINTOOLS",
+        "NIX_CFLAGS_COMPILE",
+        "NIX_CFLAGS_LINK",
+        "NIX_LDFLAGS",
+        "NIX_ENFORCE_PURITY",
+        "SDKROOT",
+        "DEVELOPER_DIR",
+        "MACOSX_DEPLOYMENT_TARGET",
+      ]
+    '';
 
     # Starship
     ".config/starship.toml".source = link "starship/starship.toml";
