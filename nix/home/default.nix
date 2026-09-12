@@ -135,7 +135,7 @@ let
     {
       id = "persiyanov.reviewr";
       source = "persiyanov/herdr-reviewr";
-      rev = "8db4c8e4a0a287a63b8265aea7da4bfe7a8d0f3a";
+      rev = "4c090225af706bf3aaa24b39fea890a72994f40f";
     }
   ];
   herdrPluginArgs = lib.escapeShellArgs (
