@@ -12,12 +12,12 @@ description: >
 Choose only the paths needed for the request; repository configuration and local environment
 setup are independent tasks.
 
-| Request                                                                        | Read                                                                                           |
-| ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
-| Create a GitHub repository, with or without a template                         | [Repository setup](references/repository_setup.md)                                             |
-| Apply standard GitHub settings to an existing repository                       | [Repository setup](references/repository_setup.md), existing repository section only           |
-| Introduce or complete a project Nix environment, including local-only projects | [Development environment](references/dev_environment.md), then the relevant language reference |
-| Create a project and make it ready for development                             | Repository setup, development environment, then the relevant language reference                |
+| Request                                                                        | Read                                                                                 |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| Create a GitHub repository, with or without a template                         | [Repository setup](references/repository_setup.md)                                   |
+| Apply standard GitHub settings to an existing repository                       | [Repository setup](references/repository_setup.md), existing repository section only |
+| Introduce or complete a project Nix environment, including local-only projects | [Development environment](references/dev_environment.md)                             |
+| Create a project and make it ready for development                             | Repository setup and development environment                                         |
 
 Do not introduce Nix or change GitHub settings merely because a code-editing task loads a
 language skill. Global nix-darwin/Home Manager configuration belongs to `nix-dotfiles`;
@@ -35,19 +35,20 @@ branches and authorized commits, pushes, and PRs belong to `git-workflow`.
 - Complete the requested setup and relevant verification. Report partial completion and blockers
   without expanding into unrelated repositories, global configuration, or publication.
 
-## Templates and Language References
+## Templates and Development Conventions
 
 For new projects, the user's defaults are:
 
-| Project                  | Template                      | Read after environment setup                | Development conventions       |
-| ------------------------ | ----------------------------- | ------------------------------------------- | ----------------------------- |
-| Python / uv              | `furedea/template-python`     | [Python](references/lang_python.md)         | `python-style`                |
-| TypeScript / Node / pnpm | `furedea/template-typescript` | [TypeScript](references/lang_typescript.md) | Existing project conventions  |
-| Rust / Cargo             | `furedea/template-rust`       | [Rust](references/lang_rust.md)             | `rust-style`                  |
-| TeX / LaTeX              | `furedea/template-tex`        | [TeX](references/lang_tex.md)               | Existing project conventions  |
-| Other languages          | `furedea/template-minimal`    | [Fallback](references/lang_fallback.md)     | Relevant language conventions |
+| Project                  | Template                      | Development conventions       |
+| ------------------------ | ----------------------------- | ----------------------------- |
+| Python / uv              | `furedea/template-python`     | `python-style`                |
+| TypeScript / Node / pnpm | `furedea/template-typescript` | Existing project conventions  |
+| Rust / Cargo             | `furedea/template-rust`       | `rust-style`                  |
+| TeX / LaTeX              | `furedea/template-tex`        | Existing project conventions  |
+| Other languages          | `furedea/template-minimal`    | Relevant language conventions |
 
-Read only references for the affected workflows and languages. Existing projects need not have
+Read the reference for the requested workflow. The development-environment reference includes
+language-specific notes; apply those relevant to the project. Existing projects need not have
 been created from one of these templates to use the environment-setup path.
 
 ## Completion and Handoff
