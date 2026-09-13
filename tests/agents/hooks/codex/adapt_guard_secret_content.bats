@@ -17,24 +17,6 @@ setup() {
   [[ "$output" == *"Usage"* ]]
 }
 
-@test "added_patch_text extracts added lines from unified diff" {
-  result=$(printf '%s' '--- a/foo.py
-+++ b/foo.py
-@@ -1 +1 @@
--old
-+new_line
-+another' | awk '/^\+\+\+/ { next } /^\+/ { print substr($0, 2) }')
-
-  [ "$result" = "$(printf 'new_line\nanother')" ]
-}
-
-@test "added_patch_text skips +++ header lines" {
-  result=$(printf '%s' '+++ b/foo.py
-+actual content' | awk '/^\+\+\+/ { next } /^\+/ { print substr($0, 2) }')
-
-  [ "$result" = "actual content" ]
-}
-
 @test "prompt mode delegates to shared scanner" {
   STUB_DIR="$(mktemp -d "$BATS_TEST_TMPDIR/stub.XXXXXX")"
   mkdir -p "$STUB_DIR/.claude/hooks"

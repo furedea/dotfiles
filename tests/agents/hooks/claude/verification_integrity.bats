@@ -96,6 +96,8 @@ assert_incomplete() {
 @test "missing required default rules are reported" {
   mkdir -p "$BATS_TEST_TMPDIR/hooks"
   cp "$HOOK" "$BATS_TEST_TMPDIR/hooks/run_related_tests.sh"
+  cp "$HOOK_DIR/run_related_tests.py" "$BATS_TEST_TMPDIR/hooks/run_related_tests.py"
+  cp -R "$HOOK_DIR/lib" "$BATS_TEST_TMPDIR/hooks/lib"
   touch source.py pyproject.toml
 
   run bash "$BATS_TEST_TMPDIR/hooks/run_related_tests.sh"

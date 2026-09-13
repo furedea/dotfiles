@@ -1,19 +1,24 @@
 #!/usr/bin/env bash
+# Keep the shell entry point; Python owns the workflow.
+set -euCo pipefail
 
-# lint_format_lua.sh
-# Quality Loop: stylua -> capture residual selene diagnostics as PostToolUse
-# additionalContext JSON. Always exits 0.
+function run_python() {
+  local _python="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/bin/python3"
+  [[ -x "$_python" ]] || _python=python3
+  exec "$_python" -I -B -c '
+import pathlib
+import runpy
+import sys
 
-set -eo pipefail
-# shellcheck source=lib/lint_format.sh
-source "$(dirname "$0")/lib/lint_format.sh"
+script = pathlib.Path(sys.argv.pop(1)).resolve().with_name("lint_format.py")
+sys.argv[0] = str(script)
+runpy.run_path(str(script), run_name="__main__")
+' "${BASH_SOURCE[0]}" lua "$@"
+}
 
-load_file_path # sets FILE_PATH, FILENAME
+function usage() {
+  run_python --help
+}
 
-require_cmd stylua
-run_quality_step "stylua format" stylua "$FILE_PATH"
-
-require_cmd selene
-# selene 0.25+ only reads selene.toml from CWD (no upward search); walk up manually.
-SELENE_DIR=$(find_project_root "$(dirname "$FILE_PATH")" selene.toml) || SELENE_DIR="$(dirname "$FILE_PATH")"
-(cd "$SELENE_DIR" && run_quality_step "selene lint" selene "$FILE_PATH")
+[[ "${1:-}" == "--help" || "${1:-}" == "-h" ]] && usage
+run_python "$@"

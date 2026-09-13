@@ -1,30 +1,24 @@
 #!/usr/bin/env bash
+# Keep the shell entry point; Python owns the workflow.
+set -euCo pipefail
 
-# lint_format_tex.sh
-# Quality Loop: tex-fmt -> capture residual chktex diagnostics as PostToolUse
-# additionalContext JSON. Always exits 0.
-# Handles .tex, .cls, .sty (format + lint) and .bib (format only).
+function run_python() {
+  local _python="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/bin/python3"
+  [[ -x "$_python" ]] || _python=python3
+  exec "$_python" -I -B -c '
+import pathlib
+import runpy
+import sys
 
-set -eo pipefail
-# shellcheck source=lib/lint_format.sh
-source "$(dirname "$0")/lib/lint_format.sh"
+script = pathlib.Path(sys.argv.pop(1)).resolve().with_name("lint_format.py")
+sys.argv[0] = str(script)
+runpy.run_path(str(script), run_name="__main__")
+' "${BASH_SOURCE[0]}" tex "$@"
+}
 
-load_file_path # sets FILE_PATH, FILENAME
+function usage() {
+  run_python --help
+}
 
-EXTENSION="${FILE_PATH##*.}"
-
-require_cmd tex-fmt
-run_quality_step "tex-fmt format" tex-fmt "$FILE_PATH"
-
-# chktex does not support .bib files.
-[ "$EXTENSION" = "bib" ] && exit 0
-
-require_cmd chktex
-# chktex exits 0 even with warnings; rely on non-empty stdout as the signal.
-LINT_STATUS=0
-VIOLATIONS=$(chktex -q -n22 -n30 "$FILE_PATH" 2>&1) || LINT_STATUS=$?
-if [ "$LINT_STATUS" -ne 0 ]; then
-  emit_quality_failure "chktex lint" "$LINT_STATUS" "$VIOLATIONS"
-elif [ -n "$VIOLATIONS" ]; then
-  emit_post_tool_context "Quality check failed"$'\n'"chktex lint · $FILE_PATH · exit 0"$'\n'"Diagnostics: $VIOLATIONS"
-fi
+[[ "${1:-}" == "--help" || "${1:-}" == "-h" ]] && usage
+run_python "$@"

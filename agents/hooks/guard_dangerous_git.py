@@ -1,0 +1,46 @@
+"""Explain dangerous Git operations before the provider's hard permission boundary."""
+
+import json
+from pathlib import Path
+import sys
+
+
+ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "lib"))
+
+import audit_events
+import git_safety
+import shell_syntax
+
+
+def main() -> int:
+    """Inspect parsed literal commands and reject uninspectable input."""
+    if sys.argv[1:]:
+        print("Usage: guard_dangerous_git.py < hook-input.json", file=sys.stderr)
+        return 0 if sys.argv[1:] in (["-h"], ["--help"]) else 1
+    payload: dict = {}
+    command = ""
+    try:
+        candidate = json.load(sys.stdin)
+        if not isinstance(candidate, dict):
+            raise ValueError("invalid hook input: expected an object")
+        payload = candidate
+        command = payload.get("tool_input", {}).get("command") or ""
+        for item in shell_syntax.parse(command):
+            if reason := git_safety.reason(item.arguments):
+                if item.wrapper_depth:
+                    reason = f"shell wrapper contains {reason}"
+                raise ValueError(f"{reason}.\n\nSegment: {item.raw}")
+    except (ValueError, TypeError, AttributeError) as error:
+        message = f"BLOCKED: {error}\n\nUse a non-destructive command or ask the user to review this operation."
+        audit_events.blocked(
+            "Bash", command, message.splitlines()[0], "guard_dangerous_git.sh", payload.get("session_id", "")
+        )
+        print(message, file=sys.stderr)
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

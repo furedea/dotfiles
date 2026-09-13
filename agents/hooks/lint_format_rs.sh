@@ -1,14 +1,24 @@
 #!/usr/bin/env bash
+# Keep the shell entry point; Python owns the workflow.
+set -euCo pipefail
 
-# lint_format_rs.sh
-# Quality Loop: rustfmt only. Cargo clippy is cross-file (whole crate) and
-# runs at pre-commit / CI, not per file.
+function run_python() {
+  local _python="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/bin/python3"
+  [[ -x "$_python" ]] || _python=python3
+  exec "$_python" -I -B -c '
+import pathlib
+import runpy
+import sys
 
-set -eo pipefail
-# shellcheck source=lib/lint_format.sh
-source "$(dirname "$0")/lib/lint_format.sh"
+script = pathlib.Path(sys.argv.pop(1)).resolve().with_name("lint_format.py")
+sys.argv[0] = str(script)
+runpy.run_path(str(script), run_name="__main__")
+' "${BASH_SOURCE[0]}" rs "$@"
+}
 
-load_file_path # sets FILE_PATH, FILENAME
+function usage() {
+  run_python --help
+}
 
-require_cmd rustfmt
-run_quality_step "rustfmt format" rustfmt "$FILE_PATH"
+[[ "${1:-}" == "--help" || "${1:-}" == "-h" ]] && usage
+run_python "$@"

@@ -236,7 +236,7 @@ These tracked files are not applied by Home Manager or nix-darwin:
 ├── karabiner/                 # Keyboard remapping
 ├── starship/                  # Shell prompt
 ├── github/                    # Repository creation and policy scripts
-├── tests/                     # Bats specifications by domain
+├── tests/                     # Python contracts and Bats integration by domain
 ├── dprint/ and prettier/      # Global formatter configuration
 ├── raycast/                   # Manual settings export
 └── templates/                 # Manually copied reference templates
@@ -282,9 +282,20 @@ repo configure <name-or-owner/name>
 
 A name without an owner defaults to the authenticated GitHub user. Run
 `repo --help` or `repo -h` for the command overview. The commands are covered
-by Bats tests under `tests/github/`.
+by Python tests under `tests/python/` and Bats integration tests under `tests/github/`.
 
 ## Formatting and Validation
+
+Automation logic uses Python's standard library, without runtime pip packages.
+The project environment supplies development tools such as pytest, Ruff, and ty.
+Home Manager provides a fixed interpreter at `$XDG_CONFIG_HOME/dotfiles/bin/python3`
+(`~/.config` when unset); shell entry points prefer it over a project virtualenv.
+The shell fallback to `python3` supports development and CI before activation.
+
+Python tests cover policy decisions, test selection, and structured output. Bats
+checks executable entry points, provider payloads, command failures, and shell or
+editor integration. Declarative Home Manager and host contracts also have native
+flake checks in `nix/checks.nix`.
 
 Lefthook runs the pre-commit format and lint checks for changed files:
 
@@ -300,10 +311,11 @@ bats tests/herdr
 bats tests/esa
 bats tests/nix
 AGENT_HARNESS_BIN=agent-harness bats --recursive tests/agents
-uv run --frozen pytest tests/agents/python
+uv run --frozen pytest
+nix flake check
 ```
 
-CI checks GitHub and personal agent scripts with Bats, checks agent skill scripts
+CI checks GitHub and personal agent scripts with Bats, checks Python automation
 with Ruff, ty, and pytest, checks shell scripts with ShellCheck, checks Lua with
 Selene and StyLua, checks Nix with Statix, deadnix, and nixfmt, checks JSON/TOML
 with dprint, and lints prose with AutoCorrect. GitHub Actions are also checked

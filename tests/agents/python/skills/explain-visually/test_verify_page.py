@@ -5,7 +5,7 @@ import stat
 import pytest
 from pytest_mock import MockerFixture
 
-from tests.agents.python.conftest import REPO_ROOT, load_script_module
+from conftest import REPO_ROOT, load_script_module
 
 
 verify_page = load_script_module(

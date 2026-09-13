@@ -11,7 +11,8 @@ install_shared_hook() {
 
   mkdir -p "$_home/.claude/hooks/lib" "$_home/.claude/hooks/rules"
   cp "$REPO_ROOT/agents/hooks/guard_harness_files.sh" "$_home/.claude/hooks/"
-  cp "$REPO_ROOT/agents/hooks/lib/audit_log.sh" "$_home/.claude/hooks/lib/"
+  cp "$REPO_ROOT/agents/hooks/guard_files.py" "$REPO_ROOT/agents/hooks/audit_events.py" "$_home/.claude/hooks/"
+  cp "$REPO_ROOT/agents/hooks/lib/command_policy.py" "$_home/.claude/hooks/lib/"
   jq -n '{version:1,paths:["~/.codex/hooks/adapt_shell_command.sh"]}' \
     >"$_home/.claude/hooks/rules/protected_paths.json"
   chmod +x "$_home/.claude/hooks/guard_harness_files.sh"

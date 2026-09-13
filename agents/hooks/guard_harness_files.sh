@@ -1,74 +1,24 @@
 #!/usr/bin/env bash
-# Claude Code PreToolUse hook: block edits to installed harness files.
-# The permissions/sandbox layer is the hard boundary; this hook adds an
-# explanatory block reason plus audit logging before that boundary is reached.
-# Exit code 0 = allow, exit code 2 = block.
-
+# Keep the shell entry point; Python owns the workflow.
 set -euCo pipefail
 
-# shellcheck disable=SC1091
-source "$(dirname "${BASH_SOURCE[0]}")/lib/audit_log.sh"
+function run_python() {
+  local _python="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/bin/python3"
+  [[ -x "$_python" ]] || _python=python3
+  exec "$_python" -I -B -c '
+import pathlib
+import runpy
+import sys
 
-HOOK_DIR="$(dirname "${BASH_SOURCE[0]}")"
-readonly HOOK_DIR
-readonly DEFAULT_POLICY_FILE="$HOOK_DIR/rules/protected_paths.json"
-readonly POLICY_FILE="${AGENT_PROTECTED_PATH_POLICY:-$DEFAULT_POLICY_FILE}"
-
-INPUT=$(cat)
-TOOL=$(echo "$INPUT" | jq -r '.tool_name // "Edit"')
-SESSION=$(echo "$INPUT" | jq -r '.session_id // empty')
-FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // .tool_input.path // empty')
-
-[ -z "$FILE_PATH" ] && exit 0
-
-if [ ! -f "$POLICY_FILE" ] || ! jq -e '
-  type == "object" and
-  .version == 1 and
-  (.paths | type == "array" and length > 0 and all(.[]; type == "string" and length > 0))
-' "$POLICY_FILE" >/dev/null 2>&1; then
-  echo "BLOCKED: invalid protected path policy: $POLICY_FILE" >&2
-  exit 2
-fi
-
-function expand_home_path() {
-  local _path="$1"
-
-  # shellcheck disable=SC2088  # policy paths intentionally use literal "~/"
-  if [[ "$_path" == "~/"* ]]; then
-    printf '%s/%s\n' "$HOME" "${_path:2}"
-    return
-  fi
-  printf '%s\n' "$_path"
+script = pathlib.Path(sys.argv.pop(1)).resolve().with_name("guard_files.py")
+sys.argv[0] = str(script)
+runpy.run_path(str(script), run_name="__main__")
+' "${BASH_SOURCE[0]}" harness "$@"
 }
 
-function is_protected_path() {
-  local _file_path
-  local _protected_path
-
-  _file_path="$(expand_home_path "$1")"
-  while IFS= read -r _protected_path; do
-    if [[ "$_file_path" == "$(expand_home_path "$_protected_path")" ]]; then
-      return 0
-    fi
-  done < <(jq -r '.paths[]' "$POLICY_FILE")
-  return 1
+function usage() {
+  run_python --help
 }
 
-if is_protected_path "$FILE_PATH"; then
-  log_blocked "$TOOL" "$FILE_PATH" "agent harness boundary is protected" guard_harness_files.sh "$SESSION"
-  cat >&2 <<ERRMSG
-BLOCKED: $FILE_PATH is part of the agent harness boundary.
-
-Why: Installed hooks, agent instructions, and generated permission bindings
-     protect the safety checks themselves. Change the source under dotfiles/agents and
-     regenerate these files instead of editing generated output.
-
-What to do:
-  Agent: Change the source under dotfiles/agents, then regenerate the installed
-         files.
-  User: Review and authorize the source change as usual.
-ERRMSG
-  exit 2
-fi
-
-exit 0
+[[ "${1:-}" == "--help" || "${1:-}" == "-h" ]] && usage
+run_python "$@"

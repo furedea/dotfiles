@@ -402,7 +402,7 @@ EOF
   git config user.name t
   git config commit.gpgsign false
   mkdir -p bin home/.config/agent-harness/bin tests
-  for _dependency in awk bash cat date dirname find grep jq mkdir mktemp rm sort; do
+  for _dependency in awk bash cat date dirname find grep jq mkdir mktemp python3 rm sort; do
     ln -s "$(command -v "$_dependency")" "bin/$_dependency"
   done
   cat > bin/git <<EOF
@@ -410,8 +410,8 @@ EOF
 case "\$*" in
   "rev-parse --show-toplevel") printf '%s\n' "$TEST_TMPDIR" ;;
   "merge-base HEAD HEAD") printf '%s\n' base ;;
-  "diff --name-only base --") printf '%s\n' script.sh ;;
-  "ls-files --others --exclude-standard") exit 0 ;;
+  "diff --name-only -z base --") printf '%s\0' script.sh ;;
+  "ls-files --others --exclude-standard -z") exit 0 ;;
   *) exit 1 ;;
 esac
 EOF

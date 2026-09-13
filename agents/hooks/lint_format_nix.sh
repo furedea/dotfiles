@@ -1,21 +1,24 @@
 #!/usr/bin/env bash
+# Keep the shell entry point; Python owns the workflow.
+set -euCo pipefail
 
-# lint_format_nix.sh
-# Quality Loop: nixfmt -> statix --fix -> capture residual statix + deadnix
-# diagnostics via PostToolUse additionalContext JSON. Always exits 0.
+function run_python() {
+  local _python="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/bin/python3"
+  [[ -x "$_python" ]] || _python=python3
+  exec "$_python" -I -B -c '
+import pathlib
+import runpy
+import sys
 
-set -eo pipefail
-# shellcheck source=lib/lint_format.sh
-source "$(dirname "$0")/lib/lint_format.sh"
+script = pathlib.Path(sys.argv.pop(1)).resolve().with_name("lint_format.py")
+sys.argv[0] = str(script)
+runpy.run_path(str(script), run_name="__main__")
+' "${BASH_SOURCE[0]}" nix "$@"
+}
 
-load_file_path # sets FILE_PATH, FILENAME
+function usage() {
+  run_python --help
+}
 
-require_cmd nixfmt
-run_quality_step "nixfmt format" nixfmt "$FILE_PATH"
-
-require_cmd statix
-run_quality_step "statix fix" statix fix "$FILE_PATH"
-run_quality_step "statix lint" statix check "$FILE_PATH"
-
-require_cmd deadnix
-run_quality_step "deadnix lint" deadnix --fail "$FILE_PATH"
+[[ "${1:-}" == "--help" || "${1:-}" == "-h" ]] && usage
+run_python "$@"

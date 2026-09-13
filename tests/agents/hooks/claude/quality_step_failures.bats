@@ -48,28 +48,8 @@ setup() {
   done
 }
 
-@test "missing tools report unavailable with the target and stop the file hook" {
-  run bash -c 'source "$1/lib/lint_format.sh"; FILE_PATH="$2"; require_cmd absent-quality-tool-for-test; echo unexpected' \
-    _ "$HOOK_DIR" "$BATS_TEST_TMPDIR/source with spaces.sh"
-  [ "$status" -eq 0 ]
-  local _context
-  _context=$(jq -r '.hookSpecificOutput.additionalContext' <<<"$output")
-  [ "$_context" = "Quality check unavailable"$'\n'"absent-quality-tool-for-test · $BATS_TEST_TMPDIR/source with spaces.sh"$'\n'"Reason: absent-quality-tool-for-test not found in PATH." ]
-}
 
-@test "successful quality steps are silent even when the tool prints output" {
-  run bash -c 'source "$1/lib/lint_format.sh"; run_quality_step "example lint" printf "all good\n"' _ "$HOOK_DIR"
-  [ "$status" -eq 0 ]
-  [ -z "$output" ]
-}
 
-@test "quality failures without diagnostics still report the exit status" {
-  run bash -c 'source "$1/lib/lint_format.sh"; FILE_PATH=source.sh; run_quality_step "example lint" bash -c "exit 3"' _ "$HOOK_DIR"
-  [ "$status" -eq 0 ]
-  local _context
-  _context=$(jq -r '.hookSpecificOutput.additionalContext' <<<"$output")
-  [ "$_context" = $'Quality check failed\nexample lint · source.sh · exit 3\nError: No diagnostic output.' ]
-}
 
 @test "chktex warnings remain visible even when the command exits zero" {
   printf '#!/usr/bin/env bash\nprintf "Warning 1: unexpected spacing\\n"\n' >"$BATS_TEST_TMPDIR/bin/chktex"

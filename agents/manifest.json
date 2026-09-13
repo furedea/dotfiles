@@ -2,6 +2,10 @@
   "version": 1,
   "runtime_commands": [
     "bash",
-    "jq"
+    "jq",
+    "python3",
+    "shfmt",
+    "grep",
+    "rg"
   ]
 }

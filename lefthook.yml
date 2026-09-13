@@ -39,10 +39,10 @@ pre-commit:
       run: actionlint {all_files}
     ruff-format:
       glob: "*.py"
-      run: uv run --frozen ruff format --check agents/skills tests/agents/python
+      run: uv run --frozen ruff format --check agents github herdr zsh tests
     ruff-check:
       glob: "*.py"
-      run: uv run --frozen ruff check agents/skills tests/agents/python
+      run: uv run --frozen ruff check agents github herdr zsh tests
     ty:
       glob: "*.py"
       run: uv run --frozen ty check

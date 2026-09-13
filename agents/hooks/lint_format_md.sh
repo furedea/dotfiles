@@ -1,28 +1,24 @@
 #!/usr/bin/env bash
+# Keep the shell entry point; Python owns the workflow.
+set -euCo pipefail
 
-# lint_format_md.sh
-# Quality Loop: autocorrect --fix -> prettierd (atomic swap via stdin/stdout).
-# Format-only; emits execution errors as context. Always exits 0.
+function run_python() {
+  local _python="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/bin/python3"
+  [[ -x "$_python" ]] || _python=python3
+  exec "$_python" -I -B -c '
+import pathlib
+import runpy
+import sys
 
-set -eo pipefail
-# shellcheck source=lib/lint_format.sh
-source "$(dirname "$0")/lib/lint_format.sh"
+script = pathlib.Path(sys.argv.pop(1)).resolve().with_name("lint_format.py")
+sys.argv[0] = str(script)
+runpy.run_path(str(script), run_name="__main__")
+' "${BASH_SOURCE[0]}" md "$@"
+}
 
-load_file_path # sets FILE_PATH, FILENAME
+function usage() {
+  run_python --help
+}
 
-require_cmd autocorrect
-run_quality_step "autocorrect format" autocorrect --fix "$FILE_PATH"
-
-require_cmd prettierd
-TMPFILE=$(mktemp)
-ERROR_FILE=$(mktemp)
-# shellcheck disable=SC2094
-if PRETTIERD_DEFAULT_CONFIG="$HOME/.prettierrc" \
-  prettierd "$FILE_PATH" <"$FILE_PATH" >"$TMPFILE" 2>"$ERROR_FILE"; then
-  mv "$TMPFILE" "$FILE_PATH"
-else
-  FORMAT_STATUS=$?
-  emit_quality_failure "prettierd format" "$FORMAT_STATUS" "$(cat "$ERROR_FILE")"
-  rm -f "$TMPFILE"
-fi
-rm -f "$ERROR_FILE"
+[[ "${1:-}" == "--help" || "${1:-}" == "-h" ]] && usage
+run_python "$@"

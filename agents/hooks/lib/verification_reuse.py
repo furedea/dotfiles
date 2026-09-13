@@ -94,7 +94,7 @@ def execute_gate(hook: Path, payload: bytes) -> subprocess.CompletedProcess:
     """Run the original gate, with recursive reuse disabled."""
     environment = dict(os.environ, RUN_RELATED_TESTS_REUSE="0")
     environment.pop("AGENT_VERIFICATION_STARTED_AT", None)
-    return subprocess.run(["bash", str(hook)], input=payload, capture_output=True, env=environment)
+    return subprocess.run(["bash", str(hook)], input=payload, capture_output=True, env=environment, check=False)
 
 
 def cache_directory(root: Path, session: str) -> Path:

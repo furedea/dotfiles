@@ -4,23 +4,17 @@
 setup() {
   load test-helper/setup
   HOOK="$HOOK_DIR/guard_secret_content.sh"
-  PATTERNS_FILE="$HOOK_DIR/rules/secret_content_patterns.json"
 
   # Create a temp directory for test files
   TEST_TMPDIR="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/secret.XXXXXX")"
 
-  # Back up patterns file byte-for-byte so trailing newlines survive restore
-  PATTERNS_BACKUP=""
-  if [ -f "$PATTERNS_FILE" ]; then
-    PATTERNS_BACKUP="$TEST_TMPDIR/patterns.bak"
-    cp "$PATTERNS_FILE" "$PATTERNS_BACKUP"
-  fi
+  # Mutate only isolated policy fixtures, never the repository's live scanner rules.
+  PATTERNS_FILE="$TEST_TMPDIR/patterns.json"
+  cp "$HOOK_DIR/rules/secret_content_patterns.json" "$PATTERNS_FILE"
+  export AGENT_SECRET_CONTENT_PATTERNS="$PATTERNS_FILE"
 }
 
 teardown() {
-  if [ -n "$PATTERNS_BACKUP" ] && [ -f "$PATTERNS_BACKUP" ]; then
-    cp "$PATTERNS_BACKUP" "$PATTERNS_FILE"
-  fi
   [ -d "${TEST_TMPDIR:-}" ] && rm -rf "$TEST_TMPDIR"
 }
 

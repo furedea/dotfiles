@@ -126,19 +126,3 @@ MINIMAL_INPUT='{"model":{"display_name":"Opus 4.6"},"cwd":"/tmp/test","context_w
 # ============================================================
 # Helper functions
 # ============================================================
-
-@test "fmt_duration formats days" {
-  # Extract fmt_duration function and test it in isolation
-  run bash -c "$(sed -n '/^function fmt_duration()/,/^}/p' "$STATUSLINE"); fmt_duration 90061"
-  [[ "$output" == "1d 1h" ]]
-}
-
-@test "fmt_duration formats hours" {
-  run bash -c "$(sed -n '/^function fmt_duration()/,/^}/p' "$STATUSLINE"); fmt_duration 7260"
-  [[ "$output" == "2h 1m" ]]
-}
-
-@test "fmt_duration formats minutes" {
-  run bash -c "$(sed -n '/^function fmt_duration()/,/^}/p' "$STATUSLINE"); fmt_duration 300"
-  [[ "$output" == "5m" ]]
-}

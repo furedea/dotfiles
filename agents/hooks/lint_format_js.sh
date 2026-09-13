@@ -1,19 +1,24 @@
 #!/usr/bin/env bash
+# Keep the shell entry point; Python owns the workflow.
+set -euCo pipefail
 
-# lint_format_js.sh
-# Quality Loop: format (oxfmt) -> auto-fix (oxlint --fix) -> emit residual
-# warnings/errors as PostToolUse additionalContext JSON. Always exits 0.
+function run_python() {
+  local _python="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/bin/python3"
+  [[ -x "$_python" ]] || _python=python3
+  exec "$_python" -I -B -c '
+import pathlib
+import runpy
+import sys
 
-set -eo pipefail
-# shellcheck source=lib/lint_format.sh
-source "$(dirname "$0")/lib/lint_format.sh"
+script = pathlib.Path(sys.argv.pop(1)).resolve().with_name("lint_format.py")
+sys.argv[0] = str(script)
+runpy.run_path(str(script), run_name="__main__")
+' "${BASH_SOURCE[0]}" js "$@"
+}
 
-load_file_path # sets FILE_PATH, FILENAME
+function usage() {
+  run_python --help
+}
 
-require_cmd oxfmt
-run_quality_step "oxfmt format" oxfmt --write "$FILE_PATH"
-
-require_cmd oxlint
-run_quality_step "oxlint fix" oxlint --fix "$FILE_PATH"
-
-run_quality_step "oxlint lint" oxlint --deny-warnings "$FILE_PATH"
+[[ "${1:-}" == "--help" || "${1:-}" == "-h" ]] && usage
+run_python "$@"

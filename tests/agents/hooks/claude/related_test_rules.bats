@@ -78,15 +78,15 @@ setup() {
 }
 
 @test "library files fan out to their consumers" {
-  audit=$(jq -r '."agents/hooks/lib/audit_log.sh"[]' "$RULES")
+  audit=$(jq -r '."agents/hooks/audit_events.py"[]' "$RULES")
   [[ "$audit" == *guard_allowed_commands.bats* ]]
   [[ "$audit" == *guard_dangerous_git.bats* ]]
 
-  parse=$(jq -r '."agents/hooks/lib/shell_parse.sh"[]' "$RULES")
+  parse=$(jq -r '."agents/hooks/lib/shell_syntax.py"[]' "$RULES")
   [[ "$parse" == *guard_allowed_commands.bats* ]]
   [[ "$parse" == *adapt_shell_command.bats* ]]
 
-  lint=$(jq -r '."agents/hooks/lib/lint_format.sh"[]' "$RULES")
+  lint=$(jq -r '."agents/hooks/lint_format.py"[]' "$RULES")
   [[ "$lint" == *lint_format_py.bats* ]]
   [[ "$lint" == *adapt_lint_format.bats* ]]
 }

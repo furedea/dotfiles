@@ -583,7 +583,7 @@ in
       PATH="${lib.makeBinPath [ pkgs.git ]}:/usr/bin:/bin" \
         BASH_XTRACEFD=9 \
         HERDR_BIN="${herdrPackage}/bin/herdr" \
-        JQ_BIN="${pkgs.jq}/bin/jq" \
+        XDG_CONFIG_HOME="${config.xdg.configHome}" \
         HERDR_PLUGIN_SYNC_STATE_FILE="${config.xdg.stateHome}/home-manager/herdr_plugins" \
         ${pkgs.bash}/bin/bash \
         "${config.home.homeDirectory}/.local/libexec/sync_herdr_plugins.sh" \
@@ -594,9 +594,13 @@ in
   # lazygit reads XDG_CONFIG_HOME/lazygit/config.yml first when XDG_CONFIG_HOME is set
   # in the shell, but home-manager writes to ~/Library/Application Support/lazygit/ on macOS.
   # Mirror to the XDG path so the home-manager-generated config is actually used.
-  xdg.configFile."lazygit/config.yml".source =
-    config.home.file."Library/Application Support/lazygit/config.yml".source;
-  xdg.configFile."agent-harness/bin/timeout".source = lib.getExe' pkgs.coreutils "timeout";
+  xdg.configFile = {
+    "lazygit/config.yml".source =
+      config.home.file."Library/Application Support/lazygit/config.yml".source;
+    "agent-harness/bin/timeout".source = lib.getExe' pkgs.coreutils "timeout";
+    # Automation must not inherit a project's virtualenv interpreter or user site packages.
+    "dotfiles/bin/python3".source = lib.getExe pkgs.python314;
+  };
 
   home.file = {
     # Zsh（dotfileに実ファイル，直接編集可能）

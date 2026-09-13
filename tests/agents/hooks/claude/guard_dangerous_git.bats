@@ -8,6 +8,12 @@ setup() {
 
 # --- Allowed: normal pushes ---
 
+@test "blocks command substitution that cannot be statically approved" {
+  run bash "$HOOK" <<< "$(make_input 'echo "$(git reset --hard)"')"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"BLOCKED"* ]]
+}
+
 @test "allows push to feature branch" {
   run bash "$HOOK" <<< "$(make_input 'git push origin feature/foo')"
   [ "$status" -eq 0 ]
