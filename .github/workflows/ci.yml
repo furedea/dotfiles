@@ -57,7 +57,7 @@ jobs:
       - name: Install agent test tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends jq ripgrep shellcheck
+          sudo apt-get install -y --no-install-recommends jq ripgrep shellcheck zsh
           uv tool install --python 3.14.6 ruff==0.16.3
           uv tool dir --bin >> "$GITHUB_PATH"
           npm ci --ignore-scripts
@@ -106,7 +106,14 @@ jobs:
           AGENT_HARNESS_BIN: agent-harness
           CODEX_BIN: codex
           REQUIRE_CODEX_EXECPOLICY: "1"
-        run: bats --print-output-on-failure --recursive tests/github tests/agents
+        # Popup commands require the installed macOS profile and are tested locally.
+        run: |
+          uv run --frozen bats --print-output-on-failure --recursive \
+            tests/github \
+            tests/agents \
+            tests/herdr/merge_pull_request.bats \
+            tests/herdr/sync_plugins.bats \
+            tests/esa/zsh.bats
 
   lint-python:
     runs-on: ubuntu-latest
@@ -127,10 +134,10 @@ jobs:
           cache-python: true
 
       - name: Run ruff format
-        run: uv run --python 3.14.6 --frozen ruff format --check agents/skills tests/agents/python
+        run: uv run --python 3.14.6 --frozen ruff format --check agents github herdr zsh tests
 
       - name: Run ruff check
-        run: uv run --python 3.14.6 --frozen ruff check agents/skills tests/agents/python
+        run: uv run --python 3.14.6 --frozen ruff check agents github herdr zsh tests
 
       - name: Run ty
         run: uv run --python 3.14.6 --frozen ty check
@@ -153,8 +160,13 @@ jobs:
           enable-cache: true
           cache-python: true
 
-      - name: Run Python skill tests
-        run: uv run --python 3.14.6 --frozen pytest tests/agents/python
+      - name: Setup shfmt
+        uses: mfinelli/setup-shfmt@a25fda4c1fe115aec0f85e04126610841bc3141d # v4.0.1
+        with:
+          shfmt-version: "3.13.1"
+
+      - name: Run Python automation tests
+        run: uv run --python 3.14.6 --frozen pytest
 
   audit-python:
     runs-on: ubuntu-latest
@@ -254,10 +266,10 @@ jobs:
           nix run nixpkgs#statix -- check nix/
 
       - name: Run deadnix
-        run: nix run nixpkgs#deadnix -- --fail flake.nix nix/darwin/default.nix nix/home/default.nix
+        run: nix run nixpkgs#deadnix -- --fail flake.nix nix/checks.nix nix/darwin/default.nix nix/home/default.nix
 
       - name: Run nixfmt
-        run: nix run nixpkgs#nixfmt-rfc-style -- --check flake.nix nix/darwin/default.nix nix/home/default.nix
+        run: nix run nixpkgs#nixfmt-rfc-style -- --check flake.nix nix/checks.nix nix/darwin/default.nix nix/home/default.nix
 
   format-check:
     runs-on: ubuntu-latest

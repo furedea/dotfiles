@@ -63,24 +63,6 @@ function get_hermes_activation() {
 EOF
 }
 
-@test "Home Manager keeps mutable Hermes profile state local" {
-  run --separate-stderr nix eval --no-write-lock-file --json \
-    "$REPO_ROOT#$HOME_CONFIG.home.file" \
-    --apply \
-    'files:
-      builtins.all
-        (path: !(builtins.hasAttr path files))
-        [
-          ".hermes/profiles/secretary/cron"
-          ".hermes/profiles/secretary/state"
-          ".hermes/profiles/secretary/.env"
-          ".hermes/profiles/secretary/config.yaml"
-        ]'
-
-  [ "$status" -eq 0 ]
-  [ "$output" = 'true' ]
-}
-
 @test "Home Manager leaves the existing Hermes profile environment untouched" {
   local _activation
   local _env_file="$BATS_TEST_TMPDIR/home/.hermes/profiles/secretary/.env"

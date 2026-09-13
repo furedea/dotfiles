@@ -7,15 +7,6 @@ setup() {
   REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
 }
 
-@test "Home Manager composes Herdr and Moshi hook bundles" {
-  run --separate-stderr nix eval --json \
-    "$REPO_ROOT#homeConfigurations.kaito.config.programs.agent-harness.hooks" \
-    --apply 'hooks: builtins.attrNames hooks'
-
-  [ "$status" -eq 0 ]
-  [ "$output" = '["herdr","moshi"]' ]
-}
-
 @test "rendered hooks use managed Herdr assets and the Nix Moshi runtime" {
   run --separate-stderr nix build --no-link --print-out-paths \
     "$REPO_ROOT#homeConfigurations.kaito.activationPackage"
