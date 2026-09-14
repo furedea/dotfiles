@@ -3,6 +3,8 @@
 import io
 import json
 from pathlib import Path
+import subprocess
+import sys
 from types import ModuleType
 from unittest.mock import Mock
 
@@ -64,7 +66,7 @@ def test_translated_command_preserves_session_without_extra_tool_fields() -> Non
 
 def test_staged_filename_policy_does_not_guess_from_generic_secret_words(tmp_path: Path) -> None:
     policy = Path(__file__).resolve().parents[3] / "agents/hooks/rules/secret_commit_policy.json"
-    rules = files.secret_commit_rules(policy)
+    rules = files.commit_filename_rules(policy)
     assert any(files.regex_matches(rule["pattern"], ".env.local", True) for rule in rules)
     assert not any(files.regex_matches(rule["pattern"], "test_secret_policy.py", True) for rule in rules)
 
@@ -72,11 +74,36 @@ def test_staged_filename_policy_does_not_guess_from_generic_secret_words(tmp_pat
 def test_failed_staged_file_enumeration_is_not_an_empty_success(mocker: MockerFixture) -> None:
     mocker.patch.object(files.subprocess, "run", side_effect=files.subprocess.CalledProcessError(128, "git"))
     with pytest.raises(files.subprocess.CalledProcessError):
-        files.staged_secrets([])
+        files.staged_filename_matches([])
 
 
 def test_content_source_keeps_both_write_fields() -> None:
     assert files.content_text("write", {"tool_input": {"content": "one", "new_string": "two"}}) == "onetwo"
+
+
+def test_commit_denial_reports_filenames_without_file_bodies(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    assert files.__file__ is not None
+    monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(tmp_path))
+    monkeypatch.delenv("AGENT_SECRET_COMMIT_POLICY", raising=False)
+    (tmp_path / ".env").write_text("non-sensitive test fixture\n")
+    for arguments in (["git", "init", "--quiet"], ["git", "add", "--", ".env"]):
+        subprocess.run(arguments, cwd=tmp_path, check=True, capture_output=True)
+    result = subprocess.run(
+        [sys.executable, "-I", "-B", files.__file__, "commit"],
+        input=json.dumps({"tool_input": {"command": "git commit"}}),
+        cwd=tmp_path,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode == 2
+    logs = list((tmp_path / "docs/logs/audit").glob("*.jsonl"))
+    assert len(logs) == 1
+    row = json.loads(logs[0].read_text())
+    assert ".env" in result.stderr and ".env" in row["reason"]
+    assert "Environment files may contain credentials." in row["reason"]
+    assert "non-sensitive test fixture" not in result.stdout + result.stderr + logs[0].read_text()
 
 
 def test_blocked_audit_rows_preserve_schema_and_append(tmp_path: Path, mocker: MockerFixture) -> None:

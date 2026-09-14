@@ -49,7 +49,7 @@ def protected_reason(value: str, path: Path) -> str:
     )
 
 
-def secret_commit_rules(path: Path) -> list[dict]:
+def commit_filename_rules(path: Path) -> list[dict]:
     try:
         rules = load_policy(path, "rules")
         for rule in rules:
@@ -63,7 +63,8 @@ def secret_commit_rules(path: Path) -> list[dict]:
         raise ValueError(f"invalid secret commit policy: {path}") from error
 
 
-def staged_secrets(rules: list[dict]) -> list[tuple[str, str]]:
+def staged_filename_matches(rules: list[dict]) -> list[tuple[str, str]]:
+    """Return rejected filenames and policy reasons, never staged file contents."""
     result = subprocess.run(["git", "diff", "--cached", "--name-only", "-z"], capture_output=True, check=True)
     matches = []
     for raw in result.stdout.split(b"\0"):
@@ -80,7 +81,7 @@ def commit_reason(command: str, directory: Path) -> str:
     if not re.match(r"^\s*git\s+commit", command):
         return ""
     path = policy_path("AGENT_SECRET_COMMIT_POLICY", "secret_commit_policy.json", directory)
-    matches = staged_secrets(secret_commit_rules(path))
+    matches = staged_filename_matches(commit_filename_rules(path))
     if not matches:
         return ""
     files = "\n".join(f"  - {name} ({reason})" for name, reason in matches)
