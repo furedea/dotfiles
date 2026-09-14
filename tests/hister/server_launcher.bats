@@ -27,6 +27,20 @@ setup() {
   [ ! -e "$HISTER_EVENTS_FILE" ]
 }
 
+@test "server refuses token output from a failed Keychain command" {
+  run env \
+    HISTER_EVENTS_FILE="$HISTER_EVENTS_FILE" \
+    HISTER_SECURITY_ARGS_FILE="$SECURITY_ARGS_FILE" \
+    HISTER_SECURITY_BIN="$SECURITY_STUB" \
+    HISTER_SECURITY_FAIL_AFTER_OUTPUT=true \
+    /bin/bash "$SCRIPT" "$HISTER_STUB" kaito
+
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"Hister access token is unavailable"* ]]
+  [[ "$output" != *"test-hister-credential"* ]]
+  [ ! -e "$HISTER_EVENTS_FILE" ]
+}
+
 @test "server refuses to start when the Keychain token is empty" {
   run env \
     HISTER_EVENTS_FILE="$HISTER_EVENTS_FILE" \

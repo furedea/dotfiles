@@ -20,6 +20,9 @@ if [[ "${HISTER_SECURITY_EMPTY:-false}" == "true" ]]; then
   exit 0
 fi
 printf '%s\n' 'test-hister-credential'
+if [[ "${HISTER_SECURITY_FAIL_AFTER_OUTPUT:-false}" == "true" ]]; then
+  exit 44
+fi
 EOF
   chmod 0700 "$SECURITY_STUB"
 }

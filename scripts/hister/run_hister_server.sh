@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-set -euxCo pipefail
-cd "$(dirname "$0")"
+set -euCo pipefail
 
 function usage() {
   cat <<EOF >&2
@@ -27,8 +26,7 @@ function main() {
   local _hister_bin="$1"
   local _keychain_account="$2"
 
-  set +x
-  if ! IFS= read -r HISTER__APP__ACCESS_TOKEN < <(
+  if ! HISTER__APP__ACCESS_TOKEN=$(
     "$SECURITY_BIN" find-generic-password \
       -a "$_keychain_account" \
       -s "$KEYCHAIN_SERVICE" \
@@ -39,7 +37,6 @@ function main() {
     exit 1
   fi
   export HISTER__APP__ACCESS_TOKEN
-  set -x
 
   exec "$_hister_bin" listen
 }
