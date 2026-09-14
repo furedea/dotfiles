@@ -8,7 +8,10 @@ import sys
 import tempfile
 
 PERSONAL = "Members/k-shigyo"
+# Preserve the exact remote esa post name.
+# autocorrect-disable space-word
 MINUTES = "議事録/2026年度配属/shigyo"
+# autocorrect-enable
 QUIET = ["--message", "[skip notice]"]
 
 
