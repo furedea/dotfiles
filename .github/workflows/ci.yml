@@ -73,7 +73,7 @@ jobs:
 
       - name: Cache agent-harness
         id: agent_harness_cache
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: ${{ runner.temp }}/agent-harness/bin/agent-harness
           key: agent-harness-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.agent_harness.outputs.revision }}
