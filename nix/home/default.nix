@@ -44,8 +44,17 @@ let
     MOSHI_HOOK_BIN = moshiHookRuntime;
     SLEEP_BIN = lib.getExe' pkgs.coreutils "sleep";
   };
+  automationPython = lib.getExe pkgs.python314;
+  agentSource = pkgs.runCommand "dotfiles-agent-source" { buildInputs = [ pkgs.python314 ]; } ''
+    cp -R ${../../agents}/. "$out"
+    chmod -R u+w "$out"
+    patchShebangs --host "$out"
+  '';
   repoCommand = pkgs.writeShellScriptBin "repo" ''
-    exec "${dotfilesDir}/github/repo.sh" "$@"
+    exec ${automationPython} -I -B "${dotfilesDir}/github/repo.py" "$@"
+  '';
+  herdrMergeCommand = pkgs.writeShellScript "herdr_merge_pull_request" ''
+    exec ${automationPython} -I -B "${dotfilesDir}/herdr/merge_pull_request.py" "$@"
   '';
   secretaryCli = pkgs.writeShellApplication {
     name = "secretary";
@@ -429,7 +438,7 @@ in
     agent-harness = {
       enable = true;
       package = agentHarnessPackage;
-      source = ../../agents;
+      source = agentSource;
       skills.herdr = herdrSkill;
       hooks = {
         herdr = herdrHookBundle;
@@ -581,13 +590,12 @@ in
     '';
     herdrPlugins = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
       PATH="${lib.makeBinPath [ pkgs.git ]}:/usr/bin:/bin" \
-        BASH_XTRACEFD=9 \
         HERDR_BIN="${herdrPackage}/bin/herdr" \
         XDG_CONFIG_HOME="${config.xdg.configHome}" \
         HERDR_PLUGIN_SYNC_STATE_FILE="${config.xdg.stateHome}/home-manager/herdr_plugins" \
-        ${pkgs.bash}/bin/bash \
-        "${config.home.homeDirectory}/.local/libexec/sync_herdr_plugins.sh" \
-        ${herdrPluginArgs} 9>/dev/null
+        ${automationPython} -I -B \
+        "${dotfilesDir}/herdr/sync_plugins.py" \
+        ${herdrPluginArgs}
     '';
   };
 
@@ -687,8 +695,7 @@ in
     ".config/karabiner/karabiner.json".source = link "karabiner/karabiner.json";
     ".config/herdr/config.toml".source = link "herdr/config.toml";
     ".config/herdr/plugins/config/persiyanov.reviewr/config.toml".source = link "herdr/reviewr.toml";
-    ".local/libexec/herdr_merge_pull_request.sh".source = link "herdr/merge_pull_request.sh";
-    ".local/libexec/sync_herdr_plugins.sh".source = link "herdr/sync_plugins.sh";
+    ".local/libexec/herdr_merge_pull_request.sh".source = herdrMergeCommand;
 
     # Hermes secretary files remain editable by Hermes and visible to Git.
     ".hermes/profiles/secretary/SOUL.md".source = link "hermes/secretary/SOUL.md";

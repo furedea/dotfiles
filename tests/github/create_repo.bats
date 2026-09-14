@@ -5,18 +5,18 @@ bats_require_minimum_version 1.5.0
 
 setup() {
   load test-helper/setup
-  SCRIPT="$GITHUB_DIR/create_repo.sh"
+  SCRIPT="$GITHUB_DIR/repo.py"
   setup_create_repo_stubs
 }
 
 @test "shows usage when no argument is given" {
-  run bash "$SCRIPT"
+  run python3 -I -B "$SCRIPT" create
   [ "$status" -eq 1 ]
   [[ "$output" == *"Usage:"* ]]
 }
 
 @test "shows usage when -h follows the repository name" {
-  run bash "$SCRIPT" agent-harness --private -h
+  run python3 -I -B "$SCRIPT" create agent-harness --private -h
   [ "$status" -eq 1 ]
   [[ "$output" == *"Usage:"* ]]
   ! grep -q "repo create" "$GH_LOG"
@@ -25,28 +25,28 @@ setup() {
 @test "rejects local repository lifecycle flags" {
   local flag
   for flag in --clone -c --source=. -s=. --push --remote=origin -r=origin; do
-    run bash "$SCRIPT" agent-harness --private "$flag"
+    run python3 -I -B "$SCRIPT" create agent-harness --private "$flag"
     [ "$status" -eq 1 ]
     [[ "$output" == *"controls the local clone destination"* ]]
   done
 }
 
 @test "requires exactly one repository visibility" {
-  run bash "$SCRIPT" agent-harness --template furedea/template-rust
+  run python3 -I -B "$SCRIPT" create agent-harness --template furedea/template-rust
   [ "$status" -eq 1 ]
   [[ "$output" == *"exactly one of --public, --private, or --internal is required"* ]]
   ! grep -q "repo create" "$GH_LOG"
 }
 
 @test "rejects multiple repository visibilities" {
-  run bash "$SCRIPT" agent-harness --public --private
+  run python3 -I -B "$SCRIPT" create agent-harness --public --private
   [ "$status" -eq 1 ]
   [[ "$output" == *"exactly one of --public, --private, or --internal is required"* ]]
   ! grep -q "repo create" "$GH_LOG"
 }
 
 @test "creates a template repository and prints only the clone destination to stdout" {
-  run --separate-stderr bash "$SCRIPT" agent-harness --private --template furedea/template-rust
+  run --separate-stderr python3 -I -B "$SCRIPT" create agent-harness --private --template furedea/template-rust
   [ "$status" -eq 0 ]
   [ "$output" = "$BATS_TEST_TMPDIR/ghq/github.com/furedea/agent-harness" ]
   [[ "$stderr" == *"creating GitHub repo"* ]]
@@ -61,7 +61,7 @@ setup() {
 }
 
 @test "keeps waiting when GitHub returns an empty repository response for the branch ref" {
-  GH_REF_EMPTY_ONCE=1 run bash "$SCRIPT" agent-harness --private --template furedea/template-rust
+  GH_REF_EMPTY_ONCE=1 run python3 -I -B "$SCRIPT" create agent-harness --private --template furedea/template-rust
   [ "$status" -eq 0 ]
 
   local calls ref_calls
@@ -72,7 +72,7 @@ setup() {
 }
 
 @test "rewrites Rust template package name after clone" {
-  run bash "$SCRIPT" agent-harness --private --template furedea/template-rust
+  run python3 -I -B "$SCRIPT" create agent-harness --private --template furedea/template-rust
   [ "$status" -eq 0 ]
 
   local cargo_toml="$BATS_TEST_TMPDIR/ghq/github.com/furedea/agent-harness/Cargo.toml"
@@ -83,7 +83,7 @@ setup() {
 @test "fails before remote creation when local destination already exists" {
   mkdir -p "$BATS_TEST_TMPDIR/ghq/github.com/furedea/agent-harness"
 
-  run bash "$SCRIPT" agent-harness --private --template furedea/template-rust
+  run python3 -I -B "$SCRIPT" create agent-harness --private --template furedea/template-rust
   [ "$status" -eq 1 ]
   [[ "$output" == *"local destination already exists"* ]]
   ! grep -q "repo create" "$GH_LOG"

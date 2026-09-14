@@ -3,7 +3,7 @@
 
 setup() {
   load test-helper/setup
-  HOOK="$HOOK_DIR/audit_tool_call.sh"
+  HOOK="$HOOK_DIR/audit_events.py"
   LOG_TMPDIR="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/log.XXXXXX")"
 }
 
@@ -12,7 +12,7 @@ teardown() {
 }
 
 run_hook() {
-  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run bash "$HOOK" <<< "$1"
+  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run python3 -I -B "$HOOK" tool <<< "$1"
 }
 
 get_last_log() {
@@ -169,17 +169,17 @@ get_last_log() {
 # ============================================================
 
 @test "exits 0 with empty tool name" {
-  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run bash "$HOOK" <<< '{"tool_name":"","tool_input":{}}'
+  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run python3 -I -B "$HOOK" tool <<< '{"tool_name":"","tool_input":{}}'
   [ "$status" -eq 0 ]
 }
 
 @test "exits 0 with empty command" {
-  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run bash "$HOOK" <<< '{"tool_name":"Bash","tool_input":{"command":""}}'
+  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run python3 -I -B "$HOOK" tool <<< '{"tool_name":"Bash","tool_input":{"command":""}}'
   [ "$status" -eq 0 ]
 }
 
 @test "exits 0 with missing tool_input" {
-  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run bash "$HOOK" <<< '{"tool_name":"Bash"}'
+  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run python3 -I -B "$HOOK" tool <<< '{"tool_name":"Bash"}'
   [ "$status" -eq 0 ]
 }
 
@@ -211,7 +211,7 @@ get_last_log() {
   # Older Claude Code versions did not send hook_event_name; keep behaviour
   # stable so historic transcripts replayed against this hook still write
   # to the audit log without dropping the entry.
-  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run bash "$HOOK" <<< '{"tool_name":"Bash","tool_input":{"command":"ls"}}'
+  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run python3 -I -B "$HOOK" tool <<< '{"tool_name":"Bash","tool_input":{"command":"ls"}}'
   [ "$status" -eq 0 ]
   local entry
   entry=$(get_last_log)

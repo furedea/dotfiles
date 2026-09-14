@@ -1,3 +1,4 @@
+#!/usr/bin/env -S python3 -IB
 """Summarize hook events without recording file bodies or command output."""
 
 from datetime import UTC, datetime

@@ -27,5 +27,5 @@ setup() {
 @test "related tests remain the only Claude Stop hook" {
   [ "$(jq -r '.claude.Stop[0].hooks | length' "$HOOKS")" -eq 1 ]
   [ "$(jq -r '.claude.Stop[0].hooks[0].command' "$HOOKS")" = \
-    '$HOME/.claude/hooks/run_related_tests.sh' ]
+    '"$HOME/.claude/hooks/run_related_tests.py"' ]
 }

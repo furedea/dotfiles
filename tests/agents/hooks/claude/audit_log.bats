@@ -21,7 +21,7 @@ get_last_log() {
 @test "guard_forbidden_commands.sh emits a Blocked row for no-verify" {
   AGENT_COMMAND_PERMISSIONS="$REPO_ROOT/agents/command_permissions.json" \
     AGENT_FORBIDDEN_COMMAND_RULES="$REPO_ROOT/agents/hooks/rules/forbidden_commands.json" \
-    CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run bash "$HOOK_DIR/guard_forbidden_commands.sh" \
+    CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run python3 -I -B "$HOOK_DIR/guard_commands.py" forbidden \
     <<<"$(jq -n '{tool_input:{command:"git commit --no-verify -m x"},session_id:"sess-e2e"}')"
   [ "$status" -eq 2 ]
   local entry
@@ -33,7 +33,7 @@ get_last_log() {
 }
 
 @test "guard_dangerous_git.sh emits a Blocked row when it blocks" {
-  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run bash "$HOOK_DIR/guard_dangerous_git.sh" \
+  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run python3 -I -B "$HOOK_DIR/guard_dangerous_git.py" \
     <<<"$(jq -n '{tool_input:{command:"git push --force origin main"},session_id:"sess-e2e"}')"
   [ "$status" -eq 2 ]
   local entry

@@ -1,86 +1,45 @@
 #!/usr/bin/env bats
-# Tests for codex/hooks/adapt_guard_secret_content.sh
+# Exercise the actual shared scanner with an isolated, non-secret test pattern.
 
 setup() {
   REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../../../.." && pwd)"
-  HOOK="$REPO_ROOT/agents/codex/hooks/adapt_guard_secret_content.sh"
+  HOOK="$REPO_ROOT/agents/codex/hooks/adapters.py"
+  local _rules="$BATS_TEST_TMPDIR/harness/.claude/hooks/rules"
+  mkdir -p "$_rules"
+  printf '%s\n' '{"fixture":{"pattern":"fixture-sensitive-marker","message":"Fixture detected"}}' \
+    >"$_rules/secret_content_patterns.json"
+  export AGENT_HARNESS_ROOT="$BATS_TEST_TMPDIR/harness"
 }
 
-@test "exits non-zero without mode argument" {
-  run "$HOOK"
-  [ "$status" -ne 0 ]
+@test "content adapter requires a mode" {
+  run python3 -I -B "$HOOK" content
+  [ "$status" -eq 1 ]
 }
 
-@test "prints usage with --help" {
-  run "$HOOK" --help
-  [ "$status" -ne 0 ]
-  [[ "$output" == *"Usage"* ]]
-}
-
-@test "prompt mode delegates to shared scanner" {
-  STUB_DIR="$(mktemp -d "$BATS_TEST_TMPDIR/stub.XXXXXX")"
-  mkdir -p "$STUB_DIR/.claude/hooks"
-  cat >"$STUB_DIR/.claude/hooks/guard_secret_content.sh" <<'STUB'
-#!/bin/bash
-echo "CALLED:$1"
-cat > /dev/null
-STUB
-  chmod +x "$STUB_DIR/.claude/hooks/guard_secret_content.sh"
-
-  run bash -c "export HOME='$STUB_DIR'; echo '{\"prompt\":\"hello\"}' | '$HOOK' prompt"
+@test "prompt scanner loads policy from the harness root" {
+  run env HOME="$BATS_TEST_TMPDIR/other-home" python3 -I -B "$HOOK" content prompt \
+    <<<'{"prompt":"fixture-sensitive-marker"}'
   [ "$status" -eq 0 ]
-  [[ "$output" == *"CALLED:prompt"* ]]
+  [[ "$output" == *'"decision": "block"'* ]]
+  [[ "$output" == *"Fixture detected"* ]]
 }
 
-@test "prompt mode resolves the shared scanner from the harness root" {
-  local _home
-  _home="$(mktemp -d "$BATS_TEST_TMPDIR/home.XXXXXX")"
-  local _harness_root
-  _harness_root="$(mktemp -d "$BATS_TEST_TMPDIR/harness.XXXXXX")"
-  mkdir -p "$_harness_root/.claude/hooks"
-  cat >"$_harness_root/.claude/hooks/guard_secret_content.sh" <<'STUB'
-#!/usr/bin/env bash
-set -euxCo pipefail
-cd "$(dirname "$0")"
-
-printf 'CALLED:%s\n' "$1"
-cat >/dev/null
-STUB
-  chmod +x "$_harness_root/.claude/hooks/guard_secret_content.sh"
-
-  run env HOME="$_home" AGENT_HARNESS_ROOT="$_harness_root" \
-    bash -c "echo '{\"prompt\":\"hello\"}' | '$HOOK' prompt"
-
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"CALLED:prompt"* ]]
-}
-
-@test "prompt mode does not emit shell trace when scanner is silent" {
-  STUB_DIR="$(mktemp -d "$BATS_TEST_TMPDIR/stub.XXXXXX")"
-  mkdir -p "$STUB_DIR/.claude/hooks"
-  cat >"$STUB_DIR/.claude/hooks/guard_secret_content.sh" <<'STUB'
-#!/bin/bash
-cat >/dev/null
-STUB
-  chmod +x "$STUB_DIR/.claude/hooks/guard_secret_content.sh"
-
-  run bash -c "export HOME='$STUB_DIR'; echo '{\"prompt\":\"hello\"}' | '$HOOK' prompt"
+@test "safe prompt produces no shell trace or decision" {
+  run python3 -I -B "$HOOK" content prompt <<<'{"prompt":"hello"}'
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
 
-@test "apply-patch mode delegates to shared scanner with write arg" {
-  STUB_DIR="$(mktemp -d "$BATS_TEST_TMPDIR/stub.XXXXXX")"
-  mkdir -p "$STUB_DIR/.claude/hooks"
-  cat >"$STUB_DIR/.claude/hooks/guard_secret_content.sh" <<'STUB'
-#!/bin/bash
-echo "CALLED:$1"
-cat > /dev/null
-STUB
-  chmod +x "$STUB_DIR/.claude/hooks/guard_secret_content.sh"
-
-  INPUT='{"tool_input":{"command":"--- a/f\n+++ b/f\n+secret"}}'
-  run bash -c "export HOME='$STUB_DIR'; echo '$INPUT' | '$HOOK' apply-patch"
+@test "patch additions use the write decision format" {
+  run python3 -I -B "$HOOK" content apply-patch \
+    <<<'{"tool_input":{"command":"*** Update File: file.txt\n@@\n+fixture-sensitive-marker"}}'
   [ "$status" -eq 0 ]
-  [[ "$output" == *"CALLED:write"* ]]
+  [[ "$output" == *'"permissionDecision": "deny"'* ]]
+}
+
+@test "removed patch content is not treated as a new secret" {
+  run python3 -I -B "$HOOK" content apply-patch \
+    <<<'{"tool_input":{"command":"*** Update File: file.txt\n@@\n-fixture-sensitive-marker\n+safe"}}'
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
 }

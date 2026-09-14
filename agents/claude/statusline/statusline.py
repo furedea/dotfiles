@@ -1,3 +1,4 @@
+#!/usr/bin/env -S python3 -IB
 """Render the two-line status display from structured provider input."""
 
 import json

@@ -5,14 +5,14 @@ bats_require_minimum_version 1.5.0
 
 setup() {
   load test-helper/setup
-  SCRIPT="$GITHUB_DIR/sync_repos.sh"
+  SCRIPT="$GITHUB_DIR/repo.py"
   setup_sync_repo_stubs
 }
 
 @test "clones a missing owned repository into the canonical ghq path" {
   export GH_REPOSITORIES="furedea/alpha"
 
-  run --separate-stderr bash "$SCRIPT"
+  run --separate-stderr python3 -I -B "$SCRIPT" sync
 
   [ "$status" -eq 0 ]
   [[ "$(gh_calls)" == *"repo clone furedea/alpha $BATS_TEST_TMPDIR/ghq/github.com/furedea/alpha"* ]]
@@ -22,7 +22,7 @@ setup() {
   export GH_REPOSITORIES="furedea/alpha"
   mkdir -p "$BATS_TEST_TMPDIR/ghq/github.com/furedea/alpha/.git"
 
-  run --separate-stderr bash "$SCRIPT"
+  run --separate-stderr python3 -I -B "$SCRIPT" sync
 
   [ "$status" -eq 0 ]
   [[ "$(git_calls)" == *"-C $BATS_TEST_TMPDIR/ghq/github.com/furedea/alpha pull --ff-only"* ]]
@@ -34,7 +34,7 @@ setup() {
   mkdir -p "$_target"
   printf 'keep\n' >"$_target/sentinel"
 
-  run --separate-stderr bash "$SCRIPT"
+  run --separate-stderr python3 -I -B "$SCRIPT" sync
 
   [ "$status" -eq 1 ]
   [ "$(cat "$_target/sentinel")" = "keep" ]
@@ -47,7 +47,7 @@ setup() {
   export GIT_PULL_FAILURE="/alpha"
   mkdir -p "$BATS_TEST_TMPDIR/ghq/github.com/furedea/alpha/.git"
 
-  run --separate-stderr bash "$SCRIPT"
+  run --separate-stderr python3 -I -B "$SCRIPT" sync
 
   [ "$status" -eq 1 ]
   [[ "$(gh_calls)" == *"repo clone furedea/beta $BATS_TEST_TMPDIR/ghq/github.com/furedea/beta"* ]]
@@ -57,7 +57,7 @@ setup() {
   export GH_REPOSITORIES=$'furedea/alpha\nfuredea/beta'
   mkdir -p "$BATS_TEST_TMPDIR/ghq/github.com/furedea/alpha/.git"
 
-  run --separate-stderr bash "$SCRIPT" --dry-run
+  run --separate-stderr python3 -I -B "$SCRIPT" sync --dry-run
 
   [ "$status" -eq 0 ]
   [ -z "$(git_calls)" ]
@@ -69,7 +69,7 @@ setup() {
   export GH_REPOSITORIES=$'furedea/alpha\nfuredea/beta'
   mkdir -p "$BATS_TEST_TMPDIR/ghq/github.com/furedea/alpha/.git"
 
-  run --separate-stderr bash "$SCRIPT" --dry-run
+  run --separate-stderr python3 -I -B "$SCRIPT" sync --dry-run
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"[pull] $BATS_TEST_TMPDIR/ghq/github.com/furedea/alpha"* ]]
@@ -81,7 +81,7 @@ setup() {
   mkdir -p "$BATS_TEST_TMPDIR/ghq/github.com/furedea/alpha/.git"
   mkdir -p "$BATS_TEST_TMPDIR/ghq/github.com/furedea/gamma"
 
-  run --separate-stderr bash "$SCRIPT"
+  run --separate-stderr python3 -I -B "$SCRIPT" sync
 
   [ "$status" -eq 1 ]
   [[ "$output" == *"[summary] cloned=1 pulled=1 failed=1"* ]]

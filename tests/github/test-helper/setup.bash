@@ -2,7 +2,7 @@
 
 REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
 GITHUB_DIR="$REPO_ROOT/github"
-SCRIPT="$GITHUB_DIR/configure_repo.sh"
+SCRIPT="$GITHUB_DIR/repo.py"
 
 # Create a stub gh command that logs calls to a file for assertion.
 # The stub succeeds by default and records each invocation.

@@ -4,7 +4,7 @@
 
 setup() {
   load test-helper/setup
-  HOOK="$HOOK_DIR/lint_format_rs.sh"
+  HOOK="$HOOK_DIR/lint_format.py"
   TEST_TMPDIR="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/lintrs.XXXXXX")"
 }
 
@@ -22,13 +22,13 @@ teardown() {
   fi
   local _file="$TEST_TMPDIR/badfmt.rs"
   printf 'fn main(){let x=1;println!("{}",x);}\n' > "$_file"
-  run bash "$HOOK" <<< "$(make_post_tool_input "$_file")"
+  run python3 -I -B "$HOOK" rs <<< "$(make_post_tool_input "$_file")"
   [ "$status" -eq 0 ]
   grep -q '^fn main()' "$_file"
 }
 
 @test "lint_format_rs exits 0 when input has no file_path" {
-  run bash "$HOOK" <<< '{"tool_input":{}}'
+  run python3 -I -B "$HOOK" rs <<< '{"tool_input":{}}'
   [ "$status" -eq 0 ]
 }
 
@@ -39,7 +39,7 @@ teardown() {
   touch "$TEST_TMPDIR/source.rs"
   export PATH="$TEST_TMPDIR/bin:$PATH"
 
-  run bash "$HOOK" <<< "$(make_post_tool_input "$TEST_TMPDIR/source.rs")"
+  run python3 -I -B "$HOOK" rs <<< "$(make_post_tool_input "$TEST_TMPDIR/source.rs")"
 
   [ "$status" -eq 0 ]
   local _context

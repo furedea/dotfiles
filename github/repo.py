@@ -1,3 +1,4 @@
+#!/usr/bin/env -S python3 -IB
 """Run the personal GitHub workflow without shell-based data processing."""
 
 import contextlib
@@ -34,7 +35,9 @@ def usage(command: str = "") -> int:
         "configure": "repo configure <name-or-owner/name>",
         "sync": "repo sync [--dry-run]",
     }
-    print(f"Usage: {descriptions.get(command, 'repo <create|configure|sync> [arguments]')}", file=sys.stderr)
+    print(f"Usage: {descriptions.get(command, 'repo <command> [arguments]')}", file=sys.stderr)
+    if not command:
+        print("Commands: create, configure, sync", file=sys.stderr)
     print("Options: --help, -h", file=sys.stderr)
     if command == "create":
         print("Visibility: set exactly one of --public, --private, or --internal.", file=sys.stderr)

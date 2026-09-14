@@ -5,7 +5,7 @@
 
 setup() {
   load test-helper/setup
-  HOOK="$HOOK_DIR/lint_format_json_toml.sh"
+  HOOK="$HOOK_DIR/lint_format.py"
   TEST_TMPDIR="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/lintjson.XXXXXX")"
 }
 
@@ -54,7 +54,7 @@ EOF
   local _input
   _input="$(make_input_file "$_file")"
 
-  PATH="$TEST_TMPDIR:$PATH" HOME="$REPO_ROOT" run bash -c 'bash "$1" < "$2"' _ "$HOOK" "$_input"
+  PATH="$TEST_TMPDIR:$PATH" HOME="$REPO_ROOT" run python3 -I -B "$HOOK" json_toml <"$_input"
 
   [ "$status" -eq 0 ]
   ! [[ "$output" == *"hookSpecificOutput"* ]]
@@ -67,7 +67,7 @@ EOF
   local _input
   _input="$(make_input_file "$_file")"
 
-  PATH="$TEST_TMPDIR:$PATH" HOME="$REPO_ROOT" run bash -c 'bash "$1" < "$2"' _ "$HOOK" "$_input"
+  PATH="$TEST_TMPDIR:$PATH" HOME="$REPO_ROOT" run python3 -I -B "$HOOK" json_toml <"$_input"
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"hookSpecificOutput"* ]]

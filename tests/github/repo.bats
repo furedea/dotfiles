@@ -5,12 +5,12 @@ bats_require_minimum_version 1.5.0
 
 setup() {
   load test-helper/setup
-  SCRIPT="$GITHUB_DIR/repo.sh"
+  SCRIPT="$GITHUB_DIR/repo.py"
   setup_create_repo_stubs
 }
 
 @test "creates a repository through the public command" {
-  run --separate-stderr bash "$SCRIPT" create agent-harness --private
+  run --separate-stderr python3 -I -B "$SCRIPT" create agent-harness --private
   [ "$status" -eq 0 ]
   [ "$output" = "$BATS_TEST_TMPDIR/ghq/github.com/furedea/agent-harness" ]
   [[ "$stderr" != +* ]]
@@ -18,7 +18,7 @@ setup() {
 }
 
 @test "configures a repository through the public command" {
-  run --separate-stderr bash "$SCRIPT" configure agent-harness
+  run --separate-stderr python3 -I -B "$SCRIPT" configure agent-harness
   [ "$status" -eq 0 ]
   [[ "$stderr" != +* ]]
   [[ "$stderr" != *$'\n+'* ]]
@@ -29,7 +29,7 @@ setup() {
 }
 
 @test "synchronizes owned repositories through the public command" {
-  run --separate-stderr bash "$SCRIPT" sync --dry-run
+  run --separate-stderr python3 -I -B "$SCRIPT" sync --dry-run
 
   if [ "$status" -ne 0 ]; then
     printf '%s\n' "$stderr" >&2
@@ -39,7 +39,7 @@ setup() {
 }
 
 @test "shows top-level help with --help" {
-  run bash "$SCRIPT" --help
+  run python3 -I -B "$SCRIPT" --help
   [ "$status" -eq 1 ]
   [[ "$output" == *"Usage:"* ]]
   [[ "$output" == *"repo <command> [arguments]"* ]]
@@ -49,20 +49,20 @@ setup() {
 }
 
 @test "does not print the Bash execution trace" {
-  run --separate-stderr bash "$SCRIPT" --help
+  run --separate-stderr python3 -I -B "$SCRIPT" --help
   [ "$status" -eq 1 ]
   [[ "$stderr" != +* ]]
   [[ "$stderr" != *$'\n+'* ]]
 }
 
 @test "shows top-level help with -h" {
-  run bash "$SCRIPT" -h
+  run python3 -I -B "$SCRIPT" -h
   [ "$status" -eq 1 ]
   [[ "$output" == *"repo <command> [arguments]"* ]]
 }
 
 @test "shows create-specific help" {
-  run bash "$SCRIPT" create --help
+  run python3 -I -B "$SCRIPT" create --help
   [ "$status" -eq 1 ]
   [[ "$output" == *"repo create <name-or-owner/name> <visibility> [options]"* ]]
   [[ "$output" == *"--template"* ]]
@@ -71,7 +71,7 @@ setup() {
 }
 
 @test "shows configure-specific help" {
-  run bash "$SCRIPT" configure --help
+  run python3 -I -B "$SCRIPT" configure --help
   [ "$status" -eq 1 ]
   [[ "$output" == *"repo configure <name-or-owner/name>"* ]]
 }

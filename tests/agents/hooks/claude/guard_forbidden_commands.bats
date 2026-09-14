@@ -3,7 +3,7 @@
 
 setup() {
   load test-helper/setup
-  HOOK="$HOOK_DIR/guard_forbidden_commands.sh"
+  HOOK="$HOOK_DIR/guard_commands.py"
   POLICY="$BATS_TEST_TMPDIR/command_permissions.json"
   RULES="$BATS_TEST_TMPDIR/forbidden_commands.json"
   cat >"$POLICY" <<'JSON'
@@ -43,13 +43,13 @@ JSON
 
 run_hook() {
   AGENT_COMMAND_PERMISSIONS="$POLICY" AGENT_FORBIDDEN_COMMAND_RULES="$RULES" \
-    bash "$HOOK" <<<"$(make_input "$1")"
+    python3 -I -B "$HOOK" forbidden <<<"$(make_input "$1")"
 }
 
 run_hook_with_global_rules() {
   AGENT_COMMAND_PERMISSIONS="$REPO_ROOT/agents/command_permissions.json" \
     AGENT_FORBIDDEN_COMMAND_RULES="$REPO_ROOT/agents/hooks/rules/forbidden_commands.json" \
-    bash "$HOOK" <<<"$(make_input "$1")"
+    python3 -I -B "$HOOK" forbidden <<<"$(make_input "$1")"
 }
 
 @test "allows non-forbidden command" {
@@ -171,7 +171,7 @@ JSON
 
 @test "blocks when generated rules file is missing" {
   AGENT_COMMAND_PERMISSIONS="$POLICY" AGENT_FORBIDDEN_COMMAND_RULES="$BATS_TEST_TMPDIR/missing.json" \
-    run bash "$HOOK" <<<"$(make_input "git status")"
+    run python3 -I -B "$HOOK" forbidden <<<"$(make_input "git status")"
   [ "$status" -eq 2 ]
   [[ "$output" == *"forbidden command regex rules were not found or are invalid"* ]]
 }

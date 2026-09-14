@@ -5,7 +5,7 @@
 
 setup() {
   load test-helper/setup
-  HOOK="$HOOK_DIR/lint_format_sh.sh"
+  HOOK="$HOOK_DIR/lint_format.py"
   TEST_TMPDIR="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/lintsh.XXXXXX")"
 }
 
@@ -20,7 +20,7 @@ teardown() {
 set -eo pipefail
 echo "hello"
 EOF
-  run bash "$HOOK" <<< "$(make_post_tool_input "$_file")"
+  run python3 -I -B "$HOOK" sh <<< "$(make_post_tool_input "$_file")"
   [ "$status" -eq 0 ]
   ! [[ "$output" == *"hookSpecificOutput"* ]]
 }
@@ -35,7 +35,7 @@ then
 echo "x"
 fi
 EOF
-  run bash "$HOOK" <<< "$(make_post_tool_input "$_file")"
+  run python3 -I -B "$HOOK" sh <<< "$(make_post_tool_input "$_file")"
   [ "$status" -eq 0 ]
   grep -q '^if true; then$' "$_file"
 }
@@ -46,7 +46,7 @@ EOF
 #!/bin/bash
 echo $1
 EOF
-  run bash "$HOOK" <<< "$(make_post_tool_input "$_file")"
+  run python3 -I -B "$HOOK" sh <<< "$(make_post_tool_input "$_file")"
   [ "$status" -eq 0 ]
   [[ "$output" == *"hookSpecificOutput"* ]]
   local _ctx
@@ -55,6 +55,6 @@ EOF
 }
 
 @test "lint_format_sh exits 0 when input has no file_path" {
-  run bash "$HOOK" <<< '{"tool_input":{}}'
+  run python3 -I -B "$HOOK" sh <<< '{"tool_input":{}}'
   [ "$status" -eq 0 ]
 }

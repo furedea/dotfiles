@@ -1,18 +1,4 @@
 {
-  "agents/hooks/run_related_tests.sh": [
-    "tests/agents/python/test_verification_logs.py",
-    "tests/agents/hooks/claude/verification_integrity.bats"
-  ],
-  "agents/hooks/guard_secret_content.sh": [
-    "tests/agents/hooks/codex/adapt_guard_secret_content.bats"
-  ],
-  "agents/hooks/guard_secret_commit.sh": [
-    "tests/agents/hooks/claude/guard_secret_commit.bats"
-  ],
-  "agents/hooks/guard_harness_files.sh": [
-    "tests/agents/hooks/claude/guard_harness_files.bats",
-    "tests/agents/hooks/codex/adapt_harness_files.bats"
-  ],
   "agents/hooks/rules/secret_path_policy.json": [
     "tests/agents/hooks/codex/adapt_guard_secret_paths.bats",
     "tests/agents/hooks/claude/related_test_rules.bats"
@@ -23,10 +9,6 @@
   ],
   "agents/hooks/rules/forbidden_commands.json": [
     "tests/agents/hooks/claude/guard_forbidden_commands.bats"
-  ],
-  "agents/hooks/lint_format_*.sh": [
-    "tests/agents/hooks/claude/quality_step_failures.bats",
-    "tests/agents/hooks/claude/lint_format_hooks.bats"
   ],
   "agents/hooks/rules/secret_content_patterns.json": [
     "tests/agents/hooks/rules/secret_patterns.bats",
@@ -51,9 +33,6 @@
   "agents/hooks.json": [
     "tests/agents/notifications.bats",
     "tests/agents/hooks/claude/related_test_rules.bats"
-  ],
-  "agents/claude/statusline/*.sh": [
-    "tests/agents/hooks/claude/statusline.bats"
   ],
   "agents/claude/statusline/*.json": [
     "tests/agents/hooks/claude/statusline.bats"
@@ -152,7 +131,8 @@
     "tests/agents/hooks/claude/guard_secret_content.bats",
     "tests/agents/hooks/claude/guard_harness_files.bats",
     "tests/agents/hooks/codex/adapt_harness_files.bats",
-    "tests/agents/python/test_hook_boundaries.py"
+    "tests/agents/python/test_hook_boundaries.py",
+    "tests/agents/hooks/codex/adapt_guard_secret_content.bats"
   ],
   "agents/codex/hooks/adapters.py": [
     "tests/agents/hooks/codex",

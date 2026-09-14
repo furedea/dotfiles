@@ -1,9 +1,9 @@
+#!/usr/bin/env -S python3 -IB
 """Translate Codex hook payloads at the boundary to shared hook implementations."""
 
 import json
 import os
 from pathlib import Path
-import subprocess
 import sys
 
 SCRIPT = Path(__file__).resolve()
@@ -12,6 +12,10 @@ sys.path.insert(0, str(COMMON))
 sys.path.insert(0, str(COMMON / "lib"))
 
 import audit_events
+import guard_commands
+import guard_dangerous_git
+import guard_files
+import lint_format
 import patch_input
 import secret_paths
 import shell_syntax
@@ -48,52 +52,23 @@ def translated(payload: dict, tool: str, values: dict) -> dict:
     return {"tool_name": tool, "tool_input": values, "session_id": payload.get("session_id") or ""}
 
 
-def invoke(path: Path, payload: dict, arguments: tuple[str, ...] = ()) -> int:
-    if not os.access(path, os.X_OK):
-        raise ValueError(f"shared hook is not executable: {path}")
-    return subprocess.run([str(path), *arguments], input=json.dumps(payload), text=True, check=False).returncode
-
-
-def plain_context(output: str) -> str:
-    try:
-        value = json.loads(output)
-        return value.get("hookSpecificOutput", {}).get("additionalContext") or output
-    except ValueError, AttributeError:
-        return output
-
-
 def lint(payload: dict) -> int:
+    """Report shared quality diagnostics directly in Codex's plain-text format."""
     for name in patch_input.paths((payload.get("tool_input") or {}).get("command") or ""):
-        path = Path(name)
+        path = Path(name).absolute()
         kind = EXTENSIONS.get(path.suffix)
-        if not kind or not path.is_file():
-            continue
-        hook = shared_directory() / f"lint_format_{kind}.sh"
-        try:
-            result = subprocess.run(
-                [str(hook)],
-                input=json.dumps(translated(payload, "Edit", {"file_path": name})),
-                text=True,
-                capture_output=True,
-                check=False,
-            )
-            output = result.stdout.rstrip()
-            if result.returncode and result.stderr:
-                output += ("\n" if output else "") + result.stderr.rstrip()
-        except OSError as error:
-            output = str(error)
-        if output:
-            print(plain_context(output))
+        if kind and path.is_file():
+            for message in lint_format.check_file(kind, path):
+                print(message)
     return 0
 
 
 def harness(payload: dict) -> int:
-    hook = shared_directory() / "guard_harness_files.sh"
-    if not os.access(hook, os.X_OK):
-        raise ValueError(f"harness boundary hook is not executable: {hook}")
     for name in patch_input.paths((payload.get("tool_input") or {}).get("command") or ""):
         absolute = name if name.startswith(("/", "~/")) else str(Path.cwd() / name)
-        if status := invoke(hook, translated(payload, "apply_patch", {"file_path": absolute})):
+        if status := guard_files.check(
+            "harness", translated(payload, "apply_patch", {"file_path": absolute}), shared_directory()
+        ):
             return status
     return 0
 
@@ -132,23 +107,24 @@ def check_paths(mode: str, payload: dict) -> int:
 def dispatch(kind: str, arguments: list[str], payload: dict) -> int:
     values = payload.get("tool_input") or {}
     if kind == "shell":
-        return invoke(
-            Path(arguments[0]),
-            translated(payload, "Bash", {"command": values.get("command") or values.get("cmd") or ""}),
-        )
+        command = translated(payload, "Bash", {"command": values.get("command") or values.get("cmd") or ""})
+        if arguments[0] in {"allowed", "forbidden"}:
+            return guard_commands.check(arguments[0], command, shared_directory())
+        if arguments[0] == "git":
+            return guard_dangerous_git.check(command)
+        return guard_files.check("commit", command, shared_directory())
     if kind == "lint":
         return lint(payload)
     if kind == "harness":
         return harness(payload)
     if kind == "paths":
         return check_paths(arguments[0], payload)
-    scanner = shared_directory() / "guard_secret_content.sh"
     if arguments[0] == "prompt":
-        return invoke(scanner, payload, ("prompt",))
-    return invoke(
-        scanner,
+        return guard_files.check("prompt", payload, shared_directory())
+    return guard_files.check(
+        "write",
         translated(payload, "Edit", {"content": patch_input.added_text(values.get("command") or "")}),
-        ("write",),
+        shared_directory(),
     )
 
 
@@ -157,7 +133,7 @@ def main(arguments: list[str]) -> int:
     rest = arguments[1:]
     valid = (
         (kind in {"lint", "harness"} and not rest)
-        or (kind == "shell" and len(rest) == 1)
+        or (kind == "shell" and len(rest) == 1 and rest[0] in {"allowed", "forbidden", "git", "commit"})
         or (
             kind in {"paths", "content"}
             and len(rest) == 1
@@ -166,7 +142,7 @@ def main(arguments: list[str]) -> int:
     )
     if not valid or any(value in {"-h", "--help"} for value in rest):
         print(
-            "Usage: adapters.py <shell HOOK_PATH|lint|harness|paths command/patch|content prompt/apply-patch>",
+            "Usage: adapters.py <shell allowed/forbidden/git/commit|lint|harness|paths command/patch|content prompt/apply-patch>",
             file=sys.stderr,
         )
         return 1

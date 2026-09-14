@@ -20,7 +20,7 @@ setup() {
     export FAILED_TOOL="$_tool"
     touch "$BATS_TEST_TMPDIR/source.$_extension"
 
-    run bash "$HOOK_DIR/lint_format_$_hook.sh" <<<"$(make_post_tool_input "$BATS_TEST_TMPDIR/source.$_extension")"
+    run python3 -I -B "$HOOK_DIR/lint_format.py" "$_hook" <<<"$(make_post_tool_input "$BATS_TEST_TMPDIR/source.$_extension")"
 
     [ "$status" -eq 0 ]
     _context=$(jq -r '.hookSpecificOutput.additionalContext' <<<"$output")
@@ -39,7 +39,7 @@ setup() {
     mkdir -p "$BATS_TEST_TMPDIR/.github/workflows"
     _file="$BATS_TEST_TMPDIR/.github/workflows/source.$_extension"
     touch "$_file"
-    run bash "$HOOK_DIR/lint_format_$_hook.sh" <<<"$(make_post_tool_input "$_file")"
+    run python3 -I -B "$HOOK_DIR/lint_format.py" "$_hook" <<<"$(make_post_tool_input "$_file")"
     [ "$status" -eq 0 ]
     _context=$(jq -r '.hookSpecificOutput.additionalContext' <<<"$output")
     [[ "$_context" == *"Quality check failed"* ]]
@@ -55,7 +55,7 @@ setup() {
   printf '#!/usr/bin/env bash\nprintf "Warning 1: unexpected spacing\\n"\n' >"$BATS_TEST_TMPDIR/bin/chktex"
   export FAILED_TOOL=""
   touch "$BATS_TEST_TMPDIR/source.tex"
-  run bash "$HOOK_DIR/lint_format_tex.sh" <<<"$(make_post_tool_input "$BATS_TEST_TMPDIR/source.tex")"
+  run python3 -I -B "$HOOK_DIR/lint_format.py" tex <<<"$(make_post_tool_input "$BATS_TEST_TMPDIR/source.tex")"
   [ "$status" -eq 0 ]
   local _context
   _context=$(jq -r '.hookSpecificOutput.additionalContext' <<<"$output")

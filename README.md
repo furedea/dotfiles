@@ -185,7 +185,7 @@ herdr --remote <ssh-target> --session <name>
 
 The `persiyanov.reviewr` plugin revision is declared in
 [`nix/home/default.nix`](nix/home/default.nix), synchronized during Home Manager
-activation by [`herdr/sync_plugins.sh`](herdr/sync_plugins.sh), and justified by
+activation by [`herdr/sync_plugins.py`](herdr/sync_plugins.py), and justified by
 [`ADR-0002`](docs/adr/0002_manage_herdr_plugins_through_home_manager_activation.md).
 
 ### Editable Symlinks
@@ -288,9 +288,14 @@ by Python tests under `tests/python/` and Bats integration tests under `tests/gi
 
 Automation logic uses Python's standard library, without runtime pip packages.
 The project environment supplies development tools such as pytest, Ruff, and ty.
-Home Manager provides a fixed interpreter at `$XDG_CONFIG_HOME/dotfiles/bin/python3`
-(`~/.config` when unset); shell entry points prefer it over a project virtualenv.
-The shell fallback to `python3` supports development and CI before activation.
+Nix pins the interpreter in deployed hook and statusline shebangs. Codex adapters
+call shared Python functions directly. The `repo` and Herdr launchers use Nix's
+fixed Python with editable source files; hook source changes require Home Manager
+activation. Python entry points use isolated mode to ignore project import paths.
+For development or CI, run a source command with `python3 -I -B path/to/command.py`.
+The Zsh esa helper still uses `$XDG_CONFIG_HOME/dotfiles/bin/python3` (`~/.config`
+when unset), because it updates parent-shell state. See
+[ADR-0027](docs/adr/0027_let_nix_own_python_entry_points.md) for the deployment rationale.
 
 Python tests cover policy decisions, test selection, and structured output. Bats
 checks executable entry points, provider payloads, command failures, and shell or

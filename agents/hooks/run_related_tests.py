@@ -1,3 +1,4 @@
+#!/usr/bin/env -S python3 -IB
 """Run differential verification while keeping selection, evidence, and retention separate."""
 
 from dataclasses import dataclass, field
@@ -226,7 +227,7 @@ def main() -> int:
         return 0 if sys.argv[1:] in (["-h"], ["--help"]) else 1
     started = time.time()
     if verification_reuse is not None and reuse_enabled():
-        result = verification_reuse.run_gate(Path(__file__).with_suffix(".sh"), sys.stdin.buffer.read())
+        result = verification_reuse.run_gate(Path(__file__), sys.stdin.buffer.read())
         result = verification_reuse.with_total(result, time.time() - started)
         sys.stdout.buffer.write(result.stdout)
         sys.stderr.buffer.write(result.stderr)

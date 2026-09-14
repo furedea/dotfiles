@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 
 from conftest import REPO_ROOT, load_script_module
 import pytest
@@ -63,16 +64,23 @@ def gate(tmp_path: Path, repository: Path, monkeypatch: pytest.MonkeyPatch) -> t
     hooks = tmp_path / "hooks"
     hooks.mkdir()
     count = tmp_path / "count"
-    hook = hooks / "gate.sh"
+    hook = hooks / "gate.py"
     hook.write_text(
-        "#!/usr/bin/env bash\n"
-        'printf "run\\n" >> "$REUSE_TEST_COUNT"\n'
-        'if [ "${REUSE_TEST_CHANGE:-0}" = 1 ]; then printf changed >> source.txt; fi\n'
-        'if [ "${REUSE_TEST_FAIL:-0}" = 1 ]; then\n'
-        '  printf \'{"decision":"block","reason":"failed: test"}\\n\'\n'
-        "else\n"
-        "  printf '%s\\n' '{\"systemMessage\":\"Verification passed · total 0.1s\\nBats: 1 passed · 1 file · 0.1s\\nDetails: /tmp/example-log\"}'\n"
-        "fi\n"
+        """import json
+import os
+from pathlib import Path
+
+with Path(os.environ["REUSE_TEST_COUNT"]).open("a") as stream:
+    stream.write("run\\n")
+if os.environ.get("REUSE_TEST_CHANGE") == "1":
+    with Path("source.txt").open("a") as stream:
+        stream.write("changed")
+if os.environ.get("REUSE_TEST_FAIL") == "1":
+    print(json.dumps({"decision": "block", "reason": "failed: test"}))
+else:
+    print(json.dumps({"systemMessage": "Verification passed · total 0.1s\\n"
+                      "Bats: 1 passed · 1 file · 0.1s\\nDetails: /tmp/example-log"}))
+"""
     )
     monkeypatch.chdir(repository)
     monkeypatch.setenv("REUSE_TEST_COUNT", str(count))
@@ -361,14 +369,14 @@ def test_shell_entrypoint_reuses_real_gate_selection(
         policy = repository / ".agents/hooks/rules/verification_reuse.json"
         policy.parent.mkdir(parents=True)
         policy.write_text(setting)
-    hook = REPO_ROOT / "agents/hooks/run_related_tests.sh"
+    hook = REPO_ROOT / "agents/hooks/run_related_tests.py"
     if helper_missing:
         copied = repository.parent / "incomplete-hooks"
         shutil.copytree(hook.parent, copied)
         (copied / "lib/verification_reuse.py").unlink()
         hook = copied / hook.name
         expected_reuse = False
-    command = ["bash", str(hook)]
+    command = [sys.executable, "-I", "-B", str(hook)]
     payload = b'{"session_id":"entrypoint"}'
     first = subprocess.run(command, input=payload, capture_output=True, check=True)
     assert reuse.successful(first), first.stdout
@@ -384,14 +392,14 @@ def test_base_selection_uses_local_remote_head_without_overriding_explicit_base(
     monkeypatch: pytest.MonkeyPatch,
     explicit: str | None,
 ) -> None:
-    hook = REPO_ROOT / "agents/hooks/run_related_tests.sh"
+    hook = REPO_ROOT / "agents/hooks/run_related_tests.py"
     subprocess.run(["git", "update-ref", "refs/remotes/origin/trunk", "HEAD"], check=True)
     subprocess.run(["git", "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/trunk"], check=True)
     monkeypatch.setenv("RUN_RELATED_TESTS_REUSE", "0")
     monkeypatch.delenv("RUN_RELATED_TESTS_BASE_REF")
     if explicit is not None:
         monkeypatch.setenv("RUN_RELATED_TESTS_BASE_REF", explicit)
-    result = subprocess.run(["bash", str(hook)], input=b"{}", capture_output=True, check=True)
+    result = subprocess.run([sys.executable, "-I", "-B", str(hook)], input=b"{}", capture_output=True, check=True)
     output = json.loads(result.stdout)
     if explicit == "missing-base":
         assert output["decision"] == "block"
@@ -403,10 +411,10 @@ def test_base_selection_uses_local_remote_head_without_overriding_explicit_base(
 
 
 def test_unknown_default_base_is_reported(gate: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch) -> None:
-    hook = REPO_ROOT / "agents/hooks/run_related_tests.sh"
+    hook = REPO_ROOT / "agents/hooks/run_related_tests.py"
     monkeypatch.setenv("RUN_RELATED_TESTS_REUSE", "0")
     monkeypatch.delenv("RUN_RELATED_TESTS_BASE_REF")
-    result = subprocess.run(["bash", str(hook)], input=b"{}", capture_output=True, check=True)
+    result = subprocess.run([sys.executable, "-I", "-B", str(hook)], input=b"{}", capture_output=True, check=True)
     output = json.loads(result.stdout)
     assert output["decision"] == "block"
     assert "refs/remotes/origin/HEAD" in output["reason"]
@@ -432,7 +440,7 @@ def test_reporting_preserves_actual_output_counts_and_failure_status(
     exit_code: int,
     summary: str,
 ) -> None:
-    hook = REPO_ROOT / "agents/hooks/run_related_tests.sh"
+    hook = REPO_ROOT / "agents/hooks/run_related_tests.py"
     binaries = repository.parent / "report-bin"
     binaries.mkdir()
     executable = binaries / ("uv" if runner == "pytest" else "bats")
@@ -450,7 +458,7 @@ def test_reporting_preserves_actual_output_counts_and_failure_status(
     monkeypatch.setenv("RUN_RELATED_TESTS_REUSE", "0")
     monkeypatch.setenv("REPORT_TEST_OUTPUT", runner_output)
     monkeypatch.setenv("REPORT_TEST_STATUS", str(exit_code))
-    result = subprocess.run(["bash", str(hook)], input=b"{}", capture_output=True, check=True)
+    result = subprocess.run([sys.executable, "-I", "-B", str(hook)], input=b"{}", capture_output=True, check=True)
     response = json.loads(result.stdout)
     message = response["reason" if exit_code else "systemMessage"]
     assert (response.get("decision") == "block") == bool(exit_code)
@@ -489,11 +497,11 @@ def test_unavailable_log_storage_does_not_skip_tests(
     blocked = repository.parent / "not-a-directory"
     blocked.write_text("file")
     monkeypatch.setenv("XDG_STATE_HOME", str(blocked))
-    hook = REPO_ROOT / "agents/hooks/run_related_tests.sh"
+    hook = REPO_ROOT / "agents/hooks/run_related_tests.py"
     (repository / "tests").mkdir()
     (repository / "tests" / "example.bats").write_text('@test "actual test" { true; }\n')
     monkeypatch.setenv("RUN_RELATED_TESTS_REUSE", "0")
-    result = subprocess.run(["bash", str(hook)], input=b"{}", capture_output=True, check=True)
+    result = subprocess.run([sys.executable, "-I", "-B", str(hook)], input=b"{}", capture_output=True, check=True)
     message = json.loads(result.stdout)["systemMessage"]
     assert "Bats: 1 passed" in message
     assert "Details:" not in message

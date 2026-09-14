@@ -3,7 +3,7 @@
 
 setup() {
   load test-helper/setup
-  HOOK="$HOOK_DIR/guard_harness_files.sh"
+  HOOK="$HOOK_DIR/guard_files.py"
   LOG_TMPDIR="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/harness.XXXXXX")"
   POLICY="$BATS_TEST_TMPDIR/protected_paths.json"
   jq -n '{
@@ -31,7 +31,7 @@ get_last_log() {
 }
 
 @test "blocks edits to Claude hook symlink path" {
-  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run bash "$HOOK" \
+  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run python3 -I -B "$HOOK" harness \
     <<<"$(make_edit_input Edit "$HOME/.claude/hooks/guard_allowed_commands.sh")"
 
   [ "$status" -eq 2 ]
@@ -44,7 +44,7 @@ get_last_log() {
   jq -n '{version:1,paths:["~/.claude/custom-protected.json"]}' >"$_policy"
 
   AGENT_PROTECTED_PATH_POLICY="$_policy" CLAUDE_PROJECT_DIR="$LOG_TMPDIR" \
-    run bash "$HOOK" \
+    run python3 -I -B "$HOOK" harness \
     <<<"$(make_edit_input Edit "$HOME/.claude/custom-protected.json")"
 
   [ "$status" -eq 2 ]
@@ -56,7 +56,7 @@ get_last_log() {
   jq -n '{version:1,paths:[]}' >"$_policy"
 
   AGENT_PROTECTED_PATH_POLICY="$_policy" CLAUDE_PROJECT_DIR="$LOG_TMPDIR" \
-    run bash "$HOOK" \
+    run python3 -I -B "$HOOK" harness \
     <<<"$(make_edit_input Edit "$HOME/.claude/settings.json")"
 
   [ "$status" -eq 2 ]
@@ -64,7 +64,7 @@ get_last_log() {
 }
 
 @test "allows hook files not declared by the generated protection policy" {
-  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run bash "$HOOK" \
+  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run python3 -I -B "$HOOK" harness \
     <<<"$(make_edit_input Edit "$HOME/.claude/hooks/custom.sh")"
 
   [ "$status" -eq 0 ]
@@ -72,7 +72,7 @@ get_last_log() {
 }
 
 @test "allows writes to harness hook source path" {
-  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run bash "$HOOK" \
+  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run python3 -I -B "$HOOK" harness \
     <<<"$(make_edit_input Write "$REPO_ROOT/agents/hooks/guard_allowed_commands.sh")"
 
   [ "$status" -eq 0 ]
@@ -80,7 +80,7 @@ get_last_log() {
 }
 
 @test "allows writes to harness agent instructions source path" {
-  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run bash "$HOOK" \
+  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run python3 -I -B "$HOOK" harness \
     <<<"$(make_edit_input Edit "$REPO_ROOT/agents/AGENTS.md")"
 
   [ "$status" -eq 0 ]
@@ -88,7 +88,7 @@ get_last_log() {
 }
 
 @test "allows MultiEdit to Codex hook source path" {
-  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run bash "$HOOK" \
+  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run python3 -I -B "$HOOK" harness \
     <<<"$(make_edit_input MultiEdit "$REPO_ROOT/agents/codex/hooks/adapt_lint_format.sh")"
 
   [ "$status" -eq 0 ]
@@ -96,7 +96,7 @@ get_last_log() {
 }
 
 @test "allows writes to dotfiles harness source paths" {
-  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run bash "$HOOK" \
+  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run python3 -I -B "$HOOK" harness \
     <<<"$(make_edit_input Edit "$BATS_TEST_TMPDIR/dotfiles/agents/hooks/guard.sh")"
 
   [ "$status" -eq 0 ]
@@ -104,21 +104,21 @@ get_last_log() {
 }
 
 @test "blocks generated Claude settings" {
-  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run bash "$HOOK" \
+  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run python3 -I -B "$HOOK" harness \
     <<<"$(make_edit_input Edit "$HOME/.claude/settings.json")"
 
   [ "$status" -eq 2 ]
 }
 
 @test "blocks generated forbidden command rules" {
-  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run bash "$HOOK" \
+  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run python3 -I -B "$HOOK" harness \
     <<<"$(make_edit_input Edit "$HOME/.claude/hooks/rules/forbidden_commands.json")"
 
   [ "$status" -eq 2 ]
 }
 
 @test "allows normal project file edits" {
-  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run bash "$HOOK" \
+  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run python3 -I -B "$HOOK" harness \
     <<<"$(make_edit_input Edit "$REPO_ROOT/src/app.py")"
 
   [ "$status" -eq 0 ]
@@ -126,7 +126,7 @@ get_last_log() {
 }
 
 @test "allows empty file path" {
-  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run bash "$HOOK" \
+  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run python3 -I -B "$HOOK" harness \
     <<<'{"tool_name":"Edit","tool_input":{},"session_id":"sess-harness"}'
 
   [ "$status" -eq 0 ]
@@ -134,7 +134,7 @@ get_last_log() {
 }
 
 @test "writes blocked audit row" {
-  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run bash "$HOOK" \
+  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run python3 -I -B "$HOOK" harness \
     <<<"$(make_edit_input Edit "$HOME/.claude/hooks/guard_allowed_commands.sh")"
 
   [ "$status" -eq 2 ]

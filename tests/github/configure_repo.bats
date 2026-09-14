@@ -9,39 +9,39 @@ setup() {
 # --- Usage ---
 
 @test "shows usage with --help" {
-  run bash "$SCRIPT" --help
+  run python3 -I -B "$SCRIPT" configure --help
   [ "$status" -eq 1 ]
   [[ "$output" == *"Usage:"* ]]
 }
 
 @test "shows usage with -h" {
-  run bash "$SCRIPT" -h
+  run python3 -I -B "$SCRIPT" configure -h
   [ "$status" -eq 1 ]
   [[ "$output" == *"Usage:"* ]]
 }
 
 @test "shows usage when no argument is given" {
-  run bash "$SCRIPT"
+  run python3 -I -B "$SCRIPT" configure
   [ "$status" -eq 1 ]
   [[ "$output" == *"Usage:"* ]]
 }
 
 @test "rejects multiple repository arguments" {
-  run bash "$SCRIPT" "owner/first" "owner/second"
+  run python3 -I -B "$SCRIPT" configure "owner/first" "owner/second"
   [ "$status" -eq 1 ]
   [[ "$output" == *"Usage:"* ]]
   ! grep -q "repos/owner/" "$GH_LOG"
 }
 
 @test "rejects unknown options" {
-  run bash "$SCRIPT" --unknown
+  run python3 -I -B "$SCRIPT" configure --unknown
   [ "$status" -eq 1 ]
   [[ "$output" == *"Usage:"* ]]
   ! grep -q "repos/" "$GH_LOG"
 }
 
 @test "configures the authenticated owner's repository when given a short name" {
-  run bash "$SCRIPT" "myrepo"
+  run python3 -I -B "$SCRIPT" configure "myrepo"
   [ "$status" -eq 0 ]
 
   local calls
@@ -53,7 +53,7 @@ setup() {
 # --- Create path (no existing ruleset) ---
 
 @test "applies settings and creates ruleset for a new repo" {
-  run bash "$SCRIPT" "owner/myrepo"
+  run python3 -I -B "$SCRIPT" configure "owner/myrepo"
   [ "$status" -eq 0 ]
   [[ "$output" == *"Applied repo settings to owner/myrepo"* ]]
   [[ "$output" == *"Created ruleset on owner/myrepo"* ]]
@@ -69,7 +69,7 @@ setup() {
 
 @test "updates existing ruleset by id when one with the same name exists" {
   setup_gh_stub_with_existing_ruleset 42
-  run bash "$SCRIPT" "owner/myrepo"
+  run python3 -I -B "$SCRIPT" configure "owner/myrepo"
   [ "$status" -eq 0 ]
   [[ "$output" == *"Updated ruleset 42 on owner/myrepo"* ]]
 

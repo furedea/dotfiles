@@ -5,7 +5,7 @@
 
 setup() {
   load test-helper/setup
-  HOOK="$HOOK_DIR/lint_format_py.sh"
+  HOOK="$HOOK_DIR/lint_format.py"
   TEST_TMPDIR="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/lintpy.XXXXXX")"
 }
 
@@ -16,7 +16,7 @@ teardown() {
 @test "lint_format_py exits 0 on a clean file with no output JSON" {
   local _file="$TEST_TMPDIR/clean.py"
   printf 'x = 1\n' > "$_file"
-  run bash "$HOOK" <<< "$(make_post_tool_input "$_file")"
+  run python3 -I -B "$HOOK" py <<< "$(make_post_tool_input "$_file")"
   [ "$status" -eq 0 ]
   ! [[ "$output" == *"hookSpecificOutput"* ]]
 }
@@ -24,7 +24,7 @@ teardown() {
 @test "lint_format_py auto-fixes an unused import and emits no JSON" {
   local _file="$TEST_TMPDIR/unused_import.py"
   printf 'import os\nx = 1\n' > "$_file"
-  run bash "$HOOK" <<< "$(make_post_tool_input "$_file")"
+  run python3 -I -B "$HOOK" py <<< "$(make_post_tool_input "$_file")"
   [ "$status" -eq 0 ]
   ! grep -q '^import os' "$_file"
   ! [[ "$output" == *"hookSpecificOutput"* ]]
@@ -33,7 +33,7 @@ teardown() {
 @test "lint_format_py auto-formats a malformatted file and emits no JSON" {
   local _file="$TEST_TMPDIR/badfmt.py"
   printf 'x=1\ny  =   2\n' > "$_file"
-  run bash "$HOOK" <<< "$(make_post_tool_input "$_file")"
+  run python3 -I -B "$HOOK" py <<< "$(make_post_tool_input "$_file")"
   [ "$status" -eq 0 ]
   grep -q '^x = 1$' "$_file"
   grep -q '^y = 2$' "$_file"
@@ -43,7 +43,7 @@ teardown() {
 @test "lint_format_py emits PostToolUse JSON for non-auto-fixable violation" {
   local _file="$TEST_TMPDIR/undefined.py"
   printf 'def f():\n    return undefined_name\n' > "$_file"
-  run bash "$HOOK" <<< "$(make_post_tool_input "$_file")"
+  run python3 -I -B "$HOOK" py <<< "$(make_post_tool_input "$_file")"
   [ "$status" -eq 0 ]
   [[ "$output" == *"hookSpecificOutput"* ]]
   local _event
@@ -51,11 +51,11 @@ teardown() {
   [ "$_event" = "PostToolUse" ]
   local _ctx
   _ctx="$(echo "$output" | grep '"hookSpecificOutput"' | jq -r '.hookSpecificOutput.additionalContext')"
-  [[ "$_ctx" == *"F821"* ]] || [[ "$_ctx" == *"undefined"* ]]
+  [[ "$_ctx" == *"F821"* ]]
 }
 
 @test "lint_format_py exits 0 when input has no file_path" {
-  run bash "$HOOK" <<< '{"tool_input":{}}'
+  run python3 -I -B "$HOOK" py <<< '{"tool_input":{}}'
   [ "$status" -eq 0 ]
 }
 
@@ -67,7 +67,7 @@ teardown() {
   touch "$TEST_TMPDIR/source.py"
   export PATH="$TEST_TMPDIR/bin:$PATH"
 
-  run bash "$HOOK" <<< "$(make_post_tool_input "$TEST_TMPDIR/source.py")"
+  run python3 -I -B "$HOOK" py <<< "$(make_post_tool_input "$TEST_TMPDIR/source.py")"
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"failed"* ]]

@@ -1,9 +1,9 @@
 #!/usr/bin/env bats
-# Tests for .claude/statusline/statusline.sh
+# Tests for .claude/statusline/statusline.py
 
 setup() {
   load test-helper/setup
-  STATUSLINE="$REPO_ROOT/agents/claude/statusline/statusline.sh"
+  STATUSLINE="$REPO_ROOT/agents/claude/statusline/statusline.py"
 }
 
 # Build a minimal statusline JSON input.
@@ -18,44 +18,34 @@ MINIMAL_INPUT='{"model":{"display_name":"Opus 4.6"},"cwd":"/tmp/test","context_w
 # File structure
 # ============================================================
 
-@test "statusline.sh exists and is executable" {
+@test "statusline.py exists and is executable" {
   [ -f "$STATUSLINE" ]
   [ -x "$STATUSLINE" ]
 }
 
-@test "statusline.sh passes bash syntax check" {
-  run bash -n "$STATUSLINE"
-  [ "$status" -eq 0 ]
-}
-
-@test "statusline.sh resolves bash from PATH" {
-  head -1 "$STATUSLINE" | grep -q '#!/usr/bin/env bash'
-}
-
-# ============================================================
 # Basic output
 # ============================================================
 
 @test "produces two lines of output" {
-  run bash "$STATUSLINE" <<< "$MINIMAL_INPUT"
+  run "$STATUSLINE" <<< "$MINIMAL_INPUT"
   [ "$status" -eq 0 ]
   [ "${#lines[@]}" -eq 2 ]
 }
 
 @test "line 1 contains model name" {
-  run bash "$STATUSLINE" <<< "$MINIMAL_INPUT"
+  run "$STATUSLINE" <<< "$MINIMAL_INPUT"
   [ "$status" -eq 0 ]
   [[ "${lines[0]}" == *"Opus 4.6"* ]]
 }
 
 @test "line 2 contains context percentage" {
-  run bash "$STATUSLINE" <<< "$MINIMAL_INPUT"
+  run "$STATUSLINE" <<< "$MINIMAL_INPUT"
   [ "$status" -eq 0 ]
   [[ "${lines[1]}" == *"25%"* ]]
 }
 
 @test "line 2 contains Ctx label" {
-  run bash "$STATUSLINE" <<< "$MINIMAL_INPUT"
+  run "$STATUSLINE" <<< "$MINIMAL_INPUT"
   [ "$status" -eq 0 ]
   [[ "${lines[1]}" == *"Ctx:"* ]]
 }
@@ -66,7 +56,7 @@ MINIMAL_INPUT='{"model":{"display_name":"Opus 4.6"},"cwd":"/tmp/test","context_w
 
 @test "shortens long CWD to current directory name" {
   local input='{"model":{"display_name":"Opus"},"cwd":"/a/b/c/d/e","context_window":{"used_percentage":0}}'
-  run bash "$STATUSLINE" <<< "$input"
+  run "$STATUSLINE" <<< "$input"
   [ "$status" -eq 0 ]
   [[ "${lines[0]}" == *"e"* ]]
   [[ "${lines[0]}" != *"c/d/e"* ]]
@@ -78,7 +68,7 @@ MINIMAL_INPUT='{"model":{"display_name":"Opus 4.6"},"cwd":"/tmp/test","context_w
 
 @test "shows 5h rate limit when provided" {
   local input='{"model":{"display_name":"Opus"},"cwd":"/tmp","context_window":{"used_percentage":10},"rate_limits":{"five_hour":{"used_percentage":42,"resets_at":null}}}'
-  run bash "$STATUSLINE" <<< "$input"
+  run "$STATUSLINE" <<< "$input"
   [ "$status" -eq 0 ]
   [[ "${lines[1]}" == *"42%"* ]]
   [[ "${lines[1]}" == *"5h:"* ]]
@@ -86,14 +76,14 @@ MINIMAL_INPUT='{"model":{"display_name":"Opus 4.6"},"cwd":"/tmp/test","context_w
 
 @test "shows 7d rate limit when provided" {
   local input='{"model":{"display_name":"Opus"},"cwd":"/tmp","context_window":{"used_percentage":10},"rate_limits":{"seven_day":{"used_percentage":15,"resets_at":null}}}'
-  run bash "$STATUSLINE" <<< "$input"
+  run "$STATUSLINE" <<< "$input"
   [ "$status" -eq 0 ]
   [[ "${lines[1]}" == *"15%"* ]]
   [[ "${lines[1]}" == *"7d:"* ]]
 }
 
 @test "omits 5h section when not present" {
-  run bash "$STATUSLINE" <<< "$MINIMAL_INPUT"
+  run "$STATUSLINE" <<< "$MINIMAL_INPUT"
   [ "$status" -eq 0 ]
   [[ "${lines[1]}" != *"5h:"* ]]
 }
@@ -104,21 +94,21 @@ MINIMAL_INPUT='{"model":{"display_name":"Opus 4.6"},"cwd":"/tmp/test","context_w
 
 @test "handles empty model name" {
   local input='{"model":{},"cwd":"/tmp","context_window":{"used_percentage":50}}'
-  run bash "$STATUSLINE" <<< "$input"
+  run "$STATUSLINE" <<< "$input"
   [ "$status" -eq 0 ]
   [ "${#lines[@]}" -eq 2 ]
 }
 
 @test "handles 0% context" {
   local input='{"model":{"display_name":"Opus"},"cwd":"/tmp","context_window":{"used_percentage":0}}'
-  run bash "$STATUSLINE" <<< "$input"
+  run "$STATUSLINE" <<< "$input"
   [ "$status" -eq 0 ]
   [[ "${lines[1]}" == *"0%"* ]]
 }
 
 @test "handles 100% context" {
   local input='{"model":{"display_name":"Opus"},"cwd":"/tmp","context_window":{"used_percentage":100}}'
-  run bash "$STATUSLINE" <<< "$input"
+  run "$STATUSLINE" <<< "$input"
   [ "$status" -eq 0 ]
   [[ "${lines[1]}" == *"100%"* ]]
 }

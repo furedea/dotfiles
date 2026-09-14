@@ -1,3 +1,4 @@
+#!/usr/bin/env -S python3 -IB
 """Evaluate generated prefixes and precise global/project command policy."""
 
 import json
@@ -15,12 +16,12 @@ import command_policy
 import shell_syntax
 
 
-def policies(kind: str) -> tuple[list[dict], list[dict]]:
+def policies(kind: str, directory: Path) -> tuple[list[dict], list[dict]]:
     """Load required global rules and optional project additions exactly once."""
-    permissions = Path(os.environ.get("AGENT_COMMAND_PERMISSIONS", str(ROOT / "rules/command_permissions.json")))
+    permissions = Path(os.environ.get("AGENT_COMMAND_PERMISSIONS", str(directory / "rules/command_permissions.json")))
     name = "allowed_commands.json" if kind == "allowed" else "forbidden_commands.json"
     environment = "AGENT_ALLOWED_COMMAND_RULES" if kind == "allowed" else "AGENT_FORBIDDEN_COMMAND_RULES"
-    path = Path(os.environ.get(environment, str(ROOT / "rules" / name)))
+    path = Path(os.environ.get(environment, str(directory / "rules" / name)))
     try:
         prefixes = command_policy.load_rules(permissions, prefixes=True)
     except ValueError as error:
@@ -39,23 +40,13 @@ def policies(kind: str) -> tuple[list[dict], list[dict]]:
     return prefixes, rules
 
 
-def main(arguments: list[str]) -> int:
-    """Deny known forbidden or uninspectable input; leave other decisions to the provider."""
-    if len(arguments) != 1 or arguments[0] not in {"allowed", "forbidden"}:
-        print("Usage: guard_commands.py <allowed|forbidden>", file=sys.stderr)
-        return 1
-    kind = arguments[0]
-    payload: dict = {}
+def check(kind: str, payload: dict, directory: Path = ROOT) -> int:
+    """Enforce command policy for an already decoded provider payload."""
     command = ""
     try:
-        prefixes, rules = policies(kind)
-        try:
-            candidate = json.load(sys.stdin)
-        except json.JSONDecodeError as error:
-            raise ValueError("failed to parse tool input JSON") from error
-        if not isinstance(candidate, dict):
+        prefixes, rules = policies(kind, directory)
+        if not isinstance(payload, dict):
             raise ValueError("failed to parse tool input JSON: expected an object")
-        payload = candidate
         command = payload.get("tool_input", {}).get("command") or ""
         for item in shell_syntax.parse(command):
             if kind == "allowed":
@@ -72,10 +63,29 @@ def main(arguments: list[str]) -> int:
     except (ValueError, TypeError, AttributeError, OSError) as error:
         prefix = "forbidden command: " if kind == "forbidden" else ""
         message = f"BLOCKED: {prefix}{error}\n\nUse a non-destructive approved form, or ask the user to review the command policy."
-        audit_events.blocked("Bash", command, str(error), f"guard_{kind}_commands.sh", payload.get("session_id", ""))
+        audit_events.blocked(
+            "Bash",
+            command,
+            str(error),
+            f"guard_{kind}_commands.sh",
+            payload.get("session_id", "") if isinstance(payload, dict) else "",
+        )
         print(message, file=sys.stderr)
         return 2
     return 0
+
+
+def main(arguments: list[str]) -> int:
+    if len(arguments) != 1 or arguments[0] not in {"allowed", "forbidden"}:
+        print("Usage: guard_commands.py <allowed|forbidden>", file=sys.stderr)
+        return 1
+    try:
+        payload = json.load(sys.stdin)
+    except ValueError, OSError:
+        audit_events.blocked("Bash", "", "failed to parse tool input JSON", f"guard_{arguments[0]}_commands.sh", "")
+        print("BLOCKED: failed to parse tool input JSON", file=sys.stderr)
+        return 2
+    return check(arguments[0], payload)
 
 
 if __name__ == "__main__":

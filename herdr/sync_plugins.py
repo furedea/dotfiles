@@ -1,3 +1,4 @@
+#!/usr/bin/env -S python3 -IB
 """Reconcile declared Herdr plugins while preserving state on failure."""
 
 from dataclasses import dataclass
@@ -21,7 +22,7 @@ class Plugin:
 def declared_plugins(arguments: list[str]) -> tuple[Plugin, ...]:
     """Parse the Home Manager declaration's identifier/source/revision triples."""
     if len(arguments) % 3 or any(argument in {"-h", "--help"} for argument in arguments):
-        raise ValueError("Usage: sync_plugins.sh [<PLUGIN_ID> <GITHUB_SOURCE> <GIT_REF>]...")
+        raise ValueError("Usage: sync_plugins.py [<PLUGIN_ID> <GITHUB_SOURCE> <GIT_REF>]...")
     return tuple(Plugin(*arguments[index : index + 3]) for index in range(0, len(arguments), 3))
 
 

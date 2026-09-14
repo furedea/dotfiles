@@ -3,7 +3,7 @@
 
 setup() {
   load test-helper/setup
-  HOOK="$HOOK_DIR/audit_compaction.sh"
+  HOOK="$HOOK_DIR/audit_events.py"
   LOG_TMPDIR="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/log.XXXXXX")"
 }
 
@@ -12,7 +12,7 @@ teardown() {
 }
 
 run_hook() {
-  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run bash "$HOOK" <<< "$1"
+  CLAUDE_PROJECT_DIR="$LOG_TMPDIR" run python3 -I -B "$HOOK" compaction <<< "$1"
 }
 
 get_last_log() {

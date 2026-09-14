@@ -1,3 +1,4 @@
+#!/usr/bin/env -S python3 -IB
 """Enforce file-boundary policies and scan content without logging secret bodies."""
 
 import json
@@ -15,8 +16,8 @@ import audit_events
 from command_policy import regex_matches
 
 
-def policy_path(environment: str, name: str) -> Path:
-    return Path(os.environ.get(environment, str(ROOT / "rules" / name)))
+def policy_path(environment: str, name: str, directory: Path) -> Path:
+    return Path(os.environ.get(environment, str(directory / "rules" / name)))
 
 
 def load_policy(path: Path, field: str) -> list:
@@ -75,10 +76,10 @@ def staged_secrets(rules: list[dict]) -> list[tuple[str, str]]:
     return matches
 
 
-def commit_reason(command: str) -> str:
+def commit_reason(command: str, directory: Path) -> str:
     if not re.match(r"^\s*git\s+commit", command):
         return ""
-    path = policy_path("AGENT_SECRET_COMMIT_POLICY", "secret_commit_policy.json")
+    path = policy_path("AGENT_SECRET_COMMIT_POLICY", "secret_commit_policy.json", directory)
     matches = staged_secrets(secret_commit_rules(path))
     if not matches:
         return ""
@@ -126,9 +127,10 @@ def content_match(text: str, path: Path) -> tuple[str, str] | None:
     return None
 
 
-def scan_content(mode: str, payload: dict) -> None:
+def scan_content(mode: str, payload: dict, directory: Path) -> None:
     match = content_match(
-        content_text(mode, payload), policy_path("AGENT_SECRET_CONTENT_PATTERNS", "secret_content_patterns.json")
+        content_text(mode, payload),
+        policy_path("AGENT_SECRET_CONTENT_PATTERNS", "secret_content_patterns.json", directory),
     )
     if match is None:
         return
@@ -153,19 +155,14 @@ def scan_content(mode: str, payload: dict) -> None:
     print(json.dumps(decision))
 
 
-def main(arguments: list[str]) -> int:
-    if len(arguments) != 1 or arguments[0] not in {"harness", "commit", "prompt", "read", "write"}:
-        print("Usage: guard_files.py <harness|commit|prompt|read|write>", file=sys.stderr)
-        return 1
-    mode = arguments[0]
-    payload: dict = {}
+def check(mode: str, payload: dict, directory: Path = ROOT) -> int:
+    """Enforce file policy without spawning another hook process."""
     value = ""
     tool = "Bash" if mode == "commit" else "Edit"
     hook = "guard_secret_commit.sh" if mode == "commit" else "guard_harness_files.sh"
     try:
-        payload = json.load(sys.stdin)
         if mode in {"prompt", "read", "write"}:
-            scan_content(mode, payload)
+            scan_content(mode, payload, directory)
             return 0
         values = payload.get("tool_input") or {}
         tool = payload.get("tool_name") or tool
@@ -175,9 +172,9 @@ def main(arguments: list[str]) -> int:
         if not value:
             return 0
         reason = (
-            commit_reason(value)
+            commit_reason(value, directory)
             if mode == "commit"
-            else protected_reason(value, policy_path("AGENT_PROTECTED_PATH_POLICY", "protected_paths.json"))
+            else protected_reason(value, policy_path("AGENT_PROTECTED_PATH_POLICY", "protected_paths.json", directory))
         )
         if not reason:
             return 0
@@ -186,6 +183,21 @@ def main(arguments: list[str]) -> int:
     audit_events.blocked(tool, value, reason, hook, payload.get("session_id", "") if isinstance(payload, dict) else "")
     print(f"BLOCKED: {reason}", file=sys.stderr)
     return 2
+
+
+def main(arguments: list[str]) -> int:
+    if len(arguments) != 1 or arguments[0] not in {"harness", "commit", "prompt", "read", "write"}:
+        print("Usage: guard_files.py <harness|commit|prompt|read|write>", file=sys.stderr)
+        return 1
+    try:
+        payload = json.load(sys.stdin)
+    except (ValueError, OSError) as error:
+        tool = "Bash" if arguments[0] == "commit" else "Edit"
+        hook = "guard_secret_commit.sh" if arguments[0] == "commit" else "guard_harness_files.sh"
+        audit_events.blocked(tool, "", str(error), hook, "")
+        print(f"BLOCKED: {error}", file=sys.stderr)
+        return 2
+    return check(arguments[0], payload)
 
 
 if __name__ == "__main__":

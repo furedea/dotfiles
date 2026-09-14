@@ -9,7 +9,7 @@ setup() {
 # Helper: run the hook from within the temp repo so it picks up staged files.
 run_hook() {
   local cmd="${1:-git commit -m test}"
-  run bash -c "cd '$TEMP_REPO' && bash '$HOOK_DIR/guard_secret_commit.sh'" <<<"$(make_input "$cmd")"
+  run bash -c "cd '$TEMP_REPO' && python3 -I -B '$HOOK_DIR/guard_files.py' commit" <<<"$(make_input "$cmd")"
 }
 
 # --- Blocked cases: sensitive filename patterns ---

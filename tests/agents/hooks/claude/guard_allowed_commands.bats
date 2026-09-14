@@ -18,7 +18,7 @@ setup() {
 }
 
 run_hook() {
-  run bash "$HOOK_DIR/guard_allowed_commands.sh" <<<"$(make_input "$1")"
+  run python3 -I -B "$HOOK_DIR/guard_commands.py" allowed <<<"$(make_input "$1")"
 }
 
 # ============================================================
@@ -36,7 +36,7 @@ run_hook() {
 }
 
 @test "passes through empty command" {
-  run bash "$HOOK_DIR/guard_allowed_commands.sh" <<<'{"tool_input":{"command":""}}'
+  run python3 -I -B "$HOOK_DIR/guard_commands.py" allowed <<<'{"tool_input":{"command":""}}'
   [ "$status" -eq 0 ]
 }
 
@@ -609,7 +609,7 @@ run_hook() {
   # Shell: -f body='it'\''s great'  →  the '\'' sequence ends quote, adds literal ', reopens quote
   local input
   input=$(jq -n --arg cmd "gh api repos/owner/repo/pulls/1/comments/99/replies -f body='it'\\''s great'" '{tool_input:{command:$cmd}}')
-  run bash "$HOOK_DIR/guard_allowed_commands.sh" <<<"$input"
+  run python3 -I -B "$HOOK_DIR/guard_commands.py" allowed <<<"$input"
   [ "$status" -eq 0 ]
 }
 
@@ -632,7 +632,7 @@ run_hook() {
 # ============================================================
 
 @test "handles invalid JSON gracefully" {
-  run bash "$HOOK_DIR/guard_allowed_commands.sh" <<<"not json"
+  run python3 -I -B "$HOOK_DIR/guard_commands.py" allowed <<<"not json"
   [ "$status" -eq 2 ]
   [[ "$output" == *"failed to parse"* ]]
 }

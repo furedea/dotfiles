@@ -3,7 +3,7 @@
 
 setup() {
   REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../../../.." && pwd)"
-  HOOK="$REPO_ROOT/agents/codex/hooks/adapt_guard_secret_paths.sh"
+  HOOK="$REPO_ROOT/agents/codex/hooks/adapters.py"
 }
 
 install_policy() {
@@ -14,7 +14,7 @@ install_policy() {
 }
 
 @test "prints usage with --help" {
-  run "$HOOK" --help
+  run "$HOOK" paths --help
   [ "$status" -ne 0 ]
   [[ "$output" == *"Usage:"* ]]
 }
@@ -27,7 +27,7 @@ install_policy() {
   local _input
   _input="$(jq -n --arg cwd "$REPO_ROOT" '{cwd:$cwd,tool_input:{command:"cat .env"},session_id:"sess-codex"}')"
 
-  run env HOME="$_tmp" CLAUDE_PROJECT_DIR="$_tmp" bash -c "printf '%s' '$_input' | '$HOOK' command"
+  run env HOME="$_tmp" CLAUDE_PROJECT_DIR="$_tmp" bash -c "printf '%s' '$_input' | '$HOOK' paths command"
   [ "$status" -eq 2 ]
   [[ "$output" == *"BLOCKED"* ]]
   [[ "$output" == *".env"* ]]
@@ -45,7 +45,7 @@ install_policy() {
     '{cwd:$cwd,tool_input:{command:"cat .env"},session_id:"sess-codex"}')"
 
   run env HOME="$_home" AGENT_HARNESS_ROOT="$_harness_root" \
-    CLAUDE_PROJECT_DIR="$_home" bash -c "printf '%s' '$_input' | '$HOOK' command"
+    CLAUDE_PROJECT_DIR="$_home" bash -c "printf '%s' '$_input' | '$HOOK' paths command"
 
   [ "$status" -eq 2 ]
   [[ "$output" == *".env"* ]]
@@ -59,7 +59,7 @@ install_policy() {
   local _input
   _input="$(jq -n '{tool_input:{command:"cat ~/.docker/config.json"},session_id:"sess-codex"}')"
 
-  run env HOME="$_tmp" CLAUDE_PROJECT_DIR="$_tmp" bash -c "printf '%s' '$_input' | '$HOOK' command"
+  run env HOME="$_tmp" CLAUDE_PROJECT_DIR="$_tmp" bash -c "printf '%s' '$_input' | '$HOOK' paths command"
   [ "$status" -eq 2 ]
   [[ "$output" == *"~/.docker/config.json"* ]]
 }
@@ -72,7 +72,7 @@ install_policy() {
   local _input
   _input="$(jq -n '{tool_input:{command:"rg token README.md"},session_id:"sess-codex"}')"
 
-  run env HOME="$_tmp" CLAUDE_PROJECT_DIR="$_tmp" bash -c "printf '%s' '$_input' | '$HOOK' command"
+  run env HOME="$_tmp" CLAUDE_PROJECT_DIR="$_tmp" bash -c "printf '%s' '$_input' | '$HOOK' paths command"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
@@ -94,7 +94,7 @@ install_policy() {
   _input="$(jq -n --arg cwd "$REPO_ROOT" --arg command "$_patch" \
     '{cwd:$cwd,tool_input:{command:$command},session_id:"sess-codex"}')"
 
-  run env HOME="$_tmp" CLAUDE_PROJECT_DIR="$_tmp" bash -c "printf '%s' '$_input' | '$HOOK' patch"
+  run env HOME="$_tmp" CLAUDE_PROJECT_DIR="$_tmp" bash -c "printf '%s' '$_input' | '$HOOK' paths patch"
   [ "$status" -eq 2 ]
   [[ "$output" == *".env.local"* ]]
 }
@@ -107,7 +107,7 @@ install_policy() {
   local _input
   _input="$(jq -n '{tool_input:{file_path:"~/.ssh/config"},session_id:"sess-codex"}')"
 
-  run env HOME="$_tmp" CLAUDE_PROJECT_DIR="$_tmp" bash -c "printf '%s' '$_input' | '$HOOK' patch"
+  run env HOME="$_tmp" CLAUDE_PROJECT_DIR="$_tmp" bash -c "printf '%s' '$_input' | '$HOOK' paths patch"
   [ "$status" -eq 2 ]
   [[ "$output" == *"~/.ssh/config"* ]]
 }
@@ -120,7 +120,7 @@ install_policy() {
   local _input
   _input='{"tool_input":{"command":"cat .env"}}'
 
-  run env HOME="$_tmp" bash -c "printf '%s' '$_input' | '$HOOK' command"
+  run env HOME="$_tmp" bash -c "printf '%s' '$_input' | '$HOOK' paths command"
   [ "$status" -eq 2 ]
   [[ "$output" == *"BLOCKED"* ]]
   [[ "$output" == *"secret path policy"* ]]

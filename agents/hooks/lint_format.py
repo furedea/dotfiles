@@ -1,3 +1,4 @@
+#!/usr/bin/env -S python3 -IB
 """Plan and run file quality checks using the provider's existing notification contract."""
 
 from dataclasses import dataclass

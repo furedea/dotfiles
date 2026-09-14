@@ -1,3 +1,4 @@
+#!/usr/bin/env -S python3 -IB
 """Confirm an immediate squash merge without hiding command failures or unsafe cleanup."""
 
 import os

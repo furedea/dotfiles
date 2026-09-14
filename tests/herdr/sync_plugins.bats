@@ -5,12 +5,12 @@ bats_require_minimum_version 1.5.0
 
 setup() {
   load test-helper/setup
-  SCRIPT="$REPO_ROOT/herdr/sync_plugins.sh"
+  SCRIPT="$REPO_ROOT/herdr/sync_plugins.py"
   setup_herdr_stub
 }
 
 @test "installs a missing plugin at the declared commit" {
-  run bash "$SCRIPT" \
+  run python3 -I -B "$SCRIPT" \
     persiyanov.reviewr \
     persiyanov/herdr-reviewr \
     160ad607a195ee35ac9450e887974b3b5ddc4479
@@ -23,7 +23,7 @@ setup() {
 @test "keeps a plugin installed at the declared commit" {
   export HERDR_PLUGIN_LIST_JSON='{"result":{"plugins":[{"plugin_id":"persiyanov.reviewr","source":{"resolved_commit":"160ad607a195ee35ac9450e887974b3b5ddc4479"}}]}}'
 
-  run bash "$SCRIPT" \
+  run python3 -I -B "$SCRIPT" \
     persiyanov.reviewr \
     persiyanov/herdr-reviewr \
     160ad607a195ee35ac9450e887974b3b5ddc4479
@@ -35,7 +35,7 @@ setup() {
 @test "stays quiet when plugins already match the declaration" {
   export HERDR_PLUGIN_LIST_JSON='{"result":{"plugins":[{"plugin_id":"persiyanov.reviewr","source":{"resolved_commit":"160ad607a195ee35ac9450e887974b3b5ddc4479"}}]}}'
 
-  run bash -c 'exec 9>/dev/null; BASH_XTRACEFD=9 bash "$@"' _ "$SCRIPT" \
+  run python3 -I -B "$SCRIPT" \
     persiyanov.reviewr \
     persiyanov/herdr-reviewr \
     160ad607a195ee35ac9450e887974b3b5ddc4479
@@ -48,7 +48,7 @@ setup() {
   echo "persiyanov.reviewr" >"$HERDR_PLUGIN_SYNC_STATE_FILE"
   export HERDR_PLUGIN_LIST_JSON='{"result":{"plugins":[{"plugin_id":"persiyanov.reviewr","source":{"resolved_commit":"160ad607a195ee35ac9450e887974b3b5ddc4479"}}]}}'
 
-  run bash "$SCRIPT"
+  run python3 -I -B "$SCRIPT"
 
   [ "$status" -eq 0 ]
   [[ "$(herdr_calls)" == *"plugin uninstall persiyanov.reviewr"* ]]
@@ -59,7 +59,7 @@ setup() {
   echo "existing.plugin" >"$HERDR_PLUGIN_SYNC_STATE_FILE"
   export HERDR_INSTALL_EXIT_CODE=17
 
-  run bash "$SCRIPT" new.plugin owner/new-plugin deadbeef
+  run python3 -I -B "$SCRIPT" new.plugin owner/new-plugin deadbeef
 
   [ "$status" -eq 17 ]
   [ "$(cat "$HERDR_PLUGIN_SYNC_STATE_FILE")" = "existing.plugin" ]
@@ -68,7 +68,7 @@ setup() {
 @test "reports only the original plugin installation failure" {
   export HERDR_INSTALL_EXIT_CODE=17
 
-  run bash "$SCRIPT" new.plugin owner/new-plugin deadbeef
+  run python3 -I -B "$SCRIPT" new.plugin owner/new-plugin deadbeef
 
   [ "$status" -eq 17 ]
   [[ "$output" == *"plugin install failed"* ]]
@@ -80,7 +80,7 @@ setup() {
   export HERDR_PLUGIN_LIST_JSON='{"result":{"plugins":[{"plugin_id":"existing.plugin","source":{"resolved_commit":"cafebabe"}}]}}'
   export HERDR_INSTALL_EXIT_CODE=17
 
-  run bash "$SCRIPT" new.plugin owner/new-plugin deadbeef
+  run python3 -I -B "$SCRIPT" new.plugin owner/new-plugin deadbeef
 
   [ "$status" -eq 17 ]
   ! [[ "$(herdr_calls)" == *"plugin uninstall existing.plugin"* ]]

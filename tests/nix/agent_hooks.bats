@@ -23,6 +23,16 @@ setup() {
   _rendered=$(grep -oE '/nix/store/[a-z0-9]+-agent-harness-rendered' "$_activation" | head -n 1)
   local _claude_settings="$_rendered/.claude/settings.json"
 
+  local _entry
+  for _entry in .codex/hooks/adapters.py .claude/hooks/guard_commands.py .claude/statusline/statusline.py; do
+    [ -x "$_rendered/$_entry" ]
+    head -n 1 "$_rendered/$_entry" | grep -Eq '^#!/nix/store/[^ ]+/bin/env -S /nix/store/[^ ]+/bin/python3[^ ]* -IB$'
+  done
+  mkdir -p "$BATS_TEST_TMPDIR/empty-path"
+  run env PATH="$BATS_TEST_TMPDIR/empty-path" "$_rendered/.claude/statusline/statusline.py" <<<'{}'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Ctx:"* ]]
+
   [ -f "$_generation/home-files/.codex/hooks/external/herdr/herdr-agent-state.sh" ]
   [ -n "$_rendered" ]
   [ -f "$_rendered/.claude/hooks/external/herdr/herdr-agent-state.sh" ]
@@ -37,7 +47,7 @@ setup() {
     "$_codex_hooks"
   jq -e '
     .hooks.Stop
-      | any(.[]; any(.hooks[]; .command == "$HOME/.claude/hooks/run_related_tests.sh"))
+      | any(.[]; any(.hooks[]; .command == "\"$HOME/.claude/hooks/run_related_tests.py\""))
   ' "$_codex_hooks" >/dev/null
   grep -Eq -- "'/nix/store/[a-z0-9]+-moshi-hook-0\\.3\\.21/bin/moshi-hook' codex-hook" \
     "$_codex_hooks"

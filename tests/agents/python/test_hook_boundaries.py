@@ -1,7 +1,10 @@
 """Pure hook decisions and provider translations are independently observable."""
 
+import io
 import json
 from pathlib import Path
+from types import ModuleType
+from unittest.mock import Mock
 
 import pytest
 from pytest_mock import MockerFixture
@@ -127,3 +130,77 @@ def test_redirect_paths_are_inspected_separately_from_command_arguments() -> Non
     command = adapters.shell_syntax.parse("printf x > .env")[0]
     assert command.arguments == ("printf", "x")
     assert command.redirections == (".env",)
+
+
+@pytest.mark.parametrize("field", ["command", "cmd"])
+@pytest.mark.parametrize("mode", ["allowed", "forbidden", "git", "commit"])
+def test_shell_translation_calls_shared_policy(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, field: str, mode: str
+) -> None:
+    monkeypatch.setenv("AGENT_HARNESS_ROOT", str(tmp_path))
+    target = (
+        adapters.guard_commands
+        if mode in {"allowed", "forbidden"}
+        else adapters.guard_dangerous_git
+        if mode == "git"
+        else adapters.guard_files
+    )
+    check = Mock(return_value=2)
+    monkeypatch.setattr(target, "check", check)
+    payload = {"tool_input": {field: "git status"}, "session_id": "session-one"}
+    assert adapters.dispatch("shell", [mode], payload) == 2
+    translated = {"tool_name": "Bash", "tool_input": {"command": "git status"}, "session_id": "session-one"}
+    if mode == "git":
+        check.assert_called_once_with(translated)
+    else:
+        check.assert_called_once_with(mode, translated, tmp_path / ".claude/hooks")
+
+
+def test_adapter_applies_payload_cwd_before_enforcement(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.chdir(tmp_path.parent)
+    payload = {"cwd": str(tmp_path), "tool_input": {"cmd": "git status"}}
+    monkeypatch.setattr(adapters.sys, "stdin", io.StringIO(json.dumps(payload)))
+    observed = []
+    monkeypatch.setattr(adapters.guard_dangerous_git, "check", lambda _: observed.append(Path.cwd()) or 0)
+    assert adapters.main(["shell", "git"]) == 0
+    assert observed == [tmp_path]
+
+
+@pytest.mark.parametrize("raw", ["{", "null", "[]", '{"tool_input":true}'])
+def test_adapter_rejects_invalid_input(monkeypatch: pytest.MonkeyPatch, raw: str) -> None:
+    monkeypatch.setattr(adapters.sys, "stdin", io.StringIO(raw))
+    assert adapters.main(["shell", "git"]) == 2
+
+
+def test_lint_only_checks_existing_supported_patch_files(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "source.py").touch()
+    (tmp_path / "unknown.bin").touch()
+    check = Mock(return_value=())
+    monkeypatch.setattr(adapters.lint_format, "check_file", check)
+    patch = "\n".join(f"*** Update File: {name}" for name in ("source.py", "unknown.bin", "missing.py"))
+    assert adapters.lint({"tool_input": {"command": patch}}) == 0
+    check.assert_called_once_with("py", tmp_path / "source.py")
+
+
+@pytest.mark.parametrize(
+    "module,mode,identifier",
+    [
+        (adapters.guard_commands, "allowed", "guard_allowed_commands.sh"),
+        (adapters.guard_commands, "forbidden", "guard_forbidden_commands.sh"),
+        (adapters.guard_dangerous_git, "", "guard_dangerous_git.sh"),
+        (adapters.guard_files, "commit", "guard_secret_commit.sh"),
+        (adapters.guard_files, "harness", "guard_harness_files.sh"),
+    ],
+)
+def test_malformed_guard_input_remains_auditable(
+    monkeypatch: pytest.MonkeyPatch, module: ModuleType, mode: str, identifier: str
+) -> None:
+    monkeypatch.setattr(module.sys, "stdin", io.StringIO("{"))
+    monkeypatch.setattr(module.sys, "argv", ["hook"])
+    blocked = Mock()
+    monkeypatch.setattr(module.audit_events, "blocked", blocked)
+    assert (module.main([mode]) if mode else module.main()) == 2
+    blocked.assert_called_once()
+    assert blocked.call_args.args[1] == ""
+    assert blocked.call_args.args[3] == identifier

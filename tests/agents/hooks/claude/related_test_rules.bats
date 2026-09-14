@@ -37,21 +37,14 @@ setup() {
   ' "$LANGUAGE_RULES" >/dev/null
 }
 
-@test "default rules only cover test-selection families" {
-  jq -e '
-    [.[].lint_hook] | sort == [
-      "lint_format_js.sh",
-      "lint_format_py.sh",
-      "lint_format_rs.sh",
-      "lint_format_sh.sh"
-    ]
-  ' "$LANGUAGE_RULES" >/dev/null
+@test "default rules contain no obsolete lint entry points" {
+  jq -e 'all(.[]; has("lint_hook") | not)' "$LANGUAGE_RULES" >/dev/null
 }
 
 @test "Codex runs related tests before stopping" {
   jq -e '
     .codex.hooks.Stop
-      | any(.[]; any(.hooks[]; .command == "$HOME/.claude/hooks/run_related_tests.sh"))
+      | any(.[]; any(.hooks[]; .command == "\"$HOME/.claude/hooks/run_related_tests.py\""))
   ' "$HOOKS" >/dev/null
 }
 
@@ -91,13 +84,13 @@ setup() {
   [[ "$lint" == *adapt_lint_format.bats* ]]
 }
 
-@test "glob pattern keys cover lint_format hooks" {
-  result=$(jq -r '."agents/hooks/lint_format_*.sh"[]' "$RULES")
+@test "shared quality module covers every language hook" {
+  result=$(jq -r '."agents/hooks/lint_format.py"[]' "$RULES")
   [[ "$result" == *lint_format_hooks.bats* ]]
 }
 
 @test "secret-content patterns trigger both Claude and Codex tests" {
-  result=$(jq -r '."agents/hooks/guard_secret_content.sh"[]' "$RULES")
+  result=$(jq -r '."agents/hooks/guard_files.py"[]' "$RULES")
   [[ "$result" == *guard_secret_content.bats* ]]
   [[ "$result" == *adapt_guard_secret_content.bats* ]]
 }

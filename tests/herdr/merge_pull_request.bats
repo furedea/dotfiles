@@ -6,11 +6,11 @@ bats_require_minimum_version 1.5.0
 setup() {
   load test-helper/setup
   setup_merge_pull_request_stubs
-  SCRIPT="$REPO_ROOT/herdr/merge_pull_request.sh"
+  SCRIPT="$REPO_ROOT/herdr/merge_pull_request.py"
 }
 
 @test "Enter immediately squash-merges the current PR and deletes safe branches" {
-  run --separate-stderr bash "$SCRIPT" "$TEST_REPOSITORY" <<<""
+  run --separate-stderr python3 -I -B "$SCRIPT" "$TEST_REPOSITORY" <<<""
 
   [ "$status" -eq 0 ]
   [[ "$(merge_pull_request_gh_calls)" == *"pr merge --squash --delete-branch --match-head-commit $GIT_HEAD"* ]]
@@ -18,14 +18,14 @@ setup() {
 }
 
 @test "Ctrl+M confirms the pull-request merge" {
-  run --separate-stderr bash "$SCRIPT" "$TEST_REPOSITORY" <<<$'\r'
+  run --separate-stderr python3 -I -B "$SCRIPT" "$TEST_REPOSITORY" <<<$'\r'
 
   [ "$status" -eq 0 ]
   [[ "$(merge_pull_request_gh_calls)" == *"pr merge --squash"* ]]
 }
 
 @test "Escape cancels without merging the pull request" {
-  run --separate-stderr bash "$SCRIPT" "$TEST_REPOSITORY" <<<$'\e'
+  run --separate-stderr python3 -I -B "$SCRIPT" "$TEST_REPOSITORY" <<<$'\e'
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"Cancelled."* ]]
@@ -33,7 +33,7 @@ setup() {
 }
 
 @test "Ctrl+C cancels without merging the pull request" {
-  run --separate-stderr bash "$SCRIPT" "$TEST_REPOSITORY" <<<$'\003'
+  run --separate-stderr python3 -I -B "$SCRIPT" "$TEST_REPOSITORY" <<<$'\003'
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"Cancelled."* ]]
@@ -41,7 +41,7 @@ setup() {
 }
 
 @test "End of input cancels without merging the pull request" {
-  run --separate-stderr bash "$SCRIPT" "$TEST_REPOSITORY" </dev/null
+  run --separate-stderr python3 -I -B "$SCRIPT" "$TEST_REPOSITORY" </dev/null
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"Cancelled."* ]]
@@ -51,7 +51,7 @@ setup() {
 @test "A dirty working tree blocks the pull-request merge" {
   export GIT_STATUS_OUTPUT=$' M herdr/config.toml\n'
 
-  run --separate-stderr bash "$SCRIPT" "$TEST_REPOSITORY" <<<""
+  run --separate-stderr python3 -I -B "$SCRIPT" "$TEST_REPOSITORY" <<<""
 
   [ "$status" -ne 0 ]
   [[ "$output" == *"working tree has uncommitted changes"* ]]
@@ -68,7 +68,7 @@ HEAD 89abcdef0123456789abcdef0123456789abcdef
 branch refs/heads/main
 "
 
-  run --separate-stderr bash "$SCRIPT" "$TEST_REPOSITORY" <<<""
+  run --separate-stderr python3 -I -B "$SCRIPT" "$TEST_REPOSITORY" <<<""
 
   [ "$status" -eq 0 ]
   [[ "$(merge_pull_request_gh_calls)" == *"pr merge --squash --match-head-commit $GIT_HEAD"* ]]
@@ -80,7 +80,7 @@ branch refs/heads/main
   export GH_MERGE_EXIT_CODE=1
   export GH_MERGE_ERROR="required checks have not passed"
 
-  run --separate-stderr bash "$SCRIPT" "$TEST_REPOSITORY" <<<$'\n'
+  run --separate-stderr python3 -I -B "$SCRIPT" "$TEST_REPOSITORY" <<<$'\n'
 
   [ "$status" -eq 1 ]
   [[ "$stderr" == *"required checks have not passed"* ]]
@@ -91,7 +91,7 @@ branch refs/heads/main
   export GH_VIEW_EXIT_CODE=1
   export GH_VIEW_ERROR="no pull requests found for branch"
 
-  run --separate-stderr bash "$SCRIPT" "$TEST_REPOSITORY" <<<""
+  run --separate-stderr python3 -I -B "$SCRIPT" "$TEST_REPOSITORY" <<<""
 
   [ "$status" -eq 1 ]
   [[ "$stderr" == *"no pull requests found for branch"* ]]
@@ -103,7 +103,7 @@ branch refs/heads/main
   export GIT_HEAD_EXIT_CODE=128
   export GIT_HEAD_ERROR="unable to resolve HEAD"
 
-  run --separate-stderr bash "$SCRIPT" "$TEST_REPOSITORY" <<<$'\e'
+  run --separate-stderr python3 -I -B "$SCRIPT" "$TEST_REPOSITORY" <<<$'\e'
 
   [ "$status" -eq 128 ]
   [[ "$stderr" == *"unable to resolve HEAD"* ]]
@@ -112,7 +112,7 @@ branch refs/heads/main
 }
 
 @test "An unexpected confirmation key cancels and consumes the following Enter" {
-  run --separate-stderr bash "$SCRIPT" "$TEST_REPOSITORY" <<<$'x'
+  run --separate-stderr python3 -I -B "$SCRIPT" "$TEST_REPOSITORY" <<<$'x'
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"Cancelled."* ]]
@@ -121,7 +121,7 @@ branch refs/heads/main
 }
 
 @test "The confirmation identifies the pull request and branch direction" {
-  run --separate-stderr bash "$SCRIPT" "$TEST_REPOSITORY" <<<$'\e'
+  run --separate-stderr python3 -I -B "$SCRIPT" "$TEST_REPOSITORY" <<<$'\e'
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"PR #42: Merge helper"* ]]
@@ -133,7 +133,7 @@ branch refs/heads/main
   export GIT_ROOT_EXIT_CODE=128
   export GIT_ROOT_ERROR="not a git repository"
 
-  run --separate-stderr bash "$SCRIPT" "$TEST_REPOSITORY" <<<""
+  run --separate-stderr python3 -I -B "$SCRIPT" "$TEST_REPOSITORY" <<<""
 
   [ "$status" -eq 128 ]
   [[ "$stderr" == *"not a git repository"* ]]

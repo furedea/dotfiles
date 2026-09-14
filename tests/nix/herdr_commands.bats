@@ -9,14 +9,18 @@ setup() {
   HOME_CONFIG="homeConfigurations.kaito.config"
 }
 
-@test "Home Manager links the editable Herdr pull-request merge helper" {
+@test "Herdr launcher pins Python while keeping the implementation editable" {
   run --separate-stderr nix build --no-link --print-out-paths \
     "$REPO_ROOT#$HOME_CONFIG.home.file.\".local/libexec/herdr_merge_pull_request.sh\".source"
 
   [ "$status" -eq 0 ]
-  run readlink "$output"
-  [ "$status" -eq 0 ]
-  [ "$output" = "$PRIMARY_DOTFILES/herdr/merge_pull_request.sh" ]
+  local _launcher="$output"
+  grep -Eq 'exec /nix/store/[^ ]+/bin/python3[^ ]* -I -B ' "$_launcher"
+  grep -Fq "$PRIMARY_DOTFILES/herdr/merge_pull_request.py" "$_launcher"
+  mkdir -p "$BATS_TEST_TMPDIR/empty-path"
+  run env PATH="$BATS_TEST_TMPDIR/empty-path" "$_launcher"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Usage:"* ]]
 }
 
 @test "Home Manager builds with the out-of-store Herdr pull-request merge helper" {

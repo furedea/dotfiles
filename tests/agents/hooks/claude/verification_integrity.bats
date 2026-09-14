@@ -5,7 +5,7 @@
 
 setup() {
   load test-helper/setup
-  HOOK="$HOOK_DIR/run_related_tests.sh"
+  HOOK="$HOOK_DIR/run_related_tests.py"
   create_temp_git_repo
   cd "$TEMP_REPO" || return
   export RUN_RELATED_TESTS_BASE_REF=HEAD
@@ -36,14 +36,14 @@ assert_incomplete() {
   printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$1" > "$BATS_TEST_TMPDIR/budget"\nshift\n"$@"\n' >bin/timeout
   unset RUN_RELATED_TESTS_TIMEOUT_SECONDS
 
-  run bash "$HOOK"
+  run python3 -I -B "$HOOK"
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"Verification passed"* ]]
   [ "$(cat "$BATS_TEST_TMPDIR/budget")" = 300 ]
 
   export RUN_RELATED_TESTS_TIMEOUT_SECONDS=7
-  run bash "$HOOK"
+  run python3 -I -B "$HOOK"
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"Verification passed"* ]]
@@ -56,7 +56,7 @@ assert_incomplete() {
   printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$1" > "$BATS_TEST_TMPDIR/budget"\nshift\n"$@"\n' >bin/timeout
   unset RUN_RELATED_TESTS_TIMEOUT_SECONDS
 
-  run bash "$HOOK"
+  run python3 -I -B "$HOOK"
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"Verification passed"* ]]
@@ -67,7 +67,7 @@ assert_incomplete() {
   touch pyproject.toml source.py tests/test_source.py
   printf '%s\n' '{"source.py":["tests/test_source.py","tests/test_missing.py"]}' >.agents/hooks/rules/related_test_extensions.json
 
-  run bash "$HOOK"
+  run python3 -I -B "$HOOK"
 
   assert_incomplete
   [[ "$output" == *"tests/test_missing.py"* ]]
@@ -77,7 +77,7 @@ assert_incomplete() {
   touch source.py pyproject.toml tests/test_source.py
   printf '{broken' >.agents/hooks/rules/related_test_extensions.json
 
-  run bash "$HOOK"
+  run python3 -I -B "$HOOK"
 
   assert_incomplete
   [[ "$output" == *"configuration"* ]]
@@ -87,7 +87,7 @@ assert_incomplete() {
   touch source.py pyproject.toml
   printf '%s\n' '{"source.py":"tests/test_source.py"}' >.agents/hooks/rules/related_test_extensions.json
 
-  run bash "$HOOK"
+  run python3 -I -B "$HOOK"
 
   assert_incomplete
   [[ "$output" == *"configuration"* ]]
@@ -95,12 +95,11 @@ assert_incomplete() {
 
 @test "missing required default rules are reported" {
   mkdir -p "$BATS_TEST_TMPDIR/hooks"
-  cp "$HOOK" "$BATS_TEST_TMPDIR/hooks/run_related_tests.sh"
   cp "$HOOK_DIR/run_related_tests.py" "$BATS_TEST_TMPDIR/hooks/run_related_tests.py"
   cp -R "$HOOK_DIR/lib" "$BATS_TEST_TMPDIR/hooks/lib"
   touch source.py pyproject.toml
 
-  run bash "$BATS_TEST_TMPDIR/hooks/run_related_tests.sh"
+  run python3 -I -B "$BATS_TEST_TMPDIR/hooks/run_related_tests.py"
 
   assert_incomplete
   [[ "$output" == *"related_test_defaults.json"* ]]
@@ -111,7 +110,7 @@ assert_incomplete() {
   printf '%s\n' '{"source.rs":["source.rs"]}' >.agents/hooks/rules/related_test_extensions.json
   export TEST_RUNNER_OUTPUT='test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 12 filtered out; finished in 0.00s'
 
-  run bash "$HOOK"
+  run python3 -I -B "$HOOK"
 
   assert_incomplete
   [[ "$output" == *"No tests executed"* ]]
@@ -121,7 +120,7 @@ assert_incomplete() {
   touch pyproject.toml tests/test_source.py
   export TEST_RUNNER_OUTPUT='3 skipped in 0.01s'
 
-  run bash "$HOOK"
+  run python3 -I -B "$HOOK"
 
   assert_incomplete
   [[ "$output" == *"No tests executed"* ]]
@@ -131,7 +130,7 @@ assert_incomplete() {
   touch Cargo.toml source.rs
   export TEST_RUNNER_OUTPUT=$'test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s'
 
-  run bash "$HOOK"
+  run python3 -I -B "$HOOK"
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"Verification passed"* ]]
@@ -141,7 +140,7 @@ assert_incomplete() {
   touch pyproject.toml tests/test_source.py
   export TEST_RUNNER_OUTPUT='custom runner finished successfully'
 
-  run bash "$HOOK"
+  run python3 -I -B "$HOOK"
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"test count unavailable"* ]]
@@ -151,7 +150,7 @@ assert_incomplete() {
   touch tests/source.bats
   export TEST_RUNNER_OUTPUT=$'1..1\nok 1 source # skip unavailable service'
 
-  run bash "$HOOK"
+  run python3 -I -B "$HOOK"
 
   assert_incomplete
   [[ "$output" == *"No tests executed"* ]]
@@ -162,7 +161,7 @@ assert_incomplete() {
   touch source.ts
   export TEST_RUNNER_OUTPUT='No test files found, exiting with code 0'
 
-  run bash "$HOOK"
+  run python3 -I -B "$HOOK"
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"Verification skipped"* ]]
@@ -174,7 +173,7 @@ assert_incomplete() {
   touch source.ts
   export TEST_RUNNER_OUTPUT='Tests  2 skipped (2)'
 
-  run bash "$HOOK"
+  run python3 -I -B "$HOOK"
 
   assert_incomplete
 }
@@ -183,7 +182,7 @@ assert_incomplete() {
   touch source.md tests/test_source.py
   printf '%s\n' '{"source.md":["tests/test_source.py"]}' >.agents/hooks/rules/related_test_extensions.json
 
-  run bash "$HOOK"
+  run python3 -I -B "$HOOK"
 
   assert_incomplete
 }

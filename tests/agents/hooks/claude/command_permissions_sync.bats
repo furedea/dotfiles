@@ -64,7 +64,7 @@ assert_lines_contain() {
     --output "$_runtime_permissions"
 
   run env AGENT_COMMAND_PERMISSIONS="$_runtime_permissions" \
-    bash "$HOOK_DIR/guard_allowed_commands.sh" <<<"$(make_input "gh pr list")"
+    python3 -I -B "$HOOK_DIR/guard_commands.py" allowed <<<"$(make_input "gh pr list")"
 
   [ "$status" -eq 0 ]
 }

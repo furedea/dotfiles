@@ -5,7 +5,7 @@
 
 setup() {
   load test-helper/setup
-  HOOK="$HOOK_DIR/run_related_tests.sh"
+  HOOK="$HOOK_DIR/run_related_tests.py"
   TEST_TMPDIR="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/gate.XXXXXX")"
   export RUN_RELATED_TESTS_BASE_REF=HEAD
   export XDG_STATE_HOME="$BATS_TEST_TMPDIR/state"
@@ -59,7 +59,7 @@ EOF
   printf '#!/bin/bash\necho changed\n' > script.sh
   export PATH="$TEST_TMPDIR/bin:$PATH"
 
-  run bash "$HOOK" <<< "$(make_stop_input true)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input true)"
 
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision":"block"'* ]]
@@ -98,7 +98,7 @@ EOF
   export PATH="$TEST_TMPDIR/bin:$PATH"
   export RUN_RELATED_TESTS_BASE_REF=origin/main
 
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision":"block"'* ]]
@@ -115,7 +115,7 @@ EOF
   git add tracked && git commit --quiet -m base
   export RUN_RELATED_TESTS_BASE_REF=origin/missing
 
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision":"block"'* ]]
@@ -150,7 +150,7 @@ EOF
   git add script.sh
   export PATH="$TEST_TMPDIR/bin:$PATH"
 
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision":"block"'* ]]
@@ -183,7 +183,7 @@ EOF
   printf '#!/bin/bash\necho untracked\n' > new_script.sh
   export PATH="$TEST_TMPDIR/bin:$PATH"
 
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision":"block"'* ]]
@@ -192,7 +192,7 @@ EOF
 
 @test "run_related_tests reports that a non-Git directory was skipped" {
   cd "$TEST_TMPDIR"
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   message="$(jq -r '.systemMessage' <<<"$output")"
   [[ "$message" == *'Reason: not inside a Git repository'* ]]
@@ -205,7 +205,7 @@ EOF
   git config user.name t
   git config commit.gpgsign false
   touch f && git add f && git commit --quiet -m i
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   message="$(jq -r '.systemMessage' <<<"$output")"
   [[ "$message" == *'Reason: no changes since HEAD'* ]]
@@ -219,7 +219,7 @@ EOF
   git config commit.gpgsign false
   touch base && git add base && git commit --quiet -m i
   printf 'console.log(1)\n' > app.js  # untracked change, no test framework
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   message="$(jq -r '.systemMessage' <<<"$output")"
   [[ "$message" == *'Reason: no related test runner matched changed paths'* ]]
@@ -240,7 +240,7 @@ EOF
   git add . && git commit --quiet -m i
   printf '\n' >> settings.json
 
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
   message="$(jq -r '.systemMessage' <<<"$output")"
@@ -263,7 +263,7 @@ EOF
   git add . && git commit --quiet -m i
   printf '\n' >> src/app.ts
 
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision":"block"'* ]]
@@ -289,7 +289,7 @@ echo hi
 EOF
   git add . && git commit --quiet -m i
   printf '#!/bin/bash\necho changed\n' > script.sh
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision"'* ]]
   [[ "$output" == *'block'* ]]
@@ -325,7 +325,7 @@ EOF
   git add . && git commit --quiet -m i
   printf '\n' >> script.sh
 
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
   [[ "$output" == *'Bats: test count unavailable · 1 targets'* ]]
@@ -355,7 +355,7 @@ EOF
   printf '#!/bin/bash\necho changed\n' > script.sh
   export RUN_RELATED_TESTS_BATS_BIN=missing-bats-runner
 
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision":"block"'* ]]
@@ -387,7 +387,7 @@ EOF
   export PATH="$TEST_TMPDIR/bin:$PATH"
   export RUN_RELATED_TESTS_TIMEOUT_BIN=missing-timeout-runner
 
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision":"block"'* ]]
@@ -402,9 +402,10 @@ EOF
   git config user.name t
   git config commit.gpgsign false
   mkdir -p bin home/.config/agent-harness/bin tests
-  for _dependency in awk bash cat date dirname find grep jq mkdir mktemp python3 rm sort; do
+  for _dependency in awk bash cat date dirname find grep jq mkdir mktemp rm sort; do
     ln -s "$(command -v "$_dependency")" "bin/$_dependency"
   done
+  ln -s "$(python3 -I -B -c 'import sys; print(sys.executable)')" bin/python3
   cat > bin/git <<EOF
 #!/bin/bash
 case "\$*" in
@@ -437,7 +438,7 @@ EOF
   run env \
     XDG_CONFIG_HOME="$TEST_TMPDIR/home/.config" \
     PATH="$TEST_TMPDIR/bin" \
-    bash "$HOOK" <<< '{"stop_hook_active":false,"session_id":"test"}'
+    python3 -I -B "$HOOK" <<< '{"stop_hook_active":false,"session_id":"test"}'
 
   [ "$status" -eq 0 ]
   assert_verification_passed
@@ -471,7 +472,7 @@ EOF
   export PATH="$TEST_TMPDIR/bin:$PATH"
   export RUN_RELATED_TESTS_TIMEOUT_SECONDS=1
 
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision"'* ]]
@@ -497,7 +498,7 @@ echo hi
 EOF
   git add . && git commit --quiet -m i
   printf '#!/bin/bash\necho changed\n' > script.sh
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   message="$(jq -r '.systemMessage' <<<"$output")"
   [[ "$message" == *'Bats: '* ]]
@@ -529,7 +530,7 @@ EOF
   printf '# changed\n' >> source.sh
   printf '# changed\n' >> "tests/domain with spaces/shared.bats"
 
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
   assert_verification_passed
@@ -545,7 +546,7 @@ EOF
   git add . && git commit --quiet -m base
   printf '# changed\n' >> source.sh
 
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision":"block"'* ]]
@@ -575,7 +576,7 @@ EOF
 EOF
   git add . && git commit --quiet -m i
   printf 'changed\n' >> lib/shared.sh
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision"'* ]]
   [[ "$output" == *'block'* ]]
@@ -602,7 +603,7 @@ EOF
 EOF
   git add . && git commit --quiet -m i
   printf 'changed\n' >> lib/shared.sh
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   assert_verification_passed
 }
@@ -632,7 +633,7 @@ EOF
 EOF
   git add . && git commit --quiet -m i
   printf 'changed\n' >> script.sh
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   [[ "$output" == *'extra fan-out fails'* ]]
   [[ "$output" == *'"decision"'* ]]
@@ -654,7 +655,7 @@ EOF
 EOF
   git add . && git commit --quiet -m i
   printf 'changed\n' >> script.sh
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   [ "$(jq -r '.decision' <<< "$output")" = block ]
   [[ "$output" == *"Invalid configuration"* ]]
@@ -680,7 +681,7 @@ key = "value"
 EOF
   git add . && git commit --quiet -m i
   printf '\nupdated = true\n' >> config/app.toml
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   [[ "$output" == *'config check fails'* ]]
 }
@@ -716,7 +717,7 @@ EOF
   printf '\n' >> nix/module.nix
   export PATH="$TEST_TMPDIR/bin:$PATH"
 
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
   [ "$(cat bats_args.txt)" = "tests/nix/module.bats" ]
@@ -747,7 +748,7 @@ EOF
   git add . && git commit --quiet -m i
   printf '\n' >> nix/module.nix
 
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
   assert_verification_passed
@@ -780,7 +781,7 @@ EOF
 EOF
   git add . && git commit --quiet -m i
   printf 'changed\n' >> script.sh
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   assert_verification_passed
 }
@@ -804,7 +805,7 @@ EOF
 EOF
   git add . && git commit --quiet -m i
   printf 'changed\n' >> unrelated.sh
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision"'* ]]
   [[ "$output" == *'block'* ]]
@@ -832,7 +833,7 @@ EOF
 EOF
   git add . && git commit --quiet -m i
   printf 'changed\n' >> script.sh
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   assert_verification_passed
 }
@@ -852,7 +853,7 @@ EOF
 EOF
   git add . && git commit --quiet -m i
   printf '\n@test "still passes" { true; }\n' >> tests/changed.bats
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   assert_verification_passed
 }
@@ -894,7 +895,7 @@ def test_other():
 EOF
   git add . && git commit --quiet -m i
   printf '\n' >> app.py
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   assert_verification_passed
 }
@@ -924,7 +925,7 @@ EOF
   git add . && git commit --quiet -m i
   printf '\n' >> app.py
 
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
   [ "$(cat uv_args.txt)" = \
@@ -954,7 +955,7 @@ EOF
   git add . && git commit --quiet -m i
   printf '\n' >> config/app.toml
 
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
   message="$(jq -r '.systemMessage' <<<"$output")"
@@ -982,7 +983,7 @@ EOF
   chmod +x bin/timeout bin/bats
   export PATH="$TEST_TMPDIR/bin:$PATH"
   printf '@test "fixture" { true; }\n' > tests/example.bats
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   message="$(jq -r '.systemMessage' <<<"$output")"
   [[ "$message" == *'Bats: 2 passed, 1 skipped'* ]]
@@ -1018,7 +1019,7 @@ def test_value():
 EOF
   git add . && git commit --quiet -m i
   printf '\n' >> service.py
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision"'* ]]
   [[ "$output" == *'test_value'* ]]
@@ -1050,7 +1051,7 @@ EOF
   git add . && git commit --quiet -m i
   printf '\n' >> src/app.ts
 
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
   assert_verification_passed
@@ -1083,7 +1084,7 @@ EOF
   git add . && git commit --quiet -m i
   printf '\n' >> src/app.ts
 
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
   assert_verification_passed
@@ -1115,7 +1116,7 @@ EOF
   git add . && git commit --quiet -m i
   printf '\n' >> src/app.ts
 
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
   assert_verification_passed
@@ -1148,7 +1149,7 @@ EOF
   git add . && git commit --quiet -m i
   printf '\n' >> src/app.js
 
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
   assert_verification_passed
@@ -1179,7 +1180,7 @@ EOF
   git add . && git commit --quiet -m i
   printf '\n' >> src/app.js
 
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
 
   [ "$status" -eq 0 ]
   assert_verification_passed
@@ -1207,7 +1208,7 @@ fn parses() {}
 EOF
   git add . && git commit --quiet -m i
   printf '\n' >> tests/parser.rs
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   assert_verification_passed
   [ "$(cat cargo_args.txt)" = "test --test parser --quiet" ]
@@ -1237,7 +1238,7 @@ fn parses() {}
 EOF
   git add . && git commit --quiet -m i
   printf '\n' >> src/parser.rs
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   [[ "$output" == *'"decision"'* ]]
   [[ "$output" == *'parser integration failed'* ]]
@@ -1270,7 +1271,7 @@ fn other() {}
 EOF
   git add . && git commit --quiet -m i
   printf '\n' >> src/parser.rs
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   assert_verification_passed
   [ "$(cat cargo_args.txt)" = "test --quiet" ]
@@ -1296,7 +1297,7 @@ pub fn parse() {}
 EOF
   git add . && git commit --quiet -m i
   printf '\n' >> src/lib.rs
-  run bash "$HOOK" <<< "$(make_stop_input false)"
+  run python3 -I -B "$HOOK" <<< "$(make_stop_input false)"
   [ "$status" -eq 0 ]
   assert_verification_passed
   [ "$(cat cargo_args.txt)" = "test --quiet" ]
