@@ -63,7 +63,7 @@ let
       exec hermes -p secretary "$@"
     '';
   };
-  zshCacheBuilder = pkgs.writeText "build_cache.sh" (builtins.readFile ../../zsh/build_cache.sh);
+  zshCacheBuilder = pkgs.writeText "build_cache.zsh" (builtins.readFile ../../zsh/build_cache.zsh);
   herdrSkill = pkgs.runCommand "herdr-skill" { } ''
     set -euxCo pipefail
     mkdir -p "$out"
@@ -562,13 +562,10 @@ in
       fi
     '';
     zshCache = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
-      BASH_XTRACEFD=9 \
-        "${pkgs.bash}/bin/bash" \
+      "${pkgs.zsh}/bin/zsh" -f \
         "${zshCacheBuilder}" \
-        "${pkgs.zsh}/bin/zsh" \
         "${config.home.homeDirectory}/.zshrc" \
-        "${config.xdg.cacheHome}/zsh/.zcompdump" \
-        9>/dev/null
+        "${config.xdg.cacheHome}/zsh/.zcompdump"
     '';
     sshDirectoryPermissions = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       if [ -d "$HOME/.ssh" ]; then

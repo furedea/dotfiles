@@ -5,6 +5,7 @@ bats_require_minimum_version 1.5.0
 
 setup() {
   REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
+  TEST_FLAKE="${DOTFILES_TEST_FLAKE:-$REPO_ROOT}"
   TEST_HOME="$BATS_TEST_TMPDIR/home"
   TEST_BIN="$BATS_TEST_TMPDIR/bin"
   COMPINIT_LOG="$BATS_TEST_TMPDIR/compinit.log"
@@ -92,7 +93,7 @@ EOF
 
 @test "system Zsh leaves completion initialization to the user configuration" {
   run --separate-stderr nix eval --json \
-    "$REPO_ROOT#darwinConfigurations.mba.config.programs.zsh.enableGlobalCompInit"
+    "$TEST_FLAKE#darwinConfigurations.mba.config.programs.zsh.enableGlobalCompInit"
 
   [ "$status" -eq 0 ]
   [ "$output" = "false" ]
@@ -100,7 +101,7 @@ EOF
 
 @test "system Zsh skips unused Bash completion compatibility" {
   run --separate-stderr nix eval --json \
-    "$REPO_ROOT#darwinConfigurations.mba.config.programs.zsh.enableBashCompletion"
+    "$TEST_FLAKE#darwinConfigurations.mba.config.programs.zsh.enableBashCompletion"
 
   [ "$status" -eq 0 ]
   [ "$output" = "false" ]
@@ -108,7 +109,7 @@ EOF
 
 @test "system Zsh leaves prompt initialization to Starship" {
   run --separate-stderr nix eval --json \
-    "$REPO_ROOT#darwinConfigurations.mba.config.programs.zsh.promptInit"
+    "$TEST_FLAKE#darwinConfigurations.mba.config.programs.zsh.promptInit"
 
   [ "$status" -eq 0 ]
   [ "$output" = '""' ]
@@ -116,7 +117,7 @@ EOF
 
 @test "nix-homebrew leaves Zsh environment initialization disabled" {
   run --separate-stderr nix eval --json \
-    "$REPO_ROOT#darwinConfigurations.mba.config.nix-homebrew.enableZshIntegration"
+    "$TEST_FLAKE#darwinConfigurations.mba.config.nix-homebrew.enableZshIntegration"
 
   [ "$status" -eq 0 ]
   [ "$output" = "false" ]
@@ -124,7 +125,7 @@ EOF
 
 @test "Home Manager activation invokes the packaged Zsh cache builder" {
   run --separate-stderr nix build --no-link --print-out-paths \
-    "$REPO_ROOT#homeConfigurations.kaito.activationPackage"
+    "$TEST_FLAKE#homeConfigurations.kaito.activationPackage"
 
   if [ "$status" -ne 0 ]; then
     printf '%s\n' "$stderr" >&2
@@ -134,14 +135,14 @@ EOF
   local _activation_package="$output"
   [ -f "$_activation_package/activate" ]
   local _builder
-  _builder="$(grep -Eo '/nix/store/[^"[:space:]]+-build_cache[.]sh' "$_activation_package/activate" | head -n 1)"
+  _builder="$(grep -Eo '/nix/store/[^"[:space:]]+-build_cache[.]zsh' "$_activation_package/activate" | head -n 1)"
   [ -f "$_builder" ]
-  cmp --silent "$REPO_ROOT/zsh/build_cache.sh" "$_builder"
+  cmp --silent "$REPO_ROOT/zsh/build_cache.zsh" "$_builder"
 }
 
 @test "Home Manager builds Zsh caches after linking the new startup file" {
   run --separate-stderr nix eval --json \
-    "$REPO_ROOT#homeConfigurations.kaito.config.home.activation.zshCache.after"
+    "$TEST_FLAKE#homeConfigurations.kaito.config.home.activation.zshCache.after"
 
   [ "$status" -eq 0 ]
   [ "$output" = '["linkGeneration"]' ]

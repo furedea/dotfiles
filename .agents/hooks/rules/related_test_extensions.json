@@ -153,6 +153,10 @@
     "tests/esa/zsh.bats",
     "tests/python/test_esa.py"
   ],
+  "zsh/build_cache.zsh": [
+    "tests/zsh/cache.bats",
+    "tests/zsh/startup.bats"
+  ],
   "agents/manifest.json": [
     "tests/agents/hooks/claude/python_runtime.bats"
   ],
