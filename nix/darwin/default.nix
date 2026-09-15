@@ -14,6 +14,25 @@ let
     executable = true;
     text = builtins.readFile ../../scripts/hister/run_hister_server.sh;
   };
+
+  # The tap repository is `jundot/omlx`, not the conventional
+  # `jundot/homebrew-omlx`, so the clone target cannot be inferred.
+  omlxTap = "jundot/omlx";
+  omlxTapUrl = "https://github.com/${omlxTap}";
+  omlxFormula = "${omlxTap}/omlx";
+
+  # Homebrew refuses to load formulae from third-party taps until they are
+  # trusted. Keep the trust formula-scoped rather than tap-wide so only this
+  # formula's Ruby is authorized to run. Homebrew records the clone URL
+  # spelling for taps with a custom clone target, so declare both.
+  homebrewTrustFile = pkgs.writeText "homebrew-trust.json" (
+    builtins.toJSON {
+      trustedformulae = [
+        omlxFormula
+        "${omlxTapUrl}/omlx"
+      ];
+    }
+  );
 in
 {
   environment.systemPackages = [ pkgs.vim ];
@@ -264,6 +283,16 @@ in
         mv "$f" "$f.before-nix-darwin"
       fi
     done
+
+    # Homebrew Bundle runs without XDG_CONFIG_HOME, while interactive shells
+    # may set it. Keep both trust stores identical and available before Bundle.
+    user="${config.system.primaryUser}"
+    user_home="/Users/$user"
+    for trust_dir in "$user_home/.homebrew" "$user_home/.config/homebrew"; do
+      install -d -m 700 -o "$user" -g staff "$trust_dir"
+      install -m 600 -o "$user" -g staff \
+        ${homebrewTrustFile} "$trust_dir/trust.json"
+    done
   '';
 
   system.activationScripts.postActivation.text = ''
@@ -311,19 +340,17 @@ in
       extraFlags = [ "--force" ];
     };
 
-    # The tap repository is `jundot/omlx`, not the conventional
-    # `jundot/homebrew-omlx`, so the clone target cannot be inferred.
     taps = [
       {
-        name = "jundot/omlx";
-        clone_target = "https://github.com/jundot/omlx";
+        name = omlxTap;
+        clone_target = omlxTapUrl;
       }
     ];
 
     # Local MLX inference server. Nixpkgs builds mlx with MLX_BUILD_METAL=false
     # because the Metal shader compiler is not open source, so a Nix-managed
     # build would run on CPU only.
-    brews = [ "jundot/omlx/omlx" ];
+    brews = [ omlxFormula ];
 
     casks = [
       "bitwarden"
