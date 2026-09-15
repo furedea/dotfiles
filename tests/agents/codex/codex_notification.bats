@@ -17,7 +17,7 @@ capture_codex_arguments() {
   # Intercept the generated wrapper's exec without starting a real agent.
   # shellcheck disable=SC2329
   exec() {
-    shift 3
+    shift 6
     printf '%s\n' "$@"
   }
   # shellcheck source=/dev/null

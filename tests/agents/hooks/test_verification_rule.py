@@ -45,7 +45,7 @@ def test_defaults_have_no_obsolete_lint_entry_point() -> None:
 def test_codex_verifies_changes_before_stopping() -> None:
     hooks = json.loads((REPO_ROOT / "agents/hooks.json").read_text())
     commands = [hook["command"] for group in hooks["codex"]["hooks"]["Stop"] for hook in group["hooks"]]
-    assert '"$HOME/.claude/hooks/run_verification.py"' in commands
+    assert '"$HOME/.claude/hooks/verification_session.py" stop' in commands
 
 
 def test_extension_values_are_nonempty_arrays_of_paths(extension: dict[str, list[str]]) -> None:
@@ -91,7 +91,15 @@ def test_nix_changes_select_configuration_and_packaged_runtime_contracts(
         ("agents/hooks/rules/secret_path_policy.json", {"test_hook_translation_cli.py"}),
         ("agents/claude/settings.base.json", {"test_allowed_command.py", "test_notification.py"}),
         ("agents/codex/config.toml", {"test_notification.py"}),
-        ("agents/hooks.json", {"test_notification.py", "test_verification_rule.py", "test_python_runtime.py"}),
+        (
+            "agents/hooks.json",
+            {
+                "test_notification.py",
+                "test_verification_rule.py",
+                "test_python_runtime.py",
+                "test_verification_session.py",
+            },
+        ),
         (
             "agents/command_permissions.json",
             {

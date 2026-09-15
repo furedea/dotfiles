@@ -29,6 +29,7 @@ let
   rootsPackage = pkgs.callPackage ../packages/roots.nix { };
   terminalBrowserPackage = pkgs.callPackage ../packages/terminal_browser.nix { };
   codexPackage = llm-agents.packages.${system}.codex;
+  claudePackage = llm-agents.packages.${system}.claude-code;
   agentHarnessPackage = agent-harness.packages.${system}.default;
   moshiHookPackage = pkgs.callPackage ../packages/moshi_hook.nix { };
   moshiHookRuntime = lib.getExe moshiHookPackage;
@@ -130,7 +131,12 @@ let
     if [ "''${HERDR_ENV:-}" = "1" ]; then
       set -- -c tui.notifications=false "$@"
     fi
-    exec -a codex ${codexPackage}/bin/codex "$@"
+    exec ${automationPython} -I -B ${agentSource}/hooks/launch_agent.py \
+      codex ${codexPackage}/bin/codex "$@"
+  '';
+  registeredClaude = pkgs.writeShellScriptBin "claude" ''
+    exec ${automationPython} -I -B ${agentSource}/hooks/launch_agent.py \
+      claude ${claudePackage}/bin/claude "$@"
   '';
   herdrPlugins = [
     {
@@ -212,7 +218,7 @@ in
     gwsPackage
 
     # AI coding agents
-    llm-agents.packages.${system}.claude-code
+    registeredClaude
     herdrCompatibleCodex
     hermesAgentPackage
     unstable.opencode

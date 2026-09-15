@@ -45,7 +45,22 @@
   "agents/hooks.json": [
     "tests/agents/test_notification.py",
     "tests/agents/hooks/test_verification_rule.py",
-    "tests/agents/test_python_runtime.py"
+    "tests/agents/test_python_runtime.py",
+    "tests/agents/hooks/test_verification_session.py"
+  ],
+  "agents/hooks/lib/session_*.py": [
+    "tests/agents/hooks/test_session_snapshot.py",
+    "tests/agents/hooks/test_session_store.py",
+    "tests/agents/hooks/test_session_gate.py",
+    "tests/agents/hooks/test_verification_session.py"
+  ],
+  "agents/hooks/launch_agent.py": [
+    "tests/agents/hooks/test_launch_agent.py",
+    "tests/agents/hooks/test_verification_session.py"
+  ],
+  "agents/hooks/verification_session.py": [
+    "tests/agents/hooks/test_verification_session.py",
+    "tests/agents/hooks/test_session_gate.py"
   ],
   "agents/claude/statusline/*.json": [
     "tests/agents/claude/test_statusline.py"
