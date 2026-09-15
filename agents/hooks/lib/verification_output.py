@@ -1,10 +1,23 @@
-"""Interpret runner evidence without conflating unknown counts and zero execution."""
+"""Interpret runner evidence and order summaries independently of execution."""
 
 from dataclasses import dataclass
 import re
 
 
 ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+DISPLAY_ORDER = {
+    "pytest": 0,
+    "rust": 1,
+    "vitest": 2,
+    "jest": 2,
+    "node": 2,
+    "npm test": 2,
+    "pnpm test": 2,
+    "yarn test": 2,
+    "bun test": 2,
+    "javascript_typescript": 2,
+    "Bats": 3,
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -13,6 +26,11 @@ class Evidence:
 
     summary: str
     executed: int | None
+
+
+def ordered_lines(lines: list[str]) -> list[str]:
+    """Order language summaries without changing their evidence."""
+    return sorted(lines, key=lambda line: DISPLAY_ORDER.get(line.partition(":")[0], -1))
 
 
 def summarize(label: str, output: str) -> Evidence:

@@ -92,17 +92,18 @@ class Report:
     def notification(self, skipped_reason: str = "") -> dict[str, str]:
         """Produce the existing provider-neutral Stop notification."""
         elapsed = time.monotonic() - self.started
+        summaries = verification_output.ordered_lines(self.lines)
         if self.failed:
             lines = [
                 f"Verification failed · total {elapsed:.1f}s",
-                *self.lines,
+                *summaries,
                 *self.errors,
                 verification_log.finish(self.directory),
             ]
             return {"decision": "block", "reason": "\n".join(lines)}
         if self.passed:
-            return {"systemMessage": "\n".join([f"Verification passed · total {elapsed:.1f}s", *self.lines])}
-        reason = skipped_reason or "\n".join(self.lines) or "no related test runner matched changed paths"
+            return {"systemMessage": "\n".join([f"Verification passed · total {elapsed:.1f}s", *summaries])}
+        reason = skipped_reason or "\n".join(summaries) or "no related test runner matched changed paths"
         return {"systemMessage": f"Verification skipped · total {elapsed:.1f}s\nReason: {reason}"}
 
 

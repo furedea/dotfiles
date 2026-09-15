@@ -89,6 +89,35 @@ def message(result: subprocess.CompletedProcess[str], *, blocked: bool = False) 
     return payload["systemMessage"]
 
 
+@pytest.mark.parametrize("state", ["passed", "failed", "reused"])
+def test_language_display_order_does_not_change_execution_order(
+    run_cli: CliRunner, gate_project: Path, tmp_path_factory: pytest.TempPathFactory, state: str
+) -> None:
+    files = {
+        "tests/example.bats": "",
+        "pyproject.toml": "",
+        "tests/test_example.py": "",
+        "Cargo.toml": "",
+        "tests/example.rs": "",
+        "package.json": '{"scripts":{"test":"node --test"}}',
+        "tests/example.test.js": "",
+    }
+    prepare(gate_project, files, tuple(files))
+    environment = {
+        "RUN_RELATED_TESTS_REUSE": "1" if state == "reused" else "0",
+        "TEST_RUNNER_STATUS": "1" if state == "failed" else "0",
+        "XDG_CACHE_HOME": str(tmp_path_factory.mktemp("verification-cache")),
+    }
+    result = run_cli(SCRIPT, payload={"session_id": "display-order"}, env=environment)
+    if state == "reused":
+        assert message(result).startswith("Verification passed")
+        result = run_cli(SCRIPT, payload={"session_id": "display-order"}, env=environment)
+    text = message(result, blocked=state == "failed")
+    assert text.startswith(f"Verification {state}")
+    assert [line.partition(":")[0] for line in text.splitlines()[1:5]] == ["pytest", "rust", "node", "Bats"]
+    assert [call["tool"] for call in calls(gate_project)] == ["bats", "uv", "node", "cargo"]
+
+
 @pytest.mark.parametrize("state", ["unstaged", "staged", "committed", "untracked"])
 def test_changes_are_revalidated_even_on_continuation(run_cli: CliRunner, gate_project: Path, state: str) -> None:
     files = {"tests/script.bats": "", **({"script.sh": "echo base\n"} if state != "untracked" else {})}

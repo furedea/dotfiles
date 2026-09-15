@@ -38,3 +38,26 @@ def test_bats_summary_preserves_skipped_tests() -> None:
 
 def test_diagnostic_prefers_actual_failure_over_runner_banner() -> None:
     assert output.first_error("starting runner\nFAILED test_example\nmore details") == "FAILED test_example"
+
+
+@pytest.mark.parametrize("runner", ["vitest", "jest", "node", "npm test", "pnpm test", "yarn test", "bun test"])
+def test_javascript_runner_summaries_follow_rust_and_precede_bats(runner: str) -> None:
+    lines = [
+        "Bats: 50 passed · 11 targets · 33.8s",
+        f"{runner}: 3 passed · full suite · 0.5s",
+        "rust: 2 passed · full suite · 0.3s",
+        "pytest: 989 passed · 38 files · 140.0s",
+    ]
+    assert output.ordered_lines(lines) == [lines[3], lines[2], lines[1], lines[0]]
+    assert lines[0].startswith("Bats:")
+
+
+def test_display_order_preserves_multiple_results_and_configuration_errors() -> None:
+    lines = [
+        "configuration: unavailable · project test rules",
+        "Bats: 1 passed · 1 targets · 0.1s",
+        "rust: 2 passed · unit filter first · 0.2s",
+        "pytest: 3 passed · 1 files · 0.3s",
+        "rust: 4 passed · integration target second · 0.4s",
+    ]
+    assert output.ordered_lines(lines) == [lines[0], lines[3], lines[2], lines[4], lines[1]]
