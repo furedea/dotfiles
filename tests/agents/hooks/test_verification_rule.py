@@ -91,6 +91,8 @@ def test_nix_changes_select_configuration_and_packaged_runtime_contracts(
         ("agents/hooks/rules/secret_path_policy.json", {"test_hook_translation_cli.py"}),
         ("agents/claude/settings.base.json", {"test_allowed_command.py", "test_notification.py"}),
         ("agents/codex/config.toml", {"test_notification.py"}),
+        ("bash/.bashrc", {"configuration.bats"}),
+        ("zsh/.zshrc", {"configuration.bats"}),
         ("agents/hooks.json", {"test_notification.py", "test_verification_rule.py", "test_python_runtime.py"}),
         (
             "agents/command_permissions.json",

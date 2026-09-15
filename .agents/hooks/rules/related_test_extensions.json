@@ -42,6 +42,12 @@
   "agents/codex/config.toml": [
     "tests/agents/test_notification.py"
   ],
+  "bash/.bashrc": [
+    "tests/nix/configuration.bats"
+  ],
+  "zsh/.zshrc": [
+    "tests/nix/configuration.bats"
+  ],
   "agents/hooks.json": [
     "tests/agents/test_notification.py",
     "tests/agents/hooks/test_verification_rule.py",

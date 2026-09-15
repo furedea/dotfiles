@@ -23,6 +23,16 @@ let
     builtins.fromTOML
       home.home.file."Library/Application Support/lspmux/config.toml".text;
   hasAll = expected: actual: builtins.all (value: builtins.elem value actual) expected;
+  usesNeovimDefaults =
+    host: host.environment.variables.EDITOR == "nvim" && host.environment.variables.VISUAL == "nvim";
+  shellEditorDefinitions = [
+    "export EDITOR="
+    "export VISUAL="
+  ];
+  shellConfigs = map builtins.readFile [
+    ../bash/.bashrc
+    ../zsh/.zshrc
+  ];
   noSecrets =
     environment:
     builtins.all (
@@ -137,6 +147,10 @@ in
 
   host-configuration = check "host-configuration" {
     binary-cache-trust = cacheTrusted mbp && cacheTrusted mba;
+    neovim-defaults = usesNeovimDefaults mbp && usesNeovimDefaults mba;
+    no-shell-specific-editor-defaults = builtins.all (
+      source: builtins.all (definition: !(lib.hasInfix definition source)) shellEditorDefinitions
+    ) shellConfigs;
     zsh-user-owned-completion = !mba.programs.zsh.enableGlobalCompInit;
     zsh-no-bash-completion = !mba.programs.zsh.enableBashCompletion;
     zsh-starship-prompt = mba.programs.zsh.promptInit == "";
