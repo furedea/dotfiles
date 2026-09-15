@@ -101,13 +101,13 @@ in
       builtins.filter (
         name:
         builtins.elem name [
-          "claude-code"
+          "claude"
           "codex"
           "herdr"
         ]
       ) homeNames == [
         "herdr"
-        "claude-code"
+        "claude"
         "codex"
       ];
     shared-agent-input =

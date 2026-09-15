@@ -172,6 +172,10 @@ Nix for deterministic hook generation, while the Homebrew installation remains t
 runtime daemon used by generated hooks. Pairing tokens and mutable Moshi state are
 never added to the Nix store.
 
+The managed CLI launchers and lifecycle hooks provide automatic verification of
+changes since session launch. See [agent verification](docs/agent_verification.md)
+for execution timing, supported entry points, and state retention.
+
 Herdr is pinned as a flake input and replaces tmux for local and managed remote
 terminal sessions. The local configuration uses `ctrl+a` as its prefix and adds
 popup commands for Yazi, Lazygit, a scratch shell, and the `reviewr` plugin.

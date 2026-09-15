@@ -1,12 +1,8 @@
 ---
 name: information-authority
 description: >
-    Governs where durable repository information belongs, which artifact is authoritative for each
-    fact, when another artifact may link to, verify, execute, or generate it, and how to avoid
-    manually maintained duplication. Load when deciding where durable information belongs,
-    resolving duplication or conflict across artifacts, preserving requirement traceability, using
-    a temporary implementation brief, or changing an agent entry map such as AGENTS.md or
-    CLAUDE.md.
+    Use when choosing where durable repository information belongs, resolving duplicated or
+    conflicting sources, or changing the navigation in AGENTS.md or CLAUDE.md.
 ---
 
 # Information Authority
