@@ -185,7 +185,7 @@ herdr --remote <ssh-target> --session <name>
 
 The `persiyanov.reviewr` plugin revision is declared in
 [`nix/home/default.nix`](nix/home/default.nix), synchronized during Home Manager
-activation by [`herdr/sync_plugins.py`](herdr/sync_plugins.py), and justified by
+activation by [`herdr/plugin_sync.py`](herdr/plugin_sync.py), and justified by
 [`ADR-0002`](docs/adr/0002_manage_herdr_plugins_through_home_manager_activation.md).
 
 ### Editable Symlinks
@@ -282,7 +282,7 @@ repo configure <name-or-owner/name>
 
 A name without an owner defaults to the authenticated GitHub user. Run
 `repo --help` or `repo -h` for the command overview. The commands are covered
-by Python tests under `tests/python/` and Bats integration tests under `tests/github/`.
+by Python unit and CLI integration tests under `tests/python/`.
 
 ## Formatting and Validation
 
@@ -297,10 +297,15 @@ The Zsh esa helper still uses `$XDG_CONFIG_HOME/dotfiles/bin/python3` (`~/.confi
 when unset), because it updates parent-shell state. See
 [ADR-0027](docs/adr/0027_let_nix_own_python_entry_points.md) for the deployment rationale.
 
-Python tests cover policy decisions, test selection, and structured output. Bats
-checks executable entry points, provider payloads, command failures, and shell or
-editor integration. Declarative Home Manager and host contracts also have native
-flake checks in `nix/checks.nix`.
+Python tests cover policy decisions, test selection, structured output, CLI and
+provider payloads, subprocess failures, disposable Git state, and configuration
+contracts. Bats checks shell, editor, and Nix-managed launcher integration.
+Declarative Home Manager and host contracts also have native flake checks in
+`nix/checks.nix`.
+
+The verification hook allows 300 seconds per Bats or pytest invocation and 120
+seconds for other runners. `RUN_RELATED_TESTS_TIMEOUT_SECONDS` overrides this
+budget when explicitly set.
 
 Lefthook runs the pre-commit format and lint checks for changed files:
 
@@ -311,17 +316,18 @@ lefthook run pre-commit
 Run the executable specifications directly with:
 
 ```sh
-bats tests/github
-bats tests/herdr
+bats tests/zsh
 bats tests/esa
 bats tests/nix
-AGENT_HARNESS_BIN=agent-harness bats --recursive tests/agents
 uv run --frozen pytest
 nix flake check
 ```
 
-CI checks GitHub and personal agent scripts with Bats, checks Python automation
-with Ruff, ty, and pytest, checks shell scripts with ShellCheck, checks Lua with
+CI checks shell integration with Bats and checks Python automation and provider
+integration with Ruff, ty, and pytest. Tests marked `integration` use the shared
+toolchain job; other pytest tests run separately without duplicating those cases.
+CI checks all tracked `.sh` files with ShellCheck and shfmt, failing if no scripts
+are selected. Zsh files are not passed to these Bash checks. CI checks Lua with
 Selene and StyLua, checks Nix with Statix, deadnix, and nixfmt, checks JSON/TOML
 with dprint, and lints prose with AutoCorrect. GitHub Actions are also checked
 with actionlint, zizmor, and CodeQL.

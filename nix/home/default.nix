@@ -591,7 +591,7 @@ in
         XDG_CONFIG_HOME="${config.xdg.configHome}" \
         HERDR_PLUGIN_SYNC_STATE_FILE="${config.xdg.stateHome}/home-manager/herdr_plugins" \
         ${automationPython} -I -B \
-        "${dotfilesDir}/herdr/sync_plugins.py" \
+        "${dotfilesDir}/herdr/plugin_sync.py" \
         ${herdrPluginArgs}
     '';
   };

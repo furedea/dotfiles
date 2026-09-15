@@ -369,7 +369,7 @@ def test_shell_entrypoint_reuses_real_gate_selection(
         policy = repository / ".agents/hooks/rules/verification_reuse.json"
         policy.parent.mkdir(parents=True)
         policy.write_text(setting)
-    hook = REPO_ROOT / "agents/hooks/run_related_tests.py"
+    hook = REPO_ROOT / "agents/hooks/run_verification.py"
     if helper_missing:
         copied = repository.parent / "incomplete-hooks"
         shutil.copytree(hook.parent, copied)
@@ -392,7 +392,7 @@ def test_base_selection_uses_local_remote_head_without_overriding_explicit_base(
     monkeypatch: pytest.MonkeyPatch,
     explicit: str | None,
 ) -> None:
-    hook = REPO_ROOT / "agents/hooks/run_related_tests.py"
+    hook = REPO_ROOT / "agents/hooks/run_verification.py"
     subprocess.run(["git", "update-ref", "refs/remotes/origin/trunk", "HEAD"], check=True)
     subprocess.run(["git", "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/trunk"], check=True)
     monkeypatch.setenv("RUN_RELATED_TESTS_REUSE", "0")
@@ -411,7 +411,7 @@ def test_base_selection_uses_local_remote_head_without_overriding_explicit_base(
 
 
 def test_unknown_default_base_is_reported(gate: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch) -> None:
-    hook = REPO_ROOT / "agents/hooks/run_related_tests.py"
+    hook = REPO_ROOT / "agents/hooks/run_verification.py"
     monkeypatch.setenv("RUN_RELATED_TESTS_REUSE", "0")
     monkeypatch.delenv("RUN_RELATED_TESTS_BASE_REF")
     result = subprocess.run([sys.executable, "-I", "-B", str(hook)], input=b"{}", capture_output=True, check=True)
@@ -440,7 +440,7 @@ def test_reporting_preserves_actual_output_counts_and_failure_status(
     exit_code: int,
     summary: str,
 ) -> None:
-    hook = REPO_ROOT / "agents/hooks/run_related_tests.py"
+    hook = REPO_ROOT / "agents/hooks/run_verification.py"
     binaries = repository.parent / "report-bin"
     binaries.mkdir()
     executable = binaries / ("uv" if runner == "pytest" else "bats")
@@ -497,7 +497,7 @@ def test_unavailable_log_storage_does_not_skip_tests(
     blocked = repository.parent / "not-a-directory"
     blocked.write_text("file")
     monkeypatch.setenv("XDG_STATE_HOME", str(blocked))
-    hook = REPO_ROOT / "agents/hooks/run_related_tests.py"
+    hook = REPO_ROOT / "agents/hooks/run_verification.py"
     (repository / "tests").mkdir()
     (repository / "tests" / "example.bats").write_text('@test "actual test" { true; }\n')
     monkeypatch.setenv("RUN_RELATED_TESTS_REUSE", "0")

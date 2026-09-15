@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "lib"))
 
-import audit_events
+import audit_log
 import git_safety
 import shell_syntax
 
@@ -29,7 +29,7 @@ def check(payload: dict) -> int:
                 raise ValueError(f"{reason}.\n\nSegment: {item.raw}")
     except (ValueError, TypeError, AttributeError) as error:
         message = f"BLOCKED: {error}\n\nUse a non-destructive command or ask the user to review this operation."
-        audit_events.blocked(
+        audit_log.blocked(
             "Bash",
             command,
             message.splitlines()[0],
@@ -48,7 +48,7 @@ def main() -> int:
     try:
         payload = json.load(sys.stdin)
     except (ValueError, OSError) as error:
-        audit_events.blocked("Bash", "", f"BLOCKED: {error}", "guard_dangerous_git.sh", "")
+        audit_log.blocked("Bash", "", f"BLOCKED: {error}", "guard_dangerous_git.sh", "")
         print(f"BLOCKED: {error}", file=sys.stderr)
         return 2
     return check(payload)

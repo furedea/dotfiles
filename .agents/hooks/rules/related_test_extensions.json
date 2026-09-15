@@ -1,47 +1,57 @@
 {
   "agents/hooks/rules/secret_path_policy.json": [
-    "tests/agents/hooks/codex/adapt_guard_secret_paths.bats",
-    "tests/agents/hooks/claude/related_test_rules.bats"
+    "tests/agents/python/test_hook_translation_cli.py",
+    "tests/agents/python/test_verification_rule.py"
   ],
   "agents/hooks/rules/allowed_commands.json": [
-    "tests/agents/hooks/claude/command_permissions_sync.bats",
-    "tests/agents/hooks/claude/guard_allowed_commands.bats"
+    "tests/agents/python/test_command_permission_sync.py",
+    "tests/agents/python/test_allowed_command.py",
+    "tests/agents/python/test_command_cli.py"
   ],
   "agents/hooks/rules/forbidden_commands.json": [
-    "tests/agents/hooks/claude/guard_forbidden_commands.bats"
+    "tests/agents/python/test_forbidden_command.py",
+    "tests/agents/python/test_command_cli.py"
   ],
   "agents/hooks/rules/secret_content_patterns.json": [
-    "tests/agents/hooks/rules/secret_patterns.bats",
-    "tests/agents/hooks/claude/related_test_rules.bats"
+    "tests/agents/python/test_secret_content_pattern.py",
+    "tests/agents/python/test_secret_content.py",
+    "tests/agents/python/test_verification_rule.py"
+  ],
+  "tests/agents/python/secret_content_samples.json": [
+    "tests/agents/python/test_secret_content.py"
   ],
   "agents/hooks/rules/secret_commit_policy.json": [
-    "tests/agents/hooks/rules/secret_commit_policy.bats",
-    "tests/agents/hooks/claude/guard_secret_commit.bats",
-    "tests/agents/hooks/claude/related_test_rules.bats"
+    "tests/agents/python/test_secret_commit_policy.py",
+    "tests/agents/python/test_guard_file.py",
+    "tests/agents/python/test_verification_rule.py"
   ],
   "agents/hooks/rules/related_test_*.json": [
-    "tests/agents/hooks/claude/verification_integrity.bats",
-    "tests/agents/hooks/claude/related_test_rules.bats"
+    "tests/agents/python/test_verification_cli.py",
+    "tests/agents/python/test_verification_selection.py",
+    "tests/agents/python/test_verification_rule.py"
   ],
   "agents/claude/settings.base.json": [
-    "tests/agents/hooks/claude/guard_allowed_commands.bats",
-    "tests/agents/notifications.bats"
+    "tests/agents/python/test_allowed_command.py",
+    "tests/agents/python/test_command_cli.py",
+    "tests/agents/python/test_notification.py"
   ],
   "agents/codex/config.toml": [
-    "tests/agents/notifications.bats"
+    "tests/agents/python/test_notification.py"
   ],
   "agents/hooks.json": [
-    "tests/agents/notifications.bats",
-    "tests/agents/hooks/claude/related_test_rules.bats"
+    "tests/agents/python/test_notification.py",
+    "tests/agents/python/test_verification_rule.py",
+    "tests/agents/python/test_python_runtime.py"
   ],
   "agents/claude/statusline/*.json": [
-    "tests/agents/hooks/claude/statusline.bats"
+    "tests/agents/python/test_statusline.py"
   ],
   "agents/command_permissions.json": [
-    "tests/agents/codex/execpolicy.bats",
-    "tests/agents/hooks/claude/command_permissions_sync.bats",
-    "tests/agents/hooks/claude/guard_allowed_commands.bats",
-    "tests/agents/hooks/claude/guard_forbidden_commands.bats"
+    "tests/agents/python/test_execpolicy.py",
+    "tests/agents/python/test_command_permission_sync.py",
+    "tests/agents/python/test_allowed_command.py",
+    "tests/agents/python/test_command_cli.py",
+    "tests/agents/python/test_forbidden_command.py"
   ],
   "flake.nix": [
     "tests/nix"
@@ -50,104 +60,103 @@
     "tests/nix"
   ],
   "agents/hooks/lint_format.py": [
-    "tests/agents/hooks/claude/quality_step_failures.bats",
-    "tests/agents/hooks/claude/lint_format_hooks.bats",
-    "tests/agents/hooks/claude/lint_format_js.bats",
-    "tests/agents/hooks/claude/lint_format_py.bats",
-    "tests/agents/hooks/claude/lint_format_rs.bats",
-    "tests/agents/hooks/claude/lint_format_sh.bats",
-    "tests/agents/hooks/codex/adapt_lint_format.bats",
+    "tests/agents/python/test_quality_cli.py",
+    "tests/agents/python/test_hook_translation_cli.py",
     "tests/agents/python/test_lint_format.py"
   ],
-  "agents/hooks/run_related_tests.py": [
-    "tests/agents/hooks/claude/run_related_tests.bats",
-    "tests/agents/hooks/claude/verification_integrity.bats",
+  "agents/hooks/run_verification.py": [
+    "tests/agents/python/test_verification_terminal.py",
+    "tests/agents/python/test_verification_cli.py",
+    "tests/agents/python/test_verification_selection.py",
     "tests/agents/python/test_verification_output.py",
-    "tests/agents/python/test_verification_logs.py",
-    "tests/agents/python/test_verification_reuse.py",
-    "tests/agents/python/test_verification_selection.py"
+    "tests/agents/python/test_verification_log.py",
+    "tests/agents/python/test_verification_reuse.py"
   ],
   "agents/hooks/lib/verification_*.py": [
-    "tests/agents/hooks/claude/run_related_tests.bats",
-    "tests/agents/hooks/claude/verification_integrity.bats",
+    "tests/agents/python/test_verification_cli.py",
+    "tests/agents/python/test_verification_selection.py",
     "tests/agents/python/test_verification_output.py",
-    "tests/agents/python/test_verification_logs.py",
-    "tests/agents/python/test_verification_reuse.py",
-    "tests/agents/python/test_verification_selection.py"
+    "tests/agents/python/test_verification_log.py",
+    "tests/agents/python/test_verification_reuse.py"
   ],
-  "agents/hooks/audit_events.py": [
-    "tests/agents/hooks/claude/audit_compaction.bats",
-    "tests/agents/hooks/claude/audit_permission_denied.bats",
-    "tests/agents/hooks/claude/audit_tool_call.bats",
-    "tests/agents/python/test_audit_events.py",
-    "tests/agents/hooks/claude/guard_allowed_commands.bats",
-    "tests/agents/hooks/claude/guard_forbidden_commands.bats",
-    "tests/agents/hooks/claude/guard_dangerous_git.bats",
-    "tests/agents/hooks/claude/audit_log.bats",
-    "tests/agents/python/test_hook_boundaries.py"
+  "agents/hooks/audit_log.py": [
+    "tests/agents/python/test_audit_log_cli.py",
+    "tests/agents/python/test_audit_log.py",
+    "tests/agents/python/test_allowed_command.py",
+    "tests/agents/python/test_command_cli.py",
+    "tests/agents/python/test_forbidden_command.py",
+    "tests/agents/python/test_dangerous_git_contract.py",
+    "tests/agents/python/test_hook_boundary.py"
   ],
   "github/repo.py": [
-    "tests/github",
-    "tests/python/test_repo.py"
+    "tests/python/test_repo.py",
+    "tests/python/test_repo_cli.py"
   ],
-  "herdr/sync_plugins.py": [
-    "tests/herdr/sync_plugins.bats",
-    "tests/python/test_sync_plugins.py"
+  "herdr/plugin_sync.py": [
+    "tests/python/test_plugin_sync_cli.py",
+    "tests/python/test_plugin_sync.py"
+  ],
+  "herdr/config.toml": [
+    "tests/python/test_popup_command.py"
+  ],
+  "herdr/reviewr.toml": [
+    "tests/python/test_popup_command.py"
   ],
   "agents/claude/statusline/statusline.py": [
-    "tests/agents/hooks/claude/statusline.bats",
     "tests/agents/python/test_statusline.py"
   ],
   "agents/hooks/lib/shell_syntax.py": [
-    "tests/agents/hooks/claude/guard_dangerous_git.bats",
-    "tests/agents/hooks/claude/guard_allowed_commands.bats",
-    "tests/agents/hooks/claude/guard_forbidden_commands.bats",
-    "tests/agents/hooks/codex/adapt_shell_command.bats",
-    "tests/agents/hooks/codex/adapt_guard_secret_paths.bats",
+    "tests/agents/python/test_dangerous_git_contract.py",
+    "tests/agents/python/test_command_cli.py",
+    "tests/agents/python/test_allowed_command.py",
+    "tests/agents/python/test_forbidden_command.py",
+    "tests/agents/python/test_hook_translation_cli.py",
     "tests/agents/python/test_git_safety.py",
-    "tests/agents/python/test_hook_boundaries.py"
+    "tests/agents/python/test_hook_boundary.py"
   ],
   "agents/hooks/lib/command_policy.py": [
-    "tests/agents/hooks/claude/command_permissions_sync.bats",
-    "tests/agents/hooks/claude/guard_allowed_commands.bats",
-    "tests/agents/hooks/claude/guard_forbidden_commands.bats",
-    "tests/agents/hooks/claude/guard_secret_commit.bats",
-    "tests/agents/python/test_hook_boundaries.py"
+    "tests/agents/python/test_command_permission_sync.py",
+    "tests/agents/python/test_allowed_command.py",
+    "tests/agents/python/test_command_cli.py",
+    "tests/agents/python/test_forbidden_command.py",
+    "tests/agents/python/test_guard_file.py",
+    "tests/agents/python/test_hook_boundary.py"
   ],
-  "agents/hooks/guard_commands.py": [
-    "tests/agents/hooks/claude/guard_allowed_commands.bats",
-    "tests/agents/hooks/claude/guard_forbidden_commands.bats"
+  "agents/hooks/guard_command.py": [
+    "tests/agents/python/test_allowed_command.py",
+    "tests/agents/python/test_command_cli.py",
+    "tests/agents/python/test_forbidden_command.py"
   ],
   "agents/hooks/lib/git_safety.py": [
-    "tests/agents/hooks/claude/guard_dangerous_git.bats",
+    "tests/agents/python/test_dangerous_git_contract.py",
+    "tests/agents/python/test_command_cli.py",
     "tests/agents/python/test_git_safety.py"
   ],
   "agents/hooks/guard_dangerous_git.py": [
-    "tests/agents/hooks/claude/guard_dangerous_git.bats",
+    "tests/agents/python/test_dangerous_git_contract.py",
+    "tests/agents/python/test_command_cli.py",
     "tests/agents/python/test_git_safety.py"
   ],
-  "agents/hooks/guard_files.py": [
-    "tests/agents/hooks/claude/guard_secret_commit.bats",
-    "tests/agents/hooks/claude/guard_secret_content.bats",
-    "tests/agents/hooks/claude/guard_harness_files.bats",
-    "tests/agents/hooks/codex/adapt_harness_files.bats",
-    "tests/agents/python/test_hook_boundaries.py",
-    "tests/agents/hooks/codex/adapt_guard_secret_content.bats"
+  "agents/hooks/guard_file.py": [
+    "tests/agents/python/test_guard_file.py",
+    "tests/agents/python/test_secret_content.py",
+    "tests/agents/python/test_hook_translation_cli.py",
+    "tests/agents/python/test_hook_boundary.py"
   ],
-  "agents/codex/hooks/adapters.py": [
-    "tests/agents/hooks/codex",
-    "tests/agents/python/test_hook_boundaries.py"
+  "agents/codex/hooks/hook_translation.py": [
+    "tests/agents/python/test_hook_translation_cli.py",
+    "tests/agents/python/test_hook_boundary.py"
   ],
   "agents/hooks/lib/patch_input.py": [
-    "tests/agents/hooks/codex",
-    "tests/agents/python/test_hook_boundaries.py"
+    "tests/agents/python/test_hook_translation_cli.py",
+    "tests/agents/python/test_hook_boundary.py"
   ],
-  "agents/hooks/lib/secret_paths.py": [
-    "tests/agents/hooks/codex/adapt_guard_secret_paths.bats",
-    "tests/agents/python/test_hook_boundaries.py"
+  "agents/hooks/lib/secret_path_policy.py": [
+    "tests/agents/python/test_hook_translation_cli.py",
+    "tests/agents/python/test_hook_boundary.py"
   ],
   "herdr/merge_pull_request.py": [
-    "tests/herdr/merge_pull_request.bats"
+    "tests/python/test_merge_pull_request_cli.py"
   ],
   "zsh/esa.py": [
     "tests/esa/zsh.bats",
@@ -158,12 +167,12 @@
     "tests/zsh/startup.bats"
   ],
   "agents/manifest.json": [
-    "tests/agents/hooks/claude/python_runtime.bats"
+    "tests/agents/python/test_python_runtime.py"
   ],
   "agents/hooks/*.py": [
-    "tests/agents/hooks/claude/python_runtime.bats"
+    "tests/agents/python/test_python_runtime.py"
   ],
   "agents/codex/hooks/*.py": [
-    "tests/agents/hooks/claude/python_runtime.bats"
+    "tests/agents/python/test_python_runtime.py"
   ]
 }

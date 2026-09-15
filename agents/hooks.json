@@ -6,7 +6,7 @@
         "matcher": "",
         "hooks": [
           {
-            "command": "\"$HOME/.claude/hooks/guard_files.py\" prompt",
+            "command": "\"$HOME/.claude/hooks/guard_file.py\" prompt",
             "type": "command"
           }
         ]
@@ -17,15 +17,15 @@
         "matcher": "Bash",
         "hooks": [
           {
-            "command": "\"$HOME/.claude/hooks/audit_events.py\" tool",
+            "command": "\"$HOME/.claude/hooks/audit_log.py\" tool",
             "type": "command"
           },
           {
-            "command": "\"$HOME/.claude/hooks/guard_commands.py\" forbidden",
+            "command": "\"$HOME/.claude/hooks/guard_command.py\" forbidden",
             "type": "command"
           },
           {
-            "command": "\"$HOME/.claude/hooks/guard_files.py\" commit",
+            "command": "\"$HOME/.claude/hooks/guard_file.py\" commit",
             "type": "command"
           },
           {
@@ -33,7 +33,7 @@
             "type": "command"
           },
           {
-            "command": "\"$HOME/.claude/hooks/guard_commands.py\" allowed",
+            "command": "\"$HOME/.claude/hooks/guard_command.py\" allowed",
             "type": "command"
           }
         ]
@@ -42,11 +42,11 @@
         "matcher": "Read",
         "hooks": [
           {
-            "command": "\"$HOME/.claude/hooks/audit_events.py\" tool",
+            "command": "\"$HOME/.claude/hooks/audit_log.py\" tool",
             "type": "command"
           },
           {
-            "command": "\"$HOME/.claude/hooks/guard_files.py\" read",
+            "command": "\"$HOME/.claude/hooks/guard_file.py\" read",
             "type": "command"
           }
         ]
@@ -55,15 +55,15 @@
         "matcher": "Write|Edit|MultiEdit",
         "hooks": [
           {
-            "command": "\"$HOME/.claude/hooks/audit_events.py\" tool",
+            "command": "\"$HOME/.claude/hooks/audit_log.py\" tool",
             "type": "command"
           },
           {
-            "command": "\"$HOME/.claude/hooks/guard_files.py\" harness",
+            "command": "\"$HOME/.claude/hooks/guard_file.py\" harness",
             "type": "command"
           },
           {
-            "command": "\"$HOME/.claude/hooks/guard_files.py\" write",
+            "command": "\"$HOME/.claude/hooks/guard_file.py\" write",
             "type": "command"
           }
         ]
@@ -134,7 +134,7 @@
         "matcher": "Bash|Edit|MultiEdit|Write|WebFetch|WebSearch|Task|Agent",
         "hooks": [
           {
-            "command": "\"$HOME/.claude/hooks/audit_events.py\" tool",
+            "command": "\"$HOME/.claude/hooks/audit_log.py\" tool",
             "type": "command"
           }
         ]
@@ -145,7 +145,7 @@
         "matcher": "",
         "hooks": [
           {
-            "command": "\"$HOME/.claude/hooks/run_related_tests.py\"",
+            "command": "\"$HOME/.claude/hooks/run_verification.py\"",
             "type": "command"
           }
         ]
@@ -155,7 +155,7 @@
       {
         "hooks": [
           {
-            "command": "\"$HOME/.claude/hooks/audit_events.py\" denied",
+            "command": "\"$HOME/.claude/hooks/audit_log.py\" denied",
             "type": "command"
           }
         ]
@@ -166,7 +166,7 @@
         "matcher": "",
         "hooks": [
           {
-            "command": "\"$HOME/.claude/hooks/audit_events.py\" compaction",
+            "command": "\"$HOME/.claude/hooks/audit_log.py\" compaction",
             "type": "command"
           }
         ]
@@ -177,7 +177,7 @@
         "matcher": "compact|resume",
         "hooks": [
           {
-            "command": "\"$HOME/.claude/hooks/audit_events.py\" compaction",
+            "command": "\"$HOME/.claude/hooks/audit_log.py\" compaction",
             "type": "command"
           }
         ]
@@ -190,7 +190,7 @@
         {
           "hooks": [
             {
-              "command": "\"$HOME/.codex/hooks/adapters.py\" content prompt",
+              "command": "\"$HOME/.codex/hooks/hook_translation.py\" content prompt",
               "statusMessage": "Scanning prompt for sensitive information",
               "timeout": 30,
               "type": "command"
@@ -203,31 +203,31 @@
           "matcher": "^(Bash|exec_command|functions\\.exec_command)$",
           "hooks": [
             {
-              "command": "\"$HOME/.codex/hooks/adapters.py\" paths command",
+              "command": "\"$HOME/.codex/hooks/hook_translation.py\" paths command",
               "statusMessage": "Checking secret path policy",
               "timeout": 30,
               "type": "command"
             },
             {
-              "command": "\"$HOME/.codex/hooks/adapters.py\" shell forbidden",
+              "command": "\"$HOME/.codex/hooks/hook_translation.py\" shell forbidden",
               "statusMessage": "Checking forbidden command prefixes",
               "timeout": 30,
               "type": "command"
             },
             {
-              "command": "\"$HOME/.codex/hooks/adapters.py\" shell commit",
+              "command": "\"$HOME/.codex/hooks/hook_translation.py\" shell commit",
               "statusMessage": "Checking staged files for secrets",
               "timeout": 30,
               "type": "command"
             },
             {
-              "command": "\"$HOME/.codex/hooks/adapters.py\" shell git",
+              "command": "\"$HOME/.codex/hooks/hook_translation.py\" shell git",
               "statusMessage": "Checking for dangerous git operations",
               "timeout": 30,
               "type": "command"
             },
             {
-              "command": "\"$HOME/.codex/hooks/adapters.py\" shell allowed",
+              "command": "\"$HOME/.codex/hooks/hook_translation.py\" shell allowed",
               "statusMessage": "Checking command permissions",
               "timeout": 30,
               "type": "command"
@@ -238,19 +238,19 @@
           "matcher": "^apply_patch$|^Edit$|^Write$",
           "hooks": [
             {
-              "command": "\"$HOME/.codex/hooks/adapters.py\" paths patch",
+              "command": "\"$HOME/.codex/hooks/hook_translation.py\" paths patch",
               "statusMessage": "Checking secret path policy",
               "timeout": 30,
               "type": "command"
             },
             {
-              "command": "\"$HOME/.codex/hooks/adapters.py\" harness",
+              "command": "\"$HOME/.codex/hooks/hook_translation.py\" harness",
               "statusMessage": "Checking harness boundaries",
               "timeout": 30,
               "type": "command"
             },
             {
-              "command": "\"$HOME/.codex/hooks/adapters.py\" content apply-patch",
+              "command": "\"$HOME/.codex/hooks/hook_translation.py\" content apply-patch",
               "statusMessage": "Scanning patch for sensitive information",
               "timeout": 30,
               "type": "command"
@@ -263,7 +263,7 @@
           "matcher": "^apply_patch$|^Edit$|^Write$",
           "hooks": [
             {
-              "command": "\"$HOME/.codex/hooks/adapters.py\" lint",
+              "command": "\"$HOME/.codex/hooks/hook_translation.py\" lint",
               "statusMessage": "Running lint/format hooks",
               "timeout": 120,
               "type": "command"
@@ -274,7 +274,7 @@
           "matcher": ".",
           "hooks": [
             {
-              "command": "\"$HOME/.claude/hooks/audit_events.py\" tool",
+              "command": "\"$HOME/.claude/hooks/audit_log.py\" tool",
               "statusMessage": "Logging tool call",
               "timeout": 10,
               "type": "command"
@@ -286,7 +286,7 @@
         {
           "hooks": [
             {
-              "command": "\"$HOME/.claude/hooks/run_related_tests.py\"",
+              "command": "\"$HOME/.claude/hooks/run_verification.py\"",
               "statusMessage": "Running related tests",
               "timeout": 600,
               "type": "command"

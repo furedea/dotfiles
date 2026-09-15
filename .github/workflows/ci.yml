@@ -102,18 +102,15 @@ jobs:
           echo "$RUNNER_TEMP/agent-harness/bin" >> "$GITHUB_PATH"
 
       - name: Run Bats tests
+        run: uv run --frozen bats --print-output-on-failure tests/esa/zsh.bats
+
+      - name: Run Python toolchain and provider integration tests
         env:
           AGENT_HARNESS_BIN: agent-harness
           CODEX_BIN: codex
           REQUIRE_CODEX_EXECPOLICY: "1"
-        # Popup commands require the installed macOS profile and are tested locally.
-        run: |
-          uv run --frozen bats --print-output-on-failure --recursive \
-            tests/github \
-            tests/agents \
-            tests/herdr/merge_pull_request.bats \
-            tests/herdr/sync_plugins.bats \
-            tests/esa/zsh.bats
+        # The installed macOS popup profile is checked locally; static TOML checks run on Linux.
+        run: uv run --frozen pytest -m integration
 
   lint-python:
     runs-on: ubuntu-latest
@@ -165,8 +162,13 @@ jobs:
         with:
           shfmt-version: "3.13.1"
 
+      - name: Install content scanner dependency
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ripgrep
+
       - name: Run Python automation tests
-        run: uv run --python 3.14.6 --frozen pytest
+        run: uv run --python 3.14.6 --frozen pytest -m 'not integration'
 
   audit-python:
     runs-on: ubuntu-latest
@@ -203,19 +205,25 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # 2.0.0
-        env:
-          SHELLCHECK_OPTS: -x --source-path=SCRIPTDIR
-        with:
-          scandir: github
-          format: gcc
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends shellcheck
 
       - name: Setup shfmt
         uses: mfinelli/setup-shfmt@a25fda4c1fe115aec0f85e04126610841bc3141d # v4.0.1
+        with:
+          shfmt-version: "3.13.1"
 
-      - name: Run shfmt
-        run: shfmt -d -i 2 -ci github/
+      - name: Check tracked Bash scripts
+        run: |
+          mapfile -d '' -t files < <(git ls-files -z -- '*.sh')
+          if ((${#files[@]} == 0)); then
+            echo "No tracked Bash scripts found." >&2
+            exit 1
+          fi
+          shellcheck -x --source-path=SCRIPTDIR "${files[@]}"
+          shfmt -d "${files[@]}"
 
   lua-lint:
     runs-on: ubuntu-latest

@@ -54,3 +54,118 @@ def test_javascript_without_a_test_command_is_not_success(tmp_path: Path) -> Non
     (tmp_path / "package.json").write_text("{}")
     with pytest.raises(selection.UnknownTestCommand):
         selection.language_plan(tmp_path, rules, ("src/file.ts",))
+
+
+@pytest.mark.parametrize(
+    "changed,files,mappings,expected",
+    [
+        ("script.sh", ["tests/script.bats", "tests/other.bats"], {}, [("bats", "tests/script.bats")]),
+        ("script.sh", ["tests/test_script.bats", "tests/other.bats"], {}, [("bats", "tests/test_script.bats")]),
+        ("unrelated.sh", ["tests/other.bats"], {}, [("bats", "tests/", "--recursive")]),
+        ("tests/changed.bats", ["tests/changed.bats", "tests/other.bats"], {}, [("bats", "tests/changed.bats")]),
+        (
+            "lib/shared.sh",
+            ["tests/fan_out.bats", "tests/other.bats"],
+            {"lib/shared.sh": ["tests/fan_out.bats"]},
+            [("bats", "tests/fan_out.bats")],
+        ),
+        (
+            "script.sh",
+            ["tests/script.bats", "tests/extra.bats"],
+            {"script.sh": ["tests/extra.bats"]},
+            [("bats", "tests/extra.bats", "tests/script.bats")],
+        ),
+        (
+            "config/app.toml",
+            ["tests/config_check.bats"],
+            {"config/*.toml": ["tests/config_check.bats"]},
+            [("bats", "tests/config_check.bats")],
+        ),
+        ("nix/module.nix", ["tests/nix/module.bats"], {"nix/**": ["tests/nix"]}, [("bats", "tests/nix/module.bats")]),
+        (
+            "app.py",
+            ["pyproject.toml", "tests/test_app.py", "tests/test_other.py"],
+            {"app.py": ["./tests/test_app.py"]},
+            [("uv", "run", "--frozen", "pytest", "--no-header", "-q", "tests/test_app.py")],
+        ),
+        (
+            "service.py",
+            ["pyproject.toml", "tests/service_test.py"],
+            {},
+            [("uv", "run", "--frozen", "pytest", "--no-header", "-q", "tests/service_test.py")],
+        ),
+        ("tests/parser.rs", ["Cargo.toml", "tests/parser.rs"], {}, [("cargo", "test", "--test", "parser", "--quiet")]),
+        ("src/parser.rs", ["Cargo.toml", "tests/parser.rs"], {}, [("cargo", "test", "--test", "parser", "--quiet")]),
+        ("src/parser.rs", ["Cargo.toml", "tests/other.rs"], {}, [("cargo", "test", "--quiet")]),
+        ("src/lib.rs", ["Cargo.toml"], {}, [("cargo", "test", "--quiet")]),
+        (
+            "nix/module.nix",
+            ["Cargo.toml", "tests/claude_materialization.rs"],
+            {"nix/*.nix": ["tests/claude_materialization.rs"]},
+            [("cargo", "test", "--test", "claude_materialization", "--quiet")],
+        ),
+    ],
+)
+def test_default_conventions_and_project_fanout(
+    tmp_path: Path, changed: str, files: list[str], mappings: dict, expected: list[tuple[str, ...]]
+) -> None:
+    rules = project(tmp_path, mappings)
+    for name in [changed, *files]:
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.touch()
+    commands, errors = selection.language_plan(tmp_path, rules, (changed,))
+    assert not errors
+    assert [item.arguments for item in commands] == expected
+
+
+@pytest.mark.parametrize(
+    "package,target,source,expected",
+    [
+        (
+            {"packageManager": "pnpm@10", "devDependencies": {"vitest": "1"}, "scripts": {"test": "vitest run"}},
+            "tests/app.test.ts",
+            "src/app.ts",
+            [
+                ("pnpm", "exec", "vitest", "run", "tests/app.test.ts"),
+                ("pnpm", "exec", "vitest", "related", "--run", "--passWithNoTests", "src/app.ts"),
+            ],
+        ),
+        (
+            {"packageManager": "pnpm@10", "devDependencies": {"vitest": "1"}},
+            "tests/other.test.ts",
+            "src/app.ts",
+            [("pnpm", "exec", "vitest", "related", "--run", "--passWithNoTests", "src/app.ts")],
+        ),
+        (
+            {"packageManager": "pnpm@10", "scripts": {"test": "custom-test-runner"}},
+            "",
+            "src/app.ts",
+            [("pnpm", "test")],
+        ),
+        (
+            {"packageManager": "npm@11", "devDependencies": {"jest": "30"}, "scripts": {"test": "jest"}},
+            "tests/app.spec.js",
+            "src/app.js",
+            [("npm", "exec", "--", "jest", "tests/app.spec.js")],
+        ),
+        (
+            {"scripts": {"test": "node --test"}},
+            "tests/app.test.js",
+            "src/app.js",
+            [("node", "--test", "tests/app.test.js")],
+        ),
+    ],
+)
+def test_javascript_selects_named_and_dependency_aware_tests(
+    tmp_path: Path, package: dict, target: str, source: str, expected: list[tuple[str, ...]]
+) -> None:
+    rules = project(tmp_path, {})
+    (tmp_path / "package.json").write_text(json.dumps(package))
+    for name in filter(None, (source, target)):
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.touch()
+    commands, errors = selection.language_plan(tmp_path, rules, (source,))
+    assert not errors
+    assert [item.arguments for item in commands] == expected

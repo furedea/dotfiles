@@ -8,22 +8,23 @@ dependencies = []
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+markers = ["integration: requires installed toolchains, provider CLIs, or the managed macOS profile"]
 
 [tool.deptry]
 ignore_notebooks = true
 # Standalone hooks import these adjacent repository modules after trusted path setup.
 known_first_party = [
-  "audit_events",
+  "audit_log",
   "command_policy",
   "git_safety",
-  "guard_commands",
+  "guard_command",
   "guard_dangerous_git",
-  "guard_files",
+  "guard_file",
   "lint_format",
   "patch_input",
-  "secret_paths",
+  "secret_path_policy",
   "shell_syntax",
-  "verification_logs",
+  "verification_log",
   "verification_output",
   "verification_reuse",
   "verification_selection",
