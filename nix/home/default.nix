@@ -474,6 +474,12 @@ in
           }
         ];
       };
+      theme.icon.prepend_exts = [
+        {
+          name = "bats";
+          text = "";
+        }
+      ];
       keymap = {
         mgr.prepend_keymap = [
           {

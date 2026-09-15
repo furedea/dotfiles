@@ -55,6 +55,13 @@ in
       ];
     github-stacked-pr-extension = names home.programs.gh.extensions == [ "gh-stack" ];
     neovim-nix-managed-plugin-loader = names home.programs.neovim.plugins == [ "lazy.nvim" ];
+    yazi-bats-icon =
+      (home.programs.yazi.theme.icon.prepend_exts or [ ]) == [
+        {
+          name = "bats";
+          text = "";
+        }
+      ];
     ssh-identities-from-keychain =
       home.launchd.agents.ssh-agent-loader.config.ProgramArguments == [
         "/usr/bin/ssh-add"
