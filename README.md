@@ -282,7 +282,7 @@ repo configure <name-or-owner/name>
 
 A name without an owner defaults to the authenticated GitHub user. Run
 `repo --help` or `repo -h` for the command overview. The commands are covered
-by Python unit and CLI integration tests under `tests/python/`.
+by Python unit and CLI integration tests under `tests/github/`.
 
 ## Formatting and Validation
 
@@ -305,6 +305,14 @@ Declarative Home Manager and host contracts also have native flake checks in
 Hermes gateway tests run on macOS with the Nix-built Hermes Python environment;
 they do not add Hermes dependencies to the dotfiles Python environment.
 
+Tests are grouped by the feature they verify, not by implementation language.
+Python and Bats tests live together under directories such as `tests/herdr/`
+and `tests/hermes/`. Agent tests separate shared hooks, provider-specific behavior,
+and skills under `tests/agents/`; cross-provider contracts live at that directory's
+root. `tests/nix/` only bridges the repository-wide native configuration checks.
+Shared pytest fixtures live in `tests/conftest.py`, agent-specific fixtures in
+`tests/agents/conftest.py`, and importable test support in `tests/runtime.py`.
+
 The verification hook allows 300 seconds per Bats or pytest invocation and 120
 seconds for other runners. `RUN_RELATED_TESTS_TIMEOUT_SECONDS` overrides this
 budget when explicitly set.
@@ -318,9 +326,7 @@ lefthook run pre-commit
 Run the executable specifications directly with:
 
 ```sh
-bats tests/zsh
-bats tests/esa
-bats tests/nix
+bats --recursive tests
 uv run --frozen pytest
 nix flake check
 ```

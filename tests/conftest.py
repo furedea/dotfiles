@@ -1,45 +1,15 @@
-"""Load standalone automation modules without installing a Python package."""
+"""Shared process and disposable-project fixtures for repository tests."""
 
-from importlib import util
-from collections.abc import Callable
 import json
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import sys
 import textwrap
-from types import ModuleType
 
 import pytest
 
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-CliRunner = Callable[..., subprocess.CompletedProcess[str]]
-StubWriter = Callable[[str, str], Path]
-HarnessRunner = Callable[..., subprocess.CompletedProcess[str]]
-
-
-@pytest.fixture(scope="session")
-def agent_harness() -> HarnessRunner:
-    """Render the repository's provider configuration with the real harness CLI."""
-    executable = shutil.which(os.environ.get("AGENT_HARNESS_BIN", "agent-harness"))
-    if executable is None:
-        pytest.fail("agent-harness is required for provider integration tests")
-
-    def run(*arguments: str) -> subprocess.CompletedProcess[str]:
-        result = subprocess.run(
-            [executable, "--profile", "minimal", *arguments, "--source", str(REPO_ROOT / "agents")],
-            cwd=REPO_ROOT,
-            capture_output=True,
-            text=True,
-            timeout=30,
-            check=False,
-        )
-        assert result.returncode == 0, result.stderr
-        return result
-
-    return run
+from tests.runtime import CliRunner, REPO_ROOT, StubWriter
 
 
 @pytest.fixture
@@ -75,16 +45,9 @@ def git_project(isolated_project: Path) -> Path:
 
 @pytest.fixture
 def isolated_project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Keep policy discovery and audit writes inside the test's project."""
+    """Keep working files and state writes inside the test's project."""
     monkeypatch.chdir(tmp_path)
-    for name in ("CLAUDE_PROJECT_DIR", "AGENT_PROJECT_DIR"):
-        monkeypatch.setenv(name, str(tmp_path))
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
-    monkeypatch.setenv("AGENT_COMMAND_PERMISSIONS", str(REPO_ROOT / "agents/command_permissions.json"))
-    for kind in ("ALLOWED", "FORBIDDEN"):
-        monkeypatch.setenv(
-            f"AGENT_{kind}_COMMAND_RULES", str(REPO_ROOT / f"agents/hooks/rules/{kind.lower()}_commands.json")
-        )
     return tmp_path
 
 
@@ -111,14 +74,3 @@ def run_cli(isolated_project: Path) -> CliRunner:
         )
 
     return run
-
-
-def load_script_module(relative_path: str, module_name: str) -> ModuleType:
-    """Load a trusted repository module for direct behavior tests."""
-    spec = util.spec_from_file_location(module_name, REPO_ROOT / relative_path)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"Cannot load module from {relative_path}")
-    module = util.module_from_spec(spec)
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
-    return module
