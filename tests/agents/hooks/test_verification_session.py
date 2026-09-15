@@ -167,6 +167,7 @@ def test_native_worktree_creation_cannot_move_target_after_baseline(repository: 
     assert "worktree" in result.stderr
 
 
+@pytest.mark.integration
 @pytest.mark.parametrize("provider", ["claude", "codex"])
 def test_generated_hooks_enforce_the_full_lifecycle(provider: str, tmp_path: Path) -> None:
     prefix = tmp_path / "installed"

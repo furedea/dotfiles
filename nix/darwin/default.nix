@@ -18,6 +18,11 @@ in
 {
   environment.systemPackages = [ pkgs.vim ];
 
+  environment.variables = {
+    EDITOR = "nvim";
+    VISUAL = "nvim";
+  };
+
   services.hister = {
     enable = enableHisterService;
     settings.server = {
@@ -305,6 +310,20 @@ in
       cleanup = "uninstall";
       extraFlags = [ "--force" ];
     };
+
+    # The tap repository is `jundot/omlx`, not the conventional
+    # `jundot/homebrew-omlx`, so the clone target cannot be inferred.
+    taps = [
+      {
+        name = "jundot/omlx";
+        clone_target = "https://github.com/jundot/omlx";
+      }
+    ];
+
+    # Local MLX inference server. Nixpkgs builds mlx with MLX_BUILD_METAL=false
+    # because the Metal shader compiler is not open source, so a Nix-managed
+    # build would run on CPU only.
+    brews = [ "jundot/omlx/omlx" ];
 
     casks = [
       "bitwarden"

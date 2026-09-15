@@ -100,6 +100,8 @@ def test_nix_changes_select_configuration_and_packaged_runtime_contracts(
                 "test_verification_session.py",
             },
         ),
+        ("bash/.bashrc", {"configuration.bats"}),
+        ("zsh/.zshrc", {"configuration.bats"}),
         (
             "agents/command_permissions.json",
             {

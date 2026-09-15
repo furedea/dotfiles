@@ -75,8 +75,6 @@ function command_not_found_handler() {
 
 DOTFILES="$HOME/ghq/github.com/furedea/dotfiles"
 
-export EDITOR="nvim"
-export VISUAL="nvim"
 export PATH="/usr/bin:$PATH"
 export PATH="/opt/homebrew/bin:$PATH"
 export XDG_CONFIG_HOME="$HOME/.config"

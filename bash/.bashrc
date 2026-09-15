@@ -2,8 +2,6 @@
 export PATH="/opt/homebrew/bin:$PATH"
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.gem/bin:$PATH"
-export EDITOR="nvim"
-export VISUAL="nvim"
 export XDG_CONFIG_HOME="$HOME/.config"
 
 # Cargo
