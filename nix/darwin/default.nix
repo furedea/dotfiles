@@ -18,6 +18,11 @@ in
 {
   environment.systemPackages = [ pkgs.vim ];
 
+  environment.variables = {
+    EDITOR = "nvim";
+    VISUAL = "nvim";
+  };
+
   services.hister = {
     enable = enableHisterService;
     settings.server = {
