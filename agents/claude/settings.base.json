@@ -13,7 +13,7 @@
   "enableAllProjectMcpServers": false,
   "statusLine": {
     "type": "command",
-    "command": "$HOME/.claude/statusline/statusline.sh"
+    "command": "\"$HOME/.claude/statusline/statusline.py\""
   },
   "enabledPlugins": {
     "skill-creator@claude-plugins-official": true,

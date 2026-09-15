@@ -185,7 +185,7 @@ herdr --remote <ssh-target> --session <name>
 
 The `persiyanov.reviewr` plugin revision is declared in
 [`nix/home/default.nix`](nix/home/default.nix), synchronized during Home Manager
-activation by [`herdr/sync_plugins.sh`](herdr/sync_plugins.sh), and justified by
+activation by [`herdr/plugin_sync.py`](herdr/plugin_sync.py), and justified by
 [`ADR-0002`](docs/adr/0002_manage_herdr_plugins_through_home_manager_activation.md).
 
 ### Editable Symlinks
@@ -236,7 +236,7 @@ These tracked files are not applied by Home Manager or nix-darwin:
 ├── karabiner/                 # Keyboard remapping
 ├── starship/                  # Shell prompt
 ├── github/                    # Repository creation and policy scripts
-├── tests/                     # Bats specifications by domain
+├── tests/                     # Python contracts and Bats integration by domain
 ├── dprint/ and prettier/      # Global formatter configuration
 ├── raycast/                   # Manual settings export
 └── templates/                 # Manually copied reference templates
@@ -282,9 +282,40 @@ repo configure <name-or-owner/name>
 
 A name without an owner defaults to the authenticated GitHub user. Run
 `repo --help` or `repo -h` for the command overview. The commands are covered
-by Bats tests under `tests/github/`.
+by Python unit and CLI integration tests under `tests/github/`.
 
 ## Formatting and Validation
+
+Automation logic uses Python's standard library, without runtime pip packages.
+The project environment supplies development tools such as pytest, Ruff, and ty.
+Nix pins the interpreter in deployed hook and statusline shebangs. Codex adapters
+call shared Python functions directly. The `repo` and Herdr launchers use Nix's
+fixed Python with editable source files; hook source changes require Home Manager
+activation. Python entry points use isolated mode to ignore project import paths.
+For development or CI, run a source command with `python3 -I -B path/to/command.py`.
+The Zsh esa helper still uses `$XDG_CONFIG_HOME/dotfiles/bin/python3` (`~/.config`
+when unset), because it updates parent-shell state. See
+[ADR-0027](docs/adr/0027_let_nix_own_python_entry_points.md) for the deployment rationale.
+
+Python tests cover policy decisions, test selection, structured output, CLI and
+provider payloads, subprocess failures, disposable Git state, and configuration
+contracts. Bats checks shell, editor, and Nix-managed launcher integration.
+Declarative Home Manager and host contracts also have native flake checks in
+`nix/checks.nix`.
+Hermes gateway tests run on macOS with the Nix-built Hermes Python environment;
+they do not add Hermes dependencies to the dotfiles Python environment.
+
+Tests are grouped by the feature they verify, not by implementation language.
+Python and Bats tests live together under directories such as `tests/herdr/`
+and `tests/hermes/`. Agent tests separate shared hooks, provider-specific behavior,
+and skills under `tests/agents/`; cross-provider contracts live at that directory's
+root. `tests/nix/` only bridges the repository-wide native configuration checks.
+Shared pytest fixtures live in `tests/conftest.py`, agent-specific fixtures in
+`tests/agents/conftest.py`, and importable test support in `tests/runtime.py`.
+
+The verification hook allows 300 seconds per Bats or pytest invocation and 120
+seconds for other runners. `RUN_RELATED_TESTS_TIMEOUT_SECONDS` overrides this
+budget when explicitly set.
 
 Lefthook runs the pre-commit format and lint checks for changed files:
 
@@ -295,16 +326,16 @@ lefthook run pre-commit
 Run the executable specifications directly with:
 
 ```sh
-bats tests/github
-bats tests/herdr
-bats tests/esa
-bats tests/nix
-AGENT_HARNESS_BIN=agent-harness bats --recursive tests/agents
-uv run --frozen pytest tests/agents/python
+bats --recursive tests
+uv run --frozen pytest
+nix flake check
 ```
 
-CI checks GitHub and personal agent scripts with Bats, checks agent skill scripts
-with Ruff, ty, and pytest, checks shell scripts with ShellCheck, checks Lua with
+CI checks shell integration with Bats and checks Python automation and provider
+integration with Ruff, ty, and pytest. Tests marked `integration` use the shared
+toolchain job; other pytest tests run separately without duplicating those cases.
+CI checks all tracked `.sh` files with ShellCheck and shfmt, failing if no scripts
+are selected. Zsh files are not passed to these Bash checks. CI checks Lua with
 Selene and StyLua, checks Nix with Statix, deadnix, and nixfmt, checks JSON/TOML
 with dprint, and lints prose with AutoCorrect. GitHub Actions are also checked
 with actionlint, zizmor, and CodeQL.

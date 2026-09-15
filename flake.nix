@@ -33,7 +33,8 @@
   };
 
   outputs =
-    {
+    inputs@{
+      self,
       nixpkgs,
       nixpkgs-unstable,
       nix-darwin,
@@ -154,6 +155,13 @@
         };
     in
     {
+      checks.${system} = import ./nix/checks.nix {
+        inherit pkgs inputs;
+        inherit (nixpkgs) lib;
+        home = self.homeConfigurations.${username}.config;
+        darwin = self.darwinConfigurations;
+      };
+
       darwinConfigurations = {
         mba = mkDarwinConfiguration {
           enableHisterService = false;

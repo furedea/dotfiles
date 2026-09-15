@@ -1,19 +1,37 @@
 [project]
 name = "dotfiles-agent-tools"
 version = "0.1.0"
-description = "Python tooling and tests for personal agent skill scripts."
+description = "Standard-library automation and tests for personal dotfiles."
 requires-python = "==3.14.6"
 dependencies = []
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
-testpaths = ["tests/agents/python"]
+testpaths = ["tests"]
+markers = ["integration: requires installed toolchains, provider CLIs, or the managed macOS profile"]
 
 [tool.deptry]
 ignore_notebooks = true
+# Standalone hooks import these adjacent repository modules after trusted path setup.
+known_first_party = [
+  "audit_log",
+  "command_policy",
+  "git_safety",
+  "guard_command",
+  "guard_dangerous_git",
+  "guard_file",
+  "lint_format",
+  "patch_input",
+  "secret_path_policy",
+  "shell_syntax",
+  "verification_log",
+  "verification_output",
+  "verification_reuse",
+  "verification_selection",
+]
 
 [tool.vulture]
-paths = ["agents/skills", "tests/agents/python"]
+paths = ["agents", "github", "herdr", "zsh", "tests"]
 min_confidence = 100
 sort_by_size = true
 exclude = [".venv", "build", "dist"]
@@ -42,7 +60,7 @@ audit = [
 
 [tool.ruff]
 target-version = "py314"
-src = ["agents/skills", "tests/agents/python"]
+src = ["agents", "github", "herdr", "zsh", "tests"]
 line-length = 119
 
 [tool.ruff.format]
@@ -124,7 +142,10 @@ ignore = [
 ]
 
 [tool.ty.src]
-include = ["agents/skills", "tests/agents/python"]
+include = ["agents", "github", "herdr", "zsh", "tests"]
+
+[tool.ty.environment]
+extra-paths = ["agents/hooks", "agents/hooks/lib"]
 
 [tool.ty.analysis]
 respect-type-ignore-comments = true

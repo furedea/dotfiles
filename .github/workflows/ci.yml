@@ -57,7 +57,7 @@ jobs:
       - name: Install agent test tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends jq ripgrep shellcheck
+          sudo apt-get install -y --no-install-recommends jq ripgrep shellcheck zsh
           uv tool install --python 3.14.6 ruff==0.16.3
           uv tool dir --bin >> "$GITHUB_PATH"
           npm ci --ignore-scripts
@@ -102,11 +102,15 @@ jobs:
           echo "$RUNNER_TEMP/agent-harness/bin" >> "$GITHUB_PATH"
 
       - name: Run Bats tests
+        run: uv run --frozen bats --print-output-on-failure tests/esa/zsh.bats
+
+      - name: Run Python toolchain and provider integration tests
         env:
           AGENT_HARNESS_BIN: agent-harness
           CODEX_BIN: codex
           REQUIRE_CODEX_EXECPOLICY: "1"
-        run: bats --print-output-on-failure --recursive tests/github tests/agents
+        # The installed macOS popup profile is checked locally; static TOML checks run on Linux.
+        run: uv run --frozen pytest -m integration
 
   lint-python:
     runs-on: ubuntu-latest
@@ -127,10 +131,10 @@ jobs:
           cache-python: true
 
       - name: Run ruff format
-        run: uv run --python 3.14.6 --frozen ruff format --check agents/skills tests/agents/python
+        run: uv run --python 3.14.6 --frozen ruff format --check agents github herdr zsh tests
 
       - name: Run ruff check
-        run: uv run --python 3.14.6 --frozen ruff check agents/skills tests/agents/python
+        run: uv run --python 3.14.6 --frozen ruff check agents github herdr zsh tests
 
       - name: Run ty
         run: uv run --python 3.14.6 --frozen ty check
@@ -153,8 +157,18 @@ jobs:
           enable-cache: true
           cache-python: true
 
-      - name: Run Python skill tests
-        run: uv run --python 3.14.6 --frozen pytest tests/agents/python
+      - name: Setup shfmt
+        uses: mfinelli/setup-shfmt@a25fda4c1fe115aec0f85e04126610841bc3141d # v4.0.1
+        with:
+          shfmt-version: "3.13.1"
+
+      - name: Install content scanner dependency
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ripgrep
+
+      - name: Run Python automation tests
+        run: uv run --python 3.14.6 --frozen pytest -m 'not integration'
 
   audit-python:
     runs-on: ubuntu-latest
@@ -191,19 +205,25 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # 2.0.0
-        env:
-          SHELLCHECK_OPTS: -x --source-path=SCRIPTDIR
-        with:
-          scandir: github
-          format: gcc
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends shellcheck
 
       - name: Setup shfmt
         uses: mfinelli/setup-shfmt@a25fda4c1fe115aec0f85e04126610841bc3141d # v4.0.1
+        with:
+          shfmt-version: "3.13.1"
 
-      - name: Run shfmt
-        run: shfmt -d -i 2 -ci github/
+      - name: Check tracked Bash scripts
+        run: |
+          mapfile -d '' -t files < <(git ls-files -z -- '*.sh')
+          if ((${#files[@]} == 0)); then
+            echo "No tracked Bash scripts found." >&2
+            exit 1
+          fi
+          shellcheck -x --source-path=SCRIPTDIR "${files[@]}"
+          shfmt -d "${files[@]}"
 
   lua-lint:
     runs-on: ubuntu-latest
@@ -254,10 +274,10 @@ jobs:
           nix run nixpkgs#statix -- check nix/
 
       - name: Run deadnix
-        run: nix run nixpkgs#deadnix -- --fail flake.nix nix/darwin/default.nix nix/home/default.nix
+        run: nix run nixpkgs#deadnix -- --fail flake.nix nix/checks.nix nix/darwin/default.nix nix/home/default.nix
 
       - name: Run nixfmt
-        run: nix run nixpkgs#nixfmt-rfc-style -- --check flake.nix nix/darwin/default.nix nix/home/default.nix
+        run: nix run nixpkgs#nixfmt-rfc-style -- --check flake.nix nix/checks.nix nix/darwin/default.nix nix/home/default.nix
 
   format-check:
     runs-on: ubuntu-latest

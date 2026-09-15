@@ -6,12 +6,12 @@ repository policy. It does not require Nix environment setup.
 ## Command Ownership
 
 Use the public `repo` command. In the dotfiles checkout, command behavior is defined by
-`github/repo.sh`, `github/create_repo.sh`, and `github/configure_repo.sh`. The policy payloads are
+`github/repo.py`. The policy payloads are
 `github/repo_settings.json` and `github/ruleset.json`; inspect these instead of reproducing their
 settings here. Use `repo create --help` or `repo configure --help` for current arguments.
 
-If `repo` is unavailable, locate the user's dotfiles checkout and its `github/repo.sh` entry point.
-Do not assume a fixed home-directory layout or replace the wrapper with a workflow that skips
+If `repo` is unavailable, locate the user's dotfiles checkout and run its `github/repo.py` entry
+point with `python3 -I -B`. Do not assume a fixed home-directory layout or replace it with a workflow that skips
 its standard configuration.
 
 ## New GitHub Repository
@@ -21,10 +21,10 @@ its standard configuration.
    Inspect any license inherited from a template as well as explicit creation options.
 2. Use `repo create <owner/name> <visibility> --template <template>` for a supported template,
    or omit `--template` when a bare repository is intended. Supply exactly one supported visibility
-   option; the wrapper owns the ghq clone destination, so do not add `--clone` or `--source`.
+   option; the command owns the ghq clone destination, so do not add `--clone` or `--source`.
 3. Check the exit status before using the printed destination. Do not use `cd "$(repo create ...)"`
    as a success guard: the outer command can still execute when creation fails.
-4. Inspect the clone and local adjustments. The wrapper applies supported manifest-name changes
+4. Inspect the clone and local adjustments. The command applies supported manifest-name changes
    and standard GitHub configuration. It installs Lefthook only when its configuration and the
    executable are available; check the outcome instead of assuming installation occurred.
 5. Continue to environment setup only when requested. Template renames may leave local changes;

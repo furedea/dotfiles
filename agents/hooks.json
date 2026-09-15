@@ -6,7 +6,7 @@
         "matcher": "",
         "hooks": [
           {
-            "command": "$HOME/.claude/hooks/guard_secret_content.sh prompt",
+            "command": "\"$HOME/.claude/hooks/guard_file.py\" prompt",
             "type": "command"
           }
         ]
@@ -17,23 +17,23 @@
         "matcher": "Bash",
         "hooks": [
           {
-            "command": "$HOME/.claude/hooks/audit_tool_call.sh",
+            "command": "\"$HOME/.claude/hooks/audit_log.py\" tool",
             "type": "command"
           },
           {
-            "command": "$HOME/.claude/hooks/guard_forbidden_commands.sh",
+            "command": "\"$HOME/.claude/hooks/guard_command.py\" forbidden",
             "type": "command"
           },
           {
-            "command": "$HOME/.claude/hooks/guard_secret_commit.sh",
+            "command": "\"$HOME/.claude/hooks/guard_file.py\" commit",
             "type": "command"
           },
           {
-            "command": "$HOME/.claude/hooks/guard_dangerous_git.sh",
+            "command": "\"$HOME/.claude/hooks/guard_dangerous_git.py\"",
             "type": "command"
           },
           {
-            "command": "$HOME/.claude/hooks/guard_allowed_commands.sh",
+            "command": "\"$HOME/.claude/hooks/guard_command.py\" allowed",
             "type": "command"
           }
         ]
@@ -42,11 +42,11 @@
         "matcher": "Read",
         "hooks": [
           {
-            "command": "$HOME/.claude/hooks/audit_tool_call.sh",
+            "command": "\"$HOME/.claude/hooks/audit_log.py\" tool",
             "type": "command"
           },
           {
-            "command": "$HOME/.claude/hooks/guard_secret_content.sh read",
+            "command": "\"$HOME/.claude/hooks/guard_file.py\" read",
             "type": "command"
           }
         ]
@@ -55,15 +55,15 @@
         "matcher": "Write|Edit|MultiEdit",
         "hooks": [
           {
-            "command": "$HOME/.claude/hooks/audit_tool_call.sh",
+            "command": "\"$HOME/.claude/hooks/audit_log.py\" tool",
             "type": "command"
           },
           {
-            "command": "$HOME/.claude/hooks/guard_harness_files.sh",
+            "command": "\"$HOME/.claude/hooks/guard_file.py\" harness",
             "type": "command"
           },
           {
-            "command": "$HOME/.claude/hooks/guard_secret_content.sh write",
+            "command": "\"$HOME/.claude/hooks/guard_file.py\" write",
             "type": "command"
           }
         ]
@@ -74,57 +74,57 @@
         "matcher": "Write|Edit|MultiEdit",
         "hooks": [
           {
-            "command": "$HOME/.claude/hooks/lint_format_py.sh",
+            "command": "\"$HOME/.claude/hooks/lint_format.py\" py",
             "if": "Write(*.py)|Edit(*.py)|MultiEdit(*.py)",
             "type": "command"
           },
           {
-            "command": "$HOME/.claude/hooks/lint_format_sh.sh",
+            "command": "\"$HOME/.claude/hooks/lint_format.py\" sh",
             "if": "Write(*.sh)|Edit(*.sh)|MultiEdit(*.sh)",
             "type": "command"
           },
           {
-            "command": "$HOME/.claude/hooks/lint_format_js.sh",
+            "command": "\"$HOME/.claude/hooks/lint_format.py\" js",
             "if": "Write(*.js)|Edit(*.js)|MultiEdit(*.js)|Write(*.ts)|Edit(*.ts)|MultiEdit(*.ts)|Write(*.jsx)|Edit(*.jsx)|MultiEdit(*.jsx)|Write(*.tsx)|Edit(*.tsx)|MultiEdit(*.tsx)",
             "type": "command"
           },
           {
-            "command": "$HOME/.claude/hooks/lint_format_rs.sh",
+            "command": "\"$HOME/.claude/hooks/lint_format.py\" rs",
             "if": "Write(*.rs)|Edit(*.rs)|MultiEdit(*.rs)",
             "type": "command"
           },
           {
-            "command": "$HOME/.claude/hooks/lint_format_nix.sh",
+            "command": "\"$HOME/.claude/hooks/lint_format.py\" nix",
             "if": "Write(*.nix)|Edit(*.nix)|MultiEdit(*.nix)",
             "type": "command"
           },
           {
-            "command": "$HOME/.claude/hooks/lint_format_md.sh",
+            "command": "\"$HOME/.claude/hooks/lint_format.py\" md",
             "if": "Write(*.md)|Edit(*.md)|MultiEdit(*.md)|Write(*.markdown)|Edit(*.markdown)|MultiEdit(*.markdown)",
             "type": "command"
           },
           {
-            "command": "$HOME/.claude/hooks/lint_format_json_toml.sh",
+            "command": "\"$HOME/.claude/hooks/lint_format.py\" json_toml",
             "if": "Write(*.json)|Edit(*.json)|MultiEdit(*.json)|Write(*.toml)|Edit(*.toml)|MultiEdit(*.toml)",
             "type": "command"
           },
           {
-            "command": "$HOME/.claude/hooks/lint_format_gha.sh",
+            "command": "\"$HOME/.claude/hooks/lint_format.py\" gha",
             "if": "Write(*.yml)|Edit(*.yml)|MultiEdit(*.yml)|Write(*.yaml)|Edit(*.yaml)|MultiEdit(*.yaml)",
             "type": "command"
           },
           {
-            "command": "$HOME/.claude/hooks/lint_format_txt.sh",
+            "command": "\"$HOME/.claude/hooks/lint_format.py\" txt",
             "if": "Write(*.txt)|Edit(*.txt)|MultiEdit(*.txt)",
             "type": "command"
           },
           {
-            "command": "$HOME/.claude/hooks/lint_format_lua.sh",
+            "command": "\"$HOME/.claude/hooks/lint_format.py\" lua",
             "if": "Write(*.lua)|Edit(*.lua)|MultiEdit(*.lua)",
             "type": "command"
           },
           {
-            "command": "$HOME/.claude/hooks/lint_format_tex.sh",
+            "command": "\"$HOME/.claude/hooks/lint_format.py\" tex",
             "if": "Write(*.tex)|Edit(*.tex)|MultiEdit(*.tex)|Write(*.bib)|Edit(*.bib)|MultiEdit(*.bib)|Write(*.cls)|Edit(*.cls)|MultiEdit(*.cls)|Write(*.sty)|Edit(*.sty)|MultiEdit(*.sty)",
             "type": "command"
           }
@@ -134,7 +134,7 @@
         "matcher": "Bash|Edit|MultiEdit|Write|WebFetch|WebSearch|Task|Agent",
         "hooks": [
           {
-            "command": "$HOME/.claude/hooks/audit_tool_call.sh",
+            "command": "\"$HOME/.claude/hooks/audit_log.py\" tool",
             "type": "command"
           }
         ]
@@ -145,7 +145,7 @@
         "matcher": "",
         "hooks": [
           {
-            "command": "$HOME/.claude/hooks/run_related_tests.sh",
+            "command": "\"$HOME/.claude/hooks/run_verification.py\"",
             "type": "command"
           }
         ]
@@ -155,7 +155,7 @@
       {
         "hooks": [
           {
-            "command": "$HOME/.claude/hooks/audit_permission_denied.sh",
+            "command": "\"$HOME/.claude/hooks/audit_log.py\" denied",
             "type": "command"
           }
         ]
@@ -166,7 +166,7 @@
         "matcher": "",
         "hooks": [
           {
-            "command": "$HOME/.claude/hooks/audit_compaction.sh",
+            "command": "\"$HOME/.claude/hooks/audit_log.py\" compaction",
             "type": "command"
           }
         ]
@@ -177,7 +177,7 @@
         "matcher": "compact|resume",
         "hooks": [
           {
-            "command": "$HOME/.claude/hooks/audit_compaction.sh",
+            "command": "\"$HOME/.claude/hooks/audit_log.py\" compaction",
             "type": "command"
           }
         ]
@@ -190,7 +190,7 @@
         {
           "hooks": [
             {
-              "command": "$HOME/.codex/hooks/adapt_guard_secret_content.sh prompt",
+              "command": "\"$HOME/.codex/hooks/hook_translation.py\" content prompt",
               "statusMessage": "Scanning prompt for sensitive information",
               "timeout": 30,
               "type": "command"
@@ -203,31 +203,31 @@
           "matcher": "^(Bash|exec_command|functions\\.exec_command)$",
           "hooks": [
             {
-              "command": "$HOME/.codex/hooks/adapt_guard_secret_paths.sh command",
+              "command": "\"$HOME/.codex/hooks/hook_translation.py\" paths command",
               "statusMessage": "Checking secret path policy",
               "timeout": 30,
               "type": "command"
             },
             {
-              "command": "$HOME/.codex/hooks/adapt_shell_command.sh $HOME/.claude/hooks/guard_forbidden_commands.sh",
+              "command": "\"$HOME/.codex/hooks/hook_translation.py\" shell forbidden",
               "statusMessage": "Checking forbidden command prefixes",
               "timeout": 30,
               "type": "command"
             },
             {
-              "command": "$HOME/.codex/hooks/adapt_shell_command.sh $HOME/.claude/hooks/guard_secret_commit.sh",
+              "command": "\"$HOME/.codex/hooks/hook_translation.py\" shell commit",
               "statusMessage": "Checking staged files for secrets",
               "timeout": 30,
               "type": "command"
             },
             {
-              "command": "$HOME/.codex/hooks/adapt_shell_command.sh $HOME/.claude/hooks/guard_dangerous_git.sh",
+              "command": "\"$HOME/.codex/hooks/hook_translation.py\" shell git",
               "statusMessage": "Checking for dangerous git operations",
               "timeout": 30,
               "type": "command"
             },
             {
-              "command": "$HOME/.codex/hooks/adapt_shell_command.sh $HOME/.claude/hooks/guard_allowed_commands.sh",
+              "command": "\"$HOME/.codex/hooks/hook_translation.py\" shell allowed",
               "statusMessage": "Checking command permissions",
               "timeout": 30,
               "type": "command"
@@ -238,19 +238,19 @@
           "matcher": "^apply_patch$|^Edit$|^Write$",
           "hooks": [
             {
-              "command": "$HOME/.codex/hooks/adapt_guard_secret_paths.sh patch",
+              "command": "\"$HOME/.codex/hooks/hook_translation.py\" paths patch",
               "statusMessage": "Checking secret path policy",
               "timeout": 30,
               "type": "command"
             },
             {
-              "command": "$HOME/.codex/hooks/adapt_harness_files.sh",
+              "command": "\"$HOME/.codex/hooks/hook_translation.py\" harness",
               "statusMessage": "Checking harness boundaries",
               "timeout": 30,
               "type": "command"
             },
             {
-              "command": "$HOME/.codex/hooks/adapt_guard_secret_content.sh apply-patch",
+              "command": "\"$HOME/.codex/hooks/hook_translation.py\" content apply-patch",
               "statusMessage": "Scanning patch for sensitive information",
               "timeout": 30,
               "type": "command"
@@ -263,7 +263,7 @@
           "matcher": "^apply_patch$|^Edit$|^Write$",
           "hooks": [
             {
-              "command": "$HOME/.codex/hooks/adapt_lint_format.sh",
+              "command": "\"$HOME/.codex/hooks/hook_translation.py\" lint",
               "statusMessage": "Running lint/format hooks",
               "timeout": 120,
               "type": "command"
@@ -274,7 +274,7 @@
           "matcher": ".",
           "hooks": [
             {
-              "command": "$HOME/.claude/hooks/audit_tool_call.sh",
+              "command": "\"$HOME/.claude/hooks/audit_log.py\" tool",
               "statusMessage": "Logging tool call",
               "timeout": 10,
               "type": "command"
@@ -286,7 +286,7 @@
         {
           "hooks": [
             {
-              "command": "$HOME/.claude/hooks/run_related_tests.sh",
+              "command": "\"$HOME/.claude/hooks/run_verification.py\"",
               "statusMessage": "Running related tests",
               "timeout": 600,
               "type": "command"

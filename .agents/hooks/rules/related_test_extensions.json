@@ -1,98 +1,221 @@
 {
-  "agents/hooks/run_related_tests.sh": [
-    "tests/agents/hooks/claude/verification_logs.bats",
-    "tests/agents/hooks/claude/verification_integrity.bats"
-  ],
-  "agents/hooks/lib/audit_log.sh": [
-    "tests/agents/hooks/claude/guard_allowed_commands.bats",
-    "tests/agents/hooks/claude/guard_forbidden_commands.bats",
-    "tests/agents/hooks/claude/guard_dangerous_git.bats"
-  ],
-  "agents/hooks/lib/shell_parse.sh": [
-    "tests/agents/hooks/claude/guard_dangerous_git.bats",
-    "tests/agents/hooks/claude/guard_allowed_commands.bats",
-    "tests/agents/hooks/claude/guard_forbidden_commands.bats",
-    "tests/agents/hooks/codex/adapt_shell_command.bats"
-  ],
-  "agents/hooks/lib/command_rules.sh": [
-    "tests/agents/hooks/claude/command_permissions_sync.bats",
-    "tests/agents/hooks/claude/guard_allowed_commands.bats",
-    "tests/agents/hooks/claude/guard_forbidden_commands.bats"
-  ],
-  "agents/hooks/lib/lint_format.sh": [
-    "tests/agents/hooks/claude/quality_step_failures.bats",
-    "tests/agents/hooks/claude/lint_format_hooks.bats",
-    "tests/agents/hooks/claude/lint_format_js.bats",
-    "tests/agents/hooks/claude/lint_format_py.bats",
-    "tests/agents/hooks/claude/lint_format_rs.bats",
-    "tests/agents/hooks/claude/lint_format_sh.bats",
-    "tests/agents/hooks/codex/adapt_lint_format.bats"
-  ],
-  "agents/hooks/guard_secret_content.sh": [
-    "tests/agents/hooks/codex/adapt_guard_secret_content.bats"
-  ],
-  "agents/hooks/guard_secret_commit.sh": [
-    "tests/agents/hooks/claude/guard_secret_commit.bats"
-  ],
-  "agents/hooks/guard_harness_files.sh": [
-    "tests/agents/hooks/claude/guard_harness_files.bats",
-    "tests/agents/hooks/codex/adapt_harness_files.bats"
+  ".agents/hooks/rules/related_test_extensions.json": [
+    "tests/agents/hooks/test_verification_rule.py",
+    "tests/agents/hooks/test_verification_selection.py"
   ],
   "agents/hooks/rules/secret_path_policy.json": [
-    "tests/agents/hooks/codex/adapt_guard_secret_paths.bats",
-    "tests/agents/hooks/claude/related_test_rules.bats"
+    "tests/agents/codex/test_hook_translation_cli.py",
+    "tests/agents/hooks/test_verification_rule.py"
   ],
   "agents/hooks/rules/allowed_commands.json": [
-    "tests/agents/hooks/claude/command_permissions_sync.bats",
-    "tests/agents/hooks/claude/guard_allowed_commands.bats"
+    "tests/agents/test_command_permission_sync.py",
+    "tests/agents/hooks/test_allowed_command.py",
+    "tests/agents/hooks/test_command_cli.py"
   ],
   "agents/hooks/rules/forbidden_commands.json": [
-    "tests/agents/hooks/claude/guard_forbidden_commands.bats"
-  ],
-  "agents/hooks/lint_format_*.sh": [
-    "tests/agents/hooks/claude/quality_step_failures.bats",
-    "tests/agents/hooks/claude/lint_format_hooks.bats"
+    "tests/agents/hooks/test_forbidden_command.py",
+    "tests/agents/hooks/test_command_cli.py"
   ],
   "agents/hooks/rules/secret_content_patterns.json": [
-    "tests/agents/hooks/rules/secret_patterns.bats",
-    "tests/agents/hooks/claude/related_test_rules.bats"
+    "tests/agents/hooks/test_secret_content_pattern.py",
+    "tests/agents/hooks/test_secret_content.py",
+    "tests/agents/hooks/test_verification_rule.py"
+  ],
+  "tests/agents/hooks/secret_content_samples.json": [
+    "tests/agents/hooks/test_secret_content.py"
   ],
   "agents/hooks/rules/secret_commit_policy.json": [
-    "tests/agents/hooks/rules/secret_commit_policy.bats",
-    "tests/agents/hooks/claude/guard_secret_commit.bats",
-    "tests/agents/hooks/claude/related_test_rules.bats"
+    "tests/agents/hooks/test_secret_commit_policy.py",
+    "tests/agents/hooks/test_guard_file.py",
+    "tests/agents/hooks/test_verification_rule.py"
   ],
   "agents/hooks/rules/related_test_*.json": [
-    "tests/agents/hooks/claude/verification_integrity.bats",
-    "tests/agents/hooks/claude/related_test_rules.bats"
+    "tests/agents/hooks/test_verification_cli.py",
+    "tests/agents/hooks/test_verification_selection.py",
+    "tests/agents/hooks/test_verification_rule.py"
   ],
   "agents/claude/settings.base.json": [
-    "tests/agents/hooks/claude/guard_allowed_commands.bats",
-    "tests/agents/notifications.bats"
+    "tests/agents/hooks/test_allowed_command.py",
+    "tests/agents/hooks/test_command_cli.py",
+    "tests/agents/test_notification.py"
   ],
   "agents/codex/config.toml": [
-    "tests/agents/notifications.bats"
+    "tests/agents/test_notification.py"
   ],
   "agents/hooks.json": [
-    "tests/agents/notifications.bats",
-    "tests/agents/hooks/claude/related_test_rules.bats"
-  ],
-  "agents/claude/statusline/*.sh": [
-    "tests/agents/hooks/claude/statusline.bats"
+    "tests/agents/test_notification.py",
+    "tests/agents/hooks/test_verification_rule.py",
+    "tests/agents/test_python_runtime.py"
   ],
   "agents/claude/statusline/*.json": [
-    "tests/agents/hooks/claude/statusline.bats"
+    "tests/agents/claude/test_statusline.py"
   ],
   "agents/command_permissions.json": [
-    "tests/agents/codex/execpolicy.bats",
-    "tests/agents/hooks/claude/command_permissions_sync.bats",
-    "tests/agents/hooks/claude/guard_allowed_commands.bats",
-    "tests/agents/hooks/claude/guard_forbidden_commands.bats"
+    "tests/agents/codex/test_execpolicy.py",
+    "tests/agents/test_command_permission_sync.py",
+    "tests/agents/hooks/test_allowed_command.py",
+    "tests/agents/hooks/test_command_cli.py",
+    "tests/agents/hooks/test_forbidden_command.py"
   ],
   "flake.nix": [
-    "tests/nix"
+    "tests/nix/configuration.bats",
+    "tests/agents/agent_hook.bats",
+    "tests/agents/codex/codex_notification.bats",
+    "tests/herdr/herdr_command.bats",
+    "tests/hermes/hermes_secretary.bats",
+    "tests/terminal-browser/terminal_browser.bats",
+    "tests/hermes/test_hermes_gateway.py"
+  ],
+  "flake.lock": [
+    "tests/nix/configuration.bats",
+    "tests/agents/agent_hook.bats",
+    "tests/agents/codex/codex_notification.bats",
+    "tests/herdr/herdr_command.bats",
+    "tests/hermes/hermes_secretary.bats",
+    "tests/terminal-browser/terminal_browser.bats",
+    "tests/hermes/test_hermes_gateway.py"
   ],
   "nix/**": [
-    "tests/nix"
+    "tests/nix/configuration.bats",
+    "tests/agents/agent_hook.bats",
+    "tests/agents/codex/codex_notification.bats",
+    "tests/herdr/herdr_command.bats",
+    "tests/hermes/hermes_secretary.bats",
+    "tests/terminal-browser/terminal_browser.bats",
+    "tests/hermes/test_hermes_gateway.py"
+  ],
+  "agents/hooks/lint_format.py": [
+    "tests/agents/hooks/test_quality_cli.py",
+    "tests/agents/codex/test_hook_translation_cli.py",
+    "tests/agents/hooks/test_lint_format.py"
+  ],
+  "agents/hooks/run_verification.py": [
+    "tests/agents/hooks/test_verification_terminal.py",
+    "tests/agents/hooks/test_verification_cli.py",
+    "tests/agents/hooks/test_verification_selection.py",
+    "tests/agents/hooks/test_verification_output.py",
+    "tests/agents/hooks/test_verification_log.py",
+    "tests/agents/hooks/test_verification_reuse.py"
+  ],
+  "agents/hooks/lib/verification_*.py": [
+    "tests/agents/hooks/test_verification_cli.py",
+    "tests/agents/hooks/test_verification_selection.py",
+    "tests/agents/hooks/test_verification_output.py",
+    "tests/agents/hooks/test_verification_log.py",
+    "tests/agents/hooks/test_verification_reuse.py"
+  ],
+  "agents/hooks/audit_log.py": [
+    "tests/agents/hooks/test_audit_log_cli.py",
+    "tests/agents/hooks/test_audit_log.py",
+    "tests/agents/hooks/test_allowed_command.py",
+    "tests/agents/hooks/test_command_cli.py",
+    "tests/agents/hooks/test_forbidden_command.py",
+    "tests/agents/hooks/test_dangerous_git_contract.py",
+    "tests/agents/hooks/test_hook_boundary.py"
+  ],
+  "github/repo.py": [
+    "tests/github/test_repo.py",
+    "tests/github/test_repo_cli.py"
+  ],
+  "herdr/plugin_sync.py": [
+    "tests/herdr/test_plugin_sync_cli.py",
+    "tests/herdr/test_plugin_sync.py"
+  ],
+  "herdr/config.toml": [
+    "tests/herdr/test_popup_command.py"
+  ],
+  "herdr/reviewr.toml": [
+    "tests/herdr/test_popup_command.py"
+  ],
+  "agents/claude/statusline/statusline.py": [
+    "tests/agents/claude/test_statusline.py"
+  ],
+  "agents/hooks/lib/shell_syntax.py": [
+    "tests/agents/hooks/test_dangerous_git_contract.py",
+    "tests/agents/hooks/test_command_cli.py",
+    "tests/agents/hooks/test_allowed_command.py",
+    "tests/agents/hooks/test_forbidden_command.py",
+    "tests/agents/codex/test_hook_translation_cli.py",
+    "tests/agents/hooks/test_git_safety.py",
+    "tests/agents/hooks/test_hook_boundary.py"
+  ],
+  "agents/hooks/lib/command_policy.py": [
+    "tests/agents/test_command_permission_sync.py",
+    "tests/agents/hooks/test_allowed_command.py",
+    "tests/agents/hooks/test_command_cli.py",
+    "tests/agents/hooks/test_forbidden_command.py",
+    "tests/agents/hooks/test_guard_file.py",
+    "tests/agents/hooks/test_hook_boundary.py"
+  ],
+  "agents/hooks/guard_command.py": [
+    "tests/agents/hooks/test_allowed_command.py",
+    "tests/agents/hooks/test_command_cli.py",
+    "tests/agents/hooks/test_forbidden_command.py"
+  ],
+  "agents/hooks/lib/git_safety.py": [
+    "tests/agents/hooks/test_dangerous_git_contract.py",
+    "tests/agents/hooks/test_command_cli.py",
+    "tests/agents/hooks/test_git_safety.py"
+  ],
+  "agents/hooks/guard_dangerous_git.py": [
+    "tests/agents/hooks/test_dangerous_git_contract.py",
+    "tests/agents/hooks/test_command_cli.py",
+    "tests/agents/hooks/test_git_safety.py"
+  ],
+  "agents/hooks/guard_file.py": [
+    "tests/agents/hooks/test_guard_file.py",
+    "tests/agents/hooks/test_secret_content.py",
+    "tests/agents/codex/test_hook_translation_cli.py",
+    "tests/agents/hooks/test_hook_boundary.py"
+  ],
+  "agents/codex/hooks/hook_translation.py": [
+    "tests/agents/codex/test_hook_translation_cli.py",
+    "tests/agents/hooks/test_hook_boundary.py"
+  ],
+  "agents/hooks/lib/patch_input.py": [
+    "tests/agents/codex/test_hook_translation_cli.py",
+    "tests/agents/hooks/test_hook_boundary.py"
+  ],
+  "agents/hooks/lib/secret_path_policy.py": [
+    "tests/agents/codex/test_hook_translation_cli.py",
+    "tests/agents/hooks/test_hook_boundary.py"
+  ],
+  "herdr/merge_pull_request.py": [
+    "tests/herdr/test_merge_pull_request_cli.py"
+  ],
+  "zsh/esa.py": [
+    "tests/esa/zsh.bats",
+    "tests/esa/test_esa.py"
+  ],
+  "zsh/build_cache.zsh": [
+    "tests/zsh/cache.bats",
+    "tests/zsh/startup.bats"
+  ],
+  "nvim/init.lua": [
+    "tests/nvim/test_nvim_plugin_lock.py"
+  ],
+  "nvim/lazy-lock.json": [
+    "tests/nvim/test_nvim_plugin_lock.py"
+  ],
+  ".gitignore": [
+    "tests/nvim/test_nvim_plugin_lock.py"
+  ],
+  "git/ignore": [
+    "tests/nvim/test_nvim_plugin_lock.py"
+  ],
+  "hermes/secretary/skills/secretary/**": [
+    "tests/hermes/test_secretary_skill.py"
+  ],
+  "tests/hermes/gateway_probe.py": [
+    "tests/hermes/test_hermes_gateway.py"
+  ],
+  "agents/manifest.json": [
+    "tests/agents/test_python_runtime.py"
+  ],
+  "agents/hooks/*.py": [
+    "tests/agents/test_python_runtime.py"
+  ],
+  "agents/codex/hooks/*.py": [
+    "tests/agents/test_python_runtime.py"
   ]
 }
