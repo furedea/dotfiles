@@ -8,12 +8,12 @@
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
     home-manager.url = "github:nix-community/home-manager/release-25.11";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
+    # Homebrew itself is left on the revision nix-homebrew pins. Overriding it
+    # strands Homebrew behind homebrew-core, whose formulae always come from the
+    # current API: brew 6.0.12 lacked the `symlink overwrite:` keyword and the
+    # `bootstrap_cpython` install step, so post-install failed for openssl@3 and
+    # python@3.11, and `brew install` then exited non-zero.
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
-    brew-src = {
-      url = "github:Homebrew/brew/0bfbbb6c1a08254177d133f5c14a8f506ea7888e";
-      flake = false;
-    };
-    nix-homebrew.inputs.brew-src.follows = "brew-src";
     llm-agents.url = "github:numtide/llm-agents.nix";
     hermes-agent.url = "github:NousResearch/hermes-agent";
     google-workspace-cli = {

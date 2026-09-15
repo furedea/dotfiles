@@ -46,17 +46,17 @@
     "brew-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1785445275,
-        "narHash": "sha256-9eWHDcRTbMAhD47jmL9m+LB0zFFuGVsVRztyJoWw/AU=",
+        "lastModified": 1788591592,
+        "narHash": "sha256-NbwVKwKLFl0oXub7oPjvmDaOygCtV2oboeKTu4xXFTk=",
         "owner": "Homebrew",
         "repo": "brew",
-        "rev": "0bfbbb6c1a08254177d133f5c14a8f506ea7888e",
+        "rev": "08e85c4e42f5d8f1ea17c36cb59cf61c2ccb26c3",
         "type": "github"
       },
       "original": {
         "owner": "Homebrew",
+        "ref": "6.0.22",
         "repo": "brew",
-        "rev": "0bfbbb6c1a08254177d133f5c14a8f506ea7888e",
         "type": "github"
       }
     },
@@ -304,16 +304,14 @@
     },
     "nix-homebrew": {
       "inputs": {
-        "brew-src": [
-          "brew-src"
-        ]
+        "brew-src": "brew-src"
       },
       "locked": {
-        "lastModified": 1784906761,
-        "narHash": "sha256-2v0H8+Ert+xbm0oliHblXTPPczuKiibBUBvRax59kxg=",
+        "lastModified": 1788981439,
+        "narHash": "sha256-fEaFq0XgpgWFPLfpq1UK4/8ylHd2T0+fo6O3hKz1LUM=",
         "owner": "zhaofengli",
         "repo": "nix-homebrew",
-        "rev": "60623ec512406261f553d24033c8a0c53fd0b7f2",
+        "rev": "09a921d0181146cf6163ec2cc1db7b6fd539a885",
         "type": "github"
       },
       "original": {
@@ -477,7 +475,6 @@
       "inputs": {
         "agent-harness": "agent-harness",
         "apple-mail-cli": "apple-mail-cli",
-        "brew-src": "brew-src",
         "google-workspace-cli": "google-workspace-cli",
         "hermes-agent": "hermes-agent",
         "hister": "hister",
