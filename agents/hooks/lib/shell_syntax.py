@@ -9,6 +9,9 @@ import shlex
 import subprocess
 
 
+COMMAND_PREVIEW_LIMIT = 200
+
+
 class UnsupportedSyntax(ValueError):
     """The command cannot be statically inspected by this supplementary guard."""
 
@@ -21,6 +24,16 @@ class Command:
     arguments: tuple[str, ...]
     wrapper_depth: int = 0
     redirections: tuple[str, ...] = ()
+
+
+def command_preview(source: str) -> str:
+    """Bound guard diagnostics without repeating inline script bodies."""
+    lines = source.splitlines()
+    first = lines[0] if lines else ""
+    preview = first[:COMMAND_PREVIEW_LIMIT]
+    if len(first) > COMMAND_PREVIEW_LIMIT or len(lines) > 1:
+        return preview + "\nRemaining command text omitted."
+    return preview
 
 
 def nodes(value: object) -> Iterator[dict]:
@@ -73,7 +86,9 @@ def parse(source: str, depth: int = 0) -> tuple[Command, ...]:
     allowed = {None, "File", "CallExpr", "BinaryCmd", "Subshell", "Block", "Lit", "SglQuoted", "DblQuoted"}
     records = tuple(nodes(tree))
     owners = {id(node["Cmd"]): node for node in records if isinstance(node.get("Cmd"), dict)}
-    if any(node.get("Type") not in allowed or node.get("Hdoc") for node in records):
+    if any(node.get("Hdoc") for node in records):
+        raise UnsupportedSyntax("heredoc syntax requires explicit review")
+    if any(node.get("Type") not in allowed for node in records):
         raise UnsupportedSyntax("dynamic or unsupported shell syntax requires explicit review")
     data = source.encode()
     commands: list[Command] = []

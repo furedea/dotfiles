@@ -123,6 +123,28 @@ def test_secret_paths(run_cli: CliRunner, harness: Path, mode: str, payload: dic
 
 
 @pytest.mark.parametrize("field", ["command", "cmd"])
+def test_heredoc_denial_omits_the_body(run_cli: CliRunner, harness: Path, field: str) -> None:
+    command = "uv run --frozen python - <<'PY'\n" + "print('body_must_not_be_repeated')\n" * 100 + "PY\n"
+    result = run_cli(SCRIPT, "paths", "command", payload={"tool_input": {field: command}})
+    assert result.returncode == 2
+    assert "heredoc" in result.stderr.lower()
+    assert "uv run --frozen python" in result.stderr
+    assert "omitted" in result.stderr.lower()
+    assert "body_must_not_be_repeated" not in result.stderr
+    assert len(result.stderr) < 500
+
+
+def test_long_command_denial_has_a_bounded_preview(run_cli: CliRunner, harness: Path) -> None:
+    command = "echo " + "x" * 1000 + " $uninspectable_variable"
+    result = run_cli(SCRIPT, "paths", "command", payload={"tool_input": {"cmd": command}})
+    assert result.returncode == 2
+    assert "BLOCKED:" in result.stderr
+    assert "echo " in result.stderr
+    assert "omitted" in result.stderr.lower()
+    assert len(result.stderr) < 500
+
+
+@pytest.mark.parametrize("field", ["command", "cmd"])
 @pytest.mark.parametrize("command,blocked", [("git reset --hard", True), ("git status", False)])
 def test_shell_payload_fields(run_cli: CliRunner, field: str, command: str, blocked: bool) -> None:
     result = run_cli(SCRIPT, "shell", "git", payload={"tool_input": {field: command}})

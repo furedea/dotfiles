@@ -59,7 +59,7 @@ def check(kind: str, payload: dict, directory: Path = ROOT) -> int:
                     item.raw, rules
                 )
             if reason:
-                raise ValueError(f"{reason}.\n\nCommand: {item.raw}")
+                raise ValueError(f"{reason}.\n\nCommand: {shell_syntax.command_preview(item.raw)}")
     except (ValueError, TypeError, AttributeError, OSError) as error:
         prefix = "forbidden command: " if kind == "forbidden" else ""
         message = f"BLOCKED: {prefix}{error}\n\nUse a non-destructive approved form, or ask the user to review the command policy."

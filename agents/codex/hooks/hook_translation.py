@@ -84,7 +84,7 @@ def check_paths(mode: str, payload: dict) -> int:
         try:
             commands = shell_syntax.parse(command)
         except shell_syntax.UnsupportedSyntax as error:
-            raise ValueError(f"{error}\n\nCommand: {command}") from error
+            raise ValueError(f"{error}\n\nCommand: {shell_syntax.command_preview(command)}") from error
         candidates = [word for item in commands for word in (*item.arguments, *item.redirections)]
         candidates += [word.partition("=")[2] for word in candidates if "=" in word]
     else:

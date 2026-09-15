@@ -77,6 +77,30 @@ def test_invalid_command_json_remains_a_cli_error(run_cli: CliRunner) -> None:
     assert "failed to parse" in result.stderr
 
 
+@pytest.mark.parametrize(
+    "script,arguments,command,reason",
+    [
+        (
+            "guard_command.py",
+            ("allowed",),
+            'uv run --frozen pytest "' + "x" * 1000 + ';literal"',
+            "command not in allowlist",
+        ),
+        ("guard_command.py", ("forbidden",), "rm " + "x" * 1000, "forbidden command"),
+        ("guard_dangerous_git.py", (), "git reset --hard " + "x" * 1000, "BLOCKED:"),
+    ],
+    ids=["allowlist", "forbidden", "dangerous-git"],
+)
+def test_command_denial_previews_are_bounded(
+    run_cli: CliRunner, script: str, arguments: tuple[str, ...], command: str, reason: str
+) -> None:
+    result = run_cli(f"agents/hooks/{script}", *arguments, payload={"tool_input": {"command": command}})
+    assert result.returncode == 2
+    assert reason in result.stderr
+    assert "omitted" in result.stderr.lower()
+    assert len(result.stderr) < 500
+
+
 @pytest.mark.parametrize("branch,status", [("main", 2), ("feature/bar", 0), ("feature/foo", 0)])
 def test_implicit_push_uses_the_real_repository_branch(
     run_cli: CliRunner, git_project: Path, branch: str, status: int

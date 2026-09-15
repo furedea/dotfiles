@@ -26,7 +26,7 @@ def check(payload: dict) -> int:
             if reason := git_safety.reason(item.arguments):
                 if item.wrapper_depth:
                     reason = f"shell wrapper contains {reason}"
-                raise ValueError(f"{reason}.\n\nSegment: {item.raw}")
+                raise ValueError(f"{reason}.\n\nSegment: {shell_syntax.command_preview(item.raw)}")
     except (ValueError, TypeError, AttributeError) as error:
         message = f"BLOCKED: {error}\n\nUse a non-destructive command or ask the user to review this operation."
         audit_log.blocked(
