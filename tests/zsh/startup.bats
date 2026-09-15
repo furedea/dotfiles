@@ -91,38 +91,6 @@ EOF
   ! [[ "$stderr" == *"brew shellenv"* ]]
 }
 
-@test "system Zsh leaves completion initialization to the user configuration" {
-  run --separate-stderr nix eval --json \
-    "$TEST_FLAKE#darwinConfigurations.mba.config.programs.zsh.enableGlobalCompInit"
-
-  [ "$status" -eq 0 ]
-  [ "$output" = "false" ]
-}
-
-@test "system Zsh skips unused Bash completion compatibility" {
-  run --separate-stderr nix eval --json \
-    "$TEST_FLAKE#darwinConfigurations.mba.config.programs.zsh.enableBashCompletion"
-
-  [ "$status" -eq 0 ]
-  [ "$output" = "false" ]
-}
-
-@test "system Zsh leaves prompt initialization to Starship" {
-  run --separate-stderr nix eval --json \
-    "$TEST_FLAKE#darwinConfigurations.mba.config.programs.zsh.promptInit"
-
-  [ "$status" -eq 0 ]
-  [ "$output" = '""' ]
-}
-
-@test "nix-homebrew leaves Zsh environment initialization disabled" {
-  run --separate-stderr nix eval --json \
-    "$TEST_FLAKE#darwinConfigurations.mba.config.nix-homebrew.enableZshIntegration"
-
-  [ "$status" -eq 0 ]
-  [ "$output" = "false" ]
-}
-
 @test "Home Manager activation invokes the packaged Zsh cache builder" {
   run --separate-stderr nix build --no-link --print-out-paths \
     "$TEST_FLAKE#homeConfigurations.kaito.activationPackage"
@@ -138,12 +106,4 @@ EOF
   _builder="$(grep -Eo '/nix/store/[^"[:space:]]+-build_cache[.]zsh' "$_activation_package/activate" | head -n 1)"
   [ -f "$_builder" ]
   cmp --silent "$REPO_ROOT/zsh/build_cache.zsh" "$_builder"
-}
-
-@test "Home Manager builds Zsh caches after linking the new startup file" {
-  run --separate-stderr nix eval --json \
-    "$TEST_FLAKE#homeConfigurations.kaito.config.home.activation.zshCache.after"
-
-  [ "$status" -eq 0 ]
-  [ "$output" = '["linkGeneration"]' ]
 }

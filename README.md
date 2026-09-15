@@ -302,6 +302,8 @@ provider payloads, subprocess failures, disposable Git state, and configuration
 contracts. Bats checks shell, editor, and Nix-managed launcher integration.
 Declarative Home Manager and host contracts also have native flake checks in
 `nix/checks.nix`.
+Hermes gateway tests run on macOS with the Nix-built Hermes Python environment;
+they do not add Hermes dependencies to the dotfiles Python environment.
 
 The verification hook allows 300 seconds per Bats or pytest invocation and 120
 seconds for other runners. `RUN_RELATED_TESTS_TIMEOUT_SECONDS` overrides this

@@ -17,40 +17,6 @@ evaluate_ssh_directory_permissions() {
     "$REPO_ROOT#homeConfigurations.kaito.config.home.activation.sshDirectoryPermissions.data"
 }
 
-@test "login agent loads identities from the macOS Keychain" {
-  run --separate-stderr nix eval --no-write-lock-file --json \
-    "$REPO_ROOT#homeConfigurations.kaito.config.launchd.agents.ssh-agent-loader.config.ProgramArguments"
-
-  [ "$status" -eq 0 ]
-  [ "$output" = '["/usr/bin/ssh-add","--apple-load-keychain"]' ]
-}
-
-@test "identity loader starts when the user logs in" {
-  run --separate-stderr nix eval --no-write-lock-file --json \
-    "$REPO_ROOT#homeConfigurations.kaito.config.launchd.agents.ssh-agent-loader.config.RunAtLoad"
-
-  [ "$status" -eq 0 ]
-  [ "$output" = "true" ]
-}
-
-@test "home manager leaves the SSH client config unmanaged" {
-  run --separate-stderr nix eval --no-write-lock-file --json \
-    --apply 'home: builtins.hasAttr ".ssh/config" home.config.home.file' \
-    "$REPO_ROOT#homeConfigurations.kaito"
-
-  [ "$status" -eq 0 ]
-  [ "$output" = "false" ]
-}
-
-@test "home activation leaves SSH identity creation to the user" {
-  run --separate-stderr nix eval --no-write-lock-file --json \
-    --apply 'home: builtins.hasAttr "sshKeyGen" home.config.home.activation' \
-    "$REPO_ROOT#homeConfigurations.kaito"
-
-  [ "$status" -eq 0 ]
-  [ "$output" = "false" ]
-}
-
 @test "home activation restricts the SSH directory to its owner" {
   run --separate-stderr evaluate_ssh_directory_permissions
 

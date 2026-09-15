@@ -1,4 +1,8 @@
 {
+  ".agents/hooks/rules/related_test_extensions.json": [
+    "tests/agents/python/test_verification_rule.py",
+    "tests/agents/python/test_verification_selection.py"
+  ],
   "agents/hooks/rules/secret_path_policy.json": [
     "tests/agents/python/test_hook_translation_cli.py",
     "tests/agents/python/test_verification_rule.py"
@@ -54,10 +58,16 @@
     "tests/agents/python/test_forbidden_command.py"
   ],
   "flake.nix": [
-    "tests/nix"
+    "tests/nix",
+    "tests/python/test_hermes_gateway.py"
+  ],
+  "flake.lock": [
+    "tests/nix",
+    "tests/python/test_hermes_gateway.py"
   ],
   "nix/**": [
-    "tests/nix"
+    "tests/nix",
+    "tests/python/test_hermes_gateway.py"
   ],
   "agents/hooks/lint_format.py": [
     "tests/agents/python/test_quality_cli.py",
@@ -165,6 +175,24 @@
   "zsh/build_cache.zsh": [
     "tests/zsh/cache.bats",
     "tests/zsh/startup.bats"
+  ],
+  "nvim/init.lua": [
+    "tests/python/test_nvim_plugin_lock.py"
+  ],
+  "nvim/lazy-lock.json": [
+    "tests/python/test_nvim_plugin_lock.py"
+  ],
+  ".gitignore": [
+    "tests/python/test_nvim_plugin_lock.py"
+  ],
+  "git/ignore": [
+    "tests/python/test_nvim_plugin_lock.py"
+  ],
+  "hermes/secretary/skills/secretary/**": [
+    "tests/python/test_secretary_skill.py"
+  ],
+  "tests/hermes/gateway_probe.py": [
+    "tests/python/test_hermes_gateway.py"
   ],
   "agents/manifest.json": [
     "tests/agents/python/test_python_runtime.py"

@@ -54,6 +54,16 @@ in
         "moshi"
       ];
     github-stacked-pr-extension = names home.programs.gh.extensions == [ "gh-stack" ];
+    neovim-nix-managed-plugin-loader = names home.programs.neovim.plugins == [ "lazy.nvim" ];
+    ssh-identities-from-keychain =
+      home.launchd.agents.ssh-agent-loader.config.ProgramArguments == [
+        "/usr/bin/ssh-add"
+        "--apple-load-keychain"
+      ];
+    ssh-identities-loaded-at-login = home.launchd.agents.ssh-agent-loader.config.RunAtLoad;
+    ssh-client-config-unmanaged = !(home.home.file ? ".ssh/config");
+    ssh-identity-creation-left-to-user = !(home.home.activation ? sshKeyGen);
+    zsh-cache-after-startup-links = home.home.activation.zshCache.after == [ "linkGeneration" ];
     global-language-toolchains = hasAll [
       "python3"
       "uv"
@@ -120,6 +130,10 @@ in
 
   host-configuration = check "host-configuration" {
     binary-cache-trust = cacheTrusted mbp && cacheTrusted mba;
+    zsh-user-owned-completion = !mba.programs.zsh.enableGlobalCompInit;
+    zsh-no-bash-completion = !mba.programs.zsh.enableBashCompletion;
+    zsh-starship-prompt = mba.programs.zsh.promptInit == "";
+    no-homebrew-zsh-integration = !mba.nix-homebrew.enableZshIntegration;
     no-homebrew-moshi =
       !(lib.hasInfix "moshi-hook" mba.homebrew.brewfile)
       && !(lib.hasInfix "rjyo/moshi" mba.homebrew.brewfile);

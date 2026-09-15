@@ -60,9 +60,11 @@ def test_every_extension_target_exists(extension: dict[str, list[str]]) -> None:
     assert not missing
 
 
-@pytest.mark.parametrize("source", ["flake.nix", "nix/**"])
-def test_nix_changes_select_the_nix_contract_domain(extension: dict[str, list[str]], source: str) -> None:
-    assert extension[source] == ["tests/nix"]
+@pytest.mark.parametrize("source", ["flake.nix", "flake.lock", "nix/**"])
+def test_nix_changes_select_configuration_and_packaged_runtime_contracts(
+    extension: dict[str, list[str]], source: str
+) -> None:
+    assert {"tests/nix", "tests/python/test_hermes_gateway.py"} <= set(extension[source])
 
 
 @pytest.mark.parametrize(
@@ -95,6 +97,16 @@ def test_nix_changes_select_the_nix_contract_domain(extension: dict[str, list[st
         ("agents/hooks/rules/forbidden_commands.json", {"test_forbidden_command.py"}),
         ("herdr/config.toml", {"test_popup_command.py"}),
         ("herdr/reviewr.toml", {"test_popup_command.py"}),
+        ("nvim/init.lua", {"test_nvim_plugin_lock.py"}),
+        ("nvim/lazy-lock.json", {"test_nvim_plugin_lock.py"}),
+        (".gitignore", {"test_nvim_plugin_lock.py"}),
+        ("git/ignore", {"test_nvim_plugin_lock.py"}),
+        ("hermes/secretary/skills/secretary/**", {"test_secretary_skill.py"}),
+        ("tests/hermes/gateway_probe.py", {"test_hermes_gateway.py"}),
+        (
+            ".agents/hooks/rules/related_test_extensions.json",
+            {"test_verification_rule.py", "test_verification_selection.py"},
+        ),
     ],
 )
 def test_shared_inputs_select_their_consumers(
