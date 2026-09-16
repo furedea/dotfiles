@@ -8,10 +8,10 @@ import shlex
 import shutil
 import time
 
-from session_checks import Status, execute
+from check_execution import Status, execute
 from session_snapshot import Snapshot, capture
 from session_store import Run, StateError, prune
-import verification_selection
+import check_selection
 
 
 HOOK_ROOT = Path(__file__).resolve().parent.parent
@@ -36,8 +36,8 @@ def verify(run: Run, *, force: bool) -> dict[str, str]:
     if not changed and not full:
         return record_skip(run, state, "no changes since session registration")
     try:
-        rules = verification_selection.load_defaults(HOOK_ROOT / "rules/related_test_defaults.json")
-        invocations, errors = verification_selection.language_plan(run.root, rules, changed)
+        rules = check_selection.load_defaults(HOOK_ROOT / "rules/related_test_defaults.json")
+        invocations, errors = check_selection.language_plan(run.root, rules, changed)
     except (OSError, ValueError, TypeError) as error:
         return configuration_failure(run, state, current.digest, str(error))
     if errors:
@@ -149,7 +149,7 @@ def verification_inputs(snapshot: Snapshot) -> str:
     return digest.hexdigest()
 
 
-def check_identity(inputs: str, invocation: verification_selection.Invocation) -> str:
+def check_identity(inputs: str, invocation: check_selection.Invocation) -> str:
     executable = shutil.which(invocation.arguments[0])
     metadata = None
     if executable:

@@ -5,7 +5,7 @@ import pytest
 from tests.runtime import load_script_module
 
 
-output = load_script_module("agents/hooks/lib/verification_output.py", "verification_output")
+output = load_script_module("agents/hooks/lib/check_evidence.py", "check_evidence")
 
 
 @pytest.mark.parametrize(

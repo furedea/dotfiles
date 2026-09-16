@@ -9,8 +9,8 @@ import subprocess
 import threading
 import time
 
-from verification_output import first_error, summarize
-from verification_selection import Invocation
+from check_evidence import first_error, summarize
+from check_selection import Invocation
 
 
 OUTPUT_LIMIT_BYTES = 1024 * 1024

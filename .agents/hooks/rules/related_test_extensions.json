@@ -1,7 +1,7 @@
 {
   ".agents/hooks/rules/related_test_extensions.json": [
     "tests/agents/hooks/test_verification_rule.py",
-    "tests/agents/hooks/test_verification_selection.py"
+    "tests/agents/hooks/test_check_selection.py"
   ],
   "agents/hooks/rules/secret_path_policy.json": [
     "tests/agents/codex/test_hook_translation_cli.py",
@@ -30,7 +30,7 @@
     "tests/agents/hooks/test_verification_rule.py"
   ],
   "agents/hooks/rules/related_test_*.json": [
-    "tests/agents/hooks/test_verification_selection.py",
+    "tests/agents/hooks/test_check_selection.py",
     "tests/agents/hooks/test_verification_rule.py"
   ],
   "agents/claude/settings.json": [
@@ -104,9 +104,11 @@
     "tests/agents/codex/test_hook_translation_cli.py",
     "tests/agents/hooks/test_lint_format.py"
   ],
-  "agents/hooks/lib/verification_*.py": [
-    "tests/agents/hooks/test_verification_selection.py",
-    "tests/agents/hooks/test_verification_output.py"
+  "agents/hooks/lib/check_*.py": [
+    "tests/agents/hooks/test_check_selection.py",
+    "tests/agents/hooks/test_check_evidence.py",
+    "tests/agents/hooks/test_session_gate.py",
+    "tests/agents/hooks/test_native_session.py"
   ],
   "agents/hooks/audit_log.py": [
     "tests/agents/hooks/test_audit_log_cli.py",
