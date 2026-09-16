@@ -29,6 +29,7 @@ let
   rootsPackage = pkgs.callPackage ../packages/roots.nix { };
   terminalBrowserPackage = pkgs.callPackage ../packages/terminal_browser.nix { };
   codexPackage = llm-agents.packages.${system}.codex;
+  claudePackage = llm-agents.packages.${system}.claude-code;
   agentHarnessPackage = agent-harness.packages.${system}.default;
   moshiHookPackage = pkgs.callPackage ../packages/moshi_hook.nix { };
   moshiHookRuntime = lib.getExe moshiHookPackage;
@@ -212,7 +213,7 @@ in
     gwsPackage
 
     # AI coding agents
-    llm-agents.packages.${system}.claude-code
+    claudePackage
     herdrCompatibleCodex
     hermesAgentPackage
     unstable.opencode

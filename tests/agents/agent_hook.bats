@@ -24,7 +24,8 @@ setup() {
   local _claude_settings="$_rendered/.claude/settings.json"
 
   local _entry
-  for _entry in .codex/hooks/hook_translation.py .claude/hooks/guard_command.py .claude/statusline/statusline.py; do
+  for _entry in .codex/hooks/hook_translation.py .claude/hooks/guard_command.py \
+    .claude/hooks/verification_session.py .claude/statusline/statusline.py; do
     [ -x "$_rendered/$_entry" ]
     head -n 1 "$_rendered/$_entry" | grep -Eq '^#!/nix/store/[^ ]+/bin/env -S /nix/store/[^ ]+/bin/python3[^ ]* -IB$'
   done
@@ -47,12 +48,12 @@ setup() {
     "$_codex_hooks"
   jq -e '
     .hooks.Stop
-      | any(.[]; any(.hooks[]; .command == "\"$HOME/.claude/hooks/run_verification.py\""))
+      | any(.[]; any(.hooks[]; .command == "\"$HOME/.claude/hooks/verification_session.py\" codex stop"))
   ' "$_codex_hooks" >/dev/null
   grep -Eq -- "'/nix/store/[a-z0-9]+-moshi-hook-0\\.3\\.21/bin/moshi-hook' codex-hook" \
     "$_codex_hooks"
   grep -Eq -- "'/nix/store/[a-z0-9]+-moshi-hook-0\\.3\\.21/bin/moshi-hook' claude-hook" \
     "$_claude_settings"
-  ! grep -Fq -- '/opt/homebrew/bin/moshi-hook' "$_codex_hooks"
-  ! grep -Fq -- '/opt/homebrew/bin/moshi-hook' "$_claude_settings"
+  run ! grep -Fq -- '/opt/homebrew/bin/moshi-hook' "$_codex_hooks"
+  run ! grep -Fq -- '/opt/homebrew/bin/moshi-hook' "$_claude_settings"
 }

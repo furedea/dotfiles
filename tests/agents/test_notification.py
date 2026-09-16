@@ -27,4 +27,4 @@ def test_provider_hooks_do_not_register_local_macos_notifications() -> None:
 def test_verification_is_the_only_claude_stop_hook() -> None:
     hooks = json.loads((REPO_ROOT / "agents/hooks.json").read_text())
     commands = [hook["command"] for group in hooks["claude"]["Stop"] for hook in group["hooks"]]
-    assert commands == ['"$HOME/.claude/hooks/run_verification.py"']
+    assert commands == ['"$HOME/.claude/hooks/verification_session.py" claude stop']
