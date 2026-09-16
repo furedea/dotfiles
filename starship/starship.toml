@@ -1,11 +1,18 @@
 "$schema" = 'https://starship.rs/config-schema.json'
 add_newline = true
 command_timeout = 5000
-format = """$directory\
+format = """$username\
+$hostname\
+$directory\
 $git_branch\
 $git_status\
 $container\
 $nix_shell\
+$python\
+$rust\
+$nodejs\
+$bun\
+$deno\
 $docker_context\
 $all\
 $character"""
@@ -35,180 +42,186 @@ format = '[$symbol($profile)(\($region\))(\[$duration\])]($style) '
 format = '[$symbol($subscription)]($style) '
 
 [buf]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [bun]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [c]
-format = '[$symbol($version(-$name))]($style) '
+format = '[$symbol]($style)'
 
 [cmake]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [cobol]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [conda]
 format = '[$symbol$environment]($style) '
 
 [crystal]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [daml]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [dart]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [deno]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [docker_context]
-format = '[$symbol]($style) '
+format = '[$symbol]($style)'
 only_with_files = true
 
 [dotnet]
-format = '[$symbol($version)(🎯 $tfm)]($style) '
+format = '[$symbol(🎯 $tfm )]($style)'
 
 [elixir]
-format = '[$symbol($version(\(OTP $otp_version\)))]($style) '
+format = '[$symbol]($style)'
 
 [elm]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [erlang]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [fennel]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [fortran]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [gcloud]
 format = '[$symbol$account(@$domain)(\($region\))]($style) '
 
 [gleam]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [golang]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [gradle]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [haskell]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [haxe]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [helm]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
+
+[hostname]
+format = '[$hostname]($style) '
 
 [java]
-format = '[${symbol}(${version})]($style) '
+format = '[${symbol}]($style)'
 
 [julia]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [kotlin]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [kubernetes]
 format = '[$symbol$context(\($namespace\))]($style) '
 
 [lua]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [meson]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [mojo]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [nim]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [nix_shell]
-symbol = "❄️"
-format = '[$symbol]($style) '
+symbol = "❄️ "
+format = '[$symbol]($style)'
 
 [nodejs]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [ocaml]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [opa]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [package]
 disabled = true
 
 [perl]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [php]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [pulumi]
 format = '[$symbol$stack]($style) '
 
 [purescript]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [python]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [quarto]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [raku]
-format = '[$symbol($version-$vm_version)]($style) '
+format = '[$symbol]($style)'
 
 [red]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [rlang]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [ruby]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [rust]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [scala]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [singularity]
 format = '[$symbol\[$env\]]($style) '
 
 [solidity]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [spack]
 format = '[$symbol$environment]($style) '
 
 [swift]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [terraform]
-format = '[$symbol$version]($style) '
+format = '[$symbol]($style)'
 
 [typst]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
+
+[username]
+format = '[$user]($style)@'
 
 [vagrant]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [vcsh]
 format = '[$symbol$repo]($style) '
 
 [vlang]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
 
 [zig]
-format = '[$symbol($version)]($style) '
+format = '[$symbol]($style)'
