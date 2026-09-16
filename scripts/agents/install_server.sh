@@ -200,7 +200,7 @@ function write_env_snippet() {
       'esac'
     write_env_exports XDG_CONFIG_HOME XDG_STATE_HOME XDG_CACHE_HOME
   } >|"$ENV_SNIPPET"
-  printf 'Source %s from ~/.bashrc so hooks find these tools at runtime.\n' "$ENV_SNIPPET"
+  printf 'Add this line to the login shell profile (~/.profile or ~/.bashrc):\n    . "%s"\n' "$ENV_SNIPPET"
 }
 
 function write_env_exports() {
