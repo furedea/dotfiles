@@ -159,7 +159,6 @@ in
     # Shell and environment
     carapace
     direnv
-    dotenvx
     starship
     zoxide
     zsh-abbr
