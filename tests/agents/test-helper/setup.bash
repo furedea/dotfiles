@@ -4,8 +4,8 @@ export REPO_ROOT
 export COPYFILE_DISABLE=1
 
 # Offline stand-ins for the release downloads and installers used by
-# scripts/agents/install_server.sh. Every fixture lives under BATS_TEST_TMPDIR.
-function create_install_server_fixtures() {
+# scripts/agents/bootstrap_server.sh. Every fixture lives under BATS_TEST_TMPDIR.
+function create_bootstrap_server_fixtures() {
   HOME_DIR="$BATS_TEST_TMPDIR/home"
   # shellcheck disable=SC2034  # asserted by the .bats file
   BIN_DIR="$HOME_DIR/.local/bin"
@@ -23,10 +23,10 @@ function create_install_server_fixtures() {
   create_uv_installer
 }
 
-function install_server() {
+function bootstrap_server() {
   env -u XDG_CONFIG_HOME -u XDG_STATE_HOME -u XDG_CACHE_HOME -u BIN_DIR \
     HOME="$HOME_DIR" \
-    INSTALL_SERVER_MACHINE=x86_64 \
+    BOOTSTRAP_SERVER_MACHINE=x86_64 \
     AGENT_HARNESS_URL="file://$RELEASES/agent-harness.tar.xz" \
     SHFMT_URL="file://$RELEASES/shfmt" \
     RIPGREP_URL="file://$RELEASES/ripgrep.tar.gz" \
@@ -123,7 +123,7 @@ option_value() {
 render() {
   local _prefix="$1" _entry
   mkdir -p "$_prefix/.claude/hooks/lib" "$_prefix/.claude/statusline" "$_prefix/.codex/hooks"
-  for _entry in .claude/hooks/guard_command.py .claude/statusline/statusline.py .codex/hooks/hook_translation.py; do
+  for _entry in .claude/hooks/guard_command.py .claude/statusline/statusline.py .codex/hooks/hook_adapter.py; do
     printf '%s\n' '#!/usr/bin/env -S python3 -IB' 'print("hook")' >|"$_prefix/$_entry"
     chmod 0755 "$_prefix/$_entry"
   done

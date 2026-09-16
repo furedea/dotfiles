@@ -5,8 +5,8 @@ bats_require_minimum_version 1.5.0
 
 setup() {
   load test-helper/setup
-  SCRIPT="$REPO_ROOT/scripts/agents/install_server.sh"
-  create_install_server_fixtures
+  SCRIPT="$REPO_ROOT/scripts/agents/bootstrap_server.sh"
+  create_bootstrap_server_fixtures
 }
 
 # ============================================================
@@ -14,7 +14,7 @@ setup() {
 # ============================================================
 
 @test "installs the pinned user-space tools into the binary directory" {
-  run install_server
+  run bootstrap_server
 
   [ "$status" -eq 0 ]
   local _tool
@@ -27,10 +27,10 @@ setup() {
 }
 
 @test "reuses installed tools without downloading again" {
-  run install_server
+  run bootstrap_server
   [ "$status" -eq 0 ]
 
-  run install_server \
+  run bootstrap_server \
     AGENT_HARNESS_URL="file://$RELEASES/missing.tar.xz" \
     SHFMT_URL="file://$RELEASES/missing" \
     RIPGREP_URL="file://$RELEASES/missing.tar.gz" \
@@ -42,7 +42,7 @@ setup() {
 }
 
 @test "installs bats-core under its own prefix and links it into the binary directory" {
-  run install_server
+  run bootstrap_server
 
   [ "$status" -eq 0 ]
   local _prefix="$HOME_DIR/.local/share/bats-core"
@@ -51,7 +51,7 @@ setup() {
 }
 
 @test "installs the requested Python through uv" {
-  run install_server PYTHON_VERSION=3.15
+  run bootstrap_server PYTHON_VERSION=3.15
 
   [ "$status" -eq 0 ]
   run /bin/cat "$UV_ARGS_FILE"
@@ -60,7 +60,7 @@ setup() {
 }
 
 @test "refuses machines without release binaries before downloading anything" {
-  run install_server INSTALL_SERVER_MACHINE=aarch64
+  run bootstrap_server BOOTSTRAP_SERVER_MACHINE=aarch64
 
   [ "$status" -ne 0 ]
   [[ "$output" == *"aarch64"* ]]
@@ -73,7 +73,7 @@ setup() {
 # ============================================================
 
 @test "renders the repository harness into the home directory and verifies it" {
-  run install_server
+  run bootstrap_server
 
   [ "$status" -eq 0 ]
   run /bin/cat "$AGENT_HARNESS_ARGS_FILE"
@@ -82,11 +82,11 @@ setup() {
 }
 
 @test "pins hook shebangs to the managed interpreter" {
-  run install_server
+  run bootstrap_server
 
   [ "$status" -eq 0 ]
   local _entry
-  for _entry in .claude/hooks/guard_command.py .claude/statusline/statusline.py .codex/hooks/hook_translation.py; do
+  for _entry in .claude/hooks/guard_command.py .claude/statusline/statusline.py .codex/hooks/hook_adapter.py; do
     [ -x "$HOME_DIR/$_entry" ]
     [ "$(head -n 1 "$HOME_DIR/$_entry")" = "#!$FAKE_PYTHON -IB" ] || {
       echo "shebang not pinned: $_entry"
@@ -100,7 +100,7 @@ setup() {
   mkdir -p "$HOME_DIR/.claude"
   printf '%s\n' '{"model":"stale","permissions":{"allow":["Bash(ls)"]}}' >|"$HOME_DIR/.claude/settings.json"
 
-  run install_server
+  run bootstrap_server
 
   [ "$status" -eq 0 ]
   [ "$(jq -r '.model' "$HOME_DIR/.claude/settings.json")" = "fable" ]
@@ -111,7 +111,7 @@ setup() {
   mkdir -p "$HOME_DIR/.config/dotfiles"
   printf '%s\n' '{"sandbox":{"enabled":false}}' >|"$HOME_DIR/.config/dotfiles/claude_settings_override.json"
 
-  run install_server
+  run bootstrap_server
 
   [ "$status" -eq 0 ]
   [ "$(jq -r '.sandbox.enabled' "$HOME_DIR/.claude/settings.json")" = "false" ]
@@ -120,7 +120,7 @@ setup() {
 }
 
 @test "fails when the harness verification fails" {
-  run install_server FAKE_VERIFY_STATUS=3
+  run bootstrap_server FAKE_VERIFY_STATUS=3
 
   [ "$status" -ne 0 ]
   grep -Fq "verify --source" "$AGENT_HARNESS_ARGS_FILE"
@@ -135,9 +135,9 @@ setup() {
   printf '%s\n' \
     "BIN_DIR=\"$BATS_TEST_TMPDIR/tools\"" \
     "XDG_STATE_HOME=\"$BATS_TEST_TMPDIR/state\"" \
-    >|"$HOME_DIR/.config/dotfiles/install_server.env"
+    >|"$HOME_DIR/.config/dotfiles/bootstrap_server.env"
 
-  run install_server
+  run bootstrap_server
 
   [ "$status" -eq 0 ]
   [ -x "$BATS_TEST_TMPDIR/tools/agent-harness" ]
@@ -146,7 +146,7 @@ setup() {
 }
 
 @test "writes a shell snippet that puts the tools on PATH" {
-  run install_server
+  run bootstrap_server
 
   [ "$status" -eq 0 ]
   local _snippet="$HOME_DIR/.config/dotfiles/agent_env.sh"

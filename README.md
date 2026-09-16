@@ -173,7 +173,7 @@ runtime daemon used by generated hooks. Pairing tokens and mutable Moshi state a
 never added to the Nix store.
 
 Servers without Nix use
-[`scripts/agents/install_server.sh`](scripts/agents/install_server.sh) instead of
+[`scripts/agents/bootstrap_server.sh`](scripts/agents/bootstrap_server.sh) instead of
 the Home Manager module. It downloads pinned x86_64 Linux release binaries
 (`agent-harness`, `shfmt`, `rg`, `jq`, `bats`, and `uv`) into `~/.local/bin`,
 installs Python 3.14 through uv, renders `agents/` into the home directory with the
@@ -181,7 +181,7 @@ same `agent-harness` CLI, pins the hook shebangs to that interpreter, keeps sett
 that Claude Code wrote at runtime, and writes `~/.config/dotfiles/agent_env.sh`
 for the login shell to source. Host-specific locations (`BIN_DIR`,
 `UV_PYTHON_INSTALL_DIR`, `UV_CACHE_DIR`, `XDG_STATE_HOME`, `XDG_CACHE_HOME`) come
-from `~/.config/dotfiles/install_server.env`, and
+from `~/.config/dotfiles/bootstrap_server.env`, and
 `~/.config/dotfiles/claude_settings_override.json` is merged into the rendered
 Claude Code settings; both stay outside the repository. See
 [ADR-0030](docs/adr/0030_bootstrap_the_agent_harness_on_servers_without_nix.md).

@@ -102,7 +102,7 @@ jobs:
           echo "$RUNNER_TEMP/agent-harness/bin" >> "$GITHUB_PATH"
 
       - name: Run Bats tests
-        run: uv run --frozen bats --print-output-on-failure tests/esa/zsh.bats tests/agents/install_server.bats
+        run: uv run --frozen bats --print-output-on-failure tests/esa/zsh.bats tests/agents/bootstrap_server.bats
 
       - name: Run Python toolchain and provider integration tests
         env:
