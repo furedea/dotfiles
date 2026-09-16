@@ -61,7 +61,5 @@
   "effortLevel": "xhigh",
   "autoMemoryEnabled": false,
   "skipAutoPermissionPrompt": true,
-  "feedbackSurveyState": {
-    "lastShownTime": 1754030513973
-  }
+  "editorMode": "vim"
 }
