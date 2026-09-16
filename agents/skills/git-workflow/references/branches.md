@@ -40,7 +40,8 @@ Rules:
 - Example: primary checkout `/Users/kaito/ghq/github.com/furedea/agent-harness` with branch `ci/codex-conformance` uses `/Users/kaito/ghq/github.com/furedea/agent-harness-ci-codex-conformance`.
 - Append `-2`, `-3`, etc. to the worktree path if it already exists.
 - When updating `main` itself, use `git pull --ff-only` in the main worktree. Do not use `git pull --rebase origin main` for the base branch.
-- Do not remove, prune, move, or repair worktrees from the agent workflow; report stale worktrees to the user instead.
+- Remove a task worktree only after its branch is merged or abandoned and its tree is clean; never force removal. `git worktree prune` may follow a directory that has already disappeared. Moving and repairing worktrees stay outside the agent workflow; report those cases to the user.
+- For a requested stacked pull request, `gh stack init` and `gh stack add` create the layer branches; the branch name format below applies to each layer. See [Stacked pull requests](stacked_prs.md).
 
 Branch name format:
 

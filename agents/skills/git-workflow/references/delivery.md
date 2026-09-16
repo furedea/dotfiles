@@ -11,17 +11,18 @@ For implementation tasks:
     - optionally `git rebase origin/<base>` before the first push when the feature branch should be refreshed onto the latest base
     - `git push -u origin <branch>`
     - `gh pr create -f --base <base>`
-6. Stop before merge; merging is a human decision unless the user explicitly asks for it.
+6. Stop before merge; merging is a human decision unless the user explicitly asks for it. When the user asks, `gh pr merge` prompts for approval, and that prompt is the authorization step.
 
 For explicit PR requests:
 
-1. Confirm the target base branch if it is not obvious from the repo default.
-2. Push the feature branch with `git push -u origin <branch>`.
-3. Create a normal PR with `gh pr create -f --base <base>`.
+1. If the user asked for a stacked or red-green pull request, follow [Stacked pull requests](stacked_prs.md) instead of steps 2 and 3.
+2. Confirm the target base branch if it is not obvious from the repo default.
+3. Push the feature branch with `git push -u origin <branch>`.
+4. Create a normal PR with `gh pr create -f --base <base>`.
 
 For rebase and force-push:
 
-- `git rebase origin/<base>` is allowed before the first push for a PR branch.
-- `git rebase --continue` and `git rebase --abort` are allowed to complete or recover from that narrow workflow.
-- Interactive rebase, `--onto`, and rebasing onto local branches are outside the default workflow; ask before using them.
-- `git push --force`, `git push --force-with-lease`, and `+refspec` pushes are not part of the default workflow. Stop and ask the user if a remote history rewrite is genuinely required.
+- `git rebase origin/<base>` refreshes a PR branch before its first push. Non-interactive rebases onto other refs, including `--onto`, are allowed when the task needs them; reflog can undo them.
+- `git rebase --continue` and `git rebase --abort` complete or recover a rebase.
+- Interactive rebase is outside the default workflow.
+- After rebasing a branch this task already pushed, publish it with `git push --force-with-lease --force-if-includes origin <branch>`. The lease refuses to overwrite commits that were pushed elsewhere, and `--force-if-includes` refuses when a background fetch hid them. Never use bare `--force`, `+refspec` pushes, or any force push to the default branch. If the lease is rejected, stop and ask the user.
