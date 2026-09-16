@@ -34,6 +34,7 @@
     "tests/agents/hooks/test_verification_rule.py"
   ],
   "agents/claude/settings.json": [
+    "tests/agents/claude/test_settings.py",
     "tests/agents/hooks/test_allowed_command.py",
     "tests/agents/hooks/test_command_cli.py",
     "tests/agents/test_notification.py"
