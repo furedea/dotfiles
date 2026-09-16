@@ -28,9 +28,7 @@ known_first_party = [
   "session_gate",
   "session_snapshot",
   "session_store",
-  "verification_log",
   "verification_output",
-  "verification_reuse",
   "verification_selection",
 ]
 

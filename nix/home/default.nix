@@ -609,7 +609,6 @@ in
   xdg.configFile = {
     "lazygit/config.yml".source =
       config.home.file."Library/Application Support/lazygit/config.yml".source;
-    "agent-harness/bin/timeout".source = lib.getExe' pkgs.coreutils "timeout";
     # Automation must not inherit a project's virtualenv interpreter or user site packages.
     "dotfiles/bin/python3".source = lib.getExe pkgs.python314;
   };

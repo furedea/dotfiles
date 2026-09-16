@@ -240,9 +240,6 @@ reference files.
 
 These tracked files are not applied by Home Manager or nix-darwin:
 
-- `atuin/config.toml`, `gh/config.yml`, `git/.gitconfig`, and the standalone
-  `yazi/*.toml` files are reference copies; their active configuration comes
-  from `nix/home/default.nix`
 - `raycast/*.rayconfig` is a manual Raycast export
 - `templates/` contains small files copied into other repositories as needed
 
@@ -339,9 +336,8 @@ root. `tests/nix/` only bridges the repository-wide native configuration checks.
 Shared pytest fixtures live in `tests/conftest.py`, agent-specific fixtures in
 `tests/agents/conftest.py`, and importable test support in `tests/runtime.py`.
 
-The verification hook allows 300 seconds per Bats or pytest invocation and 120
-seconds for other runners. `RUN_RELATED_TESTS_TIMEOUT_SECONDS` overrides this
-budget when explicitly set.
+The verification hook allows 300 seconds per check.
+`RUN_RELATED_TESTS_TIMEOUT_SECONDS` overrides this budget when explicitly set.
 
 Lefthook runs the pre-commit format and lint checks for changed files:
 
