@@ -16,7 +16,13 @@ syntax = load_script_module("agents/hooks/lib/shell_syntax.py", "shell_syntax")
         ("git", "restore", "file.py"),
         ("git", "push", "origin", "HEAD:main"),
         ("git", "push", "--force-with-lease=main", "origin", "topic"),
+        ("git", "push", "--force-with-lease", "origin", "topic"),
+        ("git", "push", "--force-with-lease", "--force-if-includes", "origin", "main"),
+        ("git", "push", "--force", "--force-if-includes", "origin", "topic"),
         ("git", "restore", "--staged", "--worktree", "file.py"),
+        ("git", "rm", "-f", "file.py"),
+        ("git", "mv", "--force", "a.py", "b.py"),
+        ("git", "worktree", "remove", "--force", "../topic"),
         ("gh", "pr", "merge", "--admin"),
     ],
 )
@@ -25,7 +31,18 @@ def test_destructive_operations_are_rejected(arguments: tuple[str, ...]) -> None
 
 
 @pytest.mark.parametrize(
-    "arguments", [("git", "status"), ("git", "restore", "--staged", "file.py"), ("git", "push", "origin", "topic")]
+    "arguments",
+    [
+        ("git", "status"),
+        ("git", "restore", "--staged", "file.py"),
+        ("git", "push", "origin", "topic"),
+        ("git", "push", "--force-with-lease", "--force-if-includes", "origin", "topic"),
+        ("git", "rm", "--cached", "file.py"),
+        ("git", "mv", "a.py", "b.py"),
+        ("git", "worktree", "remove", "../topic"),
+        ("git", "worktree", "prune"),
+        ("git", "stash", "drop"),
+    ],
 )
 def test_non_destructive_operations_remain_available(arguments: tuple[str, ...]) -> None:
     assert not git.reason(arguments)

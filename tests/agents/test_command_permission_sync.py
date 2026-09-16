@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+import re
 
 import pytest
 
@@ -50,6 +51,11 @@ VERIFICATION_PREFIXES = [
     "uv run --frozen pytest",
     "uv run --frozen ruff",
     "uv run --frozen ty",
+    "uv run --frozen bats",
+    "uv run --frozen --group audit deptry",
+    "uv run --frozen --group audit vulture",
+    "lefthook run",
+    "nix flake check",
 ]
 
 
@@ -111,6 +117,11 @@ def test_local_verification_renders_only_as_allow(generated_permissions: dict, p
 )
 def test_obsolete_nonfrozen_and_transient_prefix_is_absent(prefix: list[str]) -> None:
     assert all(rule["prefix"] != prefix for rule in POLICY["rules"])
+
+
+def test_justifications_are_provider_neutral() -> None:
+    provider_specific = [rule for rule in POLICY["rules"] if re.search(r"\b(Codex|Claude)\b", rule["justification"])]
+    assert provider_specific == []
 
 
 def test_ask_prefix_has_no_allow_ancestor() -> None:

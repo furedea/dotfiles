@@ -84,10 +84,43 @@ def test_generated_deny_prefixes(
         "/usr/bin/git add -A",
         "env GIT_PAGER=cat git add --all",
         "timeout 30 git commit -n -m test",
+        "find . -name '*.pyc' -delete",
+        "find . -type f -exec rm {} +",
+        "find . -name x -execdir rm {} +",
     ],
 )
 def test_global_rules_reject_policy_bypasses(command: str) -> None:
     assert guard.check("forbidden", {"tool_input": {"command": command}}) == 2
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "rm -rf /tmp/example",
+        "rm -r build",
+        "cargo install ripgrep",
+        "npm install -g typescript",
+        "uv tool install ruff",
+        "uv add --dev pytest",
+        "nix profile install nixpkgs#ripgrep",
+        "security find-generic-password -s example -w",
+        "launchctl bootout gui/501/org.example.agent",
+        "gh repo delete owner/repo",
+        "gh auth login",
+        "mosh example.internal",
+        "killall Dock",
+    ],
+)
+def test_global_prefixes_deny_irreversible_or_credential_operations(command: str) -> None:
+    assert guard.check("forbidden", {"tool_input": {"command": command}}) == 2
+
+
+@pytest.mark.parametrize(
+    "command",
+    ["rm scratch.txt", "git rm agents/old.py", "git worktree remove ../topic", "git stash drop", "find . -name x"],
+)
+def test_reversible_or_asked_operations_are_not_forbidden(command: str) -> None:
+    assert guard.check("forbidden", {"tool_input": {"command": command}}) == 0
 
 
 def test_global_prefix_rejects_home_manager_activation(capsys: pytest.CaptureFixture[str]) -> None:

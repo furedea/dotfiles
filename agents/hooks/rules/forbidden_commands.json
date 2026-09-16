@@ -10,6 +10,12 @@
         "(^|[[:space:]])git[[:space:]]+commit([[:space:]].*)?[[:space:]]+(--no-verify|-n)([[:space:]]|$)"
       ],
       "justification": "Do not allow dependency, staging, or verification bypasses hidden inside otherwise approved command families."
+    },
+    {
+      "patterns": [
+        "(^|[[:space:]])find[[:space:]].*[[:space:]]-(delete|exec|execdir|ok|okdir|fprint|fprint0|fprintf|fls)([[:space:]]|$)"
+      ],
+      "justification": "Do not delete or execute through find; it is allowed as a read-only inspection command."
     }
   ]
 }

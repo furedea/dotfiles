@@ -86,7 +86,7 @@ def test_invalid_command_json_remains_a_cli_error(run_cli: CliRunner) -> None:
             'uv run --frozen pytest "' + "x" * 1000 + ';literal"',
             "command not in allowlist",
         ),
-        ("guard_command.py", ("forbidden",), "rm " + "x" * 1000, "forbidden command"),
+        ("guard_command.py", ("forbidden",), "rm -rf " + "x" * 1000, "forbidden command"),
         ("guard_git.py", (), "git reset --hard " + "x" * 1000, "BLOCKED:"),
     ],
     ids=["allowlist", "forbidden", "dangerous-git"],
