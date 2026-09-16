@@ -13,13 +13,13 @@ import patch_input
 import session_gate
 import shell_syntax
 from session_snapshot import repository_root
-from session_store import Run, StateError, load, prune, register, session_directory
+from session_store import SessionRecord, StateError, load, prune, register, session_directory
 
 
 EVENTS = ("session-start", "pre-tool-use", "stop", "session-end")
 
 
-def registered_run(provider: str, payload: dict, *, starting: bool = False) -> Run:
+def registered_record(provider: str, payload: dict, *, starting: bool = False) -> SessionRecord:
     cwd = payload.get("cwd")
     if not isinstance(cwd, str) or not Path(cwd).is_absolute():
         raise StateError("Missing absolute session working directory")
@@ -33,15 +33,15 @@ def registered_run(provider: str, payload: dict, *, starting: bool = False) -> R
         return register(root, provider, session, resuming=payload.get("source") != "startup")
     if not directory.exists():
         raise StateError("Missing verification registration; restart or resume to run SessionStart in this worktree")
-    run = load(directory)
-    with run.lock(blocking=False):
-        if run.results().get("session_id") != session or run.provider != provider:
+    record = load(directory)
+    with record.lock(blocking=False):
+        if record.results().get("session_id") != session or record.provider != provider:
             raise StateError("Provider session differs from the registered session")
-        run.touch()
-    return run
+        record.touch()
+    return record
 
 
-def check_scope(run: Run, payload: dict) -> None:
+def check_scope(record: SessionRecord, payload: dict) -> None:
     """Check observable tool paths; native permissions still govern shell execution."""
     value = payload.get("tool_input", {})
     if not isinstance(value, dict):
@@ -49,27 +49,27 @@ def check_scope(run: Run, payload: dict) -> None:
     cwd = Path(payload["cwd"])
     for key in ("cwd", "workdir"):
         if directory := value.get(key):
-            require_inside(run, cwd / directory)
+            require_inside(record, cwd / directory)
     command = value.get("command", value.get("cmd", ""))
     if isinstance(command, str):
-        check_shell_directories(run, cwd, command)
+        check_shell_directories(record, cwd, command)
     patch = value.get("patch", value.get("input", command))
     if isinstance(patch, str):
         for filename in patch_input.paths(patch):
-            require_inside(run, cwd / filename)
+            require_inside(record, cwd / filename)
     if payload.get("tool_name") in {"Write", "Edit", "MultiEdit", "apply_patch"}:
         if filename := value.get("file_path"):
-            require_inside(run, cwd / filename)
+            require_inside(record, cwd / filename)
 
 
-def require_inside(run: Run, path: Path) -> None:
-    if not path.expanduser().resolve().is_relative_to(run.root):
+def require_inside(record: SessionRecord, path: Path) -> None:
+    if not path.expanduser().resolve().is_relative_to(record.root):
         raise StateError(
-            f"Tool target is outside the registered worktree {run.root}; launch a session in that worktree"
+            f"Tool target is outside the registered worktree {record.root}; launch a session in that worktree"
         )
 
 
-def check_shell_directories(run: Run, cwd: Path, command: str) -> None:
+def check_shell_directories(record: SessionRecord, cwd: Path, command: str) -> None:
     try:
         commands = shell_syntax.parse(command)
     except shell_syntax.UnsupportedSyntax:
@@ -79,22 +79,22 @@ def check_shell_directories(run: Run, cwd: Path, command: str) -> None:
         if executable in {"cd", "pushd"}:
             targets = [value for value in parsed.arguments[1:] if value not in {"--", "-L", "-P", "-e"}]
             if targets and targets[0] != "-":
-                require_inside(run, cwd / Path(targets[0]).expanduser())
+                require_inside(record, cwd / Path(targets[0]).expanduser())
         elif executable == "git":
             for index, token in enumerate(parsed.arguments[:-1]):
                 if token == "-C":
-                    require_inside(run, cwd / Path(parsed.arguments[index + 1]).expanduser())
+                    require_inside(record, cwd / Path(parsed.arguments[index + 1]).expanduser())
 
 
 def dispatch(provider: str, event: str, payload: dict) -> dict[str, object]:
-    run = registered_run(provider, payload, starting=event == "session-start")
+    record = registered_record(provider, payload, starting=event == "session-start")
     if event == "pre-tool-use":
-        check_scope(run, payload)
+        check_scope(record, payload)
     elif event == "stop":
-        return {**session_gate.stop(run)}
+        return {**session_gate.gate(record)}
     elif event == "session-end":
-        with run.lock():
-            run.end()
+        with record.lock():
+            record.end()
         prune()
     elif event == "session-start":
         prune()
@@ -133,9 +133,9 @@ def main() -> int:
     payload: dict = {}
     try:
         if explicit:
-            run = load(Path(arguments[-1]))
-            result = session_gate.stop(run, force="--force" in arguments)
-            status = int(result.get("decision") == "block" or session_gate.unresolved(run))
+            record = load(Path(arguments[-1]))
+            result = session_gate.gate(record, force="--force" in arguments)
+            status = int(result.get("decision") == "block" or session_gate.unresolved(record))
         else:
             payload = json.load(sys.stdin)
             if not isinstance(payload, dict):

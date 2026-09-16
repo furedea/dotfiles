@@ -45,17 +45,17 @@ def test_registered_session_allows_tools_without_launch_environment(
     repository: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    run = store.register(repository, "codex", "session")
+    record = store.register(repository, "codex", "session")
     result = invoke("pre-tool-use", {"cwd": str(repository), "session_id": "session", "tool_name": "Bash"})
     assert result.returncode == 0
     assert json.loads(result.stdout) == {}
-    assert run.results()["session_id"] == "session"
+    assert record.results()["session_id"] == "session"
 
 
 @pytest.mark.parametrize("filename, field, value", [("baseline.json", "files", []), ("results.json", "checks", [])])
 def test_corrupt_registration_denies_tools(repository: Path, filename: str, field: str, value: object) -> None:
-    run = store.register(repository, "codex", "session")
-    path = run.directory / filename
+    record = store.register(repository, "codex", "session")
+    path = record.directory / filename
     record = json.loads(path.read_text())
     record[field] = value
     path.write_text(json.dumps(record))
@@ -64,8 +64,8 @@ def test_corrupt_registration_denies_tools(repository: Path, filename: str, fiel
 
 
 def test_busy_registration_denies_tools_without_waiting_for_hook_timeout(repository: Path) -> None:
-    run = store.register(repository, "codex", "session")
-    with run.lock():
+    record = store.register(repository, "codex", "session")
+    with record.lock():
         result = invoke("pre-tool-use", {"cwd": str(repository), "session_id": "session"})
     assert json.loads(result.stdout)["hookSpecificOutput"]["permissionDecision"] == "deny"
 
@@ -170,8 +170,8 @@ def test_generated_hooks_register_and_verify_without_a_launcher(
         output = json.loads(result.stdout)
         assert "decision" not in output
         assert output == {} or "no changes" in output.get("systemMessage", "")
-    run = store.load(store.session_directory(repository, provider, "session"))
-    assert run.results()["ended_at"] > 0
+    record = store.load(store.session_directory(repository, provider, "session"))
+    assert record.results()["ended_at"] > 0
     installed = prefix / ".claude/hooks/verification_session.py"
     assert os.access(installed, os.X_OK)
     result = subprocess.run(
@@ -192,11 +192,11 @@ def test_clear_preserves_pending_changes_with_a_new_session_id(
     repository: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    run = store.register(repository, "codex", "old-session")
+    record = store.register(repository, "codex", "old-session")
     (repository / "source.py").write_text("pending edit")
     result = invoke("session-start", {"cwd": str(repository), "session_id": "new-session", "source": "clear"})
     assert json.loads(result.stdout) == {}
-    assert run.baseline.changed_paths(store.capture(repository)) == ("source.py",)
+    assert record.baseline.changed_paths(store.capture(repository)) == ("source.py",)
     cleared = store.load(store.session_directory(repository, "codex", "new-session"))
     assert cleared.results()["revalidate_all"] is True
 
@@ -205,9 +205,9 @@ def test_explicit_verify_uses_registered_context_without_reading_stdin(
     repository: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    run = store.register(repository, "codex", "session")
+    record = store.register(repository, "codex", "session")
     result = subprocess.run(
-        [sys.executable, "-I", "-B", str(hook), "verify", str(run.directory)],
+        [sys.executable, "-I", "-B", str(hook), "verify", str(record.directory)],
         stdin=subprocess.DEVNULL,
         capture_output=True,
         text=True,
@@ -218,9 +218,9 @@ def test_explicit_verify_uses_registered_context_without_reading_stdin(
 
 
 def test_explicit_verify_accepts_force_before_the_record(repository: Path) -> None:
-    run = store.register(repository, "codex", "session")
+    record = store.register(repository, "codex", "session")
     result = subprocess.run(
-        [sys.executable, "-I", "-B", str(hook), "verify", "--force", str(run.directory)],
+        [sys.executable, "-I", "-B", str(hook), "verify", "--force", str(record.directory)],
         stdin=subprocess.DEVNULL,
         capture_output=True,
         text=True,
@@ -251,7 +251,7 @@ def test_explicit_verify_exits_unsuccessfully_for_a_reused_failure(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    run = store.register(repository, "codex", "session")
+    record = store.register(repository, "codex", "session")
     (repository / "source.sh").write_text("changed")
     (repository / "tests").mkdir()
     (repository / "tests/source.bats").write_text("test")
@@ -261,7 +261,7 @@ def test_explicit_verify_exits_unsuccessfully_for_a_reused_failure(
     monkeypatch.setenv("RUN_RELATED_TESTS_BATS_BIN", str(runner))
     for _ in range(2):
         result = subprocess.run(
-            [sys.executable, "-I", "-B", str(hook), "verify", str(run.directory)],
+            [sys.executable, "-I", "-B", str(hook), "verify", str(record.directory)],
             stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,

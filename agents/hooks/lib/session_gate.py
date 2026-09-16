@@ -10,7 +10,7 @@ import time
 
 from check_execution import Status, execute
 from session_snapshot import Snapshot, capture
-from session_store import Run, StateError, prune
+from session_store import SessionRecord, StateError, prune
 import check_selection
 
 
@@ -18,32 +18,32 @@ HOOK_ROOT = Path(__file__).resolve().parent.parent
 GATE_BUDGET_SECONDS = 540
 
 
-def stop(run: Run, *, force: bool = False) -> dict[str, str]:
-    """Serialize Stop/check calls so concurrent delivery cannot run a check twice."""
-    with run.lock():
-        run.touch()
-        result = verify(run, force=force)
+def gate(record: SessionRecord, *, force: bool = False) -> dict[str, str]:
+    """Serialize Stop and verify calls so concurrent delivery cannot run a check twice."""
+    with record.lock():
+        record.touch()
+        result = verify(record, force=force)
     prune()
     return result
 
 
-def verify(run: Run, *, force: bool) -> dict[str, str]:
+def verify(record: SessionRecord, *, force: bool) -> dict[str, str]:
     started = time.monotonic()
-    current = capture(run.root)
-    state = run.results()
+    current = capture(record.root)
+    state = record.results()
     full = state.get("revalidate_all", False)
-    changed = tuple(path for path, _ in current.entries) if full else run.baseline.changed_paths(current)
+    changed = tuple(path for path, _ in current.entries) if full else record.baseline.changed_paths(current)
     if not changed and not full:
-        return record_skip(run, state, "no changes since session registration")
+        return save_skip(record, state, "no changes since session registration")
     try:
         rules = check_selection.load_defaults(HOOK_ROOT / "rules/related_test_defaults.json")
-        invocations, errors = check_selection.language_plan(run.root, rules, changed)
+        invocations, errors = check_selection.language_plan(record.root, rules, changed)
     except (OSError, ValueError, TypeError) as error:
-        return configuration_failure(run, state, current.digest, str(error))
+        return configuration_failure(record, state, current.digest, str(error))
     if errors:
-        return configuration_failure(run, state, current.digest, "\n".join(errors))
+        return configuration_failure(record, state, current.digest, "\n".join(errors))
     if not invocations:
-        return record_skip(run, state, "no related test runner matched changed paths")
+        return save_skip(record, state, "no related test runner matched changed paths")
     receipts: dict[str, dict] = {}
     lines: list[str] = []
     failed = new_failure = executed = passed = False
@@ -56,11 +56,11 @@ def verify(run: Run, *, force: bool) -> dict[str, str]:
             receipt = previous
         else:
             budget = min(check_budget(), max(0.01, GATE_BUDGET_SECONDS - (time.monotonic() - started)))
-            result = execute(invocation, run.root, budget)
+            result = execute(invocation, record.root, budget)
             receipt = {"input": identity, "status": str(result.status), "summary": bounded_summary(result.summary)}
             if result.failed:
-                log = f"cwd: {run.root}\ncommand: {shlex.join(invocation.arguments)}\n\n{result.output}"
-                receipt["log"] = str(run.write_log(check_id, log))
+                log = f"cwd: {record.root}\ncommand: {shlex.join(invocation.arguments)}\n\n{result.output}"
+                receipt["log"] = str(record.write_log(check_id, log))
             executed = True
             new_failure |= result.failed
         receipts[check_id] = receipt
@@ -69,16 +69,16 @@ def verify(run: Run, *, force: bool) -> dict[str, str]:
         lines.append(receipt["summary"])
         if log := receipt.get("log"):
             lines.append(f"Details: {log}" if Path(log).is_file() else "Details: unavailable (expired)")
-    if capture(run.root).digest != current.digest or verification_inputs(current) != inputs:
+    if capture(record.root).digest != current.digest or verification_inputs(current) != inputs:
         state["checks"] = {}
-        run.save_results(state)
+        record.save_results(state)
         return {
             "decision": "block",
             "reason": "Verification unresolved · inputs changed during verification; retry required",
         }
     state.update(checks=receipts, revalidate_all=False)
     state.pop("configuration_failure", None)
-    run.save_results(state)
+    record.save_results(state)
     if failed:
         message = "Verification failed" if new_failure else "Verification unresolved · unchanged; not rerun"
         return notification("\n".join([message, *lines]), block=new_failure)
@@ -91,10 +91,10 @@ def verify(run: Run, *, force: bool) -> dict[str, str]:
     return {"systemMessage": "\n".join([message, *lines])}
 
 
-def record_skip(run: Run, state: dict, reason: str) -> dict[str, str]:
+def save_skip(record: SessionRecord, state: dict, reason: str) -> dict[str, str]:
     state.update(checks={}, revalidate_all=False)
     state.pop("configuration_failure", None)
-    run.save_results(state)
+    record.save_results(state)
     return {"systemMessage": f"Verification skipped · {reason}"}
 
 
@@ -116,10 +116,10 @@ def valid_receipt(value: object, identity: str) -> bool:
     return value.get("input") == identity
 
 
-def unresolved(run: Run) -> bool:
-    state = run.results()
+def unresolved(record: SessionRecord) -> bool:
+    state = record.results()
     return bool(state.get("configuration_failure") or state.get("revalidate_all")) or any(
-        record.get("status") not in {Status.PASSED, Status.SKIPPED} for record in state["checks"].values()
+        receipt.get("status") not in {Status.PASSED, Status.SKIPPED} for receipt in state["checks"].values()
     )
 
 
@@ -166,11 +166,11 @@ def check_budget() -> float:
     return value
 
 
-def configuration_failure(run: Run, state: dict, identity: str, error: str) -> dict[str, str]:
+def configuration_failure(record: SessionRecord, state: dict, identity: str, error: str) -> dict[str, str]:
     failure = hashlib.sha256((identity + error).encode()).hexdigest()
     repeated = state.get("configuration_failure") == failure
     state["configuration_failure"] = failure
-    run.save_results(state)
+    record.save_results(state)
     return notification(f"Verification unresolved · invalid test configuration\n{error}", block=not repeated)
 
 

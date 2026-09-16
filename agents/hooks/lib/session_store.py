@@ -26,7 +26,9 @@ class StateError(ValueError):
 
 
 @dataclass(frozen=True, slots=True)
-class Run:
+class SessionRecord:
+    """One registered provider session: its baseline, receipts, logs, and lock."""
+
     directory: Path
     root: Path
     provider: str
@@ -44,9 +46,9 @@ class Run:
     def save_results(self, value: dict) -> None:
         atomic_json(self.directory / "results.json", value)
         retained = {
-            Path(record["log"]).name
-            for record in value.get("checks", {}).values()
-            if isinstance(record, dict) and isinstance(record.get("log"), str)
+            Path(receipt["log"]).name
+            for receipt in value.get("checks", {}).values()
+            if isinstance(receipt, dict) and isinstance(receipt.get("log"), str)
         }
         for path in log_files(self.directory):
             if path.name not in retained:
@@ -97,7 +99,7 @@ def session_directory(root: Path, provider: str, session_id: str) -> Path:
     return state_directory() / worktree_id(root) / f"{provider}-{identity}"
 
 
-def register(root: Path, provider: str, session_id: str, *, resuming: bool = False) -> Run:
+def register(root: Path, provider: str, session_id: str, *, resuming: bool = False) -> SessionRecord:
     """Register once from SessionStart; repeated delivery preserves pending work."""
     root = root.resolve()
     base = state_directory()
@@ -108,13 +110,13 @@ def register(root: Path, provider: str, session_id: str, *, resuming: bool = Fal
     private_directory(directory.parent)
     with file_lock(directory.parent / ".register.lock", blocking=False):
         if directory.exists() or directory.is_symlink():
-            run = load(directory)
-            with run.lock(blocking=False):
-                results = run.results()
+            record = load(directory)
+            with record.lock(blocking=False):
+                results = record.results()
                 results.pop("ended_at", None)
-                run.save_results(results)
-                run.touch()
-            return run
+                record.save_results(results)
+                record.touch()
+            return record
         baseline = capture(root)
         with tempfile.TemporaryDirectory(prefix=".register-", dir=directory.parent) as temporary:
             staging = Path(temporary)
@@ -131,22 +133,22 @@ def register(root: Path, provider: str, session_id: str, *, resuming: bool = Fal
             atomic_json(staging / "results.json", {"checks": {}, "session_id": session_id, "revalidate_all": resuming})
             atomic_bytes(staging / ".lock", b"")
             os.rename(staging, directory)
-        return Run(directory, root, provider)
+        return SessionRecord(directory, root, provider)
 
 
-def load(directory: Path) -> Run:
+def load(directory: Path) -> SessionRecord:
     base = state_directory()
     if directory.parent.parent != base or directory.is_symlink() or directory.parent.is_symlink():
         raise StateError("Invalid verification registration path")
-    record = read_json(directory / "baseline.json")
-    root = Path(record["root"])
-    if record.get("schema") != SCHEMA or worktree_id(root) != directory.parent.name:
+    baseline = read_json(directory / "baseline.json")
+    root = Path(baseline["root"])
+    if baseline.get("schema") != SCHEMA or worktree_id(root) != directory.parent.name:
         raise StateError("Invalid verification baseline")
     try:
-        Snapshot.from_json(record["files"])
+        Snapshot.from_json(baseline["files"])
     except (ValueError, TypeError, KeyError) as error:
         raise StateError("Invalid verification baseline files") from error
-    return Run(directory, root, record["provider"])
+    return SessionRecord(directory, root, baseline["provider"])
 
 
 def private_directory(path: Path) -> None:
@@ -208,8 +210,8 @@ def prune(*, now: float | None = None) -> None:
         for directory in tuple(base.glob("*/*")):
             if not directory.is_dir() or directory.is_symlink() or directory.parent.is_symlink():
                 continue
-            prune_run(directory, current)
-        logs = [path for directory in run_directories(base) for path in log_files(directory)]
+            prune_record(directory, current)
+        logs = [path for directory in record_directories(base) for path in log_files(directory)]
         total = sum(path.stat().st_size for path in logs)
         for path in sorted(logs, key=lambda value: value.stat().st_mtime_ns):
             if total <= TOTAL_LOG_LIMIT_BYTES:
@@ -218,7 +220,7 @@ def prune(*, now: float | None = None) -> None:
             path.unlink(missing_ok=True)
 
 
-def run_directories(base: Path) -> Iterator[Path]:
+def record_directories(base: Path) -> Iterator[Path]:
     for worktree in base.iterdir():
         if worktree.is_symlink() or not worktree.is_dir():
             continue
@@ -234,11 +236,11 @@ def log_files(directory: Path) -> tuple[Path, ...]:
     return tuple(path for path in logs.glob("*.log") if not path.is_symlink() and path.is_file())
 
 
-def prune_run(directory: Path, now: float) -> None:
+def prune_record(directory: Path, now: float) -> None:
     try:
         with file_lock(directory / ".lock", blocking=False):
-            run = load(directory)
-            results = run.results()
+            record = load(directory)
+            results = record.results()
             last_seen = results.get("ended_at", directory.stat().st_mtime)
             if now - last_seen > RETENTION_SECONDS:
                 shutil.rmtree(directory)
