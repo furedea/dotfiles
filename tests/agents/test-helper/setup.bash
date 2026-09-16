@@ -19,6 +19,7 @@ function create_install_server_fixtures() {
   write_stub "$RELEASES/jq" '#!/bin/sh' "exec '$(command -v jq)' \"\$@\""
   create_agent_harness_archive
   create_ripgrep_archive
+  create_bats_archive
   create_uv_installer
 }
 
@@ -30,6 +31,7 @@ function install_server() {
     SHFMT_URL="file://$RELEASES/shfmt" \
     RIPGREP_URL="file://$RELEASES/ripgrep.tar.gz" \
     JQ_URL="file://$RELEASES/jq" \
+    BATS_URL="file://$RELEASES/bats-core.tar.gz" \
     UV_INSTALLER_URL="file://$RELEASES/uv_install.sh" \
     FAKE_PYTHON="$FAKE_PYTHON" \
     UV_ARGS_FILE="$UV_ARGS_FILE" \
@@ -57,6 +59,20 @@ function create_ripgrep_archive() {
   mkdir -p "$BATS_TEST_TMPDIR/$_name"
   write_stub "$BATS_TEST_TMPDIR/$_name/rg" '#!/bin/sh' 'exit 0'
   tar -czf "$RELEASES/ripgrep.tar.gz" -C "$BATS_TEST_TMPDIR" "$_name"
+}
+
+# Mimics bats-core's source archive: install.sh lays out bin/ and libexec/ under a prefix.
+function create_bats_archive() {
+  local _name="bats-core-1.13.0"
+  mkdir -p "$BATS_TEST_TMPDIR/$_name"
+  write_stub "$BATS_TEST_TMPDIR/$_name/install.sh" \
+    '#!/usr/bin/env bash' \
+    'set -euo pipefail' \
+    'mkdir -p "$1/bin" "$1/libexec/bats-core"' \
+    "printf '%s\\n' '#!/bin/sh' 'exit 0' >\"\$1/bin/bats\"" \
+    'chmod 0755 "$1/bin/bats"' \
+    "printf 'fake\\n' >\"\$1/libexec/bats-core/bats\""
+  tar -czf "$RELEASES/bats-core.tar.gz" -C "$BATS_TEST_TMPDIR" "$_name"
 }
 
 function create_uv_installer() {
