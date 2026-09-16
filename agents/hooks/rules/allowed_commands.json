@@ -97,6 +97,7 @@
         "^git commit -m \"[^\"$`\\\\]*\"$",
         "^git commit --amend -m [^;&|<>$`]+$",
         "^git commit --amend --no-edit$",
+        "^git commit (--amend )?-F [A-Za-z0-9._/][A-Za-z0-9._/-]*$",
         "^git pull( --rebase)?( origin [a-zA-Z0-9_./-]+)?$",
         "^git pull --ff-only$",
         "^git fetch origin$",
