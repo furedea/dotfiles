@@ -1,5 +1,5 @@
 model = "gpt-6-astra"
-model_reasoning_effort = "medium"
+model_reasoning_effort = "max"
 personality = "pragmatic"
 approval_policy = "on-request"
 sandbox_mode = "read-only"
@@ -13,11 +13,9 @@ approvals_reviewer = "guardian_subagent"
 fast_default_opt_out = true
 hide_rate_limit_model_nudge = true
 
-[notice.model_migrations]
-"gpt-5.3-codex" = "gpt-5.4"
-
 [tui]
 use_theme_colors = true
+vim_mode_default = true
 status_line = [
   "project-root",
   "model-with-reasoning",
@@ -28,9 +26,6 @@ status_line = [
 notifications = ["agent-turn-complete", "approval-requested"]
 notification_condition = "unfocused"
 notification_method = "auto"
-
-[tui.model_availability_nux]
-"gpt-5.5" = 1
 
 [plugins."browser-use@openai-bundled"]
 enabled = false
@@ -48,8 +43,10 @@ enabled = true
 enabled = false
 
 [features]
-multi_agent_v2.min_wait_timeout_ms = 120000
-multi_agent_v2.default_wait_timeout_ms = 120000
 hooks = true
 remote_connections = true
 external_migration = true
+
+[features.multi_agent_v2]
+min_wait_timeout_ms = 120000
+default_wait_timeout_ms = 120000
