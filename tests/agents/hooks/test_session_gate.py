@@ -90,7 +90,14 @@ def test_session_start_reuses_failed_evidence_without_resetting_baseline(
     monkeypatch.setenv("TEST_OUTCOME", "failed")
     assert gate.stop(run)["decision"] == "block"
     result = subprocess.run(
-        [sys.executable, "-I", "-B", str(REPO_ROOT / "agents/hooks/verification_session.py"), "codex", "start"],
+        [
+            sys.executable,
+            "-I",
+            "-B",
+            str(REPO_ROOT / "agents/hooks/verification_session.py"),
+            "codex",
+            "session-start",
+        ],
         input=json.dumps({"cwd": str(run.root), "session_id": "session", "source": source}),
         capture_output=True,
         text=True,

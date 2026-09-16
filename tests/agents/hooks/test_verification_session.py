@@ -36,7 +36,7 @@ def invoke(event: str, payload: dict) -> subprocess.CompletedProcess[str]:
 
 
 def test_missing_registration_denies_tools_mechanically(repository: Path) -> None:
-    result = invoke("pre", {"cwd": str(repository), "session_id": "session", "tool_name": "Bash"})
+    result = invoke("pre-tool-use", {"cwd": str(repository), "session_id": "session", "tool_name": "Bash"})
     assert json.loads(result.stdout)["hookSpecificOutput"]["permissionDecision"] == "deny"
     assert "SessionStart" in result.stdout
 
@@ -46,7 +46,7 @@ def test_registered_session_allows_tools_without_launch_environment(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     run = store.register(repository, "codex", "session")
-    result = invoke("pre", {"cwd": str(repository), "session_id": "session", "tool_name": "Bash"})
+    result = invoke("pre-tool-use", {"cwd": str(repository), "session_id": "session", "tool_name": "Bash"})
     assert result.returncode == 0
     assert json.loads(result.stdout) == {}
     assert run.results()["session_id"] == "session"
@@ -59,14 +59,14 @@ def test_corrupt_registration_denies_tools(repository: Path, filename: str, fiel
     record = json.loads(path.read_text())
     record[field] = value
     path.write_text(json.dumps(record))
-    result = invoke("pre", {"cwd": str(repository), "session_id": "session"})
+    result = invoke("pre-tool-use", {"cwd": str(repository), "session_id": "session"})
     assert json.loads(result.stdout)["hookSpecificOutput"]["permissionDecision"] == "deny"
 
 
 def test_busy_registration_denies_tools_without_waiting_for_hook_timeout(repository: Path) -> None:
     run = store.register(repository, "codex", "session")
     with run.lock():
-        result = invoke("pre", {"cwd": str(repository), "session_id": "session"})
+        result = invoke("pre-tool-use", {"cwd": str(repository), "session_id": "session"})
     assert json.loads(result.stdout)["hookSpecificOutput"]["permissionDecision"] == "deny"
 
 
@@ -85,7 +85,7 @@ def test_explicit_mutation_outside_registered_root_is_denied(
 ) -> None:
     store.register(repository, "codex", "session")
     result = invoke(
-        "pre",
+        "pre-tool-use",
         {
             "cwd": str(repository),
             "session_id": "session",
@@ -104,7 +104,7 @@ def test_different_worktree_cannot_reuse_registration(
     store.register(repository, "codex", "session")
     other = tmp_path / "other"
     subprocess.run(["git", "init", "--quiet", str(other)], check=True)
-    result = invoke("pre", {"cwd": str(other), "session_id": "session", "tool_name": "Bash"})
+    result = invoke("pre-tool-use", {"cwd": str(other), "session_id": "session", "tool_name": "Bash"})
     assert json.loads(result.stdout)["hookSpecificOutput"]["permissionDecision"] == "deny"
 
 
@@ -118,8 +118,8 @@ def test_stop_without_registration_reports_unresolved_and_does_not_loop(reposito
 def test_failed_baseline_leaves_tools_denied(repository: Path, tmp_path: Path) -> None:
     (repository / "external").symlink_to(tmp_path)
     payload = {"cwd": str(repository), "session_id": "session", "source": "startup"}
-    assert "outside" in json.loads(invoke("start", payload).stdout)["systemMessage"]
-    assert json.loads(invoke("pre", payload).stdout)["hookSpecificOutput"]["permissionDecision"] == "deny"
+    assert "outside" in json.loads(invoke("session-start", payload).stdout)["systemMessage"]
+    assert json.loads(invoke("pre-tool-use", payload).stdout)["hookSpecificOutput"]["permissionDecision"] == "deny"
 
 
 @pytest.mark.integration
@@ -147,7 +147,12 @@ def test_generated_hooks_register_and_verify_without_a_launcher(
     filename = ".codex/hooks.json" if provider == "codex" else ".claude/settings.json"
     events = json.loads((prefix / filename).read_text())["hooks"]
     payload = {"cwd": str(repository), "session_id": "session", "source": "startup"}
-    for event, action in (("SessionStart", "start"), ("PreToolUse", "pre"), ("Stop", "stop"), ("SessionEnd", "end")):
+    for event, action in (
+        ("SessionStart", "session-start"),
+        ("PreToolUse", "pre-tool-use"),
+        ("Stop", "stop"),
+        ("SessionEnd", "session-end"),
+    ):
         handlers = [hook for group in events.get(event, []) for hook in group["hooks"]]
         handler = next(
             hook for hook in handlers if hook["command"].endswith(f'verification_session.py" {provider} {action}')
@@ -173,7 +178,7 @@ def test_generated_hooks_register_and_verify_without_a_launcher(
         [
             str(installed),
             provider,
-            "pre",
+            "pre-tool-use",
         ],
         input="{}",
         capture_output=True,
@@ -189,20 +194,20 @@ def test_clear_preserves_pending_changes_with_a_new_session_id(
 ) -> None:
     run = store.register(repository, "codex", "old-session")
     (repository / "source.py").write_text("pending edit")
-    result = invoke("start", {"cwd": str(repository), "session_id": "new-session", "source": "clear"})
+    result = invoke("session-start", {"cwd": str(repository), "session_id": "new-session", "source": "clear"})
     assert json.loads(result.stdout) == {}
     assert run.baseline.changed_paths(store.capture(repository)) == ("source.py",)
     cleared = store.load(store.session_directory(repository, "codex", "new-session"))
     assert cleared.results()["revalidate_all"] is True
 
 
-def test_explicit_check_uses_registered_context_without_reading_stdin(
+def test_explicit_verify_uses_registered_context_without_reading_stdin(
     repository: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     run = store.register(repository, "codex", "session")
     result = subprocess.run(
-        [sys.executable, "-I", "-B", str(hook), "check", str(run.directory)],
+        [sys.executable, "-I", "-B", str(hook), "verify", str(run.directory)],
         stdin=subprocess.DEVNULL,
         capture_output=True,
         text=True,
@@ -212,7 +217,36 @@ def test_explicit_check_uses_registered_context_without_reading_stdin(
     assert "no changes" in json.loads(result.stdout)["systemMessage"]
 
 
-def test_explicit_check_exits_unsuccessfully_for_a_reused_failure(
+def test_explicit_verify_accepts_force_before_the_record(repository: Path) -> None:
+    run = store.register(repository, "codex", "session")
+    result = subprocess.run(
+        [sys.executable, "-I", "-B", str(hook), "verify", "--force", str(run.directory)],
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout
+    assert "no changes" in json.loads(result.stdout)["systemMessage"]
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [["check", "record"], ["retry", "record"], ["verify"], ["verify", "record", "extra"], ["claude", "pre"]],
+)
+def test_retired_and_malformed_invocations_print_usage(arguments: list[str]) -> None:
+    result = subprocess.run(
+        [sys.executable, "-I", "-B", str(hook), *arguments],
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 1
+    assert "Usage:" in result.stderr
+
+
+def test_explicit_verify_exits_unsuccessfully_for_a_reused_failure(
     repository: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -227,7 +261,7 @@ def test_explicit_check_exits_unsuccessfully_for_a_reused_failure(
     monkeypatch.setenv("RUN_RELATED_TESTS_BATS_BIN", str(runner))
     for _ in range(2):
         result = subprocess.run(
-            [sys.executable, "-I", "-B", str(hook), "check", str(run.directory)],
+            [sys.executable, "-I", "-B", str(hook), "verify", str(run.directory)],
             stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
@@ -245,7 +279,7 @@ def test_directory_words_in_command_arguments_are_not_treated_as_directory_chang
 ) -> None:
     store.register(repository, "codex", "session")
     result = invoke(
-        "pre",
+        "pre-tool-use",
         {
             "cwd": str(repository),
             "session_id": "session",
@@ -264,7 +298,7 @@ def test_literal_shell_worktree_changes_are_denied(
 ) -> None:
     store.register(repository, "codex", "session")
     result = invoke(
-        "pre",
+        "pre-tool-use",
         {
             "cwd": str(repository),
             "session_id": "session",

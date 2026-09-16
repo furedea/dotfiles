@@ -16,7 +16,7 @@
       {
         "hooks": [
           {
-            "command": "\"$HOME/.claude/hooks/verification_session.py\" claude pre",
+            "command": "\"$HOME/.claude/hooks/verification_session.py\" claude pre-tool-use",
             "type": "command",
             "timeout": 30
           }
@@ -186,7 +186,7 @@
       {
         "hooks": [
           {
-            "command": "\"$HOME/.claude/hooks/verification_session.py\" claude start",
+            "command": "\"$HOME/.claude/hooks/verification_session.py\" claude session-start",
             "type": "command",
             "timeout": 30
           }
@@ -206,7 +206,7 @@
       {
         "hooks": [
           {
-            "command": "\"$HOME/.claude/hooks/verification_session.py\" claude end",
+            "command": "\"$HOME/.claude/hooks/verification_session.py\" claude session-end",
             "type": "command",
             "timeout": 30
           }
@@ -220,7 +220,7 @@
         {
           "hooks": [
             {
-              "command": "\"$HOME/.claude/hooks/verification_session.py\" codex start",
+              "command": "\"$HOME/.claude/hooks/verification_session.py\" codex session-start",
               "type": "command",
               "timeout": 30,
               "statusMessage": "Registering verification session"
@@ -232,7 +232,7 @@
         {
           "hooks": [
             {
-              "command": "\"$HOME/.claude/hooks/verification_session.py\" codex end",
+              "command": "\"$HOME/.claude/hooks/verification_session.py\" codex session-end",
               "type": "command",
               "timeout": 30,
               "statusMessage": "Retaining verification state"
@@ -257,7 +257,7 @@
           "matcher": ".",
           "hooks": [
             {
-              "command": "\"$HOME/.claude/hooks/verification_session.py\" codex pre",
+              "command": "\"$HOME/.claude/hooks/verification_session.py\" codex pre-tool-use",
               "type": "command",
               "timeout": 30,
               "statusMessage": "Checking verification registration"

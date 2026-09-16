@@ -21,7 +21,7 @@ def test_session_start_registers_before_tools_without_a_launcher(
     subprocess.run(["git", "init", "--quiet", str(root)], check=True)
     (root / "source.py").write_text("preexisting edit")
     payload = {"cwd": str(root), "session_id": "session", "source": "startup"}
-    for event in ("start", "pre", "stop"):
+    for event in ("session-start", "pre-tool-use", "stop"):
         result = subprocess.run(
             [sys.executable, "-I", "-B", str(HOOK), provider, event],
             input=json.dumps(payload),

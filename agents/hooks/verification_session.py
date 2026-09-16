@@ -16,6 +16,9 @@ from session_snapshot import repository_root
 from session_store import Run, StateError, load, prune, register, session_directory
 
 
+EVENTS = ("session-start", "pre-tool-use", "stop", "session-end")
+
+
 def registered_run(provider: str, payload: dict, *, starting: bool = False) -> Run:
     cwd = payload.get("cwd")
     if not isinstance(cwd, str) or not Path(cwd).is_absolute():
@@ -84,23 +87,23 @@ def check_shell_directories(run: Run, cwd: Path, command: str) -> None:
 
 
 def dispatch(provider: str, event: str, payload: dict) -> dict[str, object]:
-    run = registered_run(provider, payload, starting=event == "start")
-    if event == "pre":
+    run = registered_run(provider, payload, starting=event == "session-start")
+    if event == "pre-tool-use":
         check_scope(run, payload)
     elif event == "stop":
         return {**session_gate.stop(run)}
-    elif event == "end":
+    elif event == "session-end":
         with run.lock():
             run.end()
         prune()
-    elif event == "start":
+    elif event == "session-start":
         prune()
     return {}
 
 
 def failure(event: str, payload: dict, error: Exception) -> dict[str, object]:
     message = f"Verification unresolved · {error}"
-    if event == "pre":
+    if event == "pre-tool-use":
         return {
             "hookSpecificOutput": {
                 "hookEventName": "PreToolUse",
@@ -108,21 +111,20 @@ def failure(event: str, payload: dict, error: Exception) -> dict[str, object]:
                 "permissionDecisionReason": message,
             }
         }
-    if event in {"stop", "check", "retry"} and not payload.get("stop_hook_active"):
+    if event in {"stop", "verify"} and not payload.get("stop_hook_active"):
         return {"decision": "block", "reason": message}
     return {"systemMessage": message}
 
 
 def main() -> int:
     arguments = sys.argv[1:]
-    explicit = len(arguments) == 2 and arguments[0] in {"check", "retry"}
-    native = (
-        len(arguments) == 2 and arguments[0] in {"codex", "claude"} and arguments[1] in {"start", "pre", "stop", "end"}
-    )
+    explicit = 2 <= len(arguments) <= 3 and arguments[0] == "verify" and arguments[1:-1] in ([], ["--force"])
+    native = len(arguments) == 2 and arguments[0] in {"codex", "claude"} and arguments[1] in EVENTS
     if not (explicit or native):
         print(
-            "Usage: verification_session.py codex|claude start|pre|stop|end < hook-input.json\n"
-            "       verification_session.py check|retry /path/to/session-record",
+            "Usage: verification_session.py codex|claude session-start|pre-tool-use|stop|session-end\n"
+            "       verification_session.py verify [--force] /path/to/session-record\n"
+            "Native events read the provider hook input from stdin.",
             file=sys.stderr,
         )
         return 0 if arguments in (["-h"], ["--help"]) else 1
@@ -131,8 +133,8 @@ def main() -> int:
     payload: dict = {}
     try:
         if explicit:
-            run = load(Path(arguments[1]))
-            result = session_gate.stop(run, force=event == "retry")
+            run = load(Path(arguments[-1]))
+            result = session_gate.stop(run, force="--force" in arguments)
             status = int(result.get("decision") == "block" or session_gate.unresolved(run))
         else:
             payload = json.load(sys.stdin)

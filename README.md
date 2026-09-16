@@ -190,9 +190,9 @@ Native Claude Code and Codex lifecycle hooks register the session's worktree and
 verify changes automatically. State is stored under
 `${XDG_STATE_HOME:-~/.local/state}/agent-harness/verification/<worktree>/<session>/`;
 `results.json` identifies the provider session and its latest check results.
-To check or explicitly retry a recorded session, run
-`~/.claude/hooks/verification_session.py check <session-directory>` or
-`~/.claude/hooks/verification_session.py retry <session-directory>`.
+To verify a recorded session again, run
+`~/.claude/hooks/verification_session.py verify <session-directory>`; add
+`--force` to rerun checks whose receipts are still valid.
 Ended or inactive records expire after seven days; failure logs are capped at
 1 MiB each and 100 MiB in total. See
 [ADR-0029](docs/adr/0029_register_verification_in_native_hooks.md) for the design rationale.
