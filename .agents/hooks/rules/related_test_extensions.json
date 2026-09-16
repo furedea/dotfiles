@@ -58,14 +58,12 @@
     "tests/agents/hooks/test_session_snapshot.py",
     "tests/agents/hooks/test_session_store.py",
     "tests/agents/hooks/test_session_gate.py",
-    "tests/agents/hooks/test_verification_session.py"
-  ],
-  "agents/hooks/launch_agent.py": [
-    "tests/agents/hooks/test_launch_agent.py",
+    "tests/agents/hooks/test_native_session.py",
     "tests/agents/hooks/test_verification_session.py"
   ],
   "agents/hooks/verification_session.py": [
     "tests/agents/hooks/test_verification_session.py",
+    "tests/agents/hooks/test_native_session.py",
     "tests/agents/hooks/test_session_gate.py"
   ],
   "agents/claude/statusline/*.json": [

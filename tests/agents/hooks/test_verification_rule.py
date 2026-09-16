@@ -45,7 +45,7 @@ def test_defaults_have_no_obsolete_lint_entry_point() -> None:
 def test_codex_verifies_changes_before_stopping() -> None:
     hooks = json.loads((REPO_ROOT / "agents/hooks.json").read_text())
     commands = [hook["command"] for group in hooks["codex"]["hooks"]["Stop"] for hook in group["hooks"]]
-    assert '"$HOME/.claude/hooks/verification_session.py" stop' in commands
+    assert '"$HOME/.claude/hooks/verification_session.py" codex stop' in commands
 
 
 def test_extension_values_are_nonempty_arrays_of_paths(extension: dict[str, list[str]]) -> None:

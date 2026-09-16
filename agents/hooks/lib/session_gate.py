@@ -1,4 +1,4 @@
-"""Verify changes since launch and replace each check's latest receipt atomically."""
+"""Verify session changes and replace each check's latest receipt atomically."""
 
 import hashlib
 import json
@@ -21,6 +21,7 @@ GATE_BUDGET_SECONDS = 540
 def stop(run: Run, *, force: bool = False) -> dict[str, str]:
     """Serialize Stop/check calls so concurrent delivery cannot run a check twice."""
     with run.lock():
+        run.touch()
         result = verify(run, force=force)
     prune()
     return result
@@ -33,7 +34,7 @@ def verify(run: Run, *, force: bool) -> dict[str, str]:
     full = state.get("revalidate_all", False)
     changed = tuple(path for path, _ in current.entries) if full else run.baseline.changed_paths(current)
     if not changed and not full:
-        return record_skip(run, state, "no changes since launch")
+        return record_skip(run, state, "no changes since session registration")
     try:
         rules = verification_selection.load_defaults(HOOK_ROOT / "rules/related_test_defaults.json")
         invocations, errors = verification_selection.language_plan(run.root, rules, changed)

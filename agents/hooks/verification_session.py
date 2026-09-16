@@ -2,7 +2,6 @@
 """Mechanical lifecycle entry points for registered verification sessions."""
 
 import json
-import os
 from pathlib import Path
 import sys
 
@@ -14,28 +13,28 @@ import patch_input
 import session_gate
 import shell_syntax
 from session_snapshot import repository_root
-from session_store import Run, StateError, load, prune
+from session_store import Run, StateError, load, prune, register, session_directory
 
 
-def environment_run() -> Run:
-    directory = os.environ.get("AGENT_VERIFICATION_RUN")
-    if not directory:
-        raise StateError(
-            "Missing verification registration; restart through the codex/claude launcher in the target worktree"
-        )
-    return load(Path(directory))
-
-
-def registered_run(payload: dict) -> Run:
-    run = environment_run()
+def registered_run(provider: str, payload: dict, *, starting: bool = False) -> Run:
     cwd = payload.get("cwd")
-    if not isinstance(cwd, str) or repository_root(Path(cwd)) != run.root:
-        raise StateError(f"Session worktree differs from the registered worktree: {run.root}")
+    if not isinstance(cwd, str) or not Path(cwd).is_absolute():
+        raise StateError("Missing absolute session working directory")
+    root = repository_root(Path(cwd))
     session = payload.get("session_id")
     if not isinstance(session, str):
         raise StateError("Missing provider session ID")
-    with run.lock():
-        run.bind(session, resuming=payload.get("source") == "resume", clearing=payload.get("source") == "clear")
+    directory = session_directory(root, provider, session)
+    if starting:
+        # New IDs after clear/fork have no reliable predecessor in native hook input.
+        return register(root, provider, session, resuming=payload.get("source") != "startup")
+    if not directory.exists():
+        raise StateError("Missing verification registration; restart or resume to run SessionStart in this worktree")
+    run = load(directory)
+    with run.lock(blocking=False):
+        if run.results().get("session_id") != session or run.provider != provider:
+            raise StateError("Provider session differs from the registered session")
+        run.touch()
     return run
 
 
@@ -84,15 +83,17 @@ def check_shell_directories(run: Run, cwd: Path, command: str) -> None:
                     require_inside(run, cwd / Path(parsed.arguments[index + 1]).expanduser())
 
 
-def dispatch(event: str, payload: dict) -> dict[str, object]:
-    run = registered_run(payload)
+def dispatch(provider: str, event: str, payload: dict) -> dict[str, object]:
+    run = registered_run(provider, payload, starting=event == "start")
     if event == "pre":
         check_scope(run, payload)
-    elif event in {"stop", "check", "retry"}:
-        return {**session_gate.stop(run, force=event == "retry")}
+    elif event == "stop":
+        return {**session_gate.stop(run)}
     elif event == "end":
         with run.lock():
             run.end()
+        prune()
+    elif event == "start":
         prune()
     return {}
 
@@ -107,8 +108,6 @@ def failure(event: str, payload: dict, error: Exception) -> dict[str, object]:
                 "permissionDecisionReason": message,
             }
         }
-    if event == "start":
-        return {"continue": False, "stopReason": message}
     if event in {"stop", "check", "retry"} and not payload.get("stop_hook_active"):
         return {"decision": "block", "reason": message}
     return {"systemMessage": message}
@@ -116,26 +115,31 @@ def failure(event: str, payload: dict, error: Exception) -> dict[str, object]:
 
 def main() -> int:
     arguments = sys.argv[1:]
-    events = {"start", "pre", "stop", "end", "check", "retry"}
-    if len(arguments) != 1 or arguments[0] not in events:
-        print("Usage: verification_session.py start|pre|stop|end|check|retry < hook-input.json", file=sys.stderr)
+    explicit = len(arguments) == 2 and arguments[0] in {"check", "retry"}
+    native = (
+        len(arguments) == 2 and arguments[0] in {"codex", "claude"} and arguments[1] in {"start", "pre", "stop", "end"}
+    )
+    if not (explicit or native):
+        print(
+            "Usage: verification_session.py codex|claude start|pre|stop|end < hook-input.json\n"
+            "       verification_session.py check|retry /path/to/session-record",
+            file=sys.stderr,
+        )
         return 0 if arguments in (["-h"], ["--help"]) else 1
-    event = arguments[0]
-    explicit = event in {"check", "retry"}
+    event = arguments[0] if explicit else arguments[1]
     status = 0
     payload: dict = {}
     try:
         if explicit:
-            run = environment_run()
-            payload = {"cwd": str(run.root), "session_id": run.results().get("session_id")}
+            run = load(Path(arguments[1]))
+            result = session_gate.stop(run, force=event == "retry")
+            status = int(result.get("decision") == "block" or session_gate.unresolved(run))
         else:
             payload = json.load(sys.stdin)
-        if not isinstance(payload, dict):
-            payload = {}
-            raise StateError("Hook input must be an object")
-        result = dispatch(event, payload)
-        if explicit:
-            status = int(result.get("decision") == "block" or session_gate.unresolved(environment_run()))
+            if not isinstance(payload, dict):
+                payload = {}
+                raise StateError("Hook input must be an object")
+            result = dispatch(arguments[0], event, payload)
     except (OSError, ValueError, TypeError, KeyError) as error:
         result = failure(event, payload, error)
         status = int(explicit)

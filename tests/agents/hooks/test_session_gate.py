@@ -39,9 +39,7 @@ def run(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> session_store.Run:
     runner.chmod(0o755)
     monkeypatch.setenv("PATH", f"{binary}{os.pathsep}{os.environ['PATH']}")
     monkeypatch.setenv("TEST_CALLS", str(tmp_path / "calls"))
-    registered = session_store.register(root, "codex")
-    registered.bind("session", resuming=False)
-    return registered
+    return session_store.register(root, "codex", "session")
 
 
 def calls() -> list[dict]:
@@ -82,6 +80,26 @@ def test_unchanged_failure_remains_unresolved_without_rerun_or_stop_loop(
     assert "unresolved" in repeated["systemMessage"]
     assert len(calls()) == 1
     assert next(iter(run.results()["checks"].values()))["status"] == "failed"
+
+
+@pytest.mark.parametrize("source", ["startup", "resume", "compact"])
+def test_session_start_reuses_failed_evidence_without_resetting_baseline(
+    run: session_store.Run, monkeypatch: pytest.MonkeyPatch, source: str
+) -> None:
+    (run.root / "source.py").write_text("task edit")
+    monkeypatch.setenv("TEST_OUTCOME", "failed")
+    assert gate.stop(run)["decision"] == "block"
+    result = subprocess.run(
+        [sys.executable, "-I", "-B", str(REPO_ROOT / "agents/hooks/verification_session.py"), "codex", "start"],
+        input=json.dumps({"cwd": str(run.root), "session_id": "session", "source": source}),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == {}
+    assert "unresolved" in gate.stop(run)["systemMessage"]
+    assert len(calls()) == 1
 
 
 def test_edit_after_failure_is_rechecked_and_recovery_replaces_failure(
@@ -163,9 +181,8 @@ def test_log_budget_is_enforced_before_a_long_session_ends(
     monkeypatch.setattr(session_store, "TOTAL_LOG_LIMIT_BYTES", 1)
     monkeypatch.setenv("TEST_OUTCOME", "failed")
     (run.root / "source.py").write_text("task edit")
-    with run.lease():
-        assert gate.stop(run)["decision"] == "block"
-        assert not list(run.directory.glob("logs/*.log"))
+    assert gate.stop(run)["decision"] == "block"
+    assert not list(run.directory.glob("logs/*.log"))
     assert "unresolved" in gate.stop(run)["systemMessage"]
 
 

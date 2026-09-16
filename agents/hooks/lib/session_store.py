@@ -1,4 +1,4 @@
-"""Private, bounded verification state with atomic replacement and process leases."""
+"""Private, bounded verification state keyed by native provider sessions."""
 
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -11,7 +11,6 @@ from pathlib import Path
 import shutil
 import tempfile
 import time
-import uuid
 
 from session_snapshot import Snapshot, capture
 
@@ -53,43 +52,9 @@ class Run:
             if path.name not in retained:
                 path.unlink(missing_ok=True)
 
-    def bind(self, session_id: str, *, resuming: bool, clearing: bool = False) -> None:
-        """Bind once; resume copies the original baseline before any tool executes."""
-        if not session_id or len(session_id) > 256:
-            raise StateError("Missing or invalid provider session ID")
-        results = self.results()
-        if existing := results.get("session_id"):
-            if existing != session_id and not clearing:
-                raise StateError("Provider session differs from the registered session")
-            if clearing:
-                results["session_id"] = session_id
-                self.save_results(results)
-            return
-        if resuming or results.get("resume_pending"):
-            previous = self.previous_session(session_id)
-            if previous is None:
-                results.update(revalidate_all=True, checks={})
-            else:
-                baseline = read_json(self.directory / "baseline.json")
-                baseline["files"] = previous.baseline.to_json()
-                atomic_json(self.directory / "baseline.json", baseline)
-                results.update(checks=previous.results()["checks"])
-                results["revalidate_all"] = previous.results().get("revalidate_all", False)
-        results.update(session_id=session_id, resume_pending=False)
-        self.save_results(results)
-
-    def previous_session(self, session_id: str) -> Run | None:
-        candidates = sorted(self.directory.parent.iterdir(), key=lambda path: path.name, reverse=True)
-        for directory in candidates:
-            if directory == self.directory or not directory.is_dir() or directory.is_symlink():
-                continue
-            previous = load(directory)
-            result = previous.results()
-            if previous.provider == self.provider and result.get("session_id") == session_id:
-                if not result.get("ended_at") or time.time() - result["ended_at"] > RETENTION_SECONDS:
-                    continue
-                return previous
-        return None
+    def touch(self) -> None:
+        """Keep active sessions without a parent process or a per-tool snapshot."""
+        os.utime(self.directory, None)
 
     def end(self, *, now: float | None = None) -> None:
         results = self.results()
@@ -109,14 +74,8 @@ class Run:
         return path
 
     @contextmanager
-    def lock(self) -> Iterator[None]:
-        with file_lock(self.directory / ".lock"):
-            yield
-
-    @contextmanager
-    def lease(self) -> Iterator[None]:
-        """The launcher holds this across the complete child process lifetime."""
-        with file_lock(self.directory / ".lease"):
+    def lock(self, *, blocking: bool = True) -> Iterator[None]:
+        with file_lock(self.directory / ".lock", blocking=blocking):
             yield
 
 
@@ -131,30 +90,48 @@ def worktree_id(root: Path) -> str:
     return hashlib.sha256(os.fsencode(root.resolve())).hexdigest()[:32]
 
 
-def register(root: Path, provider: str, *, resuming: bool = False) -> Run:
-    """Persist a baseline before the provider process is allowed to start."""
+def session_directory(root: Path, provider: str, session_id: str) -> Path:
+    if provider not in {"codex", "claude"} or not isinstance(session_id, str) or not 0 < len(session_id) <= 256:
+        raise StateError("Missing or invalid provider session ID")
+    identity = hashlib.sha256(session_id.encode()).hexdigest()[:32]
+    return state_directory() / worktree_id(root) / f"{provider}-{identity}"
+
+
+def register(root: Path, provider: str, session_id: str, *, resuming: bool = False) -> Run:
+    """Register once from SessionStart; repeated delivery preserves pending work."""
     root = root.resolve()
     base = state_directory()
     if base.resolve().is_relative_to(root):
         raise StateError("Verification state must be outside the worktree")
-    baseline = capture(root)
+    directory = session_directory(root, provider, session_id)
     private_directory(base)
-    private_directory(base / worktree_id(root))
-    directory = base / worktree_id(root) / f"{time.time_ns():020d}-{uuid.uuid4().hex}"
-    private_directory(directory)
-    atomic_json(
-        directory / "baseline.json",
-        {
-            "schema": SCHEMA,
-            "root": str(root),
-            "provider": provider,
-            "created_at": time.time(),
-            "files": baseline.to_json(),
-        },
-    )
-    run = Run(directory, root, provider)
-    run.save_results({"checks": {}, "resume_pending": resuming, "revalidate_all": False})
-    return run
+    private_directory(directory.parent)
+    with file_lock(directory.parent / ".register.lock", blocking=False):
+        if directory.exists() or directory.is_symlink():
+            run = load(directory)
+            with run.lock(blocking=False):
+                results = run.results()
+                results.pop("ended_at", None)
+                run.save_results(results)
+                run.touch()
+            return run
+        baseline = capture(root)
+        with tempfile.TemporaryDirectory(prefix=".register-", dir=directory.parent) as temporary:
+            staging = Path(temporary)
+            atomic_json(
+                staging / "baseline.json",
+                {
+                    "schema": SCHEMA,
+                    "root": str(root),
+                    "provider": provider,
+                    "created_at": time.time(),
+                    "files": baseline.to_json(),
+                },
+            )
+            atomic_json(staging / "results.json", {"checks": {}, "session_id": session_id, "revalidate_all": resuming})
+            atomic_bytes(staging / ".lock", b"")
+            os.rename(staging, directory)
+        return Run(directory, root, provider)
 
 
 def load(directory: Path) -> Run:
@@ -165,6 +142,10 @@ def load(directory: Path) -> Run:
     root = Path(record["root"])
     if record.get("schema") != SCHEMA or worktree_id(root) != directory.parent.name:
         raise StateError("Invalid verification baseline")
+    try:
+        Snapshot.from_json(record["files"])
+    except (ValueError, TypeError, KeyError) as error:
+        raise StateError("Invalid verification baseline files") from error
     return Run(directory, root, record["provider"])
 
 
@@ -217,7 +198,7 @@ def file_lock(path: Path, *, blocking: bool = True) -> Iterator[None]:
 
 
 def prune(*, now: float | None = None) -> None:
-    """Retain live registrations; bound logs globally without dropping failure status."""
+    """Expire ended or inactive sessions and bound logs without dropping failure status."""
     base = state_directory()
     if not base.exists():
         return
@@ -255,13 +236,11 @@ def log_files(directory: Path) -> tuple[Path, ...]:
 
 def prune_run(directory: Path, now: float) -> None:
     try:
-        with file_lock(directory / ".lease", blocking=False), file_lock(directory / ".lock", blocking=False):
+        with file_lock(directory / ".lock", blocking=False):
             run = load(directory)
             results = run.results()
-            if not results.get("ended_at"):
-                # A crashed launch gets a full retention interval after discovery.
-                run.end(now=now)
-            elif now - results["ended_at"] > RETENTION_SECONDS:
+            last_seen = results.get("ended_at", directory.stat().st_mtime)
+            if now - last_seen > RETENTION_SECONDS:
                 shutil.rmtree(directory)
     except OSError, StateError, KeyError, TypeError:
         return

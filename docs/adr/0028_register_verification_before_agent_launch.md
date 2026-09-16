@@ -1,7 +1,9 @@
 # ADR-0028: Register verification before agent launch
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-09-15
+- Superseded by: [ADR-0029](0029_register_verification_in_native_hooks.md)
+- Historical sources: [implementation at eaeec4d](https://github.com/furedea/dotfiles/tree/eaeec4d)
 
 In the context of automatic verification for terminal coding agents, facing
 branch-wide Stop checks that include preexisting edits and cannot reliably infer

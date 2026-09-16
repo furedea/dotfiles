@@ -131,12 +131,7 @@ let
     if [ "''${HERDR_ENV:-}" = "1" ]; then
       set -- -c tui.notifications=false "$@"
     fi
-    exec ${automationPython} -I -B ${agentSource}/hooks/launch_agent.py \
-      codex ${codexPackage}/bin/codex "$@"
-  '';
-  registeredClaude = pkgs.writeShellScriptBin "claude" ''
-    exec ${automationPython} -I -B ${agentSource}/hooks/launch_agent.py \
-      claude ${claudePackage}/bin/claude "$@"
+    exec -a codex ${codexPackage}/bin/codex "$@"
   '';
   herdrPlugins = [
     {
@@ -218,7 +213,7 @@ in
     gwsPackage
 
     # AI coding agents
-    registeredClaude
+    claudePackage
     herdrCompatibleCodex
     hermesAgentPackage
     unstable.opencode
