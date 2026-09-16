@@ -7,7 +7,7 @@ from tests.runtime import REPO_ROOT
 
 
 def test_claude_uses_the_native_automatic_notification_channel() -> None:
-    settings = json.loads((REPO_ROOT / "agents/claude/settings.base.json").read_text())
+    settings = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())
     assert settings["preferredNotifChannel"] == "auto"
 
 

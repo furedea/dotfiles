@@ -89,7 +89,7 @@ def test_nix_changes_select_configuration_and_packaged_runtime_contracts(
         ("tests/agents/hooks/secret_content_samples.json", {"test_secret_content.py"}),
         ("agents/hooks/rules/secret_commit_policy.json", {"test_guard_file.py", "test_secret_commit_policy.py"}),
         ("agents/hooks/rules/secret_path_policy.json", {"test_hook_translation_cli.py"}),
-        ("agents/claude/settings.base.json", {"test_allowed_command.py", "test_notification.py"}),
+        ("agents/claude/settings.json", {"test_allowed_command.py", "test_notification.py"}),
         ("agents/codex/config.toml", {"test_notification.py"}),
         (
             "agents/hooks.json",
