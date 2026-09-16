@@ -2,3 +2,5 @@
 .vscode/
 .idea/
 logs/
+
+**/.claude/.cc-writes/
