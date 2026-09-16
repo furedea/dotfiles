@@ -172,6 +172,20 @@ Nix for deterministic hook generation, while the Homebrew installation remains t
 runtime daemon used by generated hooks. Pairing tokens and mutable Moshi state are
 never added to the Nix store.
 
+Servers without Nix use
+[`scripts/agents/install_server.sh`](scripts/agents/install_server.sh) instead of
+the Home Manager module. It downloads pinned x86_64 Linux release binaries
+(`agent-harness`, `shfmt`, `rg`, `jq`, and `uv`) into `~/.local/bin`, installs
+Python 3.14 through uv, renders `agents/` into the home directory with the same
+`agent-harness` CLI, pins the hook shebangs to that interpreter, keeps settings
+that Claude Code wrote at runtime, and writes `~/.config/dotfiles/agent_env.sh`
+for the login shell to source. Host-specific locations (`BIN_DIR`,
+`UV_PYTHON_INSTALL_DIR`, `UV_CACHE_DIR`, `XDG_STATE_HOME`, `XDG_CACHE_HOME`) come
+from `~/.config/dotfiles/install_server.env`, and
+`~/.config/dotfiles/claude_settings_override.json` is merged into the rendered
+Claude Code settings; both stay outside the repository. See
+[ADR-0030](docs/adr/0030_bootstrap_the_agent_harness_on_servers_without_nix.md).
+
 Native Claude Code and Codex lifecycle hooks register the session's worktree and
 verify changes automatically. State is stored under
 `${XDG_STATE_HOME:-~/.local/state}/agent-harness/verification/<worktree>/<session>/`;
@@ -299,7 +313,8 @@ by Python unit and CLI integration tests under `tests/github/`.
 
 Automation logic uses Python's standard library, without runtime pip packages.
 The project environment supplies development tools such as pytest, Ruff, and ty.
-Nix pins the interpreter in deployed hook and statusline shebangs. Codex adapters
+Nix pins the interpreter in deployed hook and statusline shebangs; the server
+bootstrap pins them to its uv-managed interpreter. Codex adapters
 call shared Python functions directly. The `repo` and Herdr launchers use Nix's
 fixed Python with editable source files; hook source changes require Home Manager
 activation. Python entry points use isolated mode to ignore project import paths.
