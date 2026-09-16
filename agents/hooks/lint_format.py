@@ -103,7 +103,7 @@ def context(message: str) -> dict[str, object]:
 def failure(label: str, target: str, status: int, output: str) -> str:
     """Describe a failed command even when it produced no diagnostic output."""
     return (
-        f"Quality check failed\n{label} · {target} · exit {status}\nError: {output.strip() or 'No diagnostic output.'}"
+        f"Lint/format failed\n{label} · {target} · exit {status}\nError: {output.strip() or 'No diagnostic output.'}"
     )
 
 
@@ -141,7 +141,7 @@ def run_step(step: Step, path: Path) -> str:
     if step.writes_stdout:
         replace_formatted_file(path, result.stdout)
     if step.reports_warnings and diagnostics:
-        return f"Quality check failed\n{step.label} · {path} · exit 0\nDiagnostics: {diagnostics}"
+        return f"Lint/format failed\n{step.label} · {path} · exit 0\nDiagnostics: {diagnostics}"
     return ""
 
 
@@ -151,9 +151,7 @@ def check_file(kind: str, path: Path) -> tuple[str, ...]:
     for step in plan(kind, path):
         executable = step.arguments[0]
         if shutil.which(executable) is None:
-            messages.append(
-                f"Quality check unavailable\n{executable} · {path}\nReason: {executable} not found in PATH."
-            )
+            messages.append(f"Lint/format unavailable\n{executable} · {path}\nReason: {executable} not found in PATH.")
             break
         try:
             message = run_step(step, path)

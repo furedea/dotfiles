@@ -4,7 +4,7 @@
     "tests/agents/hooks/test_check_selection.py"
   ],
   "agents/hooks/rules/secret_path_policy.json": [
-    "tests/agents/codex/test_hook_translation_cli.py",
+    "tests/agents/codex/test_hook_adapter_cli.py",
     "tests/agents/hooks/test_verification_rule.py"
   ],
   "agents/hooks/rules/allowed_commands.json": [
@@ -100,8 +100,8 @@
     "tests/hermes/test_hermes_gateway.py"
   ],
   "agents/hooks/lint_format.py": [
-    "tests/agents/hooks/test_quality_cli.py",
-    "tests/agents/codex/test_hook_translation_cli.py",
+    "tests/agents/hooks/test_lint_format_cli.py",
+    "tests/agents/codex/test_hook_adapter_cli.py",
     "tests/agents/hooks/test_lint_format.py"
   ],
   "agents/hooks/lib/check_*.py": [
@@ -116,7 +116,7 @@
     "tests/agents/hooks/test_allowed_command.py",
     "tests/agents/hooks/test_command_cli.py",
     "tests/agents/hooks/test_forbidden_command.py",
-    "tests/agents/hooks/test_dangerous_git_contract.py",
+    "tests/agents/hooks/test_guard_git.py",
     "tests/agents/hooks/test_hook_boundary.py"
   ],
   "github/repo.py": [
@@ -137,11 +137,11 @@
     "tests/agents/claude/test_statusline.py"
   ],
   "agents/hooks/lib/shell_syntax.py": [
-    "tests/agents/hooks/test_dangerous_git_contract.py",
+    "tests/agents/hooks/test_guard_git.py",
     "tests/agents/hooks/test_command_cli.py",
     "tests/agents/hooks/test_allowed_command.py",
     "tests/agents/hooks/test_forbidden_command.py",
-    "tests/agents/codex/test_hook_translation_cli.py",
+    "tests/agents/codex/test_hook_adapter_cli.py",
     "tests/agents/hooks/test_git_safety.py",
     "tests/agents/hooks/test_hook_boundary.py"
   ],
@@ -159,31 +159,31 @@
     "tests/agents/hooks/test_forbidden_command.py"
   ],
   "agents/hooks/lib/git_safety.py": [
-    "tests/agents/hooks/test_dangerous_git_contract.py",
+    "tests/agents/hooks/test_guard_git.py",
     "tests/agents/hooks/test_command_cli.py",
     "tests/agents/hooks/test_git_safety.py"
   ],
-  "agents/hooks/guard_dangerous_git.py": [
-    "tests/agents/hooks/test_dangerous_git_contract.py",
+  "agents/hooks/guard_git.py": [
+    "tests/agents/hooks/test_guard_git.py",
     "tests/agents/hooks/test_command_cli.py",
     "tests/agents/hooks/test_git_safety.py"
   ],
   "agents/hooks/guard_file.py": [
     "tests/agents/hooks/test_guard_file.py",
     "tests/agents/hooks/test_secret_content.py",
-    "tests/agents/codex/test_hook_translation_cli.py",
+    "tests/agents/codex/test_hook_adapter_cli.py",
     "tests/agents/hooks/test_hook_boundary.py"
   ],
-  "agents/codex/hooks/hook_translation.py": [
-    "tests/agents/codex/test_hook_translation_cli.py",
+  "agents/codex/hooks/hook_adapter.py": [
+    "tests/agents/codex/test_hook_adapter_cli.py",
     "tests/agents/hooks/test_hook_boundary.py"
   ],
   "agents/hooks/lib/patch_input.py": [
-    "tests/agents/codex/test_hook_translation_cli.py",
+    "tests/agents/codex/test_hook_adapter_cli.py",
     "tests/agents/hooks/test_hook_boundary.py"
   ],
   "agents/hooks/lib/secret_path_policy.py": [
-    "tests/agents/codex/test_hook_translation_cli.py",
+    "tests/agents/codex/test_hook_adapter_cli.py",
     "tests/agents/hooks/test_hook_boundary.py"
   ],
   "herdr/merge_pull_request.py": [

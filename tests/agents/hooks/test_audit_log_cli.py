@@ -75,7 +75,7 @@ def test_unrelated_startup_exits_without_a_record(run_cli: CliRunner, tmp_path: 
     "script,arguments,command,identifier",
     [
         ("guard_command.py", ["forbidden"], "git commit --no-verify -m x", "guard_forbidden_commands.sh"),
-        ("guard_dangerous_git.py", [], "git push --force origin main", "guard_dangerous_git.sh"),
+        ("guard_git.py", [], "git push --force origin main", "guard_dangerous_git.sh"),
     ],
 )
 def test_real_guard_denials_reach_the_audit_log(
@@ -93,5 +93,5 @@ def test_real_guard_denials_reach_the_audit_log(
     assert row["session"] == "session-one"
     assert row["input"] == command
     assert row["reason"]
-    if script == "guard_dangerous_git.py":
+    if script == "guard_git.py":
         assert row["reason"].startswith("BLOCKED:")

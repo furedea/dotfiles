@@ -42,7 +42,7 @@ def protected_policy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         ("~/.claude/hooks/custom.sh", False),
         ("agents/hooks/guard_command.py", False),
         ("agents/AGENTS.md", False),
-        ("agents/codex/hooks/hook_translation.py", False),
+        ("agents/codex/hooks/hook_adapter.py", False),
         ("/tmp/dotfiles/agents/hooks/guard_command.py", False),
         ("src/main.py", False),
         ("", False),

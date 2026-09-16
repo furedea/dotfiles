@@ -1,4 +1,4 @@
-"""The quality CLI runs real tools and preserves process-level failures."""
+"""The lint/format CLI runs real tools and preserves process-level failures."""
 
 import json
 from pathlib import Path
@@ -9,7 +9,7 @@ import pytest
 from tests.runtime import CliRunner, StubWriter, load_script_module
 
 
-quality = load_script_module("agents/hooks/lint_format.py", "lint_format")
+lint_format = load_script_module("agents/hooks/lint_format.py", "lint_format")
 
 
 def additional_context(output: str) -> str:
@@ -75,7 +75,7 @@ def test_missing_file_events_are_quiet(run_cli: CliRunner, kind: str) -> None:
 
 
 @pytest.mark.parametrize("arguments,payload,diagnostic", [([], "", "Usage:"), (["py"], "{", "")])
-def test_invalid_quality_invocations_fail(
+def test_invalid_lint_format_invocations_fail(
     run_cli: CliRunner, arguments: list[str], payload: str, diagnostic: str
 ) -> None:
     result = run_cli("agents/hooks/lint_format.py", *arguments, payload=payload)
@@ -146,7 +146,7 @@ def test_process_failures_survive_later_successful_steps(
     )
     assert result.returncode == 0
     context = additional_context(result.stdout)
-    assert "Quality check failed" in context
+    assert "Lint/format failed" in context
     assert f"{tool} {phase} · {path} · exit 2" in context
     assert "Error: formatter unavailable at runtime" in context
 
@@ -212,10 +212,8 @@ def test_chktex_warning_is_visible_even_with_zero_exit(
     result = run_cli("agents/hooks/lint_format.py", "tex", payload={"tool_input": {"file_path": str(path)}})
     assert result.returncode == 0
     context = additional_context(result.stdout)
-    assert (
-        context == f"Quality check failed\nchktex lint · {path} · exit 0\nDiagnostics: Warning 1: unexpected spacing"
-    )
+    assert context == f"Lint/format failed\nchktex lint · {path} · exit 0\nDiagnostics: Warning 1: unexpected spacing"
 
 
 def test_rust_file_formatting_does_not_run_project_wide_clippy(tmp_path: Path) -> None:
-    assert all("clippy" not in step.arguments for step in quality.plan("rs", tmp_path / "source.rs"))
+    assert all("clippy" not in step.arguments for step in lint_format.plan("rs", tmp_path / "source.rs"))

@@ -43,7 +43,7 @@ def check(payload: dict) -> int:
 
 def main() -> int:
     if sys.argv[1:]:
-        print("Usage: guard_dangerous_git.py < hook-input.json", file=sys.stderr)
+        print("Usage: guard_git.py < hook-input.json", file=sys.stderr)
         return 0 if sys.argv[1:] in (["-h"], ["--help"]) else 1
     try:
         payload = json.load(sys.stdin)

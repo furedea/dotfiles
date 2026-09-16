@@ -87,7 +87,7 @@ def test_invalid_command_json_remains_a_cli_error(run_cli: CliRunner) -> None:
             "command not in allowlist",
         ),
         ("guard_command.py", ("forbidden",), "rm " + "x" * 1000, "forbidden command"),
-        ("guard_dangerous_git.py", (), "git reset --hard " + "x" * 1000, "BLOCKED:"),
+        ("guard_git.py", (), "git reset --hard " + "x" * 1000, "BLOCKED:"),
     ],
     ids=["allowlist", "forbidden", "dangerous-git"],
 )
@@ -107,7 +107,7 @@ def test_implicit_push_uses_the_real_repository_branch(
 ) -> None:
     if branch != "main":
         subprocess.run(["git", "switch", "--quiet", "-c", branch], cwd=git_project, check=True)
-    result = run_cli("agents/hooks/guard_dangerous_git.py", payload={"tool_input": {"command": "git push"}})
+    result = run_cli("agents/hooks/guard_git.py", payload={"tool_input": {"command": "git push"}})
     assert result.returncode == status
     if status:
         assert "main" in result.stderr
