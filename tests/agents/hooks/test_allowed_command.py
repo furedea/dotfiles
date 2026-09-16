@@ -15,6 +15,28 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
         pytest.param("echo hello", 0, [], id="passes through non-governed commands unchanged"),
         pytest.param("git status", 0, [], id="passes through git commands that are not governed"),
         pytest.param("gh pr list", 0, [], id="governed command matching allowlist is permitted"),
+        pytest.param("env gh pr merge 42", 2, ["gh pr merge 42"], id="blocks env wrapper around a governed command"),
+        pytest.param("command gh pr merge 42", 2, [], id="blocks command builtin around a governed command"),
+        pytest.param("/opt/homebrew/bin/gh pr merge 42", 2, [], id="blocks governed commands invoked by path"),
+        pytest.param("/opt/homebrew/bin/gh pr list", 0, [], id="allows precise forms invoked by path"),
+        pytest.param(
+            "git -c core.fsmonitor=false rebase -i origin/main", 2, [], id="governs git behind global options"
+        ),
+        pytest.param(
+            "git -c core.fsmonitor=false branch --show-current",
+            0,
+            [],
+            id="allows precise forms behind git global options",
+        ),
+        pytest.param(
+            "env BATS_TMPDIR=/tmp bats tests/zsh/cache.bats",
+            0,
+            [],
+            id="allows env wrapper around an allowed verification command",
+        ),
+        pytest.param("env CI=1 cargo test > /tmp/blocked", 2, [], id="blocks redirections behind wrappers"),
+        pytest.param("/usr/bin/time -p ls_lint", 0, [], id="passes through wrapped non-governed commands"),
+        pytest.param("command -v rg", 0, [], id="passes through command lookups"),
         pytest.param("uv run --frozen ruff check", 0, [], id="allows Python verification commands 1"),
         pytest.param("uv run --frozen ruff format --check", 0, [], id="allows Python verification commands 2"),
         pytest.param("uv run --frozen ty check", 0, [], id="allows Python verification commands 3"),

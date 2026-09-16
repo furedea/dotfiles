@@ -78,6 +78,12 @@ def test_generated_deny_prefixes(
         "git commit -m test --no-verify",
         "git commit -n -m test",
         "git   commit   --no-verify",
+        "git -c core.fsmonitor=false add -A",
+        "git -c core.fsmonitor=false commit --no-verify -m x",
+        "git -C /tmp/project add .",
+        "/usr/bin/git add -A",
+        "env GIT_PAGER=cat git add --all",
+        "timeout 30 git commit -n -m test",
     ],
 )
 def test_global_rules_reject_policy_bypasses(command: str) -> None:

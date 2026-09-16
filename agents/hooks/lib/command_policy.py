@@ -6,6 +6,9 @@ from pathlib import Path
 import re
 import subprocess
 
+import git_safety
+import shell_syntax
+
 
 def regex_matches(pattern: str, value: str, insensitive: bool = False) -> bool:
     """Use the existing system regex engine instead of silently changing regex dialects."""
@@ -68,6 +71,15 @@ def project_file(name: str) -> Path | None:
         return None
     path = Path(root) / ".agents/hooks/rules" / name
     return path if path.is_file() else None
+
+
+def canonical(command: shell_syntax.Command) -> shell_syntax.Command:
+    """Judge a program by its name and Git by its subcommand, not by install path or global options."""
+    name = Path(command.arguments[0]).name
+    if name != "git":
+        return command.rebased(1, (name,))
+    globals_, _ = git_safety.git_arguments(command.arguments)
+    return command.rebased(1 + len(globals_), ("git",))
 
 
 def prefix_reason(arguments: tuple[str, ...], rules: list[dict], decision: str) -> str:

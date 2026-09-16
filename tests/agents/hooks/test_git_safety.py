@@ -47,3 +47,45 @@ def test_unsupported_execution_or_expansion_is_not_automatically_approved(comman
 
 def test_literal_wrapper_commands_are_inspected_recursively() -> None:
     assert syntax.parse("bash -lc 'git status'")[-1].arguments == ("git", "status")
+
+
+@pytest.mark.parametrize(
+    "command,expected",
+    [
+        ("env BATS_TMPDIR=/tmp bats tests/x.bats", ("bats", "tests/x.bats")),
+        ("env -u XDG_CONFIG_HOME -i git status", ("git", "status")),
+        ("/usr/bin/time -p git push --force origin topic", ("git", "push", "--force", "origin", "topic")),
+        ("time git status", ("git", "status")),
+        ("timeout -k 5 30 git status", ("git", "status")),
+        ("nice -n 10 cargo build", ("cargo", "build")),
+        ("nohup cargo run", ("cargo", "run")),
+        ("exec git status", ("git", "status")),
+        ("caffeinate -i git status", ("git", "status")),
+        ("echo x | xargs -0 -I {} git add {}", ("git", "add", "{}")),
+        ("command git status", ("git", "status")),
+        ("env FOO=1 bash -c 'git status'", ("git", "status")),
+    ],
+)
+def test_process_wrappers_expose_the_command_they_run(command: str, expected: tuple[str, ...]) -> None:
+    innermost = syntax.parse(command)[-1]
+    assert innermost.arguments == expected
+    assert innermost.raw == " ".join(expected)
+
+
+def test_wrapped_commands_keep_their_redirections_and_depth() -> None:
+    innermost = syntax.parse("env CI=1 cargo test > /tmp/blocked")[-1]
+    assert innermost.raw == "cargo test > /tmp/blocked"
+    assert innermost.redirections == ("/tmp/blocked",)
+    assert innermost.wrapper_depth == 1
+
+
+@pytest.mark.parametrize("command", ["command -v rg", "env", "env -i", "xargs"])
+def test_wrapper_lookups_and_bare_invocations_are_not_unwrapped(command: str) -> None:
+    commands = syntax.parse(command)
+    assert len(commands) == 1
+    assert commands[0].wrapper_depth == 0
+
+
+def test_unknown_wrapper_options_are_not_silently_skipped() -> None:
+    with pytest.raises(syntax.UnsupportedSyntax):
+        syntax.parse("xargs --unknown-option git add .")

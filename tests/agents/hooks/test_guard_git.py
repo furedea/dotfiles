@@ -38,6 +38,24 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
         pytest.param("git status", 0, [], id="passes through git status"),
         pytest.param("git push --force origin feature/foo", 2, ["force-push flag"], id="blocks --force"),
         pytest.param("git push -f origin feature/foo", 2, [], id="blocks -f short flag"),
+        pytest.param(
+            "env git push --force origin feature/foo", 2, ["wrapper"], id="blocks env wrapper around --force"
+        ),
+        pytest.param(
+            "/usr/bin/time -p git push --force origin feature/foo", 2, [], id="blocks time wrapper around --force"
+        ),
+        pytest.param("time git push --force origin feature/foo", 2, [], id="blocks time keyword around --force"),
+        pytest.param(
+            "timeout 30 git push --force origin feature/foo", 2, [], id="blocks timeout wrapper around --force"
+        ),
+        pytest.param(
+            "echo feature/foo | xargs git push --force origin", 2, [], id="blocks xargs wrapper around --force"
+        ),
+        pytest.param("exec git push --force origin feature/foo", 2, [], id="blocks exec wrapper around --force"),
+        pytest.param("nohup git push --force origin feature/foo", 2, [], id="blocks nohup wrapper around --force"),
+        pytest.param("nice -n 5 git push --force origin feature/foo", 2, [], id="blocks nice wrapper around --force"),
+        pytest.param("env -u XDG_CONFIG_HOME git status", 0, [], id="allows env wrapper around a read-only command"),
+        pytest.param("command -v git", 0, [], id="allows command lookups"),
         pytest.param("git push --force-with-lease origin feature/foo", 2, [], id="blocks --force-with-lease"),
         pytest.param(
             "git push --force-with-lease=origin/foo origin feature/foo",
