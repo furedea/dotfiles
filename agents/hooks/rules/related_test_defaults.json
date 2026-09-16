@@ -11,7 +11,19 @@
     "test_dirs": ["."],
     "test_patterns": ["test_{stem}.py", "{stem}_test.py"],
     "self_test_globs": ["test_*.py", "*_test.py"],
-    "exclude_dirs": [".venv", "node_modules"],
+    "exclude_dirs": [
+      ".venv",
+      "node_modules",
+      ".cache",
+      "build",
+      "dist",
+      "target",
+      ".tox",
+      "__pycache__",
+      ".pytest_cache",
+      ".ruff_cache",
+      ".mypy_cache"
+    ],
     "project_markers": ["pyproject.toml"],
     "fallback_on_unmatched_source": true
   },
