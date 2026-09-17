@@ -3,7 +3,7 @@
 Commit by intent, not by file.
 
 - One user-visible feature, bug fix, refactor, documentation update, or config change per commit.
-- Tests for a new behavior belong in the same commit as the implementation.
+- Tests for a new behavior belong in the same commit as the implementation. A stacked red-green bug fix requested by the user is the exception: its reproduction test is its own commit on its own layer. See [Stacked pull requests](stacked_prs.md).
 - Test-only coverage for existing behavior uses `test:`.
 - Generated files and lockfiles belong with the change that caused them.
 - Pure formatting belongs in `style:` when it would obscure a logic review.

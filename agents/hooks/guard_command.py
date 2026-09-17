@@ -40,6 +40,17 @@ def policies(kind: str, directory: Path) -> tuple[list[dict], list[dict]]:
     return prefixes, rules
 
 
+def objection(
+    kind: str, item: shell_syntax.Command, candidate: shell_syntax.Command, prefixes: list[dict], rules: list[dict]
+) -> str:
+    """Judge one segment by its literal text and by its canonical program and subcommand."""
+    matched = command_policy.regex_reason(item.raw, rules) or command_policy.regex_reason(candidate.raw, rules)
+    if kind == "allowed":
+        governed = command_policy.prefix_reason(candidate.arguments, prefixes, "allow")
+        return "command not in allowlist" if governed and not matched else ""
+    return command_policy.prefix_reason(candidate.arguments, prefixes, "deny") or matched
+
+
 def check(kind: str, payload: dict, directory: Path = ROOT) -> int:
     """Enforce command policy for an already decoded provider payload."""
     command = ""
@@ -49,16 +60,7 @@ def check(kind: str, payload: dict, directory: Path = ROOT) -> int:
             raise ValueError("failed to parse tool input JSON: expected an object")
         command = payload.get("tool_input", {}).get("command") or ""
         for item in shell_syntax.parse(command):
-            if kind == "allowed":
-                governed = command_policy.prefix_reason(item.arguments, prefixes, "allow")
-                reason = (
-                    "command not in allowlist" if governed and not command_policy.regex_reason(item.raw, rules) else ""
-                )
-            else:
-                reason = command_policy.prefix_reason(item.arguments, prefixes, "deny") or command_policy.regex_reason(
-                    item.raw, rules
-                )
-            if reason:
+            if reason := objection(kind, item, command_policy.canonical(item), prefixes, rules):
                 raise ValueError(f"{reason}.\n\nCommand: {shell_syntax.command_preview(item.raw)}")
     except (ValueError, TypeError, AttributeError, OSError) as error:
         prefix = "forbidden command: " if kind == "forbidden" else ""

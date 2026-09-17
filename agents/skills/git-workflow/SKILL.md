@@ -14,7 +14,7 @@ This skill governs the default Git shape of implementation work: which branch to
 
 - Inspect Git state before edits: current branch, `git status --porcelain=v1`, and recent commit style when commit messages will be written.
 - Never overwrite, reset, clean, or discard user changes unless the user explicitly asked for that exact destructive action.
-- Do not force-push or push directly to the default / protected branch. Ordinary implementation and PR-creation requests do not authorize merging; merge only when explicitly requested and permitted by repository and runtime rules.
+- Do not push directly to the default / protected branch, and rewrite published history only with the leased force push described in [Delivery](references/delivery.md). Ordinary implementation and PR-creation requests do not authorize merging; merge only when explicitly requested and permitted by repository and runtime rules.
 - Complete requested implementation, relevant verification, and fixes for problems caused by the change. Do not stop at the first implementation or first Green when required work remains.
 - Commit, push, and create pull requests only within the user's request or an explicit standing authorization. Permission to execute a command is not authorization to perform that action for the task. Do not repeat confirmation for steps already covered by the authorized workflow; runtime approval requirements still apply.
 - When commits are authorized, group them by reviewable intent. Multiple TSDD cycles may belong to one commit; do not force a commit for every cycle. Both TSDD paths end Green.
@@ -32,6 +32,7 @@ not merging.
 | Selecting or changing the checkout, worktree, or branch | [Branches and worktrees](references/branches.md) |
 | Planning or preparing authorized commits                | [Commits](references/commits.md)                 |
 | Preparing an authorized push, pull request, or rebase   | [Delivery](references/delivery.md)               |
+| Publishing a stacked or red-green pull request the user asked for | [Stacked pull requests](references/stacked_prs.md) |
 
 Read only the reference needed for the current Git operation. Continue to use the selected
 checkout and branch while they remain suitable for the task.

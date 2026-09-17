@@ -5,7 +5,8 @@ import subprocess
 
 
 PROTECTED_BRANCHES = {"main", "master"}
-DESTRUCTIVE_VERBS = {"rm", "clean", "filter-branch", "filter-repo", "replace"}
+DESTRUCTIVE_VERBS = {"clean", "filter-branch", "filter-repo", "replace"}
+FORCE_FLAGS = {"-f", "--force"}
 
 
 def branch(arguments: tuple[str, ...] = ()) -> str:
@@ -37,10 +38,12 @@ def git_arguments(arguments: tuple[str, ...]) -> tuple[tuple[str, ...], tuple[st
 
 
 def push_reason(arguments: tuple[str, ...], globals_: tuple[str, ...]) -> str:
-    """Reject force pushes and protected destinations, including implicit destinations."""
+    """Reject unleased force pushes and protected destinations, including implicit destinations."""
     flags = {argument.split("=", 1)[0] for argument in arguments}
-    if flags & {"-f", "--force", "--force-with-lease"}:
+    if flags & FORCE_FLAGS:
         return "force-push flag detected"
+    if "--force-with-lease" in flags and "--force-if-includes" not in flags:
+        return "force-with-lease without --force-if-includes detected"
     positional: list[str] = []
     index = 0
     while index < len(arguments):
@@ -87,11 +90,13 @@ def reason(arguments: tuple[str, ...]) -> str:
     if verb == "push":
         return push_reason(tuple(remaining), globals_)
     destructive = verb in DESTRUCTIVE_VERBS
-    destructive |= verb == "stash" and bool(remaining) and remaining[0] in {"drop", "clear"}
-    destructive |= verb == "worktree" and bool(remaining) and remaining[0] in {"remove", "prune", "move", "repair"}
+    destructive |= verb == "worktree" and bool(remaining) and remaining[0] in {"move", "repair"}
+    destructive |= verb == "worktree" and remaining[:1] == ["remove"] and bool(options & FORCE_FLAGS)
     destructive |= verb == "reflog" and bool(remaining) and remaining[0] in {"delete", "expire"}
     dangerous_options = {
         "branch": {"-D"},
+        "rm": FORCE_FLAGS,
+        "mv": FORCE_FLAGS,
         "symbolic-ref": {"-d", "--delete"},
         "update-ref": {"-d", "--delete"},
         "gc": {"--prune"},

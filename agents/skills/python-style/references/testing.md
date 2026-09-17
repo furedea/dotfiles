@@ -8,6 +8,9 @@ verification level. The conventions below govern Python test tooling and structu
 - Use `anyio` for async tests, do not use `asyncio`
 - Use `pytest-mock` for mocking (`mocker` fixture), do not use `unittest.mock` directly
 - `pytest`, `anyio`, and `pytest-mock` belong in the template's test dependency group
+- Record a reproduced defect with `@pytest.mark.xfail(strict=True, reason="...")` and a comment
+  naming the condition for removing the marker; `strict=True` fails the run when the test
+  unexpectedly passes. Remove the marker in the change that fixes the defect.
 
 ## Test Structure
 
