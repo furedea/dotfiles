@@ -10,17 +10,11 @@
 
 # Development Workflow
 
-For ordinary implementation:
+For implementation, use `issue-workflow` → `git-workflow` → `tsdd` →
+`git-workflow` → `issue-workflow` for issue/plan setup, branching, implementation,
+delivery, and status reconciliation, respectively.
 
-1. Use `issue-workflow` to secure the Issue and any necessary plan.
-2. Use `git-workflow` to select the working branch.
-3. Use `tsdd` to implement and perform necessary verification.
-4. Use `git-workflow` to deliver through the authorized stage.
-5. Use `issue-workflow` to reconcile Issue and plan status.
-
-For Issue-only operations, commit-only requests, or investigation-only work, apply only the
-relevant stages. Consult each skill when its stage is needed. Existing authorization policy
-continues to govern destinations and operations.
+Consult skills as needed and apply only the stages relevant to the request.
 
 # Coding Guidelines
 
