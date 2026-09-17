@@ -58,11 +58,11 @@ jobs:
 
       - name: Stage workflow templates for discovery
         run: |
-          mkdir -p "$RUNNER_TEMP/workflow-templates/.github/workflows"
-          cp templates/*.yml "$RUNNER_TEMP/workflow-templates/.github/workflows/"
+          # zizmor-action mounts only the workspace into its container.
+          mkdir -p .zizmor-templates/.github/workflows
+          cp templates/*.yml .zizmor-templates/.github/workflows/
 
       - name: Run zizmor
         uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
         with:
           advanced-security: false
-          inputs: . ${{ runner.temp }}/workflow-templates

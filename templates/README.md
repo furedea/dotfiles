@@ -56,9 +56,10 @@ resume from that tag. Correct a published release with a new version rather than
 ## Template maintenance
 
 GitHub Actions lint validates the workflow templates as well as deployed workflows. Zizmor
-receives a temporary `.github/workflows/` tree containing the templates so its normal discovery
-rules apply. Renovate's `github-actions.managerFilePatterns` includes `templates/*.yml` and
-`templates/*.yaml`, preserving action SHA and version-comment updates.
+receives a temporary `.github/workflows/` tree inside the checked-out workspace so its container
+can access the templates and apply its normal discovery rules. Renovate's
+`github-actions.managerFilePatterns` includes `templates/*.yml` and `templates/*.yaml`, preserving
+action SHA and version-comment updates.
 
 Sources: [Release Please](https://github.com/googleapis/release-please-action),
 [immutable releases](https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases),
