@@ -7,7 +7,7 @@ import pytest
 
 from tests.runtime import REPO_ROOT, load_script_module
 
-selection = load_script_module("agents/hooks/lib/verification_selection.py", "verification_selection")
+selection = load_script_module("agents/hooks/lib/check_selection.py", "check_selection")
 
 
 def project(tmp_path: Path, mappings: dict) -> dict:

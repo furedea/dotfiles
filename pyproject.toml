@@ -15,6 +15,9 @@ ignore_notebooks = true
 # Standalone hooks import these adjacent repository modules after trusted path setup.
 known_first_party = [
   "audit_log",
+  "check_evidence",
+  "check_execution",
+  "check_selection",
   "command_policy",
   "git_safety",
   "guard_command",
@@ -24,12 +27,9 @@ known_first_party = [
   "patch_input",
   "secret_path_policy",
   "shell_syntax",
-  "session_checks",
   "session_gate",
   "session_snapshot",
   "session_store",
-  "verification_output",
-  "verification_selection",
 ]
 
 [tool.vulture]

@@ -123,7 +123,7 @@ def test_nix_changes_select_configuration_and_packaged_runtime_contracts(
         ("tests/hermes/gateway_probe.py", {"test_hermes_gateway.py"}),
         (
             ".agents/hooks/rules/related_test_extensions.json",
-            {"test_verification_rule.py", "test_verification_selection.py"},
+            {"test_verification_rule.py", "test_check_selection.py"},
         ),
     ],
 )
