@@ -13,7 +13,7 @@ sys.path.insert(0, str(COMMON / "lib"))
 
 import audit_log
 import guard_command
-import guard_dangerous_git
+import guard_git
 import guard_file
 import lint_format
 import patch_input
@@ -111,7 +111,7 @@ def dispatch(kind: str, arguments: list[str], payload: dict) -> int:
         if arguments[0] in {"allowed", "forbidden"}:
             return guard_command.check(arguments[0], command, shared_directory())
         if arguments[0] == "git":
-            return guard_dangerous_git.check(command)
+            return guard_git.check(command)
         return guard_file.check("commit", command, shared_directory())
     if kind == "lint":
         return lint(payload)
@@ -142,7 +142,7 @@ def main(arguments: list[str]) -> int:
     )
     if not valid or any(value in {"-h", "--help"} for value in rest):
         print(
-            "Usage: hook_translation.py <shell allowed/forbidden/git/commit|lint|harness|paths command/patch|content prompt/apply-patch>",
+            "Usage: hook_adapter.py <shell allowed/forbidden/git/commit|lint|harness|paths command/patch|content prompt/apply-patch>",
             file=sys.stderr,
         )
         return 1

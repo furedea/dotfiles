@@ -78,17 +78,17 @@ def test_nix_changes_select_configuration_and_packaged_runtime_contracts(
 @pytest.mark.parametrize(
     ("source", "required"),
     [
-        ("agents/hooks/audit_log.py", {"test_allowed_command.py", "test_dangerous_git_contract.py"}),
-        ("agents/hooks/lib/shell_syntax.py", {"test_allowed_command.py", "test_hook_translation_cli.py"}),
-        ("agents/hooks/lint_format.py", {"test_quality_cli.py", "test_hook_translation_cli.py"}),
-        ("agents/hooks/guard_file.py", {"test_secret_content.py", "test_hook_translation_cli.py"}),
+        ("agents/hooks/audit_log.py", {"test_allowed_command.py", "test_guard_git.py"}),
+        ("agents/hooks/lib/shell_syntax.py", {"test_allowed_command.py", "test_hook_adapter_cli.py"}),
+        ("agents/hooks/lint_format.py", {"test_lint_format_cli.py", "test_hook_adapter_cli.py"}),
+        ("agents/hooks/guard_file.py", {"test_secret_content.py", "test_hook_adapter_cli.py"}),
         (
             "agents/hooks/rules/secret_content_patterns.json",
             {"test_secret_content.py", "test_secret_content_pattern.py"},
         ),
         ("tests/agents/hooks/secret_content_samples.json", {"test_secret_content.py"}),
         ("agents/hooks/rules/secret_commit_policy.json", {"test_guard_file.py", "test_secret_commit_policy.py"}),
-        ("agents/hooks/rules/secret_path_policy.json", {"test_hook_translation_cli.py"}),
+        ("agents/hooks/rules/secret_path_policy.json", {"test_hook_adapter_cli.py"}),
         ("agents/claude/settings.json", {"test_allowed_command.py", "test_notification.py"}),
         ("agents/codex/config.toml", {"test_notification.py"}),
         (

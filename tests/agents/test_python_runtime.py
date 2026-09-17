@@ -17,14 +17,14 @@ def test_rendered_hooks_load_adjacent_modules(agent_harness: CliRunner, isolated
     for name in (
         ".claude/hooks/guard_command.py",
         ".claude/hooks/lib/shell_syntax.py",
-        ".codex/hooks/hook_translation.py",
+        ".codex/hooks/hook_adapter.py",
         ".claude/statusline/statusline.py",
     ):
         assert (prefix / name).is_file(), name
     environment = os.environ | {"AGENT_HARNESS_ROOT": str(prefix)}
     for name in ("AGENT_COMMAND_PERMISSIONS", "AGENT_ALLOWED_COMMAND_RULES", "AGENT_FORBIDDEN_COMMAND_RULES"):
         environment.pop(name, None)
-    executable = prefix / ".codex/hooks/hook_translation.py"
+    executable = prefix / ".codex/hooks/hook_adapter.py"
     for arguments, payload, status, message in (
         (["shell", "allowed"], {"tool_input": {"cmd": "git status"}}, 0, ""),
         (["paths", "patch"], {"tool_input": {"file_path": ".env.local"}}, 2, "secret path policy matched"),

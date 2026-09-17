@@ -9,7 +9,7 @@ import pytest
 from tests.runtime import CliRunner, REPO_ROOT, StubWriter
 
 
-SCRIPT = "agents/codex/hooks/hook_translation.py"
+SCRIPT = "agents/codex/hooks/hook_adapter.py"
 
 
 @pytest.fixture

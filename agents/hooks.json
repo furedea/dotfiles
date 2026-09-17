@@ -38,7 +38,7 @@
             "type": "command"
           },
           {
-            "command": "\"$HOME/.claude/hooks/guard_dangerous_git.py\"",
+            "command": "\"$HOME/.claude/hooks/guard_git.py\"",
             "type": "command"
           },
           {
@@ -244,7 +244,7 @@
         {
           "hooks": [
             {
-              "command": "\"$HOME/.codex/hooks/hook_translation.py\" content prompt",
+              "command": "\"$HOME/.codex/hooks/hook_adapter.py\" content prompt",
               "statusMessage": "Scanning prompt for sensitive information",
               "timeout": 30,
               "type": "command"
@@ -268,31 +268,31 @@
           "matcher": "^(Bash|exec_command|functions\\.exec_command)$",
           "hooks": [
             {
-              "command": "\"$HOME/.codex/hooks/hook_translation.py\" paths command",
+              "command": "\"$HOME/.codex/hooks/hook_adapter.py\" paths command",
               "statusMessage": "Checking secret path policy",
               "timeout": 30,
               "type": "command"
             },
             {
-              "command": "\"$HOME/.codex/hooks/hook_translation.py\" shell forbidden",
+              "command": "\"$HOME/.codex/hooks/hook_adapter.py\" shell forbidden",
               "statusMessage": "Checking forbidden command prefixes",
               "timeout": 30,
               "type": "command"
             },
             {
-              "command": "\"$HOME/.codex/hooks/hook_translation.py\" shell commit",
+              "command": "\"$HOME/.codex/hooks/hook_adapter.py\" shell commit",
               "statusMessage": "Checking staged files for secrets",
               "timeout": 30,
               "type": "command"
             },
             {
-              "command": "\"$HOME/.codex/hooks/hook_translation.py\" shell git",
+              "command": "\"$HOME/.codex/hooks/hook_adapter.py\" shell git",
               "statusMessage": "Checking for dangerous git operations",
               "timeout": 30,
               "type": "command"
             },
             {
-              "command": "\"$HOME/.codex/hooks/hook_translation.py\" shell allowed",
+              "command": "\"$HOME/.codex/hooks/hook_adapter.py\" shell allowed",
               "statusMessage": "Checking command permissions",
               "timeout": 30,
               "type": "command"
@@ -303,19 +303,19 @@
           "matcher": "^apply_patch$|^Edit$|^Write$",
           "hooks": [
             {
-              "command": "\"$HOME/.codex/hooks/hook_translation.py\" paths patch",
+              "command": "\"$HOME/.codex/hooks/hook_adapter.py\" paths patch",
               "statusMessage": "Checking secret path policy",
               "timeout": 30,
               "type": "command"
             },
             {
-              "command": "\"$HOME/.codex/hooks/hook_translation.py\" harness",
+              "command": "\"$HOME/.codex/hooks/hook_adapter.py\" harness",
               "statusMessage": "Checking harness boundaries",
               "timeout": 30,
               "type": "command"
             },
             {
-              "command": "\"$HOME/.codex/hooks/hook_translation.py\" content apply-patch",
+              "command": "\"$HOME/.codex/hooks/hook_adapter.py\" content apply-patch",
               "statusMessage": "Scanning patch for sensitive information",
               "timeout": 30,
               "type": "command"
@@ -328,7 +328,7 @@
           "matcher": "^apply_patch$|^Edit$|^Write$",
           "hooks": [
             {
-              "command": "\"$HOME/.codex/hooks/hook_translation.py\" lint",
+              "command": "\"$HOME/.codex/hooks/hook_adapter.py\" lint",
               "statusMessage": "Running lint/format hooks",
               "timeout": 120,
               "type": "command"
