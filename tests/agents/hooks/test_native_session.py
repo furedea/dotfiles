@@ -34,6 +34,8 @@ def test_session_start_registers_before_tools_without_a_launcher(
         assert "decision" not in output
         if event == "stop":
             assert "no changes" in output["systemMessage"]
+        elif event == "session-start":
+            assert output["hookSpecificOutput"]["hookEventName"] == "SessionStart"
         else:
             assert output == {}
     records = list((tmp_path / "state").glob("agent-harness/verification/*/*/results.json"))

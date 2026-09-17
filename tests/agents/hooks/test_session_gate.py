@@ -104,7 +104,8 @@ def test_session_start_reuses_failed_evidence_without_resetting_baseline(
         check=False,
     )
     assert result.returncode == 0, result.stderr
-    assert json.loads(result.stdout) == {}
+    context = json.loads(result.stdout)["hookSpecificOutput"]
+    assert context["additionalContext"] == f"Verification record: {record.directory}"
     assert "unresolved" in gate.gate(record)["systemMessage"]
     assert len(calls()) == 1
 
