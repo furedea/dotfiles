@@ -48,6 +48,12 @@ def test_codex_verifies_changes_before_stopping() -> None:
     assert '"$HOME/.claude/hooks/verification_session.py" codex stop' in commands
 
 
+def test_codex_session_end_hook_respects_timeout_limit() -> None:
+    hooks = json.loads((REPO_ROOT / "agents/hooks.json").read_text())
+    handlers = [hook for group in hooks["codex"]["hooks"]["SessionEnd"] for hook in group["hooks"]]
+    assert all(handler.get("timeout", 3) <= 3 for handler in handlers)
+
+
 def test_extension_values_are_nonempty_arrays_of_paths(extension: dict[str, list[str]]) -> None:
     assert extension
     for source, targets in extension.items():

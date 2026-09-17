@@ -234,7 +234,7 @@
             {
               "command": "\"$HOME/.claude/hooks/verification_session.py\" codex session-end",
               "type": "command",
-              "timeout": 30,
+              "timeout": 3,
               "statusMessage": "Retaining verification state"
             }
           ]
