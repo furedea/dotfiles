@@ -338,6 +338,8 @@ Shared pytest fixtures live in `tests/conftest.py`, agent-specific fixtures in
 
 The verification hook allows 300 seconds per check.
 `RUN_RELATED_TESTS_TIMEOUT_SECONDS` overrides this budget when explicitly set.
+pytest spreads tests across all CPU cores through pytest-xdist by default; pass
+`-n 0` when a debugging option such as `-s` or `--pdb` needs a single process.
 
 Lefthook runs the pre-commit format and lint checks for changed files:
 

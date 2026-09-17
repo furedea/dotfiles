@@ -1,5 +1,6 @@
 """Load command policy once and preserve the existing POSIX ERE matching contract."""
 
+from collections.abc import Sequence
 import json
 import os
 from pathlib import Path
@@ -12,9 +13,17 @@ import shell_syntax
 
 def regex_matches(pattern: str, value: str, insensitive: bool = False) -> bool:
     """Use the existing system regex engine instead of silently changing regex dialects."""
+    return any_regex_matches((pattern,), value, insensitive)
+
+
+def any_regex_matches(patterns: Sequence[str], value: str, insensitive: bool = False) -> bool:
+    """Spawn one grep for a whole pattern set; process start-up, not matching, dominates each decision."""
+    if not patterns:
+        return False
     flags = "-qiE" if insensitive else "-qE"
+    selectors = [argument for pattern in patterns for argument in ("-e", pattern)]
     result = subprocess.run(
-        ["grep", flags, "-e", pattern],
+        ["grep", flags, *selectors],
         input=value + "\n",
         text=True,
         stdout=subprocess.DEVNULL,
@@ -49,12 +58,10 @@ def load_rules(path: Path, prefixes: bool = False) -> list[dict]:
                 or not all(isinstance(item, str) and item for item in values)
             ):
                 raise ValueError("invalid command rule")
-            if prefixes:
-                if rule.get("decision") not in {"allow", "ask", "deny"}:
-                    raise ValueError("invalid decision")
-            else:
-                for pattern in values:
-                    regex_matches(pattern, "")
+            if prefixes and rule.get("decision") not in {"allow", "ask", "deny"}:
+                raise ValueError("invalid decision")
+        if not prefixes:
+            any_regex_matches(all_patterns(rules), "")
         return rules
     except (OSError, ValueError, TypeError) as error:
         raise ValueError(f"invalid command policy: {path}") from error
@@ -95,9 +102,12 @@ def prefix_reason(arguments: tuple[str, ...], rules: list[dict], decision: str) 
 
 
 def regex_reason(raw: str, rules: list[dict]) -> str:
-    """Return the first applicable rule's stated rationale."""
+    """Return the first applicable rule's stated rationale, asking grep once before locating that rule."""
     raw = re.sub(r"\s+(?:2>&1|2>/dev/null|>&2)\s*$", "", raw.strip())
-    return next(
-        (rule["justification"] for rule in rules if any(regex_matches(pattern, raw) for pattern in rule["patterns"])),
-        "",
-    )
+    if not any_regex_matches(all_patterns(rules), raw):
+        return ""
+    return next((rule["justification"] for rule in rules if any_regex_matches(rule["patterns"], raw)), "")
+
+
+def all_patterns(rules: list[dict]) -> list[str]:
+    return [pattern for rule in rules for pattern in rule["patterns"]]

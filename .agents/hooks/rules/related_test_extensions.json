@@ -10,7 +10,8 @@
   "agents/hooks/rules/allowed_commands.json": [
     "tests/agents/test_command_permission_sync.py",
     "tests/agents/hooks/test_allowed_command.py",
-    "tests/agents/hooks/test_command_cli.py"
+    "tests/agents/hooks/test_command_cli.py",
+    "tests/agents/hooks/test_command_policy.py"
   ],
   "agents/hooks/rules/forbidden_commands.json": [
     "tests/agents/hooks/test_forbidden_command.py",
@@ -150,6 +151,7 @@
     "tests/agents/test_command_permission_sync.py",
     "tests/agents/hooks/test_allowed_command.py",
     "tests/agents/hooks/test_command_cli.py",
+    "tests/agents/hooks/test_command_policy.py",
     "tests/agents/hooks/test_forbidden_command.py",
     "tests/agents/hooks/test_guard_file.py",
     "tests/agents/hooks/test_hook_boundary.py"
