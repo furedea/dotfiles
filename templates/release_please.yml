@@ -2,8 +2,13 @@ name: Release Please
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: Draft release tag to resume (select this tag as the workflow ref too)
+        required: true
+        type: string
 
 permissions: {}
 
@@ -12,23 +17,117 @@ defaults:
     shell: bash
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: release-${{ github.repository }}
+  cancel-in-progress: false
 
 jobs:
   release-please:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - name: Check release token
+        env:
+          RELEASE_PLEASE_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+        run: |
+          if [[ -z "$RELEASE_PLEASE_TOKEN" ]]; then
+            echo "Set RELEASE_PLEASE_TOKEN so release PRs can trigger CI."
+            exit 1
+          fi
+
+      - name: Create release PR or draft release
+        id: release
+        uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4.4.1
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          config-file: release_please_config.json
+          manifest-file: .release_please_manifest.json
+
+  release-artifacts:
+    needs: release-please
+    if: ${{ !cancelled() && (needs.release-please.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
-      issues: write
-      pull-requests: write
+      id-token: write
+      attestations: write
+    env:
+      TAG_NAME: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || needs.release-please.outputs.tag_name }}
     steps:
-      - name: Create or update release PR
-        uses: googleapis/release-please-action@16a9c90856f42705d54a6fda1823352bdc62cf38 # v4.4.0
+      - name: Validate release tag input
+        run: |
+          case "$TAG_NAME" in
+            ""|-*|*/*) echo "Expected a release tag without slashes."; exit 1 ;;
+          esac
+          git check-ref-format "refs/tags/$TAG_NAME"
+
+      - name: Checkout release tag
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
-          # Replace `simple` with a repo-specific release strategy when needed.
-          release-type: simple
-          # Use a PAT instead of `GITHUB_TOKEN` if downstream workflows must run
-          # on release PRs or release tags created by this action.
-          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: false
+          ref: refs/tags/${{ env.TAG_NAME }}
+
+      - name: Verify draft and source commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ "$(git rev-parse HEAD)" != "$GITHUB_SHA" ]]; then
+            echo "Run this workflow from the release tag to attest the correct commit."
+            exit 1
+          fi
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$GITHUB_REF" != "refs/tags/$TAG_NAME" ]]; then
+            echo "Select the release tag as the workflow ref."
+            exit 1
+          fi
+          [[ "$(gh release view "$TAG_NAME" --json isDraft --jq '.isDraft')" == "true" ]]
+
+      # Replace this step with toolchain setup, locked dependency installation,
+      # tests, packaging, and a smoke test of the actual archives.
+      # Put only the files to distribute (including checksums) in .release/.
+      - name: Build and test release artifacts
+        run: |
+          echo "Configure project-specific build and package verification before releasing."
+          exit 1
+
+      - name: Collect release files
+        run: |
+          shopt -s nullglob
+          artifact_paths=(.release/*)
+          if ((${#artifact_paths[@]} == 0)); then
+            echo "No release artifacts were produced."
+            exit 1
+          fi
+          for artifact_path in "${artifact_paths[@]}"; do
+            [[ -f "$artifact_path" ]]
+          done
+          printf '%s\n' "${artifact_paths[@]}" > "$RUNNER_TEMP/release-assets.txt"
+
+      - name: Attest tested release artifacts
+        id: attest
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: .release/*
+
+      - name: Attach artifacts to draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUNDLE_PATH: ${{ steps.attest.outputs.bundle-path }}
+        run: |
+          [[ "$(gh release view "$TAG_NAME" --json isDraft --jq '.isDraft')" == "true" ]]
+          mapfile -t artifact_paths < "$RUNNER_TEMP/release-assets.txt"
+          cp "$BUNDLE_PATH" .release/provenance.json
+          # Replacement is allowed only while the release is still a draft.
+          gh release upload "$TAG_NAME" "${artifact_paths[@]}" .release/provenance.json --clobber
+
+      # If publishing to a registry, publish the same tested archives here.
+      # On recovery, skip an existing version only after comparing its digest.
+      - name: Publish completed GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [[ "$(gh release view "$TAG_NAME" --json isDraft --jq '.isDraft')" == "true" ]]
+          gh release edit "$TAG_NAME" --draft=false

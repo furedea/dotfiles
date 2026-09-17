@@ -35,7 +35,7 @@ pre-commit:
       glob: "*.nix"
       run: deadnix --fail .
     actionlint:
-      glob: ".github/workflows/*.yml"
+      glob: "{.github/workflows,templates}/*.yml"
       run: actionlint {all_files}
     ruff-format:
       glob: "*.py"

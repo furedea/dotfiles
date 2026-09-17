@@ -8,6 +8,9 @@
   ],
   "mode": "full",
   "dependencyDashboard": true,
+  "github-actions": {
+    "managerFilePatterns": ["/^templates/.*\\.ya?ml$/"]
+  },
   "vulnerabilityAlerts": {
     "enabled": true,
     "labels": ["security"],
