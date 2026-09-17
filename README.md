@@ -241,7 +241,8 @@ reference files.
 These tracked files are not applied by Home Manager or nix-darwin:
 
 - `raycast/*.rayconfig` is a manual Raycast export
-- `templates/` contains small files copied into other repositories as needed
+- [`templates/`](templates/README.md) contains reference files copied into other repositories,
+  including a complete release workflow with project-specific build steps
 
 ## Repository Map
 
