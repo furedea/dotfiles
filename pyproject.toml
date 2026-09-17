@@ -24,6 +24,7 @@ known_first_party = [
   "guard_command",
   "guard_file",
   "guard_git",
+  "lib",
   "lint_format",
   "patch_input",
   "secret_path_policy",

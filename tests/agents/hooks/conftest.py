@@ -8,6 +8,7 @@ import pytest
 from tests.runtime import REPO_ROOT, StubWriter
 
 
+sys.path.insert(0, str(REPO_ROOT / "agents/hooks"))
 sys.path.insert(0, str(REPO_ROOT / "agents/hooks/lib"))
 import session_store
 

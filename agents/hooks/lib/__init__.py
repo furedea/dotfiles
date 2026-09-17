@@ -1,0 +1,1 @@
+"""Shared hook implementation modules."""

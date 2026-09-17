@@ -16,6 +16,7 @@ def test_rendered_hooks_load_adjacent_modules(agent_harness: CliRunner, isolated
     agent_harness("install", "--prefix", str(prefix), "--runtime-root", str(prefix))
     for name in (
         ".claude/hooks/guard_command.py",
+        ".claude/hooks/lint_format.py",
         ".claude/hooks/lib/shell_syntax.py",
         ".codex/hooks/hook_adapter.py",
         ".claude/statusline/statusline.py",
@@ -24,6 +25,18 @@ def test_rendered_hooks_load_adjacent_modules(agent_harness: CliRunner, isolated
     environment = os.environ | {"AGENT_HARNESS_ROOT": str(prefix)}
     for name in ("AGENT_COMMAND_PERMISSIONS", "AGENT_ALLOWED_COMMAND_RULES", "AGENT_FORBIDDEN_COMMAND_RULES"):
         environment.pop(name, None)
+    lint = prefix / ".claude/hooks/lint_format.py"
+    result = subprocess.run(
+        [str(lint), "py"],
+        input=json.dumps({"tool_input": {}}),
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=10,
+        check=False,
+    )
+    assert result.returncode == 0
+    assert result.stdout == result.stderr == ""
     executable = prefix / ".codex/hooks/hook_adapter.py"
     for arguments, payload, status, message in (
         (["shell", "allowed"], {"tool_input": {"cmd": "git status"}}, 0, ""),
