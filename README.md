@@ -59,6 +59,35 @@ Change them there before applying the configuration for another user or path.
 The first switch installs the `darwin-rebuild` and `home-manager` commands used
 for later updates.
 
+### Bootstrap a Linux Server without Nix
+
+On an x86_64 Linux server without Nix or root access, clone this repository and
+run the server bootstrap script:
+
+```sh
+mkdir -p "$HOME/ghq/github.com/furedea"
+git clone https://github.com/furedea/dotfiles \
+  "$HOME/ghq/github.com/furedea/dotfiles"
+cd "$HOME/ghq/github.com/furedea/dotfiles"
+bash scripts/agents/bootstrap_server.sh
+. "$HOME/.config/dotfiles/agent_env.sh"
+```
+
+The final command updates the current shell's `PATH`. Add the same line to
+`~/.profile` or `~/.bashrc` to load the tools in future shells. To update an
+existing server after changing the repository, run:
+
+```sh
+cd "$HOME/ghq/github.com/furedea/dotfiles"
+git pull --ff-only
+bash scripts/agents/bootstrap_server.sh
+```
+
+The bootstrap script currently supports x86_64 Linux release binaries only. It
+exits before installing anything on other architectures; see
+[`scripts/agents/bootstrap_server.sh`](scripts/agents/bootstrap_server.sh) for
+the source-build guidance.
+
 ## Apply Changes
 
 Use the full switch to converge the actual Mac, including both nix-darwin and
