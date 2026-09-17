@@ -30,7 +30,7 @@ the request, evaluates the returned work, and reports the outcome to the user.
 | ------------------------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------ |
 | Review a plan                              | Claude for a Codex-authored plan; Codex for a Claude-authored plan | Findings only; do not rewrite the plan or implement it |
 | Review code                                | Claude for Codex-authored code; Codex for Claude-authored code     | Findings only; do not edit the reviewed source         |
-| Implement in another directory or worktree | A separate Codex session in the requested location                 | Changes limited to the delegated scope                 |
+| Implement in another directory or worktree | A separate session of the same provider as the originating session | Changes limited to the delegated scope                 |
 
 Honor an explicit provider choice. Keep plan review, code review, and implementation as distinct
 assignments; asking for findings does not authorize the reviewer to fix them.
@@ -110,6 +110,29 @@ before reporting success. When requested completion includes integrating another
 changes, follow `git-workflow` for authorized integration and report anything still pending.
 Do not infer that changes reached the intended branch merely because the worker finished.
 
+## Finish and Clean Up
+
+The originating session decides when the assignment is complete after accepting the result and
+checking any required integration. Keep the worker available while clarification, corrections,
+or another review is still needed for the current assignment.
+
+Once the result is fully captured and no follow-up remains for that worker:
+
+- Use `herdr` to end the coding-agent session and close temporary panes or other terminal layout
+  created solely for this assignment. Recheck their identity, ownership, and live state first;
+  leave resources now used by the user or another task open.
+- Leave reused sessions and pre-existing panes, tabs, and workspaces open. Honor a request to
+  retain a newly created worker for continued work.
+- Keep branches and worktrees while their changes await integration or merge. Follow
+  `git-workflow` for their eventual removal; closing a worker must not discard pending changes.
+- Remove task-created temporary outputs only after their needed contents are captured in the
+  originating conversation or a requested artifact. Do not create a permanent report solely
+  to justify closing a worker.
+
+If the assignment or cleanup is blocked, preserve the resources needed to resume it and report
+what remains open and why. A timeout or interrupted session does not establish completion.
+
 Report the provider and reviewed or changed scope, the resulting findings or implementation,
-verification evidence, and unresolved limitations. Keep the final response with the originating
+verification evidence, where the changes remain, and whether workers were closed or retained.
+Identify unresolved work and cleanup failures. Keep the final response with the originating
 session; a worker's completion message does not replace this reconciliation.
