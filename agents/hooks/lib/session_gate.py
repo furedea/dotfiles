@@ -143,7 +143,7 @@ def verification_inputs(snapshot: Snapshot) -> str:
             "CARGO_BUILD_TARGET",
             "NODE_OPTIONS",
         }
-        or (key.startswith("RUN_RELATED_TESTS_") and key not in {"RUN_RELATED_TESTS_FORCE", "RUN_RELATED_TESTS_REUSE"})
+        or key.startswith("RUN_RELATED_TESTS_")
     }
     digest.update(json.dumps(environment, sort_keys=True).encode())
     return digest.hexdigest()
