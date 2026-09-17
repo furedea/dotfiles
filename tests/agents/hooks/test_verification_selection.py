@@ -56,6 +56,45 @@ def test_javascript_without_a_test_command_is_not_success(tmp_path: Path) -> Non
         selection.language_plan(tmp_path, rules, ("src/file.ts",))
 
 
+PYTEST = ("uv", "run", "--frozen", "pytest", "--no-header", "-q")
+
+
+def touch_all(root: Path, names: list[str]) -> None:
+    for name in names:
+        path = root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.touch()
+
+
+def test_declared_pytest_testpaths_keep_stray_test_copies_out(tmp_path: Path) -> None:
+    rules = project(tmp_path, {})
+    (tmp_path / "pyproject.toml").write_text('[tool.pytest.ini_options]\ntestpaths = ["tests"]\n')
+    touch_all(tmp_path, ["tests/test_app.py", "experiments/runtime/tests/test_app.py"])
+    commands, errors = selection.language_plan(tmp_path, rules, ("app.py", "experiments/runtime/tests/test_app.py"))
+    assert not errors
+    assert [item.arguments for item in commands] == [(*PYTEST, "tests/test_app.py")]
+
+
+def test_explicit_targets_outside_declared_testpaths_still_run(tmp_path: Path) -> None:
+    rules = project(tmp_path, {"app.py": ["experiments/checks/test_extra.py"]})
+    (tmp_path / "pyproject.toml").write_text('[tool.pytest.ini_options]\ntestpaths = ["tests"]\n')
+    touch_all(tmp_path, ["tests/test_app.py", "experiments/checks/test_extra.py"])
+    commands, errors = selection.language_plan(tmp_path, rules, ("app.py",))
+    assert not errors
+    assert [item.arguments for item in commands] == [
+        (*PYTEST, "experiments/checks/test_extra.py", "tests/test_app.py")
+    ]
+
+
+def test_cache_and_build_directories_are_not_searched_for_tests(tmp_path: Path) -> None:
+    rules = project(tmp_path, {})
+    (tmp_path / "pyproject.toml").touch()
+    touch_all(tmp_path, ["tests/test_app.py", ".cache/snapshot/tests/test_app.py", "build/lib/tests/test_app.py"])
+    commands, errors = selection.language_plan(tmp_path, rules, ("app.py",))
+    assert not errors
+    assert [item.arguments for item in commands] == [(*PYTEST, "tests/test_app.py")]
+
+
 @pytest.mark.parametrize(
     "changed,files,mappings,expected",
     [

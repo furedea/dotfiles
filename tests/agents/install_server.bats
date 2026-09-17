@@ -18,7 +18,7 @@ setup() {
 
   [ "$status" -eq 0 ]
   local _tool
-  for _tool in agent-harness shfmt rg jq uv; do
+  for _tool in agent-harness shfmt rg jq bats uv; do
     [ -x "$BIN_DIR/$_tool" ] || {
       echo "missing tool: $_tool"
       return 1
@@ -35,9 +35,19 @@ setup() {
     SHFMT_URL="file://$RELEASES/missing" \
     RIPGREP_URL="file://$RELEASES/missing.tar.gz" \
     JQ_URL="file://$RELEASES/missing" \
+    BATS_URL="file://$RELEASES/missing.tar.gz" \
     UV_INSTALLER_URL="file://$RELEASES/missing.sh"
 
   [ "$status" -eq 0 ]
+}
+
+@test "installs bats-core under its own prefix and links it into the binary directory" {
+  run install_server
+
+  [ "$status" -eq 0 ]
+  local _prefix="$HOME_DIR/.local/share/bats-core"
+  [ "$(readlink "$BIN_DIR/bats")" = "$_prefix/bin/bats" ]
+  [ -f "$_prefix/libexec/bats-core/bats" ]
 }
 
 @test "installs the requested Python through uv" {

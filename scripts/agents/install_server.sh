@@ -18,6 +18,7 @@ Options:
 Host-specific locations, from the environment or
 \$XDG_CONFIG_HOME/dotfiles/install_server.env:
     BIN_DIR                user-space binaries (default: ~/.local/bin)
+    BATS_PREFIX            bats-core installation (default: ~/.local/share/bats-core)
     PYTHON_VERSION         uv-managed interpreter (default: 3.14)
     UV_PYTHON_INSTALL_DIR  interpreter location (uv default: ~/.local/share/uv/python)
     UV_CACHE_DIR           uv cache (uv default: ~/.cache/uv)
@@ -53,10 +54,13 @@ readonly AGENT_HARNESS_VERSION="${AGENT_HARNESS_VERSION:-latest}"
 readonly SHFMT_VERSION="${SHFMT_VERSION:-3.13.1}"
 readonly RIPGREP_VERSION="${RIPGREP_VERSION:-14.1.1}"
 readonly JQ_VERSION="${JQ_VERSION:-1.8.1}"
+readonly BATS_VERSION="${BATS_VERSION:-1.13.0}"
+readonly BATS_PREFIX="${BATS_PREFIX:-${XDG_DATA_HOME:-$HOME/.local/share}/bats-core}"
 readonly UV_INSTALLER_URL="${UV_INSTALLER_URL:-https://astral.sh/uv/install.sh}"
 readonly SHFMT_URL="${SHFMT_URL:-https://github.com/mvdan/sh/releases/download/v${SHFMT_VERSION}/shfmt_v${SHFMT_VERSION}_linux_amd64}"
 readonly RIPGREP_URL="${RIPGREP_URL:-https://github.com/BurntSushi/ripgrep/releases/download/${RIPGREP_VERSION}/ripgrep-${RIPGREP_VERSION}-x86_64-unknown-linux-musl.tar.gz}"
 readonly JQ_URL="${JQ_URL:-https://github.com/jqlang/jq/releases/download/jq-${JQ_VERSION}/jq-linux-amd64}"
+readonly BATS_URL="${BATS_URL:-https://github.com/bats-core/bats-core/archive/refs/tags/v${BATS_VERSION}.tar.gz}"
 
 WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/install_server.XXXXXX")"
 readonly WORK_DIR
@@ -70,6 +74,7 @@ function main() {
   install_tool shfmt "$SHFMT_URL"
   install_tool rg "$RIPGREP_URL" rg
   install_tool jq "$JQ_URL"
+  install_bats
   install_uv
   local _python
   _python="$(install_python)"
@@ -122,10 +127,29 @@ function download() {
 }
 
 function extract_member() {
-  local _archive="$1" _member="$2" _directory
+  local _archive="$1" _member="$2"
+  printf '%s/%s\n' "$(extract_archive "$_archive")" "$_member"
+}
+
+function extract_archive() {
+  local _archive="$1" _directory
   _directory="$(mktemp -d "$WORK_DIR/extract.XXXXXX")"
   tar -xf "$_archive" -C "$_directory" --strip-components=1
-  printf '%s\n' "$_directory/$_member"
+  printf '%s\n' "$_directory"
+}
+
+# bats-core is plain Bash; its installer lays out bin/ and libexec/ under one prefix.
+function install_bats() {
+  if [[ -x "$BIN_DIR/bats" ]]; then
+    printf 'keep %s\n' "$BIN_DIR/bats"
+    return 0
+  fi
+  local _download="$WORK_DIR/bats.download" _source
+  download "$BATS_URL" "$_download"
+  _source="$(extract_archive "$_download")"
+  bash "$_source/install.sh" "$BATS_PREFIX" >/dev/null
+  ln -sf "$BATS_PREFIX/bin/bats" "$BIN_DIR/bats"
+  printf 'install %s\n' "$BIN_DIR/bats"
 }
 
 function install_uv() {

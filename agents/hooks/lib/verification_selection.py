@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import re
+import tomllib
 
 
 LANGUAGES = ("bats", "python", "javascript_typescript", "rust")
@@ -108,6 +109,29 @@ def is_test(rule: dict, filename: str) -> bool:
     )
 
 
+def pytest_testpaths(root: Path) -> tuple[str, ...]:
+    """Honor the project's declared pytest search paths so stray test copies stay out of verification."""
+    try:
+        options = tomllib.loads((root / "pyproject.toml").read_text()).get("tool", {}).get("pytest", {})
+        declared = options.get("ini_options", {}).get("testpaths")
+    except OSError, tomllib.TOMLDecodeError, AttributeError:
+        return ()
+    return tuple(str(Path(item)) for item in declared) if strings(declared) else ()
+
+
+def within_dirs(path: str, directories: tuple[str, ...]) -> bool:
+    """Decide whether a test path lives under one of the search directories."""
+    return any(directory == "." or Path(path).is_relative_to(directory) for directory in directories)
+
+
+def python_targets(root: Path, rule: dict, changed: tuple[str, ...]) -> set[str]:
+    """Search only the declared pytest paths and drop changed tests that live outside them."""
+    declared = pytest_testpaths(root)
+    if declared:
+        rule = {**rule, "test_dirs": declared}
+    return {path for path in matching_tests(root, rule, changed) if within_dirs(path, tuple(rule["test_dirs"]))}
+
+
 def matching_tests(root: Path, rule: dict, changed: tuple[str, ...]) -> set[str]:
     """Find basename matches while pruning dependency directories before traversal."""
     targets = {path for path in changed if is_test(rule, path) and (root / path).is_file()}
@@ -143,7 +167,8 @@ def language_plan(root: Path, rules: dict, changed: tuple[str, ...]) -> tuple[li
             if explicit[language]:
                 errors.append(f"Configured {language} tests require a project marker such as {markers[0]}.")
             continue
-        targets = explicit[language] | matching_tests(root, rule, changed)
+        matched = python_targets(root, rule, changed) if language == "python" else matching_tests(root, rule, changed)
+        targets = explicit[language] | matched
         if language == "bats":
             if not (root / "tests").is_dir():
                 continue
