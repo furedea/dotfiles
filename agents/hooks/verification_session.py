@@ -98,6 +98,12 @@ def dispatch(provider: str, event: str, payload: dict) -> dict[str, object]:
         prune()
     elif event == "session-start":
         prune()
+        return {
+            "hookSpecificOutput": {
+                "hookEventName": "SessionStart",
+                "additionalContext": f"Verification record: {record.directory}",
+            }
+        }
     return {}
 
 
@@ -118,12 +124,16 @@ def failure(event: str, payload: dict, error: Exception) -> dict[str, object]:
 
 def main() -> int:
     arguments = sys.argv[1:]
-    explicit = 2 <= len(arguments) <= 3 and arguments[0] == "verify" and arguments[1:-1] in ([], ["--force"])
+    query = len(arguments) == 2 and arguments[0] == "status"
+    explicit = query or (
+        2 <= len(arguments) <= 3 and arguments[0] == "verify" and arguments[1:-1] in ([], ["--force"])
+    )
     native = len(arguments) == 2 and arguments[0] in {"codex", "claude"} and arguments[1] in EVENTS
     if not (explicit or native):
         print(
             "Usage: verification_session.py codex|claude session-start|pre-tool-use|stop|session-end\n"
             "       verification_session.py verify [--force] /path/to/session-record\n"
+            "       verification_session.py status /path/to/session-record\n"
             "Native events read the provider hook input from stdin.",
             file=sys.stderr,
         )
@@ -134,8 +144,11 @@ def main() -> int:
     try:
         if explicit:
             record = load(Path(arguments[-1]))
-            result = session_gate.gate(record, force="--force" in arguments)
-            status = int(result.get("decision") == "block" or session_gate.unresolved(record))
+            if query:
+                result = session_gate.status(record)
+            else:
+                result = session_gate.gate(record, force="--force" in arguments)
+                status = int(result.get("decision") == "block" or session_gate.unresolved(record))
         else:
             payload = json.load(sys.stdin)
             if not isinstance(payload, dict):

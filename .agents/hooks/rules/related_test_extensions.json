@@ -56,6 +56,8 @@
     "tests/agents/hooks/test_verification_session.py"
   ],
   "agents/hooks/lib/session_*.py": [
+    "tests/agents/hooks/test_verification_status.py",
+    "tests/agents/hooks/test_verification_reuse.py",
     "tests/agents/hooks/test_session_snapshot.py",
     "tests/agents/hooks/test_session_store.py",
     "tests/agents/hooks/test_session_gate.py",
@@ -63,6 +65,8 @@
     "tests/agents/hooks/test_verification_session.py"
   ],
   "agents/hooks/verification_session.py": [
+    "tests/agents/hooks/test_verification_status.py",
+    "tests/agents/hooks/test_verification_reuse.py",
     "tests/agents/hooks/test_verification_session.py",
     "tests/agents/hooks/test_native_session.py",
     "tests/agents/hooks/test_session_gate.py"
@@ -217,6 +221,12 @@
   ],
   "tests/hermes/gateway_probe.py": [
     "tests/hermes/test_hermes_gateway.py"
+  ],
+  "agents/skills/**": [
+    "tests/agents/test_workflow_skill_layout.py"
+  ],
+  "agents/skill_rendering.json": [
+    "tests/agents/test_workflow_skill_layout.py"
   ],
   "agents/manifest.json": [
     "tests/agents/test_python_runtime.py"

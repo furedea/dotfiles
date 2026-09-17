@@ -28,7 +28,8 @@ Out of scope and delegated elsewhere:
   skill.
 - Language-specific documentation and code conventions → the relevant `*-style` skill and project
   rules.
-- Branches, commits, pushes, and pull requests → the `git-workflow` skill.
+- Issue publication and comment management → [issue-workflow](../issue-workflow/SKILL.md).
+- Git delivery → [git-workflow](../git-workflow/SKILL.md).
 
 Choosing an authoritative location does not by itself authorize creating or editing that artifact.
 Follow the user's request and repository-specific rules before making a change.
@@ -47,6 +48,12 @@ rationale, API reference, user guidance, migration guidance, or an operational r
 
 ## Information Placement
 
+- **Issue body** → this task's purpose, scope, acceptance criteria, and requirement sources.
+- **Plan comment** → this task's implementation approach, major steps, and important assumptions.
+  A plan is not the authority for requirements; existing formal specifications and user
+  requirements retain their authority under this skill's conflict policy.
+- **PR body** → actual changes, verification results, and material departures from the plan.
+  Link these artifacts to each other instead of manually maintaining the same details in all three.
 - **Requirement purpose, source, scope, or accepted risk** → user request, issue or reproduced
   defect, public interface, external standard, product record, or behavior intentionally preserved
   for compatibility. Preserve a link or identifier when durable traceability matters.
@@ -112,18 +119,20 @@ human review. A temporary implementation brief may record:
 - Planned verification and human review points.
 - Decisions still awaiting an authoritative home.
 
-Mark a repository brief with its temporary status and expiry event, such as task completion, PR
-merge, or a stated date. The authoritative source for each relevant fact overrides the brief if the
-two conflict.
+Create local plan files or working notes only when needed for the work. Mark each temporary file
+with its corresponding Issue or plan-comment reference and an exit condition, such as task
+completion or PR merge. The authoritative source for each fact overrides the brief on conflict.
 
-Before finishing, resolve the brief deliberately. Move each accepted item to the authoritative
-location defined under Information Placement, then handle non-authoritative remnants:
+At completion, move requirements, decisions, and unfinished work needed later to the appropriate
+locations under Information Placement. Confirm that preservation succeeded before deleting
+task-only work order, checklists, and obsolete notes. Retain notes while work is interrupted or
+preservation has failed. User-provided originals and existing permanent documents are never
+automatic deletion targets.
 
-- Remaining work → tracked issue or other project work system.
-- Work order or obsolete notes → delete, or archive with a clear non-authoritative status when the
-  project needs the review history.
-
-Do not let an implementation brief become a second specification.
+Do not require one commit to save a plan and another to delete it. Completed plan comments remain
+history, not current instructions for the next task. Do not let a brief become a second
+specification. Posting and updating Issue comments belongs to
+[issue-workflow](../issue-workflow/SKILL.md#plan-comments).
 
 ## Agent Entry Maps
 

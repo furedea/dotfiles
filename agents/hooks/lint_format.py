@@ -1,5 +1,5 @@
 #!/usr/bin/env -S python3 -IB
-"""Plan and run file quality checks using the provider's existing notification contract."""
+"""Run quality checks for files reported by Claude Code or Codex hooks."""
 
 from dataclasses import dataclass
 import json
@@ -9,6 +9,38 @@ import shutil
 import subprocess
 import sys
 import tempfile
+
+
+SCRIPT = Path(__file__).resolve()
+sys.path.insert(0, str(SCRIPT.parent / "lib"))
+
+import patch_input
+
+
+EXTENSIONS = {
+    ".py": "py",
+    ".sh": "sh",
+    ".js": "js",
+    ".ts": "js",
+    ".jsx": "js",
+    ".tsx": "js",
+    ".rs": "rs",
+    ".nix": "nix",
+    ".md": "md",
+    ".markdown": "md",
+    ".json": "json_toml",
+    ".toml": "json_toml",
+    ".yml": "gha",
+    ".yaml": "gha",
+    ".txt": "txt",
+    ".lua": "lua",
+    ".tex": "tex",
+    ".bib": "tex",
+    ".cls": "tex",
+    ".sty": "tex",
+}
+EDIT_TOOLS = frozenset({"Write", "Edit", "MultiEdit", "NotebookEdit", "apply_patch"})
+LANGUAGES = frozenset(EXTENSIONS.values())
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,7 +128,7 @@ def plan(kind: str, path: Path) -> tuple[Step, ...]:
 
 
 def context(message: str) -> dict[str, object]:
-    """Encode a Claude PostToolUse context without losing multiline diagnostics."""
+    """Encode one provider-compatible PostToolUse context object."""
     return {"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": message}}
 
 
@@ -162,23 +194,91 @@ def check_file(kind: str, path: Path) -> tuple[str, ...]:
     return tuple(messages)
 
 
+def _cwd(payload: dict) -> Path:
+    value = payload.get("cwd")
+    if not isinstance(value, str) or not value:
+        return Path.cwd().resolve()
+    return Path(value).expanduser().resolve()
+
+
+def _input_names(payload: dict) -> tuple[str, ...]:
+    values = payload.get("tool_input")
+    if not isinstance(values, dict):
+        return ()
+    tool = payload.get("tool_name")
+    command = values.get("command")
+    if isinstance(command, str) and (tool == "apply_patch" or not tool):
+        return patch_input.paths(command)
+    if tool not in EDIT_TOOLS and tool:
+        return ()
+    names: list[str] = []
+    file_path = values.get("file_path") or values.get("path")
+    if isinstance(file_path, str):
+        names.append(file_path)
+    edits = values.get("edits")
+    if isinstance(edits, list):
+        names.extend(
+            item.get("file_path")
+            for item in edits
+            if isinstance(item, dict) and isinstance(item.get("file_path"), str)
+        )
+    return tuple(names)
+
+
+def target_paths(payload: dict) -> tuple[Path, ...]:
+    """Resolve provider paths against payload cwd and remove duplicate targets."""
+    root = _cwd(payload)
+    paths: list[Path] = []
+    seen: set[str] = set()
+    for name in _input_names(payload):
+        path = Path(name).expanduser()
+        path = (path if path.is_absolute() else root / path).resolve()
+        key = os.path.normcase(os.fspath(path))
+        if key not in seen:
+            seen.add(key)
+            paths.append(path)
+    return tuple(paths)
+
+
+def diagnostics(payload: dict, kind: str | None = None) -> tuple[str, ...]:
+    """Run checks for existing supported targets selected from one hook payload."""
+    if not isinstance(payload, dict):
+        raise TypeError("hook payload must be an object")
+    messages: list[str] = []
+    for path in target_paths(payload):
+        language = EXTENSIONS.get(path.suffix.lower())
+        if language is None or (kind is not None and language != kind) or not path.is_file():
+            continue
+        messages.extend(check_file(language, path))
+    return tuple(messages)
+
+
+def emit(messages: tuple[str, ...]) -> None:
+    """Write one structured notification for all diagnostics, or remain silent."""
+    if messages:
+        print(json.dumps(context("\n\n".join(messages)), ensure_ascii=False))
+
+
 def main(arguments: list[str]) -> int:
-    """Run the selected language's PostToolUse check."""
-    if len(arguments) != 1 or arguments[0] in {"--help", "-h"}:
-        print("Usage: lint_format.py <language>", file=sys.stderr)
+    """Run the dispatcher, with an optional language filter kept for direct compatibility."""
+    if len(arguments) > 1 or any(value in {"--help", "-h"} for value in arguments):
+        print("Usage: lint_format.py [language]", file=sys.stderr)
+        return 1
+    kind = arguments[0] if arguments else None
+    if kind is not None and kind not in LANGUAGES:
+        print("Usage: lint_format.py [language]", file=sys.stderr)
         return 1
     try:
         payload = json.load(sys.stdin)
-        filename = payload.get("tool_input", {}).get("file_path")
-        if not filename:
-            return 0
-        path = Path(filename).absolute()
-        if not path.is_file():
-            print(f"File not found: {filename}", file=sys.stderr)
-            return 1
-        for message in check_file(arguments[0], path):
-            print(json.dumps(context(message), ensure_ascii=False))
-    except (ValueError, TypeError, OSError) as error:
+        if not isinstance(payload, dict):
+            raise TypeError("hook payload must be an object")
+        values = payload.get("tool_input") or {}
+        if kind is not None and isinstance(values, dict) and isinstance(values.get("file_path"), str):
+            if not target_paths(payload) or not target_paths(payload)[0].is_file():
+                print(f"File not found: {values['file_path']}", file=sys.stderr)
+                return 1
+        emit(diagnostics(payload, kind))
+    except (ValueError, TypeError, OSError, RuntimeError) as error:
         print(error, file=sys.stderr)
         return 1
     return 0

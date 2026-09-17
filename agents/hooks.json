@@ -26,7 +26,7 @@
         "matcher": "Bash",
         "hooks": [
           {
-            "command": "\"$HOME/.claude/hooks/audit_log.py\" tool",
+            "command": "\"$HOME/.claude/hooks/audit_log.py\" tool claude",
             "type": "command"
           },
           {
@@ -51,7 +51,7 @@
         "matcher": "Read",
         "hooks": [
           {
-            "command": "\"$HOME/.claude/hooks/audit_log.py\" tool",
+            "command": "\"$HOME/.claude/hooks/audit_log.py\" tool claude",
             "type": "command"
           },
           {
@@ -61,10 +61,10 @@
         ]
       },
       {
-        "matcher": "Write|Edit|MultiEdit",
+        "matcher": "Write|Edit",
         "hooks": [
           {
-            "command": "\"$HOME/.claude/hooks/audit_log.py\" tool",
+            "command": "\"$HOME/.claude/hooks/audit_log.py\" tool claude",
             "type": "command"
           },
           {
@@ -80,70 +80,19 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Write|Edit|MultiEdit",
+        "matcher": "Write|Edit",
         "hooks": [
           {
-            "command": "\"$HOME/.claude/hooks/lint_format.py\" py",
-            "if": "Write(*.py)|Edit(*.py)|MultiEdit(*.py)",
-            "type": "command"
-          },
-          {
-            "command": "\"$HOME/.claude/hooks/lint_format.py\" sh",
-            "if": "Write(*.sh)|Edit(*.sh)|MultiEdit(*.sh)",
-            "type": "command"
-          },
-          {
-            "command": "\"$HOME/.claude/hooks/lint_format.py\" js",
-            "if": "Write(*.js)|Edit(*.js)|MultiEdit(*.js)|Write(*.ts)|Edit(*.ts)|MultiEdit(*.ts)|Write(*.jsx)|Edit(*.jsx)|MultiEdit(*.jsx)|Write(*.tsx)|Edit(*.tsx)|MultiEdit(*.tsx)",
-            "type": "command"
-          },
-          {
-            "command": "\"$HOME/.claude/hooks/lint_format.py\" rs",
-            "if": "Write(*.rs)|Edit(*.rs)|MultiEdit(*.rs)",
-            "type": "command"
-          },
-          {
-            "command": "\"$HOME/.claude/hooks/lint_format.py\" nix",
-            "if": "Write(*.nix)|Edit(*.nix)|MultiEdit(*.nix)",
-            "type": "command"
-          },
-          {
-            "command": "\"$HOME/.claude/hooks/lint_format.py\" md",
-            "if": "Write(*.md)|Edit(*.md)|MultiEdit(*.md)|Write(*.markdown)|Edit(*.markdown)|MultiEdit(*.markdown)",
-            "type": "command"
-          },
-          {
-            "command": "\"$HOME/.claude/hooks/lint_format.py\" json_toml",
-            "if": "Write(*.json)|Edit(*.json)|MultiEdit(*.json)|Write(*.toml)|Edit(*.toml)|MultiEdit(*.toml)",
-            "type": "command"
-          },
-          {
-            "command": "\"$HOME/.claude/hooks/lint_format.py\" gha",
-            "if": "Write(*.yml)|Edit(*.yml)|MultiEdit(*.yml)|Write(*.yaml)|Edit(*.yaml)|MultiEdit(*.yaml)",
-            "type": "command"
-          },
-          {
-            "command": "\"$HOME/.claude/hooks/lint_format.py\" txt",
-            "if": "Write(*.txt)|Edit(*.txt)|MultiEdit(*.txt)",
-            "type": "command"
-          },
-          {
-            "command": "\"$HOME/.claude/hooks/lint_format.py\" lua",
-            "if": "Write(*.lua)|Edit(*.lua)|MultiEdit(*.lua)",
-            "type": "command"
-          },
-          {
-            "command": "\"$HOME/.claude/hooks/lint_format.py\" tex",
-            "if": "Write(*.tex)|Edit(*.tex)|MultiEdit(*.tex)|Write(*.bib)|Edit(*.bib)|MultiEdit(*.bib)|Write(*.cls)|Edit(*.cls)|MultiEdit(*.cls)|Write(*.sty)|Edit(*.sty)|MultiEdit(*.sty)",
+            "command": "\"$HOME/.claude/hooks/lint_format.py\"",
             "type": "command"
           }
         ]
       },
       {
-        "matcher": "Bash|Edit|MultiEdit|Write|WebFetch|WebSearch|Task|Agent",
+        "matcher": "Bash|Edit|Write|WebFetch|WebSearch|Task|Agent",
         "hooks": [
           {
-            "command": "\"$HOME/.claude/hooks/audit_log.py\" tool",
+            "command": "\"$HOME/.claude/hooks/audit_log.py\" tool claude",
             "type": "command"
           }
         ]
@@ -165,7 +114,7 @@
       {
         "hooks": [
           {
-            "command": "\"$HOME/.claude/hooks/audit_log.py\" denied",
+            "command": "\"$HOME/.claude/hooks/audit_log.py\" denied claude",
             "type": "command"
           }
         ]
@@ -176,7 +125,7 @@
         "matcher": "",
         "hooks": [
           {
-            "command": "\"$HOME/.claude/hooks/audit_log.py\" compaction",
+            "command": "\"$HOME/.claude/hooks/audit_log.py\" compaction claude",
             "type": "command"
           }
         ]
@@ -196,7 +145,7 @@
         "matcher": "compact|resume",
         "hooks": [
           {
-            "command": "\"$HOME/.claude/hooks/audit_log.py\" compaction",
+            "command": "\"$HOME/.claude/hooks/audit_log.py\" compaction claude",
             "type": "command"
           }
         ]
@@ -339,7 +288,7 @@
           "matcher": ".",
           "hooks": [
             {
-              "command": "\"$HOME/.claude/hooks/audit_log.py\" tool",
+              "command": "\"$HOME/.claude/hooks/audit_log.py\" tool codex",
               "statusMessage": "Logging tool call",
               "timeout": 10,
               "type": "command"

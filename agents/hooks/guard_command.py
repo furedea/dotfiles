@@ -71,6 +71,7 @@ def check(kind: str, payload: dict, directory: Path = ROOT) -> int:
             str(error),
             f"guard_{kind}_commands.sh",
             payload.get("session_id", "") if isinstance(payload, dict) else "",
+            payload=payload if isinstance(payload, dict) else None,
         )
         print(message, file=sys.stderr)
         return 2

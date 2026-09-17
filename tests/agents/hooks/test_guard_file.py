@@ -70,6 +70,7 @@ def test_harness_denial_records_metadata(run_cli: CliRunner, protected_policy: P
         SCRIPT,
         "harness",
         payload={
+            "cwd": str(isolated_project.parent / "worktree"),
             "session_id": "boundary-session",
             "tool_name": "Edit",
             "tool_input": {"file_path": "~/.claude/settings.json"},
@@ -81,8 +82,9 @@ def test_harness_denial_records_metadata(run_cli: CliRunner, protected_policy: P
     row = json.loads(logs[0].read_text())
     assert row["event"] == "Blocked"
     assert row["status"] == "blocked"
-    assert row["session"] == "boundary-session"
-    assert row["hook"] == "guard_harness_files.sh"
+    assert row["session"] != "boundary-session"
+    assert row["rule"] == "guard_harness_files.sh"
+    assert "input" not in row and "reason" not in row
 
 
 def stage(project: Path, *names: str) -> None:

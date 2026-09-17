@@ -9,7 +9,7 @@ Commit by intent, not by file.
 - Pure formatting belongs in `style:` when it would obscure a logic review.
 - Do not fabricate splits. One cohesive change should be one commit.
 
-Before an authorized commit, confirm relevant Green evidence using TSDD's Automatic Verification policy, including successful hook results. If the full suite is too expensive or unrelated failures exist, use the narrowest appropriate evidence and report the limitation.
+Before an authorized commit, follow [Local Verification Before Delivery](delivery.md#local-verification-before-delivery).
 
 ## Conventional Commits
 

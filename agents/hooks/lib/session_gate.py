@@ -31,33 +31,29 @@ def verify(record: SessionRecord, *, force: bool) -> dict[str, str]:
     started = time.monotonic()
     current = capture(record.root)
     state = record.results()
-    full = state.get("revalidate_all", False)
-    changed = tuple(path for path, _ in current.entries) if full else record.baseline.changed_paths(current)
-    if not changed and not full:
-        return save_skip(record, state, "no changes since session registration")
     try:
-        rules = check_selection.load_defaults(HOOK_ROOT / "rules/related_test_defaults.json")
-        invocations, errors = check_selection.language_plan(record.root, rules, changed)
+        invocations, skip_reason = selected_checks(record, current, state)
     except (OSError, ValueError, TypeError) as error:
         return configuration_failure(record, state, current.digest, str(error))
-    if errors:
-        return configuration_failure(record, state, current.digest, "\n".join(errors))
     if not invocations:
-        return save_skip(record, state, "no related test runner matched changed paths")
+        return save_skip(record, state, skip_reason)
     receipts: dict[str, dict] = {}
     lines: list[str] = []
     failed = new_failure = executed = passed = False
     inputs = verification_inputs(current)
     for invocation in invocations:
-        check_id = hashlib.sha256(json.dumps(invocation.arguments).encode()).hexdigest()
-        identity = check_identity(inputs, invocation)
-        previous = state["checks"].get(check_id)
-        if not force and valid_receipt(previous, identity):
+        check_id, identity, previous, reusable = receipt_state(state, inputs, invocation)
+        if not force and reusable:
             receipt = previous
         else:
             budget = min(check_budget(), max(0.01, GATE_BUDGET_SECONDS - (time.monotonic() - started)))
             result = execute(invocation, record.root, budget)
-            receipt = {"input": identity, "status": str(result.status), "summary": bounded_summary(result.summary)}
+            receipt = {
+                "input": identity,
+                "status": str(result.status),
+                "summary": bounded_summary(result.summary),
+                "scope": invocation.scope,
+            }
             if result.failed:
                 log = f"cwd: {record.root}\ncommand: {shlex.join(invocation.arguments)}\n\n{result.output}"
                 receipt["log"] = str(record.write_log(check_id, log))
@@ -89,6 +85,90 @@ def verify(record: SessionRecord, *, force: bool) -> dict[str, str]:
         else f"Verification reused · {outcome} · unchanged"
     )
     return {"systemMessage": "\n".join([message, *lines])}
+
+
+def selected_checks(
+    record: SessionRecord, current: Snapshot, state: dict
+) -> tuple[list[check_selection.Invocation], str]:
+    """Select the same scope for observation and execution without starting checks."""
+    full = state.get("revalidate_all", False)
+    changed = tuple(path for path, _ in current.entries) if full else record.baseline.changed_paths(current)
+    if not changed and not full:
+        return [], "no changes since session registration"
+    rules = check_selection.load_defaults(HOOK_ROOT / "rules/related_test_defaults.json")
+    invocations, errors = check_selection.language_plan(record.root, rules, changed)
+    if errors:
+        raise StateError("\n".join(errors))
+    return invocations, "no related test runner matched changed paths" if not invocations else ""
+
+
+def receipt_state(state: dict, inputs: str, invocation: check_selection.Invocation) -> tuple[str, str, dict, bool]:
+    """Use one fingerprint and receipt validation contract for status and verify."""
+    check_id = hashlib.sha256(json.dumps(invocation.arguments).encode()).hexdigest()
+    identity = check_identity(inputs, invocation)
+    previous = state["checks"].get(check_id)
+    reusable = valid_receipt(previous, identity)
+    return check_id, identity, previous or {}, reusable
+
+
+def status(record: SessionRecord) -> dict:
+    """Observe receipts and applicability without writes, expiry renewal, or check execution."""
+    state = record.results()
+    for receipt in state["checks"].values():
+        valid_receipt(receipt, "")
+    rows = {
+        key: {
+            "id": key,
+            "status": receipt["status"],
+            "scope": receipt.get("scope"),
+            "summary": bounded_summary(receipt["summary"]),
+            "applicability": "unknown",
+        }
+        for key, receipt in state["checks"].items()
+    }
+    result = {"worktree": str(record.root), "state": "unknown", "checks": []}
+    try:
+        current = capture(record.root)
+        invocations, skip_reason = selected_checks(record, current, state)
+        inputs = verification_inputs(current)
+        for row in rows.values():
+            row["applicability"] = "not_applicable"
+        selected = []
+        for invocation in invocations:
+            check_id, _, previous, reusable = receipt_state(state, inputs, invocation)
+            row = {
+                "id": check_id,
+                "status": previous.get("status", "not_run"),
+                "scope": invocation.scope,
+                "summary": bounded_summary(previous.get("summary", "")),
+                "applicability": "current" if reusable else "stale" if previous else "not_run",
+            }
+            rows[check_id] = row
+            selected.append(row)
+        result["state"] = current_status(selected)
+        if skip_reason:
+            result["reason"] = skip_reason
+        if capture(record.root).digest != current.digest or verification_inputs(current) != inputs:
+            raise StateError("Inputs changed during status observation")
+        if record.results() != state:
+            raise StateError("Verification results changed during status observation")
+    except (OSError, ValueError, TypeError) as error:
+        result.update(state="unknown", reason=str(error))
+        for row in rows.values():
+            row["applicability"] = "unknown"
+    result["checks"] = list(rows.values())
+    return result
+
+
+def current_status(rows: list[dict]) -> str:
+    if not rows:
+        return "not_applicable"
+    for applicability in ("stale", "not_run"):
+        if any(row["applicability"] == applicability for row in rows):
+            return applicability
+    if any(row["status"] not in {Status.PASSED, Status.SKIPPED} for row in rows):
+        return "failed"
+    return "passed" if any(row["status"] == Status.PASSED for row in rows) else "skipped"
 
 
 def save_skip(record: SessionRecord, state: dict, reason: str) -> dict[str, str]:

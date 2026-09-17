@@ -177,8 +177,10 @@ def test_lint_resolves_payload_cwd_and_suppresses_noise(
     assert result.returncode == 0
     assert result.stderr == ""
     if fail:
-        assert "F821" in result.stdout and str(project / "x.py") in result.stdout
-        assert "hookSpecificOutput" not in result.stdout
+        row = json.loads(result.stdout)
+        assert row["hookSpecificOutput"]["hookEventName"] == "PostToolUse"
+        assert "F821" in row["hookSpecificOutput"]["additionalContext"]
+        assert str(project / "x.py") in row["hookSpecificOutput"]["additionalContext"]
     else:
         assert result.stdout == ""
     assert "environment noise" not in result.stdout

@@ -8,6 +8,14 @@
 - When writing commit messages, follow Conventional Commits rules
 - Implement based on Test-Specification-Driven Development (TSDD)
 
+# Development Workflow
+
+For implementation, use `issue-workflow` → `git-workflow` → `tsdd` →
+`git-workflow` → `issue-workflow` for issue/plan setup, branching, implementation,
+delivery, and status reconciliation, respectively.
+
+Consult skills as needed and apply only the stages relevant to the request.
+
 # Coding Guidelines
 
 Existing project style takes precedence over these rules.

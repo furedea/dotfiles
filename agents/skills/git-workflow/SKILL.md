@@ -1,14 +1,18 @@
 ---
 name: git-workflow
 description: >
-    Git workflow for selecting a branch before edits and carrying out authorized commits, pushes,
-    and pull requests, including organizing mixed pending changes. Use for repository changes
-    or Git delivery tasks.
+    Use for repository changes and Git delivery: safely organize changes into history and carry
+    them through review and integration, including branch/worktree selection, commit boundaries,
+    authorized push and PR updates, delivery verification, CI/review conditions, and permitted
+    merge and Git cleanup.
 ---
 
 # Git Workflow
 
-This skill governs the default Git shape of implementation work: which branch to use, how to name it, how to cut commits, and when it is safe to push or open a PR.
+This skill owns safe change history and delivery through review and integration: branch and
+worktree selection, commit scope and composition, push and PR creation or updates, delivery
+verification and CI/review conditions, and authorized merge and Git cleanup. Receive the Issue
+number and plan URL from issue-workflow and associate them with the branch or PR as appropriate.
 
 ## Operating Rules
 
@@ -27,11 +31,12 @@ not merging.
 
 ## Task-Specific References
 
-| Task                                                    | Read                                             |
-| ------------------------------------------------------- | ------------------------------------------------ |
-| Selecting or changing the checkout, worktree, or branch | [Branches and worktrees](references/branches.md) |
-| Planning or preparing authorized commits                | [Commits](references/commits.md)                 |
-| Preparing an authorized push, pull request, or rebase   | [Delivery](references/delivery.md)               |
+| Task                                                              | Read                                               |
+| ----------------------------------------------------------------- | -------------------------------------------------- |
+| Issue creation/reuse, Issue content, and plan comments            | [issue-workflow](../issue-workflow/SKILL.md)       |
+| Selecting or changing the checkout, worktree, or branch           | [Branches and worktrees](references/branches.md)   |
+| Planning or preparing authorized commits                          | [Commits](references/commits.md)                   |
+| Preparing an authorized push, pull request, or rebase             | [Delivery](references/delivery.md)                 |
 | Publishing a stacked or red-green pull request the user asked for | [Stacked pull requests](references/stacked_prs.md) |
 
 Read only the reference needed for the current Git operation. Continue to use the selected

@@ -143,13 +143,36 @@ the current tests.
 
 ## Automatic Verification
 
-Treat repository hooks as verification gates. Do not manually repeat successful tests, lint, or
-formatting solely to duplicate a hook result.
+Prefer repository-defined hooks, pre-commit, and shared verification for format, lint, and final
+checks. Do not manually repeat an equivalent check already successful for the current inputs
+merely for reassurance or to supply a final report. A hook scheduled to run later is not present
+success evidence; silence alone does not prove that a check ran or passed.
 
-Run the narrowest relevant test explicitly when an intermediate observation is needed to confirm
-Red or Green before proceeding, when diagnosing a failure, or when the hook did not run or does not
-cover the required scope. Use the repository's configured final gates rather than inventing a
-parallel verification workflow. Report which evidence came from hooks and any known scope limits.
+Run checks manually when needed for:
+
+- Reproduction or Red for the expected reason.
+- Green evidence needed to decide the next implementation step.
+- Failure diagnosis or narrowing its scope.
+- Automatic checks that did not run or did not cover the required scope.
+- No verification result applicable to the current inputs.
+- Requirements the default checks cannot establish.
+- A user's request for a particular verification.
+
+Use the smallest scope that meets the purpose. Narrow intermediate tests and a broad final
+regression suite have different purposes and coverage; they are not automatically duplicates.
+
+Reuse evidence only when the tested content, check scope, relevant configuration, and execution
+environment match. Reassess freshness after code edits, automatic formatting, dependency or
+configuration changes. Distinguish passed, failed, not run, not applicable, and unavailable.
+Zero tests or all-skipped tests do not satisfy requested verification. Local success never
+bypasses mandatory CI, pre-commit, or review.
+
+For final verification, use the shared entry point specified by the delivery procedure, rather
+than rebuilding the same checks as a separate command sequence. Use its status query only when
+result freshness is unclear; do not require it after every operation or immediately before verify.
+Direct execution of narrow tests for intermediate decisions is allowed. Report evidence sources
+and known coverage limits. Concrete CLI syntax and delivery ordering belong to
+[Git Delivery](../git-workflow/references/delivery.md#local-verification-before-delivery).
 
 ## Type-Driven Design
 

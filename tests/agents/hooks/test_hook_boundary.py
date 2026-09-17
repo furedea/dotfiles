@@ -56,11 +56,13 @@ def test_formatter_routes_supported_extensions(suffix: str, kind: str) -> None:
     assert hook_adapter.EXTENSIONS[Path("file" + suffix).suffix] == kind
 
 
-def test_translated_command_preserves_session_without_extra_tool_fields() -> None:
+def test_translated_command_preserves_session_and_provider_context() -> None:
     assert hook_adapter.translated({"session_id": "s", "untrusted": "ignored"}, "Bash", {"command": "git status"}) == {
         "tool_name": "Bash",
         "tool_input": {"command": "git status"},
         "session_id": "s",
+        "cwd": "",
+        "provider": "codex",
     }
 
 
@@ -84,13 +86,14 @@ def test_content_source_keeps_both_write_fields() -> None:
 def test_commit_denial_reports_filenames_without_file_bodies(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     assert files.__file__ is not None
     monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(tmp_path))
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
     monkeypatch.delenv("AGENT_SECRET_COMMIT_POLICY", raising=False)
     (tmp_path / ".env").write_text("non-sensitive test fixture\n")
     for arguments in (["git", "init", "--quiet"], ["git", "add", "--", ".env"]):
         subprocess.run(arguments, cwd=tmp_path, check=True, capture_output=True)
     result = subprocess.run(
         [sys.executable, "-I", "-B", files.__file__, "commit"],
-        input=json.dumps({"tool_input": {"command": "git commit"}}),
+        input=json.dumps({"cwd": str(tmp_path / "worktree"), "tool_input": {"command": "git commit"}}),
         cwd=tmp_path,
         text=True,
         capture_output=True,
@@ -98,34 +101,39 @@ def test_commit_denial_reports_filenames_without_file_bodies(tmp_path: Path, mon
         check=False,
     )
     assert result.returncode == 2
-    logs = list((tmp_path / "docs/logs/audit").glob("*.jsonl"))
+    logs = list((tmp_path / "state/agent-harness/audit").glob("*/*/*.jsonl"))
     assert len(logs) == 1
     row = json.loads(logs[0].read_text())
-    assert ".env" in result.stderr and ".env" in row["reason"]
-    assert "Environment files may contain credentials." in row["reason"]
+    assert ".env" in result.stderr
+    assert row["rule"] == "guard_secret_commit.sh"
+    assert "reason" not in row and "input" not in row
     assert "non-sensitive test fixture" not in result.stdout + result.stderr + logs[0].read_text()
 
 
 def test_blocked_audit_rows_preserve_schema_and_append(tmp_path: Path, mocker: MockerFixture) -> None:
-    mocker.patch.dict("os.environ", {"CLAUDE_PROJECT_DIR": str(tmp_path)})
+    mocker.patch.dict(
+        "os.environ",
+        {"CLAUDE_PROJECT_DIR": str(tmp_path / "worktree"), "XDG_STATE_HOME": str(tmp_path / "state")},
+    )
     audit.blocked("Bash", "first", "reason", "hook.sh", "session")
     audit.blocked("Bash", "second", "reason", "hook.sh", "")
-    paths = list((tmp_path / "docs/logs/audit").glob("*.jsonl"))
-    assert len(paths) == 1
-    rows = [json.loads(line) for line in paths[0].read_text().splitlines()]
-    assert [row["input"] for row in rows] == ["first", "second"]
-    assert rows[0] | {"ts": "time"} == {
+    paths = list((tmp_path / "state/agent-harness/audit").glob("*/*/*.jsonl"))
+    assert len(paths) == 2
+    rows = [json.loads(line) for path in paths for line in path.read_text().splitlines()]
+    assert all("input" not in row and "reason" not in row for row in rows)
+    assert rows[0] | {"ts": "time", "worktree": "hash", "session": "hash"} == {
         "ts": "time",
         "event": "Blocked",
         "status": "blocked",
+        "provider": "claude",
         "tool": "Bash",
-        "input": "first",
-        "reason": "reason",
-        "hook": "hook.sh",
-        "session": "session",
+        "targets": [],
+        "rule": "hook.sh",
+        "worktree": "hash",
+        "session": "hash",
     }
     assert rows[0]["ts"].endswith("Z")
-    assert rows[1]["session"] == ""
+    assert {row["session"] for row in rows} == {"unknown", audit._session("session")}
 
 
 @pytest.mark.parametrize(
@@ -176,7 +184,13 @@ def test_shell_translation_calls_shared_policy(
     monkeypatch.setattr(target, "check", check)
     payload = {"tool_input": {field: "git status"}, "session_id": "session-one"}
     assert hook_adapter.dispatch("shell", [mode], payload) == 2
-    translated = {"tool_name": "Bash", "tool_input": {"command": "git status"}, "session_id": "session-one"}
+    translated = {
+        "tool_name": "Bash",
+        "tool_input": {"command": "git status"},
+        "session_id": "session-one",
+        "cwd": "",
+        "provider": "codex",
+    }
     if mode == "git":
         check.assert_called_once_with(translated)
     else:

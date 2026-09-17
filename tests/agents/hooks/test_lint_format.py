@@ -114,6 +114,47 @@ def test_empty_input_does_not_execute_quality_tools(mocker: MockerFixture, capsy
     assert capsys.readouterr().out == ""
 
 
+def test_dispatcher_selects_files_from_a_codex_patch_and_deduplicates(tmp_path: Path, mocker: MockerFixture) -> None:
+    first = tmp_path / "src" / "one.py"
+    second = tmp_path / "src" / "two.sh"
+    first.parent.mkdir()
+    first.touch()
+    second.touch()
+    check = mocker.patch.object(lint_format, "check_file", return_value=())
+    payload = {
+        "cwd": str(tmp_path),
+        "tool_name": "apply_patch",
+        "tool_input": {
+            "command": "*** Begin Patch\n*** Update File: src/one.py\n*** Update File: src/one.py\n"
+            "*** Update File: src/two.sh\n*** Update File: src/missing.py\n*** End Patch"
+        },
+    }
+
+    assert lint_format.diagnostics(payload) == ()
+    assert check.call_args_list == [mocker.call("py", first), mocker.call("sh", second)]
+
+
+def test_dispatcher_uses_only_the_file_tool_path(tmp_path: Path, mocker: MockerFixture) -> None:
+    path = tmp_path / "source.py"
+    path.touch()
+    check = mocker.patch.object(lint_format, "check_file", return_value=())
+
+    assert (
+        lint_format.diagnostics({"tool_name": "Write", "tool_input": {"file_path": str(path), "content": "secret"}})
+        == ()
+    )
+    check.assert_called_once_with("py", path)
+
+
+def test_dispatcher_skips_unsupported_files(tmp_path: Path, mocker: MockerFixture) -> None:
+    path = tmp_path / "archive.bin"
+    path.touch()
+    check = mocker.patch.object(lint_format, "check_file", return_value=())
+
+    assert lint_format.diagnostics({"tool_name": "Write", "tool_input": {"file_path": str(path)}}) == ()
+    check.assert_not_called()
+
+
 def test_formatted_replacement_preserves_file_permissions(tmp_path: Path) -> None:
     target = tmp_path / "article.md"
     target.write_text("before")
