@@ -20,28 +20,7 @@ import patch_input
 import secret_path_policy
 import shell_syntax
 
-EXTENSIONS = {
-    ".py": "py",
-    ".sh": "sh",
-    ".js": "js",
-    ".ts": "js",
-    ".jsx": "js",
-    ".tsx": "js",
-    ".rs": "rs",
-    ".nix": "nix",
-    ".md": "md",
-    ".markdown": "md",
-    ".json": "json_toml",
-    ".toml": "json_toml",
-    ".yml": "gha",
-    ".yaml": "gha",
-    ".txt": "txt",
-    ".lua": "lua",
-    ".tex": "tex",
-    ".bib": "tex",
-    ".cls": "tex",
-    ".sty": "tex",
-}
+EXTENSIONS = lint_format.EXTENSIONS
 
 
 def shared_directory() -> Path:
@@ -49,17 +28,18 @@ def shared_directory() -> Path:
 
 
 def translated(payload: dict, tool: str, values: dict) -> dict:
-    return {"tool_name": tool, "tool_input": values, "session_id": payload.get("session_id") or ""}
+    return {
+        "tool_name": tool,
+        "tool_input": values,
+        "session_id": payload.get("session_id") or "",
+        "cwd": payload.get("cwd") or "",
+        "provider": "codex",
+    }
 
 
 def lint(payload: dict) -> int:
-    """Report shared quality diagnostics directly in Codex's plain-text format."""
-    for name in patch_input.paths((payload.get("tool_input") or {}).get("command") or ""):
-        path = Path(name).absolute()
-        kind = EXTENSIONS.get(path.suffix)
-        if kind and path.is_file():
-            for message in lint_format.check_file(kind, path):
-                print(message)
+    """Report shared quality diagnostics using Codex's PostToolUse JSON contract."""
+    lint_format.emit(lint_format.diagnostics(payload))
     return 0
 
 
@@ -97,6 +77,8 @@ def check_paths(mode: str, payload: dict) -> int:
                 f"{rule['reason']}: {value}",
                 "adapt_guard_secret_paths.sh",
                 payload.get("session_id") or "",
+                payload=payload,
+                targets=() if mode == "command" else (value,),
             )
             raise ValueError(
                 f"secret path policy matched.\n\nPath: {value}\nPattern: {rule['pattern']}\n\nWhy:\n  {rule['reason']}"

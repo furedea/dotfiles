@@ -13,10 +13,11 @@ lint_format = load_script_module("agents/hooks/lint_format.py", "lint_format")
 
 
 def additional_context(output: str) -> str:
-    contexts = [json.loads(line)["hookSpecificOutput"] for line in output.splitlines()]
-    assert contexts
-    assert all(context["hookEventName"] == "PostToolUse" for context in contexts)
-    return "\n".join(context["additionalContext"] for context in contexts)
+    rows = output.splitlines()
+    assert len(rows) == 1
+    context = json.loads(rows[0])["hookSpecificOutput"]
+    assert context["hookEventName"] == "PostToolUse"
+    return context["additionalContext"]
 
 
 @pytest.mark.integration
@@ -74,7 +75,7 @@ def test_missing_file_events_are_quiet(run_cli: CliRunner, kind: str) -> None:
     assert result.stdout == result.stderr == ""
 
 
-@pytest.mark.parametrize("arguments,payload,diagnostic", [([], "", "Usage:"), (["py"], "{", "")])
+@pytest.mark.parametrize("arguments,payload,diagnostic", [(["--help"], "", "Usage:"), (["py"], "{", "")])
 def test_invalid_lint_format_invocations_fail(
     run_cli: CliRunner, arguments: list[str], payload: str, diagnostic: str
 ) -> None:
@@ -174,6 +175,28 @@ def test_language_formatter_failure_is_not_hidden(
     assert "failed" in context
     assert str(path) in context
     assert message in context
+
+
+def test_multiple_diagnostics_are_one_valid_post_tool_output(
+    run_cli: CliRunner, executable: StubWriter, tmp_path: Path
+) -> None:
+    executable(
+        "ruff",
+        """
+        import sys
+        print("F401 first")
+        print("F821 second")
+        sys.exit(1)
+        """,
+    )
+    path = tmp_path / "source.py"
+    path.touch()
+    result = run_cli("agents/hooks/lint_format.py", "py", payload={"tool_input": {"file_path": str(path)}})
+    assert result.returncode == 0
+    row = json.loads(result.stdout)
+    assert row["hookSpecificOutput"]["hookEventName"] == "PostToolUse"
+    assert "F401 first" in row["hookSpecificOutput"]["additionalContext"]
+    assert "F821 second" in row["hookSpecificOutput"]["additionalContext"]
 
 
 @pytest.mark.parametrize("status", [0, 1])

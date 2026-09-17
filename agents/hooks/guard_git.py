@@ -35,6 +35,7 @@ def check(payload: dict) -> int:
             message.splitlines()[0],
             "guard_dangerous_git.sh",
             payload.get("session_id", "") if isinstance(payload, dict) else "",
+            payload=payload if isinstance(payload, dict) else None,
         )
         print(message, file=sys.stderr)
         return 2

@@ -142,7 +142,15 @@ def scan_content(mode: str, payload: dict, directory: Path) -> None:
         "UserPromptSubmit" if mode == "prompt" else "Read" if mode == "read" else payload.get("tool_name") or "Write"
     )
     summary = "<prompt body elided>" if mode == "prompt" else values.get("file_path") or ""
-    audit_log.blocked(tool, summary, reason, "guard_secret_content.sh", payload.get("session_id") or "")
+    audit_log.blocked(
+        tool,
+        summary,
+        reason,
+        "guard_secret_content.sh",
+        payload.get("session_id") or "",
+        payload=payload,
+        targets=() if mode == "prompt" else ((summary,) if summary else ()),
+    )
     if mode == "prompt":
         decision = {"decision": "block", "reason": f"BLOCKED: {reason}. Prompt contains sensitive information."}
     else:
@@ -181,7 +189,15 @@ def check(mode: str, payload: dict, directory: Path = ROOT) -> int:
             return 0
     except (OSError, ValueError, TypeError, AttributeError, subprocess.CalledProcessError) as error:
         reason = str(error)
-    audit_log.blocked(tool, value, reason, hook, payload.get("session_id", "") if isinstance(payload, dict) else "")
+    audit_log.blocked(
+        tool,
+        value,
+        reason,
+        hook,
+        payload.get("session_id", "") if isinstance(payload, dict) else "",
+        payload=payload if isinstance(payload, dict) else None,
+        targets=() if mode == "commit" else ((value,) if value else ()),
+    )
     print(f"BLOCKED: {reason}", file=sys.stderr)
     return 2
 
