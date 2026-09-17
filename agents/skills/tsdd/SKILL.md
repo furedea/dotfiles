@@ -20,9 +20,9 @@ Out of scope and delegated elsewhere:
   and package managers → the relevant `*-style` skill and project coding rules.
 - Branches, commit authorization and boundaries, commit messages, pushes, and pull requests → the
   `git-workflow` skill.
-- Project and CI bootstrap before this methodology applies → the relevant `*-init` skill.
+- Project and CI bootstrap before this methodology applies → the `project-setup` skill.
 - Information authority, durable prose placement, duplication, traceability, temporary briefs, and
-  agent entry maps → the `information-authority` skill.
+  agent entry maps → the `source-of-truth` skill.
 - Changes that introduce, reverse, or review a broad decision or durable constraint → the `adr`
   skill, which owns decision selection, repository inspection, layout, status, supersession,
   templates, and workflow.
@@ -60,7 +60,7 @@ Before choosing a development path:
 3. Determine whether current behavior has a real gap from that outcome.
 
 Use an independent requirement source, such as an explicit user request or tracked defect. Apply
-the `information-authority` skill when its authoritative home, durable traceability, or relationship
+the `source-of-truth` skill when its authoritative home, durable traceability, or relationship
 to a conflicting source requires judgment. A test name, proposed implementation, internal
 structure, coverage target, or desire to demonstrate TDD does not create a requirement.
 

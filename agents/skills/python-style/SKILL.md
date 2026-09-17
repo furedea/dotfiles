@@ -2,7 +2,7 @@
 name: python-style
 description: >
     User-specific conventions for designing, writing, testing, and reviewing code in existing
-    Python projects. Initial project scaffolding belongs to nix-dev-init.
+    Python projects. Initial project scaffolding belongs to project-setup.
 ---
 
 # Python Coding Style Guidelines
@@ -11,7 +11,7 @@ description: >
 
 This skill governs **code written inside an already-bootstrapped Python project** — class design, test authoring, refactoring, code review, naming, imports, docstrings.
 
-Requested project initialization or Nix environment setup belongs to `nix-dev-init`. Apply these
+Requested project initialization or Nix environment setup belongs to `project-setup`. Apply these
 development conventions once the project's selected Python environment and required dependencies
 are usable. Routine Python edits do not authorize introducing Nix or changing GitHub settings;
 preserve the existing environment workflow.

@@ -1,11 +1,11 @@
 ---
-name: nix-dev-init
+name: project-setup
 description: >
     Set up per-project Nix development environments and create or configure GitHub repositories
     using this user's templates and repo commands. For requested setup, not routine code edits.
 ---
 
-# Project Setup with Nix
+# Project Setup
 
 ## Scope and Routing
 

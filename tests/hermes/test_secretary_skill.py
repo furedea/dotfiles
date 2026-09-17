@@ -13,13 +13,13 @@ SKILL_DIRECTORY = REPO_ROOT / "hermes/secretary/skills/secretary"
 @pytest.mark.parametrize(
     "name",
     [
+        "ai-research-digest",
         "apple-mail",
         "calendar-briefing",
         "google-calendar",
         "mail-triage",
         "morning-briefing",
-        "research-digest",
-        "tech-digest",
+        "toolchain-digest",
     ],
 )
 def test_secretary_exposes_each_focused_skill(name: str) -> None:

@@ -84,6 +84,6 @@ Summarize:
 - Remaining unknowns, assumptions, and their consequences.
 
 Ask the user to confirm or correct that summary. The summary is temporary deliberation, not an
-authoritative repository artifact. If the user asks to preserve it, use `information-authority` to
+authoritative repository artifact. If the user asks to preserve it, use `source-of-truth` to
 place each durable fact appropriately. If implementation follows, apply `tsdd` and the relevant
 implementation skills.

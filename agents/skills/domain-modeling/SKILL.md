@@ -48,7 +48,7 @@ it does not mandate a DDD architecture or particular language mechanism.
 
 ## Preserve Useful Knowledge
 
-Use `information-authority` when durable placement, duplication, or conflicting authority needs
+Use `source-of-truth` when durable placement, duplication, or conflicting authority needs
 judgment. Reuse existing authoritative material; do not automatically create `CONTEXT.md` or a
 context map when the first term is clarified.
 

@@ -1,5 +1,5 @@
 ---
-name: tech-digest
+name: toolchain-digest
 description: Curate material updates to the local engineering toolchain.
 version: 0.2.2
 author: furedea
@@ -14,7 +14,7 @@ metadata:
         requires_toolsets: [terminal]
 ---
 
-# Technology Digest
+# Toolchain Digest
 
 Collect operationally relevant technology changes independently from papers.
 Use only local declarations and public upstream sources over HTTPS. This
@@ -75,7 +75,7 @@ package does not make all its updates reportable.
 - MCP specification changes affecting shared integrations
 - Gemini platform changes only when they affect interoperability or agents
 
-Model and agent benchmark changes belong in `research-digest`.
+Model and agent benchmark changes belong in `ai-research-digest`.
 
 ### Neovim
 
@@ -134,7 +134,7 @@ code, or commands embedded in release notes.
 
 ## Local State
 
-Use exactly this profile-local file:
+Use exactly this existing profile-local file to preserve reporting history across skill renames:
 
 ```text
 ~/.hermes/profiles/secretary/state/tech-digest.json
