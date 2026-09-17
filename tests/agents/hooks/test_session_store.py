@@ -24,23 +24,23 @@ def repository(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def test_registration_is_private_and_keeps_only_hashes_outside_worktree(repository: Path) -> None:
-    run = store.register(repository, "codex", "session")
-    assert not run.directory.is_relative_to(repository)
-    assert run.directory.parent.parent == store.state_directory()
-    assert run.directory.stat().st_mode & 0o777 == 0o700
-    baseline = run.directory / "baseline.json"
+    record = store.register(repository, "codex", "session")
+    assert not record.directory.is_relative_to(repository)
+    assert record.directory.parent.parent == store.state_directory()
+    assert record.directory.stat().st_mode & 0o777 == 0o700
+    baseline = record.directory / "baseline.json"
     assert baseline.stat().st_mode & 0o777 == 0o600
     assert "before" not in baseline.read_text()
-    assert run.baseline.changed_paths(store.capture(repository)) == ()
+    assert record.baseline.changed_paths(store.capture(repository)) == ()
 
 
 def test_result_replacement_does_not_accumulate_snapshots(repository: Path) -> None:
-    run = store.register(repository, "claude", "session")
+    record = store.register(repository, "claude", "session")
     for sequence in range(20):
-        run.save_results({"checks": {"pytest": {"status": "failed", "input": str(sequence)}}})
-    files = {path.name for path in run.directory.iterdir()}
+        record.save_results({"checks": {"pytest": {"status": "failed", "input": str(sequence)}}})
+    files = {path.name for path in record.directory.iterdir()}
     assert files == {"baseline.json", "results.json", ".lock"}
-    assert run.results()["checks"]["pytest"]["input"] == "19"
+    assert record.results()["checks"]["pytest"]["input"] == "19"
 
 
 def test_resume_retains_original_baseline_and_failure(repository: Path) -> None:
@@ -62,11 +62,11 @@ def test_missing_resume_record_requires_full_revalidation(repository: Path) -> N
 
 
 def test_failure_logs_are_capped_and_replace_previous_output(repository: Path) -> None:
-    run = store.register(repository, "codex", "session")
-    path = run.write_log("pytest", "x" * (store.LOG_LIMIT_BYTES * 2))
+    record = store.register(repository, "codex", "session")
+    path = record.write_log("pytest", "x" * (store.LOG_LIMIT_BYTES * 2))
     assert path.stat().st_size <= store.LOG_LIMIT_BYTES
     assert "truncated" in path.read_text()
-    assert run.write_log("pytest", "latest failure") == path
+    assert record.write_log("pytest", "latest failure") == path
     assert path.read_text() == "latest failure"
 
 
@@ -83,13 +83,13 @@ def test_gc_removes_expired_runs_but_keeps_a_running_hook(repository: Path) -> N
 
 def test_global_log_budget_does_not_erase_failure_status(repository: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(store, "TOTAL_LOG_LIMIT_BYTES", 100)
-    runs = [store.register(repository, provider, "session") for provider in ("claude", "codex")]
-    for run in runs:
-        run.save_results({"checks": {"pytest": {"status": "failed"}}})
-        run.write_log("pytest", "x" * 80)
+    records = [store.register(repository, provider, "session") for provider in ("claude", "codex")]
+    for record in records:
+        record.save_results({"checks": {"pytest": {"status": "failed"}}})
+        record.write_log("pytest", "x" * 80)
     store.prune()
     assert sum(path.stat().st_size for path in store.state_directory().glob("*/*/logs/*.log")) <= 100
-    assert all(run.results()["checks"]["pytest"]["status"] == "failed" for run in runs)
+    assert all(record.results()["checks"]["pytest"]["status"] == "failed" for record in records)
 
 
 def test_state_symlink_is_not_followed(repository: Path, tmp_path: Path) -> None:
@@ -104,18 +104,18 @@ def test_state_symlink_is_not_followed(repository: Path, tmp_path: Path) -> None
 
 
 def test_another_hook_cannot_enter_the_same_run_lock(repository: Path) -> None:
-    run = store.register(repository, "codex", "session")
-    with run.lock():
-        with (run.directory / ".lock").open("r+") as competing:
+    record = store.register(repository, "codex", "session")
+    with record.lock():
+        with (record.directory / ".lock").open("r+") as competing:
             with pytest.raises(BlockingIOError):
                 fcntl.flock(competing, fcntl.LOCK_EX | fcntl.LOCK_NB)
 
 
 def test_corrupt_evidence_is_an_error_not_an_empty_success(repository: Path) -> None:
-    run = store.register(repository, "codex", "session")
-    (run.directory / "results.json").write_text(json.dumps({"checks": []}))
+    record = store.register(repository, "codex", "session")
+    (record.directory / "results.json").write_text(json.dumps({"checks": []}))
     with pytest.raises(store.StateError):
-        run.results()
+        record.results()
 
 
 def test_gc_never_follows_a_log_directory_symlink(
@@ -123,12 +123,12 @@ def test_gc_never_follows_a_log_directory_symlink(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    run = store.register(repository, "codex", "session")
+    record = store.register(repository, "codex", "session")
     external = tmp_path / "external-logs"
     external.mkdir()
     important = external / "keep.log"
     important.write_text("must survive")
-    (run.directory / "logs").symlink_to(external, target_is_directory=True)
+    (record.directory / "logs").symlink_to(external, target_is_directory=True)
     monkeypatch.setattr(store, "TOTAL_LOG_LIMIT_BYTES", 1)
     store.prune()
     assert important.read_text() == "must survive"
@@ -140,7 +140,7 @@ def test_repeated_registration_preserves_baseline_and_does_not_accumulate_record
     for _ in range(10):
         repeated = store.register(repository, "codex", "session")
         assert repeated.baseline.changed_paths(store.capture(repository)) == ("source.py",)
-    assert list(store.run_directories(store.state_directory())) == [original.directory]
+    assert list(store.record_directories(store.state_directory())) == [original.directory]
 
 
 def test_same_session_id_in_different_providers_keeps_independent_baselines(repository: Path) -> None:
