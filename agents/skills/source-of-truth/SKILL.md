@@ -1,11 +1,11 @@
 ---
-name: information-authority
+name: source-of-truth
 description: >
     Use when choosing where durable repository information belongs, resolving duplicated or
     conflicting sources, or changing the navigation in AGENTS.md or CLAUDE.md.
 ---
 
-# Information Authority
+# Source of Truth
 
 ## Scope
 

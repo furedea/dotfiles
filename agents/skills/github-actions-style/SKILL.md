@@ -1,5 +1,5 @@
 ---
-name: gha-style
+name: github-actions-style
 description: >
     Apply this user's conventions when creating, changing, or reviewing GitHub Actions workflows
     and composite actions.

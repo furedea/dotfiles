@@ -27,7 +27,7 @@
         }
       }
     },
-    "nix-dev-init": {
+    "project-setup": {
       "claude": {
         "frontmatter": {
           "disable-model-invocation": true

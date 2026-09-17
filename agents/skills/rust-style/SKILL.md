@@ -2,7 +2,7 @@
 name: rust-style
 description: >
     User-specific conventions for designing, writing, testing, and reviewing code in existing
-    Rust projects. Initial project scaffolding belongs to nix-dev-init.
+    Rust projects. Initial project scaffolding belongs to project-setup.
 ---
 
 # Rust Coding Style Guidelines
@@ -11,7 +11,7 @@ description: >
 
 This skill governs code written inside an already-bootstrapped Rust project: package commands, module layout, test authoring, refactoring, code review, naming, ownership, errors, filesystem operations, comments, and docs.
 
-Requested project initialization or Nix environment setup belongs to `nix-dev-init`. Apply these
+Requested project initialization or Nix environment setup belongs to `project-setup`. Apply these
 development conventions once the project's selected Cargo/Rust toolchain and required dependencies
 are usable. Respect the existing toolchain-management policy; routine Rust edits do not authorize
 introducing Nix, creating a competing toolchain definition, or changing GitHub settings.

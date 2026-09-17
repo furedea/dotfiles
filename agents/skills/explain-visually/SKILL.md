@@ -27,7 +27,7 @@ implementation, or review result.
   unresolved or unread material. Never present an interpretation as documented rationale.
 - Explain the target; do not silently turn the task into code review. `Q-` items are questions or
   source gaps, not formal findings.
-- Do not invent decisions inside the HTML. Apply `information-authority` if the user later asks to
+- Do not invent decisions inside the HTML. Apply `source-of-truth` if the user later asks to
   preserve a conclusion in an authoritative artifact.
 
 ## Workflow
