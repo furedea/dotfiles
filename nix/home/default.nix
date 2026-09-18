@@ -156,10 +156,6 @@ in
     stateVersion = "25.11";
   };
 
-  # Devin CLI has no config key for the default permission mode; the
-  # documented mechanisms are --permission-mode and this env var.
-  home.sessionVariables.DEVIN_PERMISSION_MODE = "smart";
-
   home.packages = with pkgs; [
     # Shell and environment
     carapace

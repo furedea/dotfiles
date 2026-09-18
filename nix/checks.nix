@@ -117,7 +117,6 @@ in
       && !(inputs ? nix-claude-code)
       && !(inputs ? codex-cli-nix)
       && !(inputs ? herdr);
-    devin-smart-permission-mode = home.home.sessionVariables.DEVIN_PERMISSION_MODE == "smart";
     terminal-browser-version = versions "terminal-browser" home.home.packages == [ "0.6.0" ];
     hermes-mutable-state-unmanaged = builtins.all (path: !(builtins.hasAttr path home.home.file)) [
       ".hermes/profiles/secretary/cron"
@@ -151,6 +150,9 @@ in
   host-configuration = check "host-configuration" {
     binary-cache-trust = cacheTrusted mbp && cacheTrusted mba;
     neovim-defaults = usesNeovimDefaults mbp && usesNeovimDefaults mba;
+    devin-smart-permission-mode =
+      mbp.environment.variables.DEVIN_PERMISSION_MODE == "smart"
+      && mba.environment.variables.DEVIN_PERMISSION_MODE == "smart";
     no-shell-specific-editor-defaults = builtins.all (
       source: builtins.all (definition: !(lib.hasInfix definition source)) shellEditorDefinitions
     ) shellConfigs;
