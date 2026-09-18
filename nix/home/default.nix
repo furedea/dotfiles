@@ -28,6 +28,7 @@ let
   gitWtPackage = unstable.callPackage ../packages/git_wt.nix { gitWt = unstable.git-wt; };
   rootsPackage = pkgs.callPackage ../packages/roots.nix { };
   terminalBrowserPackage = pkgs.callPackage ../packages/terminal_browser.nix { };
+  devinCliPackage = pkgs.callPackage ../packages/devin_cli.nix { };
   codexPackage = llm-agents.packages.${system}.codex;
   claudePackage = llm-agents.packages.${system}.claude-code;
   agentHarnessPackage = agent-harness.packages.${system}.default;
@@ -213,6 +214,7 @@ in
 
     # AI coding agents
     claudePackage
+    devinCliPackage
     herdrCompatibleCodex
     hermesAgentPackage
     unstable.opencode
