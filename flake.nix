@@ -58,6 +58,7 @@
         builtins.elem pkg.pname [
           "zsh-abbr"
           "claude-code"
+          "devin-cli"
           "moshi-hook"
         ];
       pkgs = import nixpkgs {
@@ -133,6 +134,7 @@
               # accidentally permitting other proprietary packages.
               #   zsh-abbr         : CC-BY-NC-SA-4.0 + Hippocratic License v3.0 (both free=false)
               #   claude-code      : Anthropic proprietary (via numtide/llm-agents.nix)
+              #   devin-cli        : Cognition proprietary binary release
               #   moshi-hook       : upstream binary release without a declared license
               nixpkgs.config.allowUnfreePredicate = allowUnfreePredicate;
 

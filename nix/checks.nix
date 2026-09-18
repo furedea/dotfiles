@@ -103,11 +103,13 @@ in
         builtins.elem name [
           "claude-code"
           "codex"
+          "devin-cli"
           "herdr"
         ]
       ) homeNames == [
         "herdr"
         "claude-code"
+        "devin-cli"
         "codex"
       ];
     shared-agent-input =
