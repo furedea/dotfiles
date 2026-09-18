@@ -93,7 +93,11 @@ def worktree_id(root: Path) -> str:
 
 
 def session_directory(root: Path, provider: str, session_id: str) -> Path:
-    if provider not in {"codex", "claude"} or not isinstance(session_id, str) or not 0 < len(session_id) <= 256:
+    if (
+        provider not in {"codex", "claude", "devin"}
+        or not isinstance(session_id, str)
+        or not 0 < len(session_id) <= 256
+    ):
         raise StateError("Missing or invalid provider session ID")
     identity = hashlib.sha256(session_id.encode()).hexdigest()[:32]
     return state_directory() / worktree_id(root) / f"{provider}-{identity}"

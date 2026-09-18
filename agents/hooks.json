@@ -309,5 +309,200 @@
         }
       ]
     }
+  },
+  "devin": {
+    "hooks": {
+      "SessionStart": [
+        {
+          "hooks": [
+            {
+              "command": "\"$HOME/.devin/hooks/hook_adapter.py\" native session-start",
+              "timeout": 30,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.devin/hooks/hook_adapter.py\" audit compaction",
+              "type": "command"
+            }
+          ]
+        }
+      ],
+      "UserPromptSubmit": [
+        {
+          "hooks": [
+            {
+              "command": "\"$HOME/.devin/hooks/hook_adapter.py\" content prompt",
+              "timeout": 30,
+              "type": "command"
+            }
+          ]
+        }
+      ],
+      "PreToolUse": [
+        {
+          "hooks": [
+            {
+              "command": "\"$HOME/.devin/hooks/hook_adapter.py\" native pre-tool-use",
+              "timeout": 30,
+              "type": "command"
+            }
+          ]
+        },
+        {
+          "matcher": "^exec$",
+          "hooks": [
+            {
+              "command": "\"$HOME/.devin/hooks/hook_adapter.py\" audit tool",
+              "timeout": 10,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.devin/hooks/hook_adapter.py\" paths command",
+              "timeout": 30,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.devin/hooks/hook_adapter.py\" shell forbidden",
+              "timeout": 30,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.devin/hooks/hook_adapter.py\" shell commit",
+              "timeout": 30,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.devin/hooks/hook_adapter.py\" shell git",
+              "timeout": 30,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.devin/hooks/hook_adapter.py\" shell allowed",
+              "timeout": 30,
+              "type": "command"
+            }
+          ]
+        },
+        {
+          "matcher": "^read$",
+          "hooks": [
+            {
+              "command": "\"$HOME/.devin/hooks/hook_adapter.py\" audit tool",
+              "timeout": 10,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.devin/hooks/hook_adapter.py\" content read",
+              "timeout": 30,
+              "type": "command"
+            }
+          ]
+        },
+        {
+          "matcher": "^(write|edit|notebook_edit)$",
+          "hooks": [
+            {
+              "command": "\"$HOME/.devin/hooks/hook_adapter.py\" audit tool",
+              "timeout": 10,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.devin/hooks/hook_adapter.py\" paths patch",
+              "timeout": 30,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.devin/hooks/hook_adapter.py\" harness",
+              "timeout": 30,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.devin/hooks/hook_adapter.py\" content write",
+              "timeout": 30,
+              "type": "command"
+            }
+          ]
+        },
+        {
+          "matcher": "^apply_patch$",
+          "hooks": [
+            {
+              "command": "\"$HOME/.devin/hooks/hook_adapter.py\" audit tool",
+              "timeout": 10,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.devin/hooks/hook_adapter.py\" paths patch",
+              "timeout": 30,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.devin/hooks/hook_adapter.py\" harness",
+              "timeout": 30,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.devin/hooks/hook_adapter.py\" content apply-patch",
+              "timeout": 30,
+              "type": "command"
+            }
+          ]
+        }
+      ],
+      "PostToolUse": [
+        {
+          "matcher": "^(write|edit|apply_patch|notebook_edit)$",
+          "hooks": [
+            {
+              "command": "\"$HOME/.devin/hooks/hook_adapter.py\" lint",
+              "timeout": 120,
+              "type": "command"
+            }
+          ]
+        },
+        {
+          "matcher": ".",
+          "hooks": [
+            {
+              "command": "\"$HOME/.devin/hooks/hook_adapter.py\" audit tool",
+              "timeout": 10,
+              "type": "command"
+            }
+          ]
+        }
+      ],
+      "Stop": [
+        {
+          "hooks": [
+            {
+              "command": "\"$HOME/.devin/hooks/hook_adapter.py\" native stop",
+              "timeout": 600,
+              "type": "command"
+            }
+          ]
+        }
+      ],
+      "PostCompaction": [
+        {
+          "hooks": [
+            {
+              "command": "\"$HOME/.devin/hooks/hook_adapter.py\" audit compaction",
+              "type": "command"
+            }
+          ]
+        }
+      ],
+      "SessionEnd": [
+        {
+          "hooks": [
+            {
+              "command": "\"$HOME/.devin/hooks/hook_adapter.py\" native session-end",
+              "timeout": 30,
+              "type": "command"
+            }
+          ]
+        }
+      ]
+    }
   }
 }

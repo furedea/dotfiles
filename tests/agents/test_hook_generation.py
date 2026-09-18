@@ -31,3 +31,29 @@ def test_generated_codex_lint_hook_matches_native_apply_patch_aliases(
     groups = [group for group in hooks if group.get("matcher") == "^apply_patch$|^Edit$|^Write$"]
     lint_hooks = [hook for group in groups for hook in group["hooks"] if 'hook_adapter.py" lint' in hook["command"]]
     assert len(lint_hooks) == 1
+
+
+def test_generated_devin_hooks_use_only_supported_events_and_native_tools(
+    agent_harness: CliRunner, tmp_path: Path
+) -> None:
+    path = tmp_path / "config.json"
+    agent_harness("generate-devin-hooks", "--output", str(path))
+    hooks = json.loads(path.read_text())["hooks"]
+    supported = {
+        "PreToolUse",
+        "PostToolUse",
+        "PermissionRequest",
+        "UserPromptSubmit",
+        "Stop",
+        "PostCompaction",
+        "SessionStart",
+        "SessionEnd",
+    }
+    assert set(hooks) <= supported
+    assert "PreToolUse" in hooks
+    commands = [hook["command"] for groups in hooks.values() for group in groups for hook in group["hooks"]]
+    assert any('hook_adapter.py" native session-start' in command for command in commands)
+    assert any('hook_adapter.py" shell forbidden' in command for command in commands)
+    matchers = [group.get("matcher", "") for event in ("PreToolUse", "PostToolUse") for group in hooks.get(event, [])]
+    assert any("exec" in matcher for matcher in matchers)
+    assert not any("Bash" in matcher for matcher in matchers)

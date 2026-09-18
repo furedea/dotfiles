@@ -39,7 +39,7 @@ def _label(value: object, fallback: str = "unknown") -> str:
 
 def _provider(payload: dict, explicit: str | None = None) -> str:
     candidate = explicit or payload.get("provider")
-    if candidate in {"claude", "codex"}:
+    if candidate in {"claude", "codex", "devin"}:
         return candidate
     return "codex" if payload.get("turn_id") else "claude"
 
@@ -133,7 +133,9 @@ def record(kind: str, payload: dict, provider: str | None = None) -> dict | None
     }
     if kind == "compaction":
         source = payload.get("source") or ""
-        if event != "PreCompact" and not (event == "SessionStart" and source in {"compact", "resume"}):
+        if event not in {"PreCompact", "PostCompaction"} and not (
+            event == "SessionStart" and source in {"compact", "resume"}
+        ):
             return None
         path = payload.get("transcript_path") or ""
         result.update(
@@ -359,10 +361,10 @@ def blocked(
 def main(arguments: list[str]) -> int:
     """Read an observational event without making logging an enforcement gate."""
     if len(arguments) not in {1, 2} or arguments[0] not in {"tool", "denied", "compaction"}:
-        print("Usage: audit_log.py <tool|denied|compaction> [claude|codex]", file=sys.stderr)
+        print("Usage: audit_log.py <tool|denied|compaction> [claude|codex|devin]", file=sys.stderr)
         return 1
-    if len(arguments) == 2 and arguments[1] not in {"claude", "codex"}:
-        print("Usage: audit_log.py <tool|denied|compaction> [claude|codex]", file=sys.stderr)
+    if len(arguments) == 2 and arguments[1] not in {"claude", "codex", "devin"}:
+        print("Usage: audit_log.py <tool|denied|compaction> [claude|codex|devin]", file=sys.stderr)
         return 1
     try:
         payload = json.load(sys.stdin)
