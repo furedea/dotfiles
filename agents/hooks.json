@@ -504,5 +504,344 @@
         }
       ]
     }
+  },
+  "hermes": {
+    "hooks": {
+      "on_session_start": [
+        {
+          "hooks": [
+            {
+              "command": "\"$HOME/.hermes/hooks/hook_adapter.py\" native session-start",
+              "timeout": 30,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.hermes/hooks/hook_adapter.py\" audit compaction",
+              "type": "command"
+            }
+          ]
+        }
+      ],
+      "pre_tool_call": [
+        {
+          "hooks": [
+            {
+              "command": "\"$HOME/.hermes/hooks/hook_adapter.py\" native pre-tool-use",
+              "timeout": 30,
+              "type": "command"
+            }
+          ]
+        },
+        {
+          "matcher": "^(terminal|exec_command|shell)$",
+          "hooks": [
+            {
+              "command": "\"$HOME/.hermes/hooks/hook_adapter.py\" audit tool",
+              "timeout": 10,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.hermes/hooks/hook_adapter.py\" paths command",
+              "timeout": 30,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.hermes/hooks/hook_adapter.py\" shell forbidden",
+              "timeout": 30,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.hermes/hooks/hook_adapter.py\" shell commit",
+              "timeout": 30,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.hermes/hooks/hook_adapter.py\" shell git",
+              "timeout": 30,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.hermes/hooks/hook_adapter.py\" shell allowed",
+              "timeout": 30,
+              "type": "command"
+            }
+          ]
+        },
+        {
+          "matcher": "^read_file$",
+          "hooks": [
+            {
+              "command": "\"$HOME/.hermes/hooks/hook_adapter.py\" audit tool",
+              "timeout": 10,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.hermes/hooks/hook_adapter.py\" content read",
+              "timeout": 30,
+              "type": "command"
+            }
+          ]
+        },
+        {
+          "matcher": "^(write_file|edit_file|patch|apply_patch)$",
+          "hooks": [
+            {
+              "command": "\"$HOME/.hermes/hooks/hook_adapter.py\" audit tool",
+              "timeout": 10,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.hermes/hooks/hook_adapter.py\" paths patch",
+              "timeout": 30,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.hermes/hooks/hook_adapter.py\" harness",
+              "timeout": 30,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.hermes/hooks/hook_adapter.py\" content write",
+              "timeout": 30,
+              "type": "command"
+            }
+          ]
+        }
+      ],
+      "post_tool_call": [
+        {
+          "matcher": "^(write_file|edit_file|patch|apply_patch)$",
+          "hooks": [
+            {
+              "command": "\"$HOME/.hermes/hooks/hook_adapter.py\" lint",
+              "timeout": 120,
+              "type": "command"
+            }
+          ]
+        },
+        {
+          "matcher": ".",
+          "hooks": [
+            {
+              "command": "\"$HOME/.hermes/hooks/hook_adapter.py\" audit tool",
+              "timeout": 10,
+              "type": "command"
+            }
+          ]
+        }
+      ],
+      "pre_verify": [
+        {
+          "hooks": [
+            {
+              "command": "\"$HOME/.hermes/hooks/hook_adapter.py\" native stop",
+              "timeout": 600,
+              "type": "command"
+            }
+          ]
+        }
+      ],
+      "on_session_end": [
+        {
+          "hooks": [
+            {
+              "command": "\"$HOME/.hermes/hooks/hook_adapter.py\" native session-end",
+              "timeout": 30,
+              "type": "command"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "pi": {
+    "hooks": {
+      "session_start": [
+        {
+          "hooks": [
+            {
+              "command": "\"$HOME/.pi/hooks/hook_adapter.py\" native session-start",
+              "timeout": 30,
+              "type": "command"
+            }
+          ]
+        }
+      ],
+      "input": [
+        {
+          "hooks": [
+            {
+              "command": "\"$HOME/.pi/hooks/hook_adapter.py\" content prompt",
+              "timeout": 30,
+              "type": "command"
+            }
+          ]
+        }
+      ],
+      "tool_call": [
+        {
+          "hooks": [
+            {
+              "command": "\"$HOME/.pi/hooks/hook_adapter.py\" native pre-tool-use",
+              "timeout": 30,
+              "type": "command"
+            }
+          ]
+        },
+        {
+          "matcher": "^bash$",
+          "hooks": [
+            {
+              "command": "\"$HOME/.pi/hooks/hook_adapter.py\" audit tool",
+              "timeout": 10,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.pi/hooks/hook_adapter.py\" paths command",
+              "timeout": 30,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.pi/hooks/hook_adapter.py\" shell forbidden",
+              "timeout": 30,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.pi/hooks/hook_adapter.py\" shell commit",
+              "timeout": 30,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.pi/hooks/hook_adapter.py\" shell git",
+              "timeout": 30,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.pi/hooks/hook_adapter.py\" shell allowed",
+              "timeout": 30,
+              "type": "command"
+            }
+          ]
+        },
+        {
+          "matcher": "^read$",
+          "hooks": [
+            {
+              "command": "\"$HOME/.pi/hooks/hook_adapter.py\" audit tool",
+              "timeout": 10,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.pi/hooks/hook_adapter.py\" content read",
+              "timeout": 30,
+              "type": "command"
+            }
+          ]
+        },
+        {
+          "matcher": "^(write|edit|multi_edit|notebook_edit)$",
+          "hooks": [
+            {
+              "command": "\"$HOME/.pi/hooks/hook_adapter.py\" audit tool",
+              "timeout": 10,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.pi/hooks/hook_adapter.py\" paths patch",
+              "timeout": 30,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.pi/hooks/hook_adapter.py\" harness",
+              "timeout": 30,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.pi/hooks/hook_adapter.py\" content write",
+              "timeout": 30,
+              "type": "command"
+            }
+          ]
+        },
+        {
+          "matcher": "^apply_patch$",
+          "hooks": [
+            {
+              "command": "\"$HOME/.pi/hooks/hook_adapter.py\" audit tool",
+              "timeout": 10,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.pi/hooks/hook_adapter.py\" paths patch",
+              "timeout": 30,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.pi/hooks/hook_adapter.py\" harness",
+              "timeout": 30,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.pi/hooks/hook_adapter.py\" content apply-patch",
+              "timeout": 30,
+              "type": "command"
+            }
+          ]
+        }
+      ],
+      "tool_result": [
+        {
+          "matcher": "^(write|edit|multi_edit|notebook_edit|apply_patch)$",
+          "hooks": [
+            {
+              "command": "\"$HOME/.pi/hooks/hook_adapter.py\" lint",
+              "timeout": 120,
+              "type": "command"
+            }
+          ]
+        },
+        {
+          "matcher": ".",
+          "hooks": [
+            {
+              "command": "\"$HOME/.pi/hooks/hook_adapter.py\" audit tool",
+              "timeout": 10,
+              "type": "command"
+            }
+          ]
+        }
+      ],
+      "session_before_compact": [
+        {
+          "hooks": [
+            {
+              "command": "\"$HOME/.pi/hooks/hook_adapter.py\" audit compaction",
+              "type": "command"
+            }
+          ]
+        }
+      ],
+      "session_compact": [
+        {
+          "hooks": [
+            {
+              "command": "\"$HOME/.pi/hooks/hook_adapter.py\" audit compaction",
+              "type": "command"
+            }
+          ]
+        }
+      ],
+      "session_shutdown": [
+        {
+          "hooks": [
+            {
+              "command": "\"$HOME/.pi/hooks/hook_adapter.py\" native session-end",
+              "timeout": 30,
+              "type": "command"
+            }
+          ]
+        }
+      ]
+    }
   }
 }

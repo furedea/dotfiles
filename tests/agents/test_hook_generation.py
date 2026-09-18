@@ -57,3 +57,62 @@ def test_generated_devin_hooks_use_only_supported_events_and_native_tools(
     matchers = [group.get("matcher", "") for event in ("PreToolUse", "PostToolUse") for group in hooks.get(event, [])]
     assert any("exec" in matcher for matcher in matchers)
     assert not any("Bash" in matcher for matcher in matchers)
+
+
+def test_generated_hermes_hooks_use_only_supported_events_and_native_tools(
+    agent_harness: CliRunner, tmp_path: Path
+) -> None:
+    path = tmp_path / "hooks.json"
+    agent_harness("generate-hermes-hooks", "--output", str(path))
+    hooks = json.loads(path.read_text())["hooks"]
+    supported = {
+        "on_session_start",
+        "on_session_end",
+        "pre_tool_call",
+        "post_tool_call",
+        "pre_verify",
+    }
+    assert set(hooks) <= supported
+    assert "pre_tool_call" in hooks
+    commands = [hook["command"] for groups in hooks.values() for group in groups for hook in group["hooks"]]
+    assert any('hook_adapter.py" native session-start' in command for command in commands)
+    assert any('hook_adapter.py" native session-end' in command for command in commands)
+    assert any('hook_adapter.py" native stop' in command for command in commands)
+    assert any('hook_adapter.py" native pre-tool-use' in command for command in commands)
+    assert any('hook_adapter.py" shell forbidden' in command for command in commands)
+    assert any('hook_adapter.py" content write' in command for command in commands)
+    matchers = [
+        group.get("matcher", "") for event in ("pre_tool_call", "post_tool_call") for group in hooks.get(event, [])
+    ]
+    assert any("terminal" in matcher for matcher in matchers)
+    assert not any("Bash" in matcher for matcher in matchers)
+
+
+def test_generated_pi_hooks_use_only_supported_events_and_native_tools(
+    agent_harness: CliRunner, tmp_path: Path
+) -> None:
+    path = tmp_path / "hooks.json"
+    agent_harness("generate-pi-hooks", "--output", str(path))
+    hooks = json.loads(path.read_text())["hooks"]
+    supported = {
+        "session_start",
+        "session_shutdown",
+        "tool_call",
+        "tool_result",
+        "input",
+        "session_before_compact",
+        "session_compact",
+    }
+    assert set(hooks) <= supported
+    assert "tool_call" in hooks
+    assert "input" in hooks
+    commands = [hook["command"] for groups in hooks.values() for group in groups for hook in group["hooks"]]
+    assert any('hook_adapter.py" native session-start' in command for command in commands)
+    assert any('hook_adapter.py" native session-end' in command for command in commands)
+    assert any('hook_adapter.py" native pre-tool-use' in command for command in commands)
+    assert any('hook_adapter.py" audit compaction' in command for command in commands)
+    assert any('hook_adapter.py" shell forbidden' in command for command in commands)
+    assert any('hook_adapter.py" content prompt' in command for command in commands)
+    matchers = [group.get("matcher", "") for event in ("tool_call", "tool_result") for group in hooks.get(event, [])]
+    assert any("bash" in matcher for matcher in matchers)
+    assert not any("Bash" in matcher for matcher in matchers)

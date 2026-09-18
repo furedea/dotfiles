@@ -191,10 +191,11 @@ commit-pinned Herdr plugin set.
 
 ### AI Agent Environment
 
-The [`agents/`](agents) directory owns the personal Claude Code and Codex source:
-instructions, policies, hooks, skills, and provider settings. The
+The [`agents/`](agents) directory owns the personal cross-provider agent source:
+instructions, policies, hooks, skills, and provider settings for Claude Code,
+Codex, Devin, Hermes Agent, and pi. The
 [agent-harness](https://github.com/furedea/agent-harness) flake renders and deploys
-that source for both providers. This repository also builds release-matched Herdr
+that source for each provider. This repository also builds release-matched Herdr
 and Moshi hook bundles and composes them through the module's generic `hooks`
 boundary. Herdr comes from the pinned flake input. Moshi Hook 0.2.87 is pinned in
 Nix for deterministic hook generation, while the Homebrew installation remains the
@@ -215,7 +216,7 @@ from `~/.config/dotfiles/bootstrap_server.env`, and
 Claude Code settings; both stay outside the repository. See
 [ADR-0030](docs/adr/0030_bootstrap_the_agent_harness_on_servers_without_nix.md).
 
-Native Claude Code and Codex lifecycle hooks register the session's worktree and
+Native provider lifecycle hooks register the session's worktree and
 verify changes automatically. State is stored under
 `${XDG_STATE_HOME:-~/.local/state}/agent-harness/verification/<worktree>/<session>/`;
 `results.json` identifies the provider session and its latest check results.

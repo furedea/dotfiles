@@ -94,7 +94,7 @@ def worktree_id(root: Path) -> str:
 
 def session_directory(root: Path, provider: str, session_id: str) -> Path:
     if (
-        provider not in {"codex", "claude", "devin"}
+        provider not in {"codex", "claude", "devin", "hermes", "pi"}
         or not isinstance(session_id, str)
         or not 0 < len(session_id) <= 256
     ):
