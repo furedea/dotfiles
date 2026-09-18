@@ -108,7 +108,35 @@
   "agents/hooks/lint_format.py": [
     "tests/agents/hooks/test_lint_format_cli.py",
     "tests/agents/codex/test_hook_adapter_cli.py",
-    "tests/agents/hooks/test_lint_format.py"
+    "tests/agents/hooks/test_lint_format.py",
+    "tests/agents/test_python_runtime.py"
+  ],
+  "agents/hooks/lib/formatter_policy.py": [
+    "tests/agents/hooks/test_lint_format.py",
+    "tests/agents/hooks/test_lint_format_cli.py",
+    "tests/agents/test_python_runtime.py"
+  ],
+  "agents/hooks/lib/process_runner.py": [
+    "tests/agents/hooks/test_lint_format.py",
+    "tests/agents/hooks/test_lint_format_cli.py",
+    "tests/agents/test_python_runtime.py"
+  ],
+  "agents/hooks/lib/hook_input.py": [
+    "tests/agents/hooks/test_lint_format.py",
+    "tests/agents/hooks/test_lint_format_cli.py",
+    "tests/agents/hooks/test_hook_boundary.py",
+    "tests/agents/test_python_runtime.py"
+  ],
+  "agents/hooks/lib/lint_engine.py": [
+    "tests/agents/hooks/test_lint_format.py",
+    "tests/agents/hooks/test_lint_format_cli.py",
+    "tests/agents/hooks/test_hook_boundary.py",
+    "tests/agents/codex/test_hook_adapter_cli.py",
+    "tests/agents/test_python_runtime.py"
+  ],
+  "agents/hooks/lib/__init__.py": [
+    "tests/agents/hooks/test_lint_format.py",
+    "tests/agents/test_python_runtime.py"
   ],
   "agents/hooks/lib/check_*.py": [
     "tests/agents/hooks/test_check_selection.py",
