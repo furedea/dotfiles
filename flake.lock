@@ -10,11 +10,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1789707987,
-        "narHash": "sha256-wzO4GBYjBiOfClm5Odn35swvO5GtFDBCUiyQ0M0gGKU=",
+        "lastModified": 1789712933,
+        "narHash": "sha256-0TM7gzip4YOfV78egAYImeO/SOP7iKSxK5Oosr33dEc=",
         "owner": "furedea",
         "repo": "agent-harness",
-        "rev": "c4339a2eb85e8488af7579a0d6582a2ba9524381",
+        "rev": "bae4e6cd1095b019108f79402dbe8daca2b6f5f3",
         "type": "github"
       },
       "original": {
