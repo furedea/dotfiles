@@ -117,6 +117,7 @@ in
       && !(inputs ? nix-claude-code)
       && !(inputs ? codex-cli-nix)
       && !(inputs ? herdr);
+    devin-smart-permission-mode = home.home.sessionVariables.DEVIN_PERMISSION_MODE == "smart";
     terminal-browser-version = versions "terminal-browser" home.home.packages == [ "0.6.0" ];
     hermes-mutable-state-unmanaged = builtins.all (path: !(builtins.hasAttr path home.home.file)) [
       ".hermes/profiles/secretary/cron"
