@@ -3,12 +3,11 @@
 import io
 import json
 from pathlib import Path
-import subprocess
 
 import pytest
 from pytest_mock import MockerFixture
 
-from tests.runtime import load_script_module
+from tests.runtime import StubWriter, load_script_module
 
 
 lint_format = load_script_module("agents/hooks/lint_format.py", "lint_format")
@@ -51,20 +50,90 @@ def test_language_plans_preserve_the_configured_quality_tools(
 
 
 def test_python_project_uses_its_frozen_uv_tools(tmp_path: Path) -> None:
-    (tmp_path / "pyproject.toml").touch()
+    (tmp_path / "pyproject.toml").write_text("[tool.ruff]\nline-length = 100\n")
     steps = lint_format.plan("py", tmp_path / "src" / "file.py")
     assert all(step.arguments[:4] == ("uv", "run", "--frozen", "ruff") for step in steps)
     assert all(step.cwd == tmp_path for step in steps)
     assert [step.label for step in steps] == ["ruff format", "ruff fix", "ruff lint"]
 
 
+def test_python_project_does_not_fallback_to_personal_ruff(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text("[tool.black]\nline-length = 100\n")
+    steps = lint_format.plan("py", tmp_path / "src" / "file.py")
+    assert len(steps) == 1
+    assert steps[0].policy_error is not None
+    assert "black" in steps[0].policy_error
+    assert steps[0].arguments == ()
+
+
+def test_conflicting_python_formatters_are_not_guessed(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text("[tool.ruff]\n[tool.black]\n")
+    steps = lint_format.plan("py", tmp_path / "src" / "file.py")
+    assert len(steps) == 1
+    assert steps[0].policy_error is not None
+    assert "multiple formatters" in steps[0].policy_error
+
+
+def test_project_formatter_policy_is_reported_without_running_a_tool(tmp_path: Path, mocker: MockerFixture) -> None:
+    (tmp_path / "pyproject.toml").write_text("[tool.black]\n")
+    target = tmp_path / "source.py"
+    target.touch()
+    which = mocker.patch.object(lint_format.shutil, "which", autospec=True)
+    messages = lint_format.check_file("py", target)
+    assert len(messages) == 1
+    assert "black" in messages[0]
+    which.assert_not_called()
+
+
 def test_python_outside_a_project_uses_available_ruff(tmp_path: Path) -> None:
     assert all(step.arguments[0] == "ruff" for step in lint_format.plan("py", tmp_path / "file.py"))
 
 
+def test_dprint_project_config_takes_precedence_over_personal_config(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    config = project / "dprint.json"
+    config.write_text("{}")
+    target = project / "src" / "config.json"
+    target.parent.mkdir()
+    steps = lint_format.plan("json_toml", target)
+    assert all(step.arguments[0] == "dprint" for step in steps)
+    assert all(str(config) in step.arguments for step in steps)
+    assert all(step.cwd == project for step in steps)
+
+
+def test_personal_dprint_runs_from_the_target_directory(tmp_path: Path) -> None:
+    target = tmp_path / "config.json"
+    steps = lint_format.plan("json_toml", target)
+    assert all(step.cwd == tmp_path for step in steps)
+    assert all(str(Path.home() / "dprint.json") in step.arguments for step in steps)
+
+
+def test_other_project_formatter_prevents_personal_dprint_fallback(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / ".prettierrc").write_text("{}")
+    steps = lint_format.plan("json_toml", project / "config.json")
+    assert len(steps) == 1
+    assert steps[0].policy_error is not None
+    assert "prettier" in steps[0].policy_error
+    assert steps[0].arguments == ()
+
+
+def test_conflicting_project_formatters_are_not_guessed(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "dprint.json").write_text("{}")
+    (project / ".prettierrc").write_text("{}")
+    steps = lint_format.plan("json_toml", project / "config.json")
+    assert len(steps) == 1
+    assert steps[0].policy_error is not None
+    assert "conflict" in steps[0].policy_error
+
+
 def test_missing_tool_reports_target_and_prevents_later_steps(tmp_path: Path, mocker: MockerFixture) -> None:
     mocker.patch.object(lint_format.shutil, "which", return_value=None, autospec=True)
-    execute = mocker.patch.object(lint_format.subprocess, "run", autospec=True)
+    execute = mocker.patch.object(lint_format, "run_process", autospec=True)
     target = tmp_path / "file with spaces.sh"
     assert lint_format.check_file("sh", target) == (
         f"Lint/format unavailable\nshfmt · {target}\nReason: shfmt not found in PATH.",
@@ -74,15 +143,53 @@ def test_missing_tool_reports_target_and_prevents_later_steps(tmp_path: Path, mo
 
 def test_successful_steps_are_silent_even_with_output(tmp_path: Path, mocker: MockerFixture) -> None:
     mocker.patch.object(
-        lint_format.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, b"all good\n"), autospec=True
+        lint_format,
+        "run_process",
+        return_value=lint_format.ProcessResult(0, diagnostics=b"all good\n"),
+        autospec=True,
     )
     assert lint_format.run_step(lint_format.Step("example lint", ("example",)), tmp_path / "file") == ""
 
 
-def test_failure_without_diagnostics_preserves_exit_status(tmp_path: Path, mocker: MockerFixture) -> None:
-    mocker.patch.object(
-        lint_format.subprocess, "run", return_value=subprocess.CompletedProcess([], 3, b""), autospec=True
+def test_process_output_is_bounded(executable: StubWriter, tmp_path: Path) -> None:
+    executable("noisy", "import sys; print('diagnostic ' * 100000); sys.exit(1)")
+    message = lint_format.run_step(lint_format.Step("example lint", ("noisy",)), tmp_path / "file")
+    assert len(message.encode()) < lint_format.PROCESS_OUTPUT_LIMIT_BYTES + 256
+    assert "[process output truncated]" in message
+
+
+def test_process_timeout_is_reported(executable: StubWriter, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    executable("slow", "import time; time.sleep(1)")
+    monkeypatch.setattr(lint_format, "STEP_TIMEOUT_SECONDS", 0.01)
+    message = lint_format.run_step(lint_format.Step("example lint", ("slow",)), tmp_path / "file")
+    assert "Lint/format timeout" in message
+    assert "0.01s" in message
+
+
+def test_formatted_output_limit_does_not_replace_the_target(executable: StubWriter, tmp_path: Path) -> None:
+    executable("formatted", "import sys; sys.stdout.write('x' * 10000000)")
+    target = tmp_path / "article.md"
+    target.write_bytes(b"before")
+    message = lint_format.run_step(lint_format.Step("formatted", ("formatted",), writes_stdout=True), target)
+    assert "Formatted output exceeded" in message
+    assert target.read_bytes() == b"before"
+
+
+def test_formatter_diagnostics_are_bounded_separately_from_formatted_output(
+    executable: StubWriter, tmp_path: Path
+) -> None:
+    executable("formatted-warning", "import sys; sys.stdout.write('after'); sys.stderr.write('warning ' * 100000)")
+    target = tmp_path / "article.md"
+    target.write_bytes(b"before")
+    message = lint_format.run_step(
+        lint_format.Step("formatted", ("formatted-warning",), writes_stdout=True, reports_warnings=True), target
     )
+    assert "[process output truncated]" in message
+    assert target.read_bytes() == b"after"
+
+
+def test_failure_without_diagnostics_preserves_exit_status(tmp_path: Path, mocker: MockerFixture) -> None:
+    mocker.patch.object(lint_format, "run_process", return_value=lint_format.ProcessResult(3), autospec=True)
     target = tmp_path / "source.sh"
     assert lint_format.run_step(lint_format.Step("example lint", ("example",)), target) == (
         f"Lint/format failed\nexample lint · {target} · exit 3\nError: No diagnostic output."
@@ -94,6 +201,19 @@ def test_context_preserves_event_tool_label_and_multiline_diagnostics() -> None:
     assert json.loads(json.dumps(lint_format.context(message))) == {
         "hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": message},
     }
+
+
+def test_provider_diagnostics_are_bounded_without_losing_truncation_notice(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    messages = tuple(f"diagnostic {index}: {'x' * 2000}" for index in range(20))
+    lint_format.emit(messages)
+    output = capsys.readouterr().out
+    row = json.loads(output)
+    context = row["hookSpecificOutput"]["additionalContext"]
+    assert len(context.encode()) <= lint_format.NOTIFICATION_LIMIT_BYTES
+    assert "[diagnostics truncated]" in context
+    assert "diagnostic 0" in context
 
 
 def test_missing_file_is_not_treated_as_a_successful_check(
@@ -108,7 +228,7 @@ def test_missing_file_is_not_treated_as_a_successful_check(
 
 def test_empty_input_does_not_execute_quality_tools(mocker: MockerFixture, capsys: pytest.CaptureFixture[str]) -> None:
     mocker.patch.object(lint_format.sys, "stdin", io.StringIO('{"tool_input":{}}'))
-    execute = mocker.patch.object(lint_format.subprocess, "run", autospec=True)
+    execute = mocker.patch.object(lint_format, "run_process", autospec=True)
     assert lint_format.main(["sh"]) == 0
     execute.assert_not_called()
     assert capsys.readouterr().out == ""
