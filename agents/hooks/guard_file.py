@@ -153,6 +153,8 @@ def scan_content(mode: str, payload: dict, directory: Path) -> None:
     )
     if mode == "prompt":
         decision = {"decision": "block", "reason": f"BLOCKED: {reason}. Prompt contains sensitive information."}
+    elif payload.get("provider") == "devin":
+        decision = {"decision": "block", "reason": f"BLOCKED: {reason}"}
     else:
         decision = {
             "hookSpecificOutput": {
