@@ -25,6 +25,7 @@ known_first_party = [
   "guard_file",
   "guard_git",
   "hook_dispatch",
+  "hook_input",
   "lib",
   "lint_format",
   "patch_input",
