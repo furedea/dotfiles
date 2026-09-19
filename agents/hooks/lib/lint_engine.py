@@ -67,13 +67,16 @@ def run_step(step: Step, path: Path) -> str:
     return ""
 
 
-def check_file(kind: str, path: Path) -> tuple[str, ...]:
+def check_file(kind: str, path: Path, readonly: bool = False) -> tuple[str, ...]:
     """Collect quality diagnostics, stopping when a required executable is unavailable."""
     messages: list[str] = []
-    for step in plan(kind, path):
+    for step in plan(kind, path, readonly=readonly):
         if step.policy_error:
             messages.append(f"Lint/format unavailable\n{step.label} · {path}\nReason: {step.policy_error}")
             break
+        if step.note:
+            messages.append(f"Lint/format skipped\n{step.label} · {path}\nReason: {step.note}")
+            continue
         executable = step.arguments[0]
         if shutil.which(executable) is None:
             messages.append(f"Lint/format unavailable\n{executable} · {path}\nReason: {executable} not found in PATH.")
@@ -93,10 +96,11 @@ def diagnostics(
     kind: str | None = None,
     *,
     checker: Callable[[str, Path], tuple[str, ...]] | None = None,
+    readonly: bool = False,
 ) -> tuple[str, ...]:
     """Run checks for existing supported targets selected from one normalized hook payload."""
     messages: list[str] = []
-    check = checker or check_file
+    check = checker or (lambda language, path: check_file(language, path, readonly))
     for path in paths:
         language = extensions.get(path.suffix.lower())
         if language is None or (kind is not None and language != kind) or not path.is_file():

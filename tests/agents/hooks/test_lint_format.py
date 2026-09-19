@@ -3,6 +3,7 @@
 import io
 import json
 from pathlib import Path
+import shutil
 
 import pytest
 from pytest_mock import MockerFixture
@@ -33,7 +34,7 @@ def test_missing_project_marker_has_no_invented_root(tmp_path: Path) -> None:
     ("kind", "filename", "tools"),
     [
         ("sh", "file.sh", ("shfmt", "shellcheck")),
-        ("js", "file.js", ("oxfmt", "oxlint", "oxlint")),
+        ("js", "file.js", ("oxlint",)),
         ("json_toml", "file.json", ("dprint", "dprint")),
         ("rs", "file.rs", ("rustfmt",)),
         ("nix", "file.nix", ("nixfmt", "statix", "statix", "deadnix")),
@@ -49,47 +50,155 @@ def test_missing_project_marker_has_no_invented_root(tmp_path: Path) -> None:
 def test_language_plans_preserve_the_configured_quality_tools(
     tmp_path: Path, kind: str, filename: str, tools: tuple[str, ...]
 ) -> None:
-    assert tuple(step.arguments[0] for step in formatter_policy.plan(kind, tmp_path / filename)) == tools
+    steps = formatter_policy.plan(kind, tmp_path / filename)
+    assert tuple(step.arguments[0] for step in steps if step.arguments) == tools
 
 
 def test_python_project_uses_its_frozen_uv_tools(tmp_path: Path) -> None:
-    (tmp_path / "pyproject.toml").write_text("[tool.ruff]\nline-length = 100\n")
+    (tmp_path / "pyproject.toml").write_text("[tool.ruff]\nline-length = 100\n[tool.ruff.format]\n")
+    (tmp_path / "uv.lock").touch()
     steps = formatter_policy.plan("py", tmp_path / "src" / "file.py")
     assert all(step.arguments[:4] == ("uv", "run", "--frozen", "ruff") for step in steps)
     assert all(step.cwd == tmp_path for step in steps)
-    assert [step.label for step in steps] == ["ruff format", "ruff fix", "ruff lint"]
+    assert [step.label for step in steps] == ["ruff fix", "ruff format", "ruff lint"]
 
 
-def test_python_project_does_not_fallback_to_personal_ruff(tmp_path: Path) -> None:
-    (tmp_path / "pyproject.toml").write_text("[tool.black]\nline-length = 100\n")
+def test_ruff_configuration_alone_does_not_adopt_the_formatter(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text("[tool.ruff]\nline-length = 100\n")
     steps = formatter_policy.plan("py", tmp_path / "src" / "file.py")
-    assert len(steps) == 1
-    assert steps[0].policy_error is not None
-    assert "black" in steps[0].policy_error
-    assert steps[0].arguments == ()
+    labels = [step.label for step in steps]
+    assert "ruff format" not in labels and "ruff fix" not in labels
+    assert "ruff lint" in labels
+    assert steps[0].note is not None
 
 
-def test_conflicting_python_formatters_are_not_guessed(tmp_path: Path) -> None:
+def test_adopted_black_formats_and_ruff_lints_without_conflict(tmp_path: Path) -> None:
     (tmp_path / "pyproject.toml").write_text("[tool.ruff]\n[tool.black]\n")
     steps = formatter_policy.plan("py", tmp_path / "src" / "file.py")
-    assert len(steps) == 1
-    assert steps[0].policy_error is not None
-    assert "multiple formatters" in steps[0].policy_error
+    assert [step.label for step in steps] == ["ruff fix", "black format", "ruff lint"]
 
 
-def test_project_formatter_policy_is_reported_without_running_a_tool(tmp_path: Path, mocker: MockerFixture) -> None:
-    (tmp_path / "pyproject.toml").write_text("[tool.black]\n")
+def test_conflicting_python_formatters_skip_formatting_but_keep_lint(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text("[tool.black]\n[tool.yapf]\n")
+    steps = formatter_policy.plan("py", tmp_path / "src" / "file.py")
+    assert steps[0].note is not None
+    assert "conflict" in steps[0].note.lower()
+    assert all("format" not in step.label for step in steps if step.arguments)
+    assert steps[-1].arguments[0] == "ruff"
+
+
+def test_unsupported_python_formatter_is_reported_and_lint_continues(tmp_path: Path, mocker: MockerFixture) -> None:
+    (tmp_path / "pyproject.toml").write_text("[tool.yapf]\n")
     target = tmp_path / "source.py"
     target.touch()
-    which = mocker.patch.object(lint_engine.shutil, "which", autospec=True)
+    execute = mocker.patch.object(process_runner, "run_process", return_value=process_runner.ProcessResult(0))
     messages = lint_engine.check_file("py", target)
-    assert len(messages) == 1
-    assert "black" in messages[0]
-    which.assert_not_called()
+    assert any("yapf" in message for message in messages)
+    assert execute.call_count == 1
+    assert execute.call_args.args[0].label == "ruff lint"
 
 
-def test_python_outside_a_project_uses_available_ruff(tmp_path: Path) -> None:
-    assert all(step.arguments[0] == "ruff" for step in formatter_policy.plan("py", tmp_path / "file.py"))
+def test_invalid_pyproject_is_a_policy_error_not_a_silent_skip(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text("not = [toml")
+    steps = formatter_policy.plan("py", tmp_path / "src" / "file.py")
+    assert len(steps) == 1
+    assert steps[0].policy_error is not None
+    assert "invalid pyproject.toml" in steps[0].policy_error
+
+
+def test_python_outside_a_project_lints_without_formatting(tmp_path: Path) -> None:
+    steps = formatter_policy.plan("py", tmp_path / "file.py")
+    runnable = [step for step in steps if step.arguments]
+    assert [step.label for step in runnable] == ["ruff lint"]
+    assert all(step.arguments[0] == "ruff" for step in runnable)
+
+
+def test_format_hook_declares_ruff_formatter_adoption(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text('[dependency-groups]\nlint = ["ruff"]\n')
+    (tmp_path / "lefthook.yml").write_text("pre-commit:\n  commands:\n    format:\n      run: ruff format --check .\n")
+    steps = formatter_policy.plan("py", tmp_path / "src" / "file.py")
+    assert [step.label for step in steps] == ["ruff fix", "ruff format", "ruff lint"]
+
+
+def test_ruff_fix_runs_before_format_and_lint(tmp_path: Path, executable: StubWriter) -> None:
+    (tmp_path / "pyproject.toml").write_text("[tool.ruff]\n[tool.ruff.format]\n")
+    calls = tmp_path / "calls.log"
+    executable("ruff", f'import sys; open({str(calls)!r}, "a").write(" ".join(sys.argv[1:]) + "\\n")')
+    target = tmp_path / "file.py"
+    target.touch()
+    lint_engine.check_file("py", target)
+    assert calls.read_text().splitlines() == [
+        f"check --fix-only --quiet {target}",
+        f"format {target}",
+        f"check --output-format=concise --quiet {target}",
+    ]
+
+
+@pytest.mark.integration
+def test_real_ruff_fix_and_format_complete_in_one_pass(tmp_path: Path) -> None:
+    if not shutil.which("ruff"):
+        pytest.skip("ruff not installed")
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.ruff]\n[tool.ruff.format]\n[tool.ruff.lint]\nselect = ["E", "W", "F"]\n'
+    )
+    target = tmp_path / "file.py"
+    target.write_text("x = 1   \ny  =   2\n")
+    assert lint_engine.check_file("py", target) == ()
+    formatted = target.read_text()
+    assert formatted == "x = 1\ny = 2\n"
+    assert lint_engine.check_file("py", target) == ()
+    assert target.read_text() == formatted
+
+
+def test_project_prettier_suppresses_personal_oxfmt_but_keeps_oxlint(tmp_path: Path) -> None:
+    (tmp_path / "package.json").write_text('{"devDependencies": {"prettier": "*"}}')
+    steps = formatter_policy.plan("js", tmp_path / "file.js")
+    assert steps[0].note is not None
+    assert "prettier" in steps[0].note
+    executables = [step.arguments[0] for step in steps if step.arguments]
+    assert "oxfmt" not in executables
+    assert executables == ["oxlint"]
+
+
+def test_adopted_oxfmt_orders_fix_format_then_lint(tmp_path: Path) -> None:
+    (tmp_path / "package.json").write_text('{"devDependencies": {"oxfmt": "*"}}')
+    steps = formatter_policy.plan("js", tmp_path / "file.js")
+    assert [step.label for step in steps] == ["oxlint fix", "oxfmt format", "oxlint lint"]
+
+
+def test_conflicting_js_formatters_skip_formatting_but_keep_lint(tmp_path: Path) -> None:
+    (tmp_path / "package.json").write_text('{"devDependencies": {"prettier": "*"}}')
+    (tmp_path / "biome.json").write_text("{}")
+    steps = formatter_policy.plan("js", tmp_path / "file.js")
+    assert steps[0].note is not None
+    assert "conflict" in steps[0].note.lower()
+    executables = [step.arguments[0] for step in steps if step.arguments]
+    assert executables == ["oxlint"]
+
+
+def test_invalid_package_json_is_a_policy_error_not_a_silent_skip(tmp_path: Path) -> None:
+    (tmp_path / "package.json").write_text("{")
+    steps = formatter_policy.plan("js", tmp_path / "src" / "file.js")
+    assert len(steps) == 1
+    assert steps[0].policy_error is not None
+    assert "invalid package.json" in steps[0].policy_error
+
+
+def test_js_without_formatter_declaration_lints_without_formatting(tmp_path: Path) -> None:
+    steps = formatter_policy.plan("js", tmp_path / "file.js")
+    runnable = [step for step in steps if step.arguments]
+    assert [step.label for step in runnable] == ["oxlint lint"]
+    assert steps[0].note is not None
+
+
+def test_readonly_plans_skip_every_mutating_step(tmp_path: Path) -> None:
+    (tmp_path / "package.json").write_text('{"devDependencies": {"oxfmt": "*"}}')
+    (tmp_path / "pyproject.toml").write_text("[tool.ruff]\n[tool.ruff.format]\n")
+    assert [step.label for step in formatter_policy.plan("js", tmp_path / "file.js", readonly=True)] == ["oxlint lint"]
+    assert [step.label for step in formatter_policy.plan("py", tmp_path / "file.py", readonly=True)] == ["ruff lint"]
+    assert [step.label for step in formatter_policy.plan("sh", tmp_path / "file.sh", readonly=True)] == [
+        "shellcheck lint"
+    ]
 
 
 def test_dprint_project_config_takes_precedence_over_personal_config(tmp_path: Path) -> None:

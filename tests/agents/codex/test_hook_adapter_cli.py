@@ -52,6 +52,32 @@ def patch_payload(*paths: str) -> dict:
     }
 
 
+@pytest.mark.parametrize("field", ["patch", "input", "command"])
+def test_patch_carrier_fields_resolve_the_same_targets(run_cli: CliRunner, harness: Path, field: str) -> None:
+    body = "*** Begin Patch\n*** Update File: .env.local\n@@\n-old\n+new\n*** End Patch\n"
+    result = run_cli(SCRIPT, "paths", "patch", payload={"tool_input": {field: body}})
+    assert result.returncode == 2
+    assert ".env.local" in result.stderr
+
+
+def test_conflicting_patch_fields_are_rejected(run_cli: CliRunner, harness: Path) -> None:
+    payload = {
+        "tool_input": {
+            "patch": "*** Begin Patch\n*** Update File: a.py\n*** End Patch\n",
+            "command": "*** Begin Patch\n*** Update File: b.py\n*** End Patch\n",
+        }
+    }
+    result = run_cli(SCRIPT, "paths", "patch", payload=payload)
+    assert result.returncode == 2
+    assert "conflict" in result.stderr.lower()
+
+
+def test_shell_commands_are_not_patch_paths(run_cli: CliRunner, harness: Path) -> None:
+    result = run_cli(SCRIPT, "paths", "patch", payload={"tool_input": {"command": "cat .env.local"}})
+    assert result.returncode == 0
+    assert result.stdout == result.stderr == ""
+
+
 @pytest.mark.parametrize(
     "arguments",
     [("harness", "--help"), ("lint", "--help"), ("paths",), ("content",), ("shell", "/tmp/arbitrary-hook")],
@@ -171,6 +197,7 @@ def test_lint_resolves_payload_cwd_and_suppresses_noise(
     )
     project = tmp_path / "nested"
     project.mkdir()
+    (project / "pyproject.toml").write_text("[tool.ruff]\n[tool.ruff.format]\n")
     (project / "x.py").write_text("x = 1\n")
     payload = patch_payload("x.py") | {"cwd": str(project)}
     result = run_cli(SCRIPT, "lint", payload=payload, env={"LINT_FIXTURE_FAIL": str(int(fail))})

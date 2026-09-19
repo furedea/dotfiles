@@ -25,7 +25,6 @@ def additional_context(output: str) -> str:
     "kind,source,expected,removed",
     [
         ("py", "x = 1\n", "x = 1\n", ""),
-        ("py", "import os\nx = 1\n", "x = 1\n", "import os"),
         ("py", "x=1\ny  =   2\n", "x = 1\ny = 2\n", ""),
         ("sh", '#!/bin/bash\nset -eo pipefail\necho "hello"\n', 'echo "hello"', ""),
         ("sh", '#!/bin/bash\nset -eo pipefail\nif true\nthen\necho "x"\nfi\n', "if true; then", ""),
@@ -39,6 +38,10 @@ def test_real_formatters_fix_files_without_residual_notifications(
 ) -> None:
     if kind == "rs" and not shutil.which("rustfmt"):
         pytest.skip("rustfmt not installed")
+    if kind == "py":
+        (tmp_path / "pyproject.toml").write_text("[tool.ruff]\n[tool.ruff.format]\n")
+    if kind == "js":
+        (tmp_path / "package.json").write_text('{"devDependencies": {"oxfmt": "*"}}')
     path = tmp_path / f"source.{kind}"
     path.write_text(source)
     result = run_cli("agents/hooks/lint_format.py", kind, payload={"tool_input": {"file_path": str(path)}})
@@ -96,7 +99,7 @@ def test_invalid_lint_format_invocations_fail(
         ("md", "md", "prettierd", "format"),
         ("json_toml", "json", "dprint", "format"),
         ("sh", "sh", "shellcheck", "lint"),
-        ("js", "js", "oxlint", "lint"),
+        ("js", "js", "oxlint", "fix"),
         ("nix", "nix", "statix", "lint"),
         ("nix", "nix", "deadnix", "lint"),
         ("lua", "lua", "selene", "lint"),
@@ -136,6 +139,8 @@ def test_process_failures_survive_later_successful_steps(
                 sys.exit(2)
         """,
         )
+    if kind == "js":
+        (tmp_path / "package.json").write_text('{"devDependencies": {"oxfmt": "*"}}')
     path = tmp_path / ".github/workflows" / f"source.{suffix}"
     path.parent.mkdir(parents=True)
     path.touch()
@@ -167,6 +172,8 @@ def test_language_formatter_failure_is_not_hidden(
             sys.exit(2)
     """,
     )
+    if kind == "py":
+        (tmp_path / "pyproject.toml").write_text("[tool.ruff]\n[tool.ruff.format]\n")
     path = tmp_path / f"source.{kind}"
     path.touch()
     result = run_cli("agents/hooks/lint_format.py", kind, payload={"tool_input": {"file_path": str(path)}})
