@@ -42,15 +42,21 @@ Allow only one implementation writer per checkout at a time.
 
 ## Prepare a Self-Contained Brief
 
-The recipient does not inherit the originating conversation. Supply:
+The recipient does not inherit the originating conversation. Keep the brief concise but
+complete. Supply:
 
 - **Task:** plan review, code review, or implementation, with the requested outcome.
-- **Requirements:** the user's relevant requirements, accepted decisions, constraints, and links
-  to authoritative repository material. Distinguish requirements from the author's assumptions.
+- **Requirements:** the user's relevant requirements, acceptance criteria, accepted decisions,
+  constraints, and links to authoritative repository material. Record the version of the
+  requirements being delegated, or their full text when no version exists. Distinguish
+  requirements from the author's assumptions.
 - **Location:** the absolute repository or worktree path, branch, and relevant base and head
   commits. Tell the recipient to read the applicable instructions in that location.
 - **Input:** the exact plan text or plan file, code review range, or implementation scope. For
-  uncommitted code, identify whether staged, unstaged, and untracked files are included.
+  uncommitted code, identify whether staged, unstaged, and untracked files are included, and
+  provide a stable snapshot when the checkout may still change.
+- **Scope and focus:** the boundaries of the assignment and the review aspects that matter
+  (for example correctness, boundaries, verification, or a specific risk).
 - **Authority:** permitted edits, excluded files or tasks, and any existing delivery authorization.
 - **Completion:** observable acceptance conditions, relevant verification, and the expected
   response described below.
@@ -61,6 +67,9 @@ location, or permission prevents a correct assignment. Reuse authorization alrea
 Keep the reviewed input stable until the review completes. For uncommitted work, pause writes
 to that checkout or use an explicitly selected isolated snapshot containing all reviewed files.
 A result for an earlier plan or revision is not evidence that later changes were reviewed.
+A review input is identified by its requirements, diff, scope, and focus together: matching
+HEAD alone does not make two reviews the same input when requirements, uncommitted changes,
+or requested aspects differ.
 
 ## Review Assignments
 
@@ -73,6 +82,13 @@ For a **code review**, ask the reviewer to inspect the specified changes in thei
 context. Prioritize actionable bugs, regressions, contract violations, and missing evidence for
 required behavior. Relevant checks may be run within the session's permissions; source changes
 remain outside a review assignment.
+
+For changes spanning multiple components, review the boundaries between them, not only
+individual files. Have the reviewer trace an actual path such as provider input → adapter →
+shared guard or lint → provider output, and check the real input forms, configuration,
+execution order, and where results arrive, within the assigned scope. Small self-contained
+changes do not require an extra integration review, and high-risk design questions should
+still be reviewed when they surface rather than deferred to the end.
 
 Request findings ordered by severity. Each finding should identify the affected plan section or
 file and line, the violated requirement or concrete failure scenario, its impact, and supporting
@@ -100,10 +116,24 @@ originating session. Follow `herdr` for waiting, blocked sessions, and complete 
 Successful submission or a settled agent state does not prove that the assigned task is complete;
 read the response and compare it with the requested outcome.
 
+Do not repeat a completed review of the same requirements, diff, scope, and focus without new
+grounds. When inputs or material evidence change, scope the follow-up review to the affected
+part instead of repeating the whole assignment. Retrying a timed-out, incomplete, or
+unretrieved review is not a duplicate of a completed one.
+
 Evaluate review findings against the requirements and evidence before changing the work.
-Apply accepted corrections within the user's scope and seek a focused follow-up review when
-material changes leave the earlier review incomplete. Resolve disputed findings with evidence;
-do not manufacture consensus by repeating the same review request.
+Sort each finding as confirmed, refuted with evidence, or undetermined for lack of
+information. Apply accepted corrections within the user's scope and seek a focused follow-up
+review when material changes leave the earlier review incomplete. Resolve disputed findings
+with evidence; do not manufacture consensus by repeating the same review request, do not
+commission a review whose purpose is to refute a finding, and do not treat agreement between
+agents as proof of correctness. If conclusions keep alternating on the same grounds with no
+new information, report the point as unresolved and stop re-reviewing.
+
+Keep the mapping between reviewed inputs and their results in the originating conversation.
+When recording on a pull request has been requested, add only the needed content to that PR.
+Do not introduce a review database, a `REVIEW_STATE.md`, or a standing reconciliation
+process.
 
 For implementation, inspect the actual diff and verification evidence in the assigned repository
 before reporting success. When requested completion includes integrating another worktree's

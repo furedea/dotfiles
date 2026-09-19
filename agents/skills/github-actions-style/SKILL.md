@@ -114,14 +114,3 @@ This is most useful for `pull_request` and `push` triggers where users push mult
   cache broad paths that may contain credentials. When using an external shared
   backend, do not let untrusted workflows write caches that privileged
   workflows later execute.
-
-## 8. Runner: Blacksmith
-
-For GitHub Organizations, Blacksmith is a drop-in replacement for `ubuntu-latest` (faster CPU + local NVMe cache). Single line change:
-
-```yaml
-- runs-on: ubuntu-latest
-+ runs-on: blacksmith-4vcpu-ubuntu-2204
-```
-
-Constraints: Organizations only, Ubuntu 22.04 only, 25 GB cache/repo. 3,000 free minutes/month to try.

@@ -70,6 +70,13 @@ structure, coverage target, or desire to demonstrate TDD does not create a requi
 Reuse an existing failing test when it already demonstrates the gap. Never add or tighten an
 assertion solely to manufacture Red.
 
+When fixing a defect, trace it beyond where the symptom appears: follow the relevant callers
+and the required processing path to locate where actual behavior diverges from the
+requirement. Prefer correcting the responsible contract or shared location over adding
+case-by-case fixes at each symptom site, provided the shared fix does not break other
+callers' legitimate behavior. Scope the investigation to code related to this defect; reading
+the whole repository is not required.
+
 ### Behavior slices
 
 A behavior slice is the smallest independently understandable outcome that can be implemented and
