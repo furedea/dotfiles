@@ -20,7 +20,7 @@ Consult skills as needed and apply only the stages relevant to the request.
 
 Existing project style takes precedence over these rules.
 
-- Keep files focused: prefer 80-120 columns, roughly 200-500 lines, high-level code before lower-level details, and related concepts close together. Treat these numbers as readability heuristics, not targets; reducing line or file counts is never a goal by itself.
+- Keep files focused: prefer 80-120 columns, roughly 200-500 lines, high-level code before lower-level details, and related concepts close together.
 - Before writing new code, check whether related existing code, the standard library, platform features, or already-installed dependencies satisfy the requirement.
 - Separate object creation/configuration from execution logic.
 - Keep classes and modules single-purpose, cohesive, loosely coupled, and minimally public.
@@ -32,7 +32,6 @@ Existing project style takes precedence over these rules.
 - Let name length match scope size; include units, trust/safety attributes, and boolean prefixes where they clarify meaning.
 - Minimize comments and docstrings; use them for public APIs, TODOs, non-obvious constraints, and intent that code cannot express.
 - Prefer DRY, YAGNI, and Law of Demeter. Do not add features, abstractions, configuration, or dependencies the current request does not require.
-- Choose the simplest change that satisfies the required behavior and stays easy to understand and maintain; do not drop safety, compatibility, accessibility, required verification, or explicit requirements for the sake of simplicity.
 - Apply SOLID pragmatically; introduce interfaces, polymorphism, or dependency inversion only at meaningful boundaries.
 - Separate policy from details; delay database, framework, and external-service decisions behind abstractions when doing so reduces coupling.
 - Prefer Value Objects over raw primitives for values with validation, invariants, or domain behavior
