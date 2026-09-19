@@ -9,6 +9,7 @@ import sys
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "lib"))
 
+import hook_input
 import patch_input
 import session_gate
 import shell_syntax
@@ -53,10 +54,12 @@ def check_scope(record: SessionRecord, payload: dict) -> None:
     command = value.get("command", value.get("cmd", ""))
     if isinstance(command, str):
         check_shell_directories(record, cwd, command)
-    patch = value.get("patch", value.get("input", command))
-    if isinstance(patch, str):
-        for filename in patch_input.paths(patch):
-            require_inside(record, cwd / filename)
+    try:
+        patch = hook_input.patch_body(value, payload.get("tool_name"))
+    except ValueError as error:
+        raise StateError(str(error)) from error
+    for filename in patch_input.paths(patch):
+        require_inside(record, cwd / filename)
     if payload.get("tool_name") in {"Write", "Edit", "MultiEdit", "apply_patch"}:
         if filename := value.get("file_path"):
             require_inside(record, cwd / filename)

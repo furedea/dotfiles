@@ -59,6 +59,17 @@ def test_generated_devin_hooks_use_only_supported_events_and_native_tools(
     assert not any("Bash" in matcher for matcher in matchers)
 
 
+def test_generated_devin_edit_matchers_cover_every_canonical_edit_tool(
+    agent_harness: CliRunner, tmp_path: Path
+) -> None:
+    path = tmp_path / "config.json"
+    agent_harness("generate-devin-hooks", "--output", str(path))
+    hooks = json.loads(path.read_text())["hooks"]
+    matchers = [group.get("matcher", "") for event in ("PreToolUse", "PostToolUse") for group in hooks.get(event, [])]
+    for tool in ("write", "edit", "multi_edit", "notebook_edit"):
+        assert any(tool in matcher for matcher in matchers), tool
+
+
 def test_generated_hermes_hooks_use_only_supported_events_and_native_tools(
     agent_harness: CliRunner, tmp_path: Path
 ) -> None:

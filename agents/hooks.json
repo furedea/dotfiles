@@ -399,7 +399,7 @@
           ]
         },
         {
-          "matcher": "^(write|edit|notebook_edit)$",
+          "matcher": "^(write|edit|multi_edit|notebook_edit)$",
           "hooks": [
             {
               "command": "\"$HOME/.devin/hooks/hook_adapter.py\" audit tool",
@@ -451,7 +451,7 @@
       ],
       "PostToolUse": [
         {
-          "matcher": "^(write|edit|apply_patch|notebook_edit)$",
+          "matcher": "^(write|edit|multi_edit|apply_patch|notebook_edit)$",
           "hooks": [
             {
               "command": "\"$HOME/.devin/hooks/hook_adapter.py\" lint",

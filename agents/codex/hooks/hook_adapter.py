@@ -15,6 +15,7 @@ import audit_log
 import guard_command
 import guard_git
 import guard_file
+import hook_input
 import lint_format
 import patch_input
 import secret_path_policy
@@ -44,7 +45,9 @@ def lint(payload: dict) -> int:
 
 
 def harness(payload: dict) -> int:
-    for name in patch_input.paths((payload.get("tool_input") or {}).get("command") or ""):
+    values = payload.get("tool_input") or {}
+    body = hook_input.patch_body(values, payload.get("tool_name"))
+    for name in patch_input.paths(body):
         absolute = name if name.startswith(("/", "~/")) else str(Path.cwd() / name)
         if status := guard_file.check(
             "harness", translated(payload, "apply_patch", {"file_path": absolute}), shared_directory()
@@ -68,7 +71,10 @@ def check_paths(mode: str, payload: dict) -> int:
         candidates = [word for item in commands for word in (*item.arguments, *item.redirections)]
         candidates += [word.partition("=")[2] for word in candidates if "=" in word]
     else:
-        candidates = [values.get("file_path") or values.get("path") or "", *patch_input.paths(command)]
+        candidates = [
+            values.get("file_path") or values.get("path") or "",
+            *patch_input.paths(hook_input.patch_body(values, payload.get("tool_name"))),
+        ]
     for value in candidates:
         if rule := secret_path_policy.blocked_rule(value, rules):
             audit_log.blocked(
@@ -105,7 +111,11 @@ def dispatch(kind: str, arguments: list[str], payload: dict) -> int:
         return guard_file.check("prompt", payload, shared_directory())
     return guard_file.check(
         "write",
-        translated(payload, "Edit", {"content": patch_input.added_text(values.get("command") or "")}),
+        translated(
+            payload,
+            "Edit",
+            {"content": patch_input.added_text(hook_input.patch_body(values, payload.get("tool_name")))},
+        ),
         shared_directory(),
     )
 
