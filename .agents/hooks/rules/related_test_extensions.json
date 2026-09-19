@@ -53,7 +53,8 @@
     "tests/agents/test_notification.py",
     "tests/agents/hooks/test_verification_rule.py",
     "tests/agents/test_python_runtime.py",
-    "tests/agents/hooks/test_verification_session.py"
+    "tests/agents/hooks/test_verification_session.py",
+    "tests/agents/test_hook_generation.py"
   ],
   "agents/hooks/lib/session_*.py": [
     "tests/agents/hooks/test_verification_status.py",
@@ -62,14 +63,20 @@
     "tests/agents/hooks/test_session_store.py",
     "tests/agents/hooks/test_session_gate.py",
     "tests/agents/hooks/test_native_session.py",
-    "tests/agents/hooks/test_verification_session.py"
+    "tests/agents/hooks/test_verification_session.py",
+    "tests/agents/devin/test_hook_adapter.py",
+    "tests/agents/hermes/test_hermes_hook_adapter.py",
+    "tests/agents/pi/test_pi_hook_adapter.py"
   ],
   "agents/hooks/verification_session.py": [
     "tests/agents/hooks/test_verification_status.py",
     "tests/agents/hooks/test_verification_reuse.py",
     "tests/agents/hooks/test_verification_session.py",
     "tests/agents/hooks/test_native_session.py",
-    "tests/agents/hooks/test_session_gate.py"
+    "tests/agents/hooks/test_session_gate.py",
+    "tests/agents/devin/test_hook_adapter.py",
+    "tests/agents/hermes/test_hermes_hook_adapter.py",
+    "tests/agents/pi/test_pi_hook_adapter.py"
   ],
   "agents/command_permissions.json": [
     "tests/agents/codex/test_execpolicy.py",
@@ -109,30 +116,48 @@
     "tests/agents/hooks/test_lint_format_cli.py",
     "tests/agents/codex/test_hook_adapter_cli.py",
     "tests/agents/hooks/test_lint_format.py",
-    "tests/agents/test_python_runtime.py"
+    "tests/agents/test_python_runtime.py",
+    "tests/agents/devin/test_hook_adapter.py",
+    "tests/agents/hermes/test_hermes_hook_adapter.py",
+    "tests/agents/pi/test_pi_hook_adapter.py"
   ],
   "agents/hooks/lib/formatter_policy.py": [
     "tests/agents/hooks/test_lint_format.py",
     "tests/agents/hooks/test_lint_format_cli.py",
-    "tests/agents/test_python_runtime.py"
+    "tests/agents/test_python_runtime.py",
+    "tests/agents/devin/test_hook_adapter.py",
+    "tests/agents/codex/test_hook_adapter_cli.py",
+    "tests/agents/hermes/test_hermes_hook_adapter.py",
+    "tests/agents/pi/test_pi_hook_adapter.py"
   ],
   "agents/hooks/lib/process_runner.py": [
     "tests/agents/hooks/test_lint_format.py",
     "tests/agents/hooks/test_lint_format_cli.py",
-    "tests/agents/test_python_runtime.py"
+    "tests/agents/test_python_runtime.py",
+    "tests/agents/devin/test_hook_adapter.py",
+    "tests/agents/codex/test_hook_adapter_cli.py",
+    "tests/agents/hermes/test_hermes_hook_adapter.py",
+    "tests/agents/pi/test_pi_hook_adapter.py"
   ],
   "agents/hooks/lib/hook_input.py": [
     "tests/agents/hooks/test_lint_format.py",
     "tests/agents/hooks/test_lint_format_cli.py",
     "tests/agents/hooks/test_hook_boundary.py",
-    "tests/agents/test_python_runtime.py"
+    "tests/agents/test_python_runtime.py",
+    "tests/agents/devin/test_hook_adapter.py",
+    "tests/agents/codex/test_hook_adapter_cli.py",
+    "tests/agents/hermes/test_hermes_hook_adapter.py",
+    "tests/agents/pi/test_pi_hook_adapter.py"
   ],
   "agents/hooks/lib/lint_engine.py": [
     "tests/agents/hooks/test_lint_format.py",
     "tests/agents/hooks/test_lint_format_cli.py",
     "tests/agents/hooks/test_hook_boundary.py",
     "tests/agents/codex/test_hook_adapter_cli.py",
-    "tests/agents/test_python_runtime.py"
+    "tests/agents/test_python_runtime.py",
+    "tests/agents/devin/test_hook_adapter.py",
+    "tests/agents/hermes/test_hermes_hook_adapter.py",
+    "tests/agents/pi/test_pi_hook_adapter.py"
   ],
   "agents/hooks/lib/__init__.py": [
     "tests/agents/hooks/test_lint_format.py",
@@ -142,7 +167,10 @@
     "tests/agents/hooks/test_check_selection.py",
     "tests/agents/hooks/test_check_evidence.py",
     "tests/agents/hooks/test_session_gate.py",
-    "tests/agents/hooks/test_native_session.py"
+    "tests/agents/hooks/test_native_session.py",
+    "tests/agents/devin/test_hook_adapter.py",
+    "tests/agents/hermes/test_hermes_hook_adapter.py",
+    "tests/agents/pi/test_pi_hook_adapter.py"
   ],
   "agents/hooks/audit_log.py": [
     "tests/agents/hooks/test_audit_log_cli.py",
@@ -151,7 +179,11 @@
     "tests/agents/hooks/test_command_cli.py",
     "tests/agents/hooks/test_forbidden_command.py",
     "tests/agents/hooks/test_guard_git.py",
-    "tests/agents/hooks/test_hook_boundary.py"
+    "tests/agents/hooks/test_hook_boundary.py",
+    "tests/agents/devin/test_hook_adapter.py",
+    "tests/agents/codex/test_hook_adapter_cli.py",
+    "tests/agents/hermes/test_hermes_hook_adapter.py",
+    "tests/agents/pi/test_pi_hook_adapter.py"
   ],
   "github/repo.py": [
     "tests/github/test_repo.py",
@@ -177,7 +209,10 @@
     "tests/agents/hooks/test_forbidden_command.py",
     "tests/agents/codex/test_hook_adapter_cli.py",
     "tests/agents/hooks/test_git_safety.py",
-    "tests/agents/hooks/test_hook_boundary.py"
+    "tests/agents/hooks/test_hook_boundary.py",
+    "tests/agents/devin/test_hook_adapter.py",
+    "tests/agents/hermes/test_hermes_hook_adapter.py",
+    "tests/agents/pi/test_pi_hook_adapter.py"
   ],
   "agents/hooks/lib/command_policy.py": [
     "tests/agents/test_command_permission_sync.py",
@@ -186,7 +221,11 @@
     "tests/agents/hooks/test_command_policy.py",
     "tests/agents/hooks/test_forbidden_command.py",
     "tests/agents/hooks/test_guard_file.py",
-    "tests/agents/hooks/test_hook_boundary.py"
+    "tests/agents/hooks/test_hook_boundary.py",
+    "tests/agents/devin/test_hook_adapter.py",
+    "tests/agents/codex/test_hook_adapter_cli.py",
+    "tests/agents/hermes/test_hermes_hook_adapter.py",
+    "tests/agents/pi/test_pi_hook_adapter.py"
   ],
   "agents/hooks/guard_command.py": [
     "tests/agents/hooks/test_allowed_command.py",
@@ -207,19 +246,31 @@
     "tests/agents/hooks/test_guard_file.py",
     "tests/agents/hooks/test_secret_content.py",
     "tests/agents/codex/test_hook_adapter_cli.py",
-    "tests/agents/hooks/test_hook_boundary.py"
+    "tests/agents/hooks/test_hook_boundary.py",
+    "tests/agents/devin/test_hook_adapter.py",
+    "tests/agents/hermes/test_hermes_hook_adapter.py",
+    "tests/agents/pi/test_pi_hook_adapter.py"
   ],
   "agents/codex/hooks/hook_adapter.py": [
     "tests/agents/codex/test_hook_adapter_cli.py",
-    "tests/agents/hooks/test_hook_boundary.py"
+    "tests/agents/hooks/test_hook_boundary.py",
+    "tests/agents/test_hook_generation.py"
   ],
   "agents/hooks/lib/patch_input.py": [
     "tests/agents/codex/test_hook_adapter_cli.py",
-    "tests/agents/hooks/test_hook_boundary.py"
+    "tests/agents/hooks/test_hook_boundary.py",
+    "tests/agents/devin/test_hook_adapter.py",
+    "tests/agents/hermes/test_hermes_hook_adapter.py",
+    "tests/agents/pi/test_pi_hook_adapter.py",
+    "tests/agents/hooks/test_verification_session.py",
+    "tests/agents/hooks/test_lint_format.py"
   ],
   "agents/hooks/lib/secret_path_policy.py": [
     "tests/agents/codex/test_hook_adapter_cli.py",
-    "tests/agents/hooks/test_hook_boundary.py"
+    "tests/agents/hooks/test_hook_boundary.py",
+    "tests/agents/devin/test_hook_adapter.py",
+    "tests/agents/hermes/test_hermes_hook_adapter.py",
+    "tests/agents/pi/test_pi_hook_adapter.py"
   ],
   "herdr/merge_pull_request.py": [
     "tests/herdr/test_merge_pull_request_cli.py"
@@ -264,5 +315,21 @@
   ],
   "agents/codex/hooks/*.py": [
     "tests/agents/test_python_runtime.py"
+  ],
+  "agents/hooks/lib/hook_dispatch.py": [
+    "tests/agents/hermes/test_hermes_hook_adapter.py",
+    "tests/agents/pi/test_pi_hook_adapter.py"
+  ],
+  "agents/devin/hooks/hook_adapter.py": [
+    "tests/agents/devin/test_hook_adapter.py",
+    "tests/agents/test_hook_generation.py"
+  ],
+  "agents/hermes/hooks/hook_adapter.py": [
+    "tests/agents/hermes/test_hermes_hook_adapter.py",
+    "tests/agents/test_hook_generation.py"
+  ],
+  "agents/pi/hooks/hook_adapter.py": [
+    "tests/agents/pi/test_pi_hook_adapter.py",
+    "tests/agents/test_hook_generation.py"
   ]
 }

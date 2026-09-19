@@ -38,17 +38,42 @@ def _cwd(payload: dict) -> Path:
     return Path(value).expanduser().resolve()
 
 
+def patch_body(values: dict, tool: str | None = None) -> str:
+    """Return the single patch body or reject conflicting, unverifiable carriers.
+
+    `patch` is the canonical field adapters normalize into. `input` and
+    `command` are accepted only for apply_patch tools or when the content
+    itself carries patch markers, so a plain shell command is never read
+    as a patch.
+    """
+    found = {
+        key: value for key in ("patch", "input", "command") if isinstance((value := values.get(key)), str) and value
+    }
+    bodies = set(found.values())
+    if len(bodies) > 1:
+        raise ValueError("conflicting patch fields in tool_input")
+    body = next(iter(bodies), "")
+    if tool == "apply_patch":
+        if body and not patch_input.is_patch(body):
+            raise ValueError("malformed patch input")
+        return body
+    if "patch" in found:
+        if not patch_input.is_patch(body):
+            raise ValueError("malformed patch input")
+        return body
+    return body if patch_input.is_patch(body) else ""
+
+
 def _input_names(payload: dict) -> tuple[str, ...]:
     values = payload.get("tool_input")
+    if values is None:
+        return ()
     if not isinstance(values, dict):
-        return ()
+        raise ValueError("tool_input must be an object")
     tool = payload.get("tool_name")
-    command = values.get("command")
-    if isinstance(command, str) and (tool == "apply_patch" or not tool):
-        return patch_input.paths(command)
-    if tool not in EDIT_TOOLS and tool:
+    if tool and tool not in EDIT_TOOLS:
         return ()
-    names: list[str] = []
+    names = list(patch_input.paths(patch_body(values, tool)))
     file_path = values.get("file_path") or values.get("path")
     if isinstance(file_path, str):
         names.append(file_path)

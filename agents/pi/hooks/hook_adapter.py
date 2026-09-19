@@ -16,6 +16,7 @@ import guard_command
 import guard_git
 import guard_file
 import hook_dispatch
+import hook_input
 import lint_format
 import patch_input
 import secret_path_policy
@@ -92,10 +93,6 @@ def audit(kind: str, payload: dict) -> int:
     return 0
 
 
-def patch_text(values: dict) -> str:
-    return values.get("patch") or values.get("input") or values.get("command") or ""
-
-
 def lint(payload: dict) -> int:
     """Report shared quality diagnostics using the post-tool JSON contract."""
     lint_format.emit(lint_format.diagnostics(normalized(payload)))
@@ -105,7 +102,7 @@ def lint(payload: dict) -> int:
 def harness(payload: dict) -> int:
     values = normalized(payload).get("tool_input") or {}
     candidates = [values.get("file_path") or values.get("path") or ""]
-    candidates += patch_input.paths(patch_text(values))
+    candidates += patch_input.paths(hook_input.patch_body(values, normalized(payload).get("tool_name")))
     for name in candidates:
         if not name:
             continue
@@ -134,7 +131,10 @@ def check_paths(mode: str, payload: dict) -> int:
         candidates = [word for item in commands for word in (*item.arguments, *item.redirections)]
         candidates += [word.partition("=")[2] for word in candidates if "=" in word]
     else:
-        candidates = [values.get("file_path") or values.get("path") or "", *patch_input.paths(patch_text(values))]
+        candidates = [
+            values.get("file_path") or values.get("path") or "",
+            *patch_input.paths(hook_input.patch_body(values, normalized(payload).get("tool_name"))),
+        ]
     context = normalized(payload)
     for value in candidates:
         if rule := secret_path_policy.blocked_rule(value, rules):
@@ -156,10 +156,10 @@ def check_paths(mode: str, payload: dict) -> int:
 def content(mode: str, payload: dict) -> int:
     if mode == "apply-patch":
         values = normalized(payload).get("tool_input") or {}
+        body = hook_input.patch_body(values, normalized(payload).get("tool_name") or "apply_patch")
         return guard_file.check(
             "write",
-            normalized(payload)
-            | {"tool_name": "Edit", "tool_input": {"content": patch_input.added_text(patch_text(values))}},
+            normalized(payload) | {"tool_name": "Edit", "tool_input": {"content": patch_input.added_text(body)}},
             shared_directory(),
         )
     return guard_file.check(mode, normalized(payload), shared_directory())

@@ -8,7 +8,7 @@ import sys
 
 import pytest
 
-from tests.runtime import CliRunner, REPO_ROOT
+from tests.runtime import CliRunner, REPO_ROOT, StubWriter
 
 
 SCRIPT = "agents/devin/hooks/hook_adapter.py"
@@ -201,3 +201,80 @@ def test_audit_compaction_records_post_compaction(
     entry = json.loads(records[0].read_text().splitlines()[-1])
     assert entry["event"] == "PostCompaction"
     assert entry["provider"] == "devin"
+
+
+def patch_payload(field: str, *paths: str) -> dict:
+    return {
+        "tool_name": "apply_patch",
+        "tool_input": {
+            field: "*** Begin Patch\n"
+            + "".join(f"*** Update File: {path}\n@@\n-old\n+new\n" for path in paths)
+            + "*** End Patch\n"
+        },
+    }
+
+
+@pytest.mark.parametrize("field", ["patch", "input", "command"])
+def test_patch_carrier_fields_resolve_the_same_targets(run_cli: CliRunner, harness: Path, field: str) -> None:
+    result = run_cli(SCRIPT, "paths", "patch", payload=patch_payload(field, ".env.local"))
+    assert result.returncode == 2
+    assert ".env.local" in result.stderr
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        "*** Begin Patch\n*** Delete File: ~/.ssh/config\n*** End Patch\n",
+        "*** Begin Patch\n*** Update File: a.py\n*** Move to: ~/.ssh/config\n*** End Patch\n",
+    ],
+)
+def test_patch_delete_and_move_targets_are_guarded(run_cli: CliRunner, harness: Path, body: str) -> None:
+    payload = {"tool_name": "apply_patch", "tool_input": {"patch": body}}
+    result = run_cli(SCRIPT, "paths", "patch", payload=payload)
+    assert result.returncode == 2
+    assert ".ssh" in result.stderr
+
+
+def test_conflicting_patch_fields_are_rejected(run_cli: CliRunner, harness: Path) -> None:
+    payload = {
+        "tool_name": "apply_patch",
+        "tool_input": {
+            "patch": "*** Begin Patch\n*** Update File: a.py\n*** End Patch\n",
+            "command": "*** Begin Patch\n*** Update File: b.py\n*** End Patch\n",
+        },
+    }
+    result = run_cli(SCRIPT, "paths", "patch", payload=payload)
+    assert result.returncode == 2
+    assert "conflict" in result.stderr.lower()
+
+
+@pytest.mark.parametrize("field", ["patch", "command"])
+def test_lint_routes_apply_patch_targets_to_shared_diagnostics(
+    run_cli: CliRunner, tmp_path: Path, executable: StubWriter, field: str
+) -> None:
+    executable(
+        "ruff",
+        """
+        import sys
+        if "--output-format=concise" in sys.argv:
+            print("ruff: F821 undefined name")
+            sys.exit(1)
+        """,
+    )
+    project = tmp_path / "repo"
+    project.mkdir()
+    (project / "x.py").write_text("x = 1\n")
+    payload = patch_payload(field, "x.py") | {"cwd": str(project)}
+    result = run_cli(SCRIPT, "lint", payload=payload)
+    assert result.returncode == 0
+    assert result.stderr == ""
+    row = json.loads(result.stdout)
+    context = row["hookSpecificOutput"]["additionalContext"]
+    assert "F821" in context
+    assert str(project / "x.py") in context
+
+
+def test_malformed_tool_input_is_rejected(run_cli: CliRunner, harness: Path) -> None:
+    result = run_cli(SCRIPT, "lint", payload={"tool_name": "write", "tool_input": "oops"})
+    assert result.returncode == 2
+    assert "BLOCKED" in result.stderr

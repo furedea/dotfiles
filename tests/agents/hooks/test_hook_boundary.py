@@ -23,6 +23,41 @@ def test_patch_paths_include_moves_and_deletions_once() -> None:
     assert hook_adapter.patch_input.paths(patch) == ("a.py", "new.py", "old.py")
 
 
+hook_input = hook_adapter.lint_format.hook_input
+
+
+def test_patch_body_requires_tool_or_format_evidence() -> None:
+    patch = "*** Begin Patch\n*** Update File: a.py\n*** End Patch"
+    assert hook_input.patch_body({"command": patch}, "apply_patch") == patch
+    assert hook_input.patch_body({"input": patch}, "apply_patch") == patch
+    assert hook_input.patch_body({"patch": patch}, "apply_patch") == patch
+    assert hook_input.patch_body({"command": patch}) == patch
+    assert hook_input.patch_body({"patch": patch}) == patch
+    assert hook_input.patch_body({"command": "rm -rf build/"}) == ""
+    assert hook_input.patch_body({"input": "plain text"}) == ""
+
+
+def test_conflicting_patch_fields_are_rejected() -> None:
+    first = "*** Begin Patch\n*** Update File: a.py\n*** End Patch"
+    second = "*** Begin Patch\n*** Update File: b.py\n*** End Patch"
+    with pytest.raises(ValueError, match="conflict"):
+        hook_input.patch_body({"patch": first, "command": second}, "apply_patch")
+
+
+def test_identical_patch_fields_do_not_conflict() -> None:
+    patch = "*** Begin Patch\n*** Update File: a.py\n*** End Patch"
+    assert hook_input.patch_body({"patch": patch, "command": patch}, "apply_patch") == patch
+
+
+def test_non_object_tool_input_is_not_an_empty_success() -> None:
+    with pytest.raises(ValueError):
+        hook_input.target_paths({"tool_input": "oops"})
+
+
+def test_shell_commands_are_not_patch_targets() -> None:
+    assert hook_input.target_paths({"tool_input": {"command": "cat src/one.py"}}) == ()
+
+
 def test_scanner_receives_only_added_lines() -> None:
     assert hook_adapter.patch_input.added_text("--- old\n+++ new\n context\n-old\n+new\n+more") == "new\nmore"
 

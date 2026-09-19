@@ -45,3 +45,47 @@ def test_workflow_local_links_resolve_and_retired_issue_reference_is_absent() ->
                     continue
                 assert (path.parent / filename).is_file(), (path, destination)
                 assert not filename.endswith("/issues.md"), (path, destination)
+
+
+CHANGED_SKILLS = ("herdr-delegation", "tsdd", "github-actions-style")
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("provider", ["claude", "codex"])
+@pytest.mark.parametrize("skill", CHANGED_SKILLS)
+def test_changed_skills_render_with_valid_frontmatter(
+    agent_harness: CliRunner, tmp_path: Path, provider: str, skill: str
+) -> None:
+    output = tmp_path / provider
+    agent_harness("generate-skills", "--provider", provider, "--output", str(output))
+    text = (output / skill / "SKILL.md").read_text()
+    frontmatter = text.split("---", 2)[1]
+    assert re.search(rf"^name:\s*{re.escape(skill)}\s*$", frontmatter, re.MULTILINE)
+    assert re.search(r"^description:\s*\S", frontmatter, re.MULTILINE)
+
+
+@pytest.mark.parametrize("skill", CHANGED_SKILLS)
+def test_changed_skill_links_resolve(skill: str) -> None:
+    for path in (SKILLS / skill).rglob("*.md"):
+        for destination in re.findall(r"\[[^\]]+\]\(([^)]+)\)", path.read_text()):
+            filename = destination.split("#", 1)[0]
+            if not filename or "://" in filename:
+                continue
+            assert (path.parent / filename).is_file(), (path, destination)
+
+
+@pytest.mark.integration
+def test_generated_github_actions_skill_drops_only_the_blacksmith_section(
+    agent_harness: CliRunner, tmp_path: Path
+) -> None:
+    output = tmp_path / "claude"
+    agent_harness("generate-skills", "--provider", "claude", "--output", str(output))
+    rendered = (output / "github-actions-style/SKILL.md").read_text()
+    assert "blacksmith" not in rendered.lower()
+    assert "blacksmith" not in (SKILLS / "github-actions-style/SKILL.md").read_text().lower()
+    assert "## 7. Cache Design" in rendered
+
+
+def test_no_review_or_ponytail_skill_was_added() -> None:
+    names = {path.name for path in SKILLS.iterdir() if path.is_dir()}
+    assert not any("review" in name or "ponytail" in name for name in names)

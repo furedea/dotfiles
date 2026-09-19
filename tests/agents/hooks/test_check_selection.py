@@ -59,6 +59,123 @@ def test_javascript_without_a_test_command_is_not_success(tmp_path: Path) -> Non
 PYTEST = ("uv", "run", "--frozen", "pytest", "--no-header", "-q")
 
 
+@pytest.mark.parametrize("changed", ["pyproject.toml", "uv.lock", "pytest.ini", "conftest.py", "tests/conftest.py"])
+def test_python_configuration_changes_select_the_full_suite(tmp_path: Path, changed: str) -> None:
+    rules = project(tmp_path, {})
+    (tmp_path / "pyproject.toml").touch()
+    commands, errors = selection.language_plan(tmp_path, rules, (changed,))
+    assert not errors
+    assert [item.arguments for item in commands] == [PYTEST]
+    assert commands[0].scope == "full suite"
+
+
+def test_configuration_changes_do_not_degrade_to_partial_tests(tmp_path: Path) -> None:
+    rules = project(tmp_path, {})
+    touch_all(tmp_path, ["pyproject.toml", "src/app.py", "tests/test_app.py"])
+    commands, errors = selection.language_plan(tmp_path, rules, ("uv.lock", "src/app.py"))
+    assert not errors
+    assert [item.arguments for item in commands] == [PYTEST]
+    assert commands[0].scope == "full suite"
+
+
+def test_deleted_project_marker_is_reported_instead_of_passing(tmp_path: Path) -> None:
+    rules = project(tmp_path, {})
+    commands, errors = selection.language_plan(tmp_path, rules, ("pyproject.toml",))
+    assert not commands
+    assert errors and "pyproject.toml" in errors[0]
+
+
+def test_deleted_configuration_still_selects_the_full_suite(tmp_path: Path) -> None:
+    rules = project(tmp_path, {})
+    (tmp_path / "pyproject.toml").touch()
+    commands, errors = selection.language_plan(tmp_path, rules, ("uv.lock",))
+    assert not errors
+    assert [item.arguments for item in commands] == [PYTEST]
+
+
+def test_unmatched_sources_escalate_beyond_partial_matches(tmp_path: Path) -> None:
+    rules = project(tmp_path, {})
+    touch_all(tmp_path, ["pyproject.toml", "tests/test_a.py"])
+    commands, errors = selection.language_plan(tmp_path, rules, ("a.py", "b.py"))
+    assert not errors
+    assert [item.arguments for item in commands] == [PYTEST]
+    assert commands[0].scope == "full suite"
+
+
+def test_mapped_sources_stay_within_their_declared_targets(tmp_path: Path) -> None:
+    rules = project(tmp_path, {"lib/core.py": ["tests/unit/test_core.py"]})
+    touch_all(tmp_path, ["pyproject.toml", "tests/unit/test_core.py"])
+    commands, errors = selection.language_plan(tmp_path, rules, ("lib/core.py",))
+    assert not errors
+    assert [item.arguments for item in commands] == [(*PYTEST, "tests/unit/test_core.py")]
+
+
+def test_sources_without_a_project_marker_report_instead_of_passing(tmp_path: Path) -> None:
+    rules = project(tmp_path, {})
+    commands, errors = selection.language_plan(tmp_path, rules, ("script.py",))
+    assert not commands
+    assert errors and "pyproject.toml" in errors[0]
+
+
+def test_shell_sources_without_a_test_directory_report_instead_of_passing(tmp_path: Path) -> None:
+    rules = project(tmp_path, {})
+    commands, errors = selection.language_plan(tmp_path, rules, ("script.sh",))
+    assert not commands
+    assert errors and "tests" in errors[0]
+
+
+def test_plain_documents_do_not_select_the_full_suite(tmp_path: Path) -> None:
+    rules = project(tmp_path, {})
+    (tmp_path / "pyproject.toml").touch()
+    commands, errors = selection.language_plan(tmp_path, rules, ("docs/guide.md",))
+    assert not commands
+    assert not errors
+
+
+@pytest.mark.parametrize(
+    "changed",
+    ["package.json", "tsconfig.json", "src/tsconfig.json", "jest.config.js", "vitest.config.ts", "pnpm-lock.yaml"],
+)
+def test_javascript_configuration_changes_select_the_full_suite(tmp_path: Path, changed: str) -> None:
+    rules = project(tmp_path, {})
+    (tmp_path / "package.json").write_text(json.dumps({"scripts": {"test": "node --test"}}))
+    commands, errors = selection.language_plan(tmp_path, rules, (changed,))
+    assert not errors
+    assert [item.arguments for item in commands] == [("node", "--test")]
+    assert commands[0].scope == "full suite"
+
+
+def test_javascript_unmatched_sources_escalate_without_dependency_analysis(tmp_path: Path) -> None:
+    rules = project(tmp_path, {})
+    (tmp_path / "package.json").write_text(
+        json.dumps({"devDependencies": {"jest": "30"}, "scripts": {"test": "jest"}})
+    )
+    touch_all(tmp_path, ["src/util.js", "tests/util.test.js"])
+    commands, errors = selection.language_plan(tmp_path, rules, ("src/util.js", "src/helper.js"))
+    assert not errors
+    assert [item.arguments for item in commands] == [("npm", "exec", "--", "jest")]
+    assert commands[0].scope == "full suite"
+
+
+@pytest.mark.parametrize("changed", ["Cargo.toml", "Cargo.lock", "rust-toolchain", "rust-toolchain.toml"])
+def test_rust_configuration_changes_select_the_full_suite(tmp_path: Path, changed: str) -> None:
+    rules = project(tmp_path, {})
+    (tmp_path / "Cargo.toml").touch()
+    commands, errors = selection.language_plan(tmp_path, rules, (changed,))
+    assert not errors
+    assert [item.arguments for item in commands] == [("cargo", "test", "--quiet")]
+    assert commands[0].scope == "full suite"
+
+
+def test_rust_unmatched_sources_escalate_beyond_named_targets(tmp_path: Path) -> None:
+    rules = project(tmp_path, {})
+    touch_all(tmp_path, ["Cargo.toml", "src/parser.rs", "src/util.rs", "tests/parser.rs"])
+    commands, errors = selection.language_plan(tmp_path, rules, ("src/parser.rs", "src/util.rs"))
+    assert not errors
+    assert [item.arguments for item in commands] == [("cargo", "test", "--quiet")]
+    assert commands[0].scope == "full suite"
+
+
 def touch_all(root: Path, names: list[str]) -> None:
     for name in names:
         path = root / name

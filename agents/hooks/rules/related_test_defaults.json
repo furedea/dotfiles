@@ -25,12 +25,23 @@
       ".mypy_cache"
     ],
     "project_markers": ["pyproject.toml"],
+    "full_suite_triggers": [
+      "conftest.py",
+      "**/conftest.py",
+      "pyproject.toml",
+      "**/pyproject.toml",
+      "pytest.ini",
+      "**/pytest.ini",
+      "uv.lock",
+      "**/uv.lock"
+    ],
     "fallback_on_unmatched_source": true
   },
   "javascript_typescript": {
     "source_extensions": [".js", ".jsx", ".ts", ".tsx"],
     "project_markers": ["package.json", "pnpm-lock.yaml", "tsconfig.json"],
     "test_dirs": ["."],
+    "exclude_dirs": ["node_modules", ".venv", "dist", "build", "coverage", "__pycache__"],
     "test_patterns": [
       "{stem}.test.js",
       "{stem}.spec.js",
@@ -50,12 +61,48 @@
       "*.spec.ts",
       "*.test.tsx",
       "*.spec.tsx"
-    ]
+    ],
+    "full_suite_triggers": [
+      "package.json",
+      "**/package.json",
+      "package-lock.json",
+      "**/package-lock.json",
+      "pnpm-lock.yaml",
+      "**/pnpm-lock.yaml",
+      "yarn.lock",
+      "**/yarn.lock",
+      "bun.lock",
+      "**/bun.lock",
+      "bun.lockb",
+      "**/bun.lockb",
+      "tsconfig.json",
+      "**/tsconfig.json",
+      "tsconfig.*.json",
+      "**/tsconfig.*.json",
+      "jest.config.*",
+      "**/jest.config.*",
+      "vitest.config.*",
+      "**/vitest.config.*",
+      "vitest.workspace.*",
+      "**/vitest.workspace.*"
+    ],
+    "fallback_on_unmatched_source": true
   },
   "rust": {
     "source_extensions": [".rs"],
     "project_markers": ["Cargo.toml"],
     "integration_test_dir": "tests",
-    "source_dirs": ["src"]
+    "source_dirs": ["src"],
+    "full_suite_triggers": [
+      "Cargo.toml",
+      "**/Cargo.toml",
+      "Cargo.lock",
+      "**/Cargo.lock",
+      "rust-toolchain",
+      "**/rust-toolchain",
+      "rust-toolchain.toml",
+      "**/rust-toolchain.toml"
+    ],
+    "fallback_on_unmatched_source": true
   }
 }

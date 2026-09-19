@@ -137,3 +137,63 @@ def test_shared_inputs_select_their_consumers(
     extension: dict[str, list[str]], source: str, required: set[str]
 ) -> None:
     assert required <= {Path(target).name for target in extension[source]}
+
+
+@pytest.mark.parametrize(
+    ("source", "required"),
+    [
+        (
+            "agents/hooks/lib/hook_input.py",
+            {
+                "test_hook_adapter.py",
+                "test_hook_adapter_cli.py",
+                "test_hermes_hook_adapter.py",
+                "test_pi_hook_adapter.py",
+                "test_hook_boundary.py",
+            },
+        ),
+        (
+            "agents/hooks/lib/patch_input.py",
+            {
+                "test_hook_adapter.py",
+                "test_hook_adapter_cli.py",
+                "test_hermes_hook_adapter.py",
+                "test_pi_hook_adapter.py",
+                "test_verification_session.py",
+                "test_hook_boundary.py",
+            },
+        ),
+        (
+            "agents/hooks/lib/lint_engine.py",
+            {
+                "test_hook_adapter.py",
+                "test_hook_adapter_cli.py",
+                "test_hermes_hook_adapter.py",
+                "test_pi_hook_adapter.py",
+                "test_hook_boundary.py",
+            },
+        ),
+        (
+            "agents/hooks/guard_file.py",
+            {
+                "test_hook_adapter.py",
+                "test_hermes_hook_adapter.py",
+                "test_pi_hook_adapter.py",
+                "test_hook_boundary.py",
+            },
+        ),
+        (
+            "agents/hooks/verification_session.py",
+            {"test_hook_adapter.py", "test_hermes_hook_adapter.py", "test_pi_hook_adapter.py"},
+        ),
+        ("agents/hooks.json", {"test_hook_generation.py"}),
+        ("agents/devin/hooks/hook_adapter.py", {"test_hook_adapter.py", "test_hook_generation.py"}),
+        ("agents/hermes/hooks/hook_adapter.py", {"test_hermes_hook_adapter.py", "test_hook_generation.py"}),
+        ("agents/pi/hooks/hook_adapter.py", {"test_pi_hook_adapter.py", "test_hook_generation.py"}),
+        ("agents/codex/hooks/hook_adapter.py", {"test_hook_generation.py"}),
+    ],
+)
+def test_shared_boundary_inputs_select_provider_boundary_tests(
+    extension: dict[str, list[str]], source: str, required: set[str]
+) -> None:
+    assert required <= {Path(target).name for target in extension[source]}

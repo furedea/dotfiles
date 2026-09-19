@@ -56,6 +56,19 @@ def test_changed_inputs_require_another_execution(
     assert len(verification_calls.read_text().splitlines()) == 2
 
 
+def test_broadened_selection_does_not_reuse_narrow_evidence(
+    verification_record: session_store.SessionRecord, verification_calls: Path, run_cli: CliRunner
+) -> None:
+    record = verification_record
+    (record.root / "source.py").write_text("changed")
+    assert run_cli(SCRIPT, "verify", str(record.directory)).returncode == 0
+    narrow = set(record.results()["checks"])
+    (record.root / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    assert run_cli(SCRIPT, "verify", str(record.directory)).returncode == 0
+    assert narrow.isdisjoint(record.results()["checks"])
+    assert len(verification_calls.read_text().splitlines()) == 2
+
+
 @pytest.mark.parametrize("provider", ["claude", "codex"])
 def test_session_start_notifies_the_registered_path_as_model_context(
     verification_record: session_store.SessionRecord, run_cli: CliRunner, provider: str
