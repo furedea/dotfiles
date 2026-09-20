@@ -152,22 +152,21 @@ wait for the old instance to expire or restart the service before reconnecting.
 - Nix flakes, weekly garbage collection, and Touch ID authentication for `sudo`
 - keyboard, text input, Finder, Dock, trackpad, screenshots, lock screen, menu
   clock, Spotlight, and other macOS defaults
-- Dock applications: Raycast, Arc, Obsidian, OrbStack, Slack, System Settings,
-  and Nani
+- Dock applications: Dia, Obsidian, OrbStack, Slack, System Settings, and Nani
 - display sleep disabled on both battery and charger
 - Homebrew through nix-homebrew, with unlisted packages removed on activation
 
 The current cask set is:
 
 ```text
-arc                    bitwarden              chatgpt
-deepl                  discord                firefox
-font-jetbrains-mono    ghostty                google-chrome
-homerow                karabiner-elements     mactex
-microsoft-excel        microsoft-powerpoint   microsoft-word
-nani                   obsidian               orbstack
-raycast                skim                   slack
-steam                  tailscale-app          vimr
+bitwarden              chatgpt                deepl
+discord                firefox                font-jetbrains-mono
+ghostty                google-chrome         homerow
+karabiner-elements     mactex                microsoft-excel
+microsoft-powerpoint   microsoft-word        nani
+obsidian               orbstack              skim
+slack                  steam                  tailscale-app
+thebrowsercompany-dia  tinycast              vimr
 ```
 
 The cask list in `nix/darwin/default.nix` is authoritative.
@@ -270,7 +269,6 @@ reference files.
 
 These tracked files are not applied by Home Manager or nix-darwin:
 
-- `raycast/*.rayconfig` is a manual Raycast export
 - [`templates/`](templates/README.md) contains reference files copied into other repositories,
   including a complete release workflow with project-specific build steps
 
@@ -291,7 +289,7 @@ These tracked files are not applied by Home Manager or nix-darwin:
 ├── github/                    # Repository creation and policy scripts
 ├── tests/                     # Python contracts and Bats integration by domain
 ├── dprint/ and prettier/      # Global formatter configuration
-├── raycast/                   # Manual settings export
+├── tinycast/                 # Manual settings export
 └── templates/                 # Manually copied reference templates
 ```
 
@@ -455,7 +453,7 @@ After the first switch, configure as needed:
 - pair Moshi Hook with the iPhone app when restoring a host
 - configure Night Shift, True Tone, display resolution, and Accessibility
   display options in System Settings
-- import `raycast/*.rayconfig` when restoring Raycast manually
+- import `tinycast/*` when restoring Tinycast manually
 
 ## Update Dependencies
 

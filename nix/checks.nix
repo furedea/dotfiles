@@ -164,6 +164,11 @@ in
       !(lib.hasInfix "moshi-hook" mba.homebrew.brewfile)
       && !(lib.hasInfix "rjyo/moshi" mba.homebrew.brewfile);
     noninteractive-homebrew-cleanup = mbp.homebrew.onActivation.extraFlags == [ "--force" ];
+    no-raycast-cask = !(builtins.elem "raycast" (names mbp.homebrew.casks));
+    no-raycast-dock-entry =
+      !lib.hasInfix "/Applications/Raycast.app" (
+        builtins.toJSON (mbp.system.defaults.dock.persistent-apps or [ ])
+      );
     moshi-pinned =
       versions "moshi-hook" mbpHome.home.packages == [ "0.3.21" ]
       && lib.hasPrefix "/nix/store/" (toString mbpHome.home.file.".local/bin/moshi-hook".source)

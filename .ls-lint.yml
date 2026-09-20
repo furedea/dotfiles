@@ -17,4 +17,5 @@ ignore:
   - docs/logs
   - "**/docs/logs"
 
-  - "raycast/*.rayconfig"
+  - "tinycast/*.rayconfig"
+  - "tinycast/*.tinycast"
