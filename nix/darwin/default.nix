@@ -247,6 +247,10 @@ in
         # Save new documents locally instead of iCloud by default
         "NSDocumentSaveNewDocumentsToCloud" = false;
       };
+      # Spotlight: disable all categories (using Tinycast instead)
+      "com.apple.Spotlight" = {
+        "orderedItems" = [ ];
+      };
       # Prevent .DS_Store file creation on network shares and USB drives
       "com.apple.desktopservices" = {
         "DSDontWriteNetworkStores" = true;
@@ -305,6 +309,17 @@ in
   system.activationScripts.postActivation.text = ''
     # Stop Apple Music (rcd) from auto-launching
     launchctl unload -w /System/Library/LaunchAgents/com.apple.rcd.plist 2>/dev/null || true
+
+    # Disable Spotlight keyboard shortcut (using Tinycast instead)
+    # Must run as the primary user, not root
+    user="${config.system.primaryUser}"
+    userHome="/Users/$user"
+    /usr/libexec/PlistBuddy \
+      -c "Set :AppleSymbolicHotKeys:64:enabled false" \
+      "$userHome/Library/Preferences/com.apple.symbolichotkeys.plist" 2>/dev/null || \
+    /usr/libexec/PlistBuddy \
+      -c "Add :AppleSymbolicHotKeys:64:enabled bool false" \
+      "$userHome/Library/Preferences/com.apple.symbolichotkeys.plist" 2>/dev/null || true
 
     # Disable automatic macOS updates (system-level, written to /Library/Preferences/)
     defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticallyInstallMacOSUpdates -bool false
