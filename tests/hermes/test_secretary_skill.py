@@ -42,4 +42,4 @@ def test_morning_blueprint_limits_writes_to_local_digest_state() -> None:
 
 def test_morning_routine_requests_a_japanese_report() -> None:
     source = (SKILL_DIRECTORY / "morning-briefing/SKILL.md").read_text()
-    assert re.search(r"^5\. Produce one concise .*Japanese report", source, re.MULTILINE)
+    assert re.search(r"^6\. Produce one concise .*Japanese report", source, re.MULTILINE)
