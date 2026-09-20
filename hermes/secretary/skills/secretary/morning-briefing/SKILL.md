@@ -1,7 +1,7 @@
 ---
 name: morning-briefing
 description: Summarize today's calendar, mail, research, and technology changes.
-version: 0.5.0
+version: 0.4.1
 author: furedea
 license: MIT
 platforms: [macos]
@@ -42,15 +42,13 @@ digest state remain local.
    separate. It may update only its local digest state.
 4. Load `toolchain-digest`. Report only daily P0 and P1 changes. It may update only
    its local digest state.
-5. Run `provider-usage` in the terminal and relay its rate-limit lines verbatim.
-6. Produce one concise Japanese report in this order:
+5. Produce one concise Japanese report in this order:
     - attention now
     - today's schedule
     - mail requiring a decision
     - AI4SE research
     - LLM and agent benchmark research
     - material technology changes
-    - provider rate limits
     - coverage gaps
 
 ## Authority Policy
@@ -58,15 +56,11 @@ digest state remain local.
 Provider access remains read-only. A scheduled run cannot change calendar,
 mail, dotfiles, dependencies, packages, or external accounts. The only allowed
 writes are the two profile-local digest state files defined by the related
-Skills and the local provider credentials that `provider-usage` refreshes
-(`~/.codex/accounts/` and the Claude Keychain item). The command prints only
-usage percentages, never credential material.
+Skills.
 
 ## Pitfalls
 
 - Inferring permission to mutate a provider or dotfiles from a scheduled run.
-- Printing or quoting credential material surfaced by `provider-usage` output;
-  only its usage lines belong in the report.
 - Hiding a failed account, calendar, or source query behind a partial summary.
 - Filling a failed or quiet research source with general news.
 - Mixing benchmark research into product and tool release updates.

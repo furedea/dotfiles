@@ -65,9 +65,6 @@ let
       exec hermes -p secretary "$@"
     '';
   };
-  providerUsageCommand = pkgs.writeShellScriptBin "provider-usage" ''
-    exec ${automationPython} -I -B "${dotfilesDir}/hermes/provider_usage.py" "$@"
-  '';
   zshCacheBuilder = pkgs.writeText "build_cache.zsh" (builtins.readFile ../../zsh/build_cache.zsh);
   herdrSkill = pkgs.runCommand "herdr-skill" { } ''
     set -euxCo pipefail
@@ -189,7 +186,6 @@ in
     herdrZshCompletion
     just
     mosh
-    providerUsageCommand
     repoCommand
     rootsPackage
     secretaryCli
