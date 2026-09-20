@@ -21,15 +21,22 @@ let
   omlxTapUrl = "https://github.com/${omlxTap}";
   omlxFormula = "${omlxTap}/omlx";
 
-  # Homebrew refuses to load formulae from third-party taps until they are
-  # trusted. Keep the trust formula-scoped rather than tap-wide so only this
-  # formula's Ruby is authorized to run. Homebrew records the clone URL
-  # spelling for taps with a custom clone target, so declare both.
+  tinycastTap = "abue-ammar/tinycast";
+
+  # Homebrew refuses to load items from third-party taps until they are
+  # trusted. `brew bundle --cleanup` replaces the whole trust store with
+  # entries derived from Brewfile `trusted:` options, so this file only
+  # needs to cover the install phase that runs before the replace; the
+  # extraConfig `tap` lines below repopulate the store afterwards.
+  # Whole-tap trust is required because `brew uninstall` strips item-level
+  # entries via Trust.untrust!. Homebrew records the clone URL spelling for
+  # taps with a custom clone target, so declare both.
   homebrewTrustFile = pkgs.writeText "homebrew-trust.json" (
     builtins.toJSON {
-      trustedformulae = [
-        omlxFormula
-        "${omlxTapUrl}/omlx"
+      trustedtaps = [
+        omlxTap
+        omlxTapUrl
+        tinycastTap
       ];
     }
   );
@@ -348,6 +355,7 @@ in
         name = omlxTap;
         clone_target = omlxTapUrl;
       }
+      { name = tinycastTap; }
     ];
 
     # Local MLX inference server. Nixpkgs builds mlx with MLX_BUILD_METAL=false
@@ -379,8 +387,17 @@ in
       "steam"
       "tailscale-app"
       "thebrowsercompany-dia"
+      "tinycast"
       "vimr"
     ];
 
+    # `brew bundle --cleanup` calls Trust.replace! with entries derived from
+    # Brewfile `trusted:` options; without these lines it rewrites trust.json
+    # as an empty store (unlinked), and its internal `brew cleanup` then dies
+    # refusing to load these third-party items.
+    extraConfig = ''
+      tap "${omlxTap}", "${omlxTapUrl}", trusted: true
+      tap "${tinycastTap}", trusted: true
+    '';
   };
 }
