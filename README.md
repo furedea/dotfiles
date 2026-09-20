@@ -152,7 +152,8 @@ wait for the old instance to expire or restart the service before reconnecting.
 - Nix flakes, weekly garbage collection, and Touch ID authentication for `sudo`
 - keyboard, text input, Finder, Dock, trackpad, screenshots, lock screen, menu
   clock, Spotlight, and other macOS defaults
-- Dock applications: Dia, Obsidian, OrbStack, Slack, System Settings, and Nani
+- Dock applications: Tinycast, Ghostty, Dia, Obsidian, OrbStack, Slack,
+  System Settings, and Nani
 - display sleep disabled on both battery and charger
 - Homebrew through nix-homebrew, with unlisted packages removed on activation
 
