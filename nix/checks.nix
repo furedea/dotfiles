@@ -23,8 +23,6 @@ let
     builtins.fromTOML
       home.home.file."Library/Application Support/lspmux/config.toml".text;
   hasAll = expected: actual: builtins.all (value: builtins.elem value actual) expected;
-  usesNeovimDefaults =
-    host: host.environment.variables.EDITOR == "nvim" && host.environment.variables.VISUAL == "nvim";
   shellEditorDefinitions = [
     "export EDITOR="
     "export VISUAL="
@@ -149,7 +147,6 @@ in
 
   host-configuration = check "host-configuration" {
     binary-cache-trust = cacheTrusted mbp && cacheTrusted mba;
-    neovim-defaults = usesNeovimDefaults mbp && usesNeovimDefaults mba;
     devin-smart-permission-mode =
       mbp.environment.variables.DEVIN_PERMISSION_MODE == "smart"
       && mba.environment.variables.DEVIN_PERMISSION_MODE == "smart";

@@ -45,8 +45,6 @@ in
   environment.systemPackages = [ pkgs.vim ];
 
   environment.variables = {
-    EDITOR = "nvim";
-    VISUAL = "nvim";
     # Devin CLI has no config key for the default permission mode; the
     # documented mechanisms are --permission-mode and this env var.
     DEVIN_PERMISSION_MODE = "smart";
