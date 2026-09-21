@@ -388,7 +388,7 @@ in
       "tailscale-app"
       "thebrowsercompany-dia"
       "tinycast"
-      "vimr"
+      "zed"
     ];
 
     # `brew bundle --cleanup` calls Trust.replace! with entries derived from
