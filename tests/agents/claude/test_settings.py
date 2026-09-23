@@ -12,3 +12,15 @@ def test_agent_git_commands_run_without_the_sandboxed_fsmonitor_daemon() -> None
         environment[f"GIT_CONFIG_KEY_{index}"]: environment[f"GIT_CONFIG_VALUE_{index}"] for index in range(count)
     }
     assert configured["core.fsmonitor"] == "false"
+
+
+def test_model_cannot_escape_the_sandbox_on_its_own() -> None:
+    sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
+    assert sandbox["enabled"] is True
+    assert sandbox["allowUnsandboxedCommands"] is False
+
+
+def test_verification_and_github_tools_work_without_escaping_the_sandbox() -> None:
+    sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
+    assert "$HOME/.cache/uv" in sandbox["filesystem"]["allowWrite"]
+    assert "gh" in sandbox["excludedCommands"]

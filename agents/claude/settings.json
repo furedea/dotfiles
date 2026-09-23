@@ -45,10 +45,11 @@
   "sandbox": {
     "enabled": true,
     "autoAllowBashIfSandboxed": false,
-    "allowUnsandboxedCommands": true,
+    "allowUnsandboxedCommands": false,
     "filesystem": {
       "allowWrite": [
-        "$HOME/.cache/nix"
+        "$HOME/.cache/nix",
+        "$HOME/.cache/uv"
       ]
     },
     "network": {
@@ -58,6 +59,7 @@
     },
     "excludedCommands": [
       "docker",
+      "gh",
       "watchman"
     ]
   },
