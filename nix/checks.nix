@@ -110,6 +110,9 @@ in
         "devin-cli"
         "codex"
       ];
+    no-unguarded-agent-packages = !(builtins.elem "opencode" homeNames);
+    commit-message-alias-avoids-removed-codex-flag =
+      !(lib.hasInfix "--full-auto" home.programs.git.settings.alias.cc);
     shared-agent-input =
       inputs ? llm-agents
       && !(inputs ? nix-claude-code)
