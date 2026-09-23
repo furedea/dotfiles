@@ -26,18 +26,6 @@
           "allow_implicit_invocation": false
         }
       }
-    },
-    "project-setup": {
-      "claude": {
-        "frontmatter": {
-          "disable-model-invocation": true
-        }
-      },
-      "codex": {
-        "openai": {
-          "allow_implicit_invocation": false
-        }
-      }
     }
   }
 }

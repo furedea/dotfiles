@@ -1,6 +1,6 @@
 # Testing with bats
 
-Test shell scripts with [bats](https://github.com/bats-core/bats-core) (Bash Automated Testing System). Available tools: `bats`, `shellcheck`, `shfmt`.
+Test shell scripts with [bats](https://github.com/bats-core/bats-core) (Bash Automated Testing System).
 
 ### Directory Layout
 
@@ -37,7 +37,7 @@ setup() {
 
 @test "descriptive lowercase sentence" {
   run bash "$SCRIPT" --help
-  [ "$status" -eq 1 ]
+  [ "$status" -eq 0 ]
   [[ "$output" == *"Usage:"* ]]
 }
 ```

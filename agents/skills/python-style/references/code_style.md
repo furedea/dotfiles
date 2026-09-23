@@ -7,19 +7,9 @@
 - Don't use `global`, `nonlocal` (not explicit enough)
 - Use built-in generics (e.g., `tuple`, `list`, `dict`) instead of `typing.Tuple`, `typing.List`, `typing.Dict`
 
-## Strings
+## Formatting
 
-### Quote Usage
-
-- String contains `'` → use `"`
-- String contains `"` → use `'`
-- f-strings (variable substitution) → use `"`
-- `raise` statements → use `"` (normal sentences use `'`)
-
-### Operators
-
-- Separate operators and operands by one space
-- When using 2+ operators, omit spaces around `*`, `/`, `//`, `%`, `**` (higher precedence)
+Let `ruff format` decide quotes and operator spacing; do not hand-format against it.
 
 ## Logging
 
@@ -108,17 +98,17 @@ class MyClass:
 
 
 # Function level
-def function_name(arg1, arg2):
+def function_name(arg1: int, arg2: str) -> bool:
     """Function functionality summary.
 
     (Detailed function functionality.)
 
     Args:
-        arg1 (type): Argument description
-        arg2 (type): Argument description
+        arg1: Argument description
+        arg2: Argument description
 
     Returns/Yields:
-        type: Return value description
+        Return value description
 
     Raises:
         ErrorType: Error description

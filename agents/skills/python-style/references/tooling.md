@@ -4,7 +4,7 @@
 
 - Use only `uv` for package management, don't use `pip`
 - Install dependencies using `uv sync`
-- Run tools using `uv run {tool}`
+- Run verification tools using `uv run --frozen {tool}` so checks never rewrite `uv.lock`
 - Baseline tooling dependencies belong in template-defined dependency groups, not ad hoc commands
 - Add project-specific dependencies using `uv add {package}`
 - Add project-specific tool dependencies using `uv add --group <group> {package}`
@@ -28,7 +28,7 @@
 ## Static Type Checking
 
 - ty should already be provided by the project's `typecheck` dependency group
-- Run type checks using `uv run ty check`
-- Check specific paths using `uv run ty check src tests`
+- Run type checks using `uv run --frozen ty check`
+- Check specific paths using `uv run --frozen ty check src tests`
 - Use `uv run ty server` only for editor or language-server integration
 - Do not introduce another type checker unless the existing project is already standardized on it

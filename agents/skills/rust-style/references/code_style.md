@@ -10,13 +10,6 @@
 
 ## Naming Conventions
 
-- Modules and files: `snake_case`.
-- Functions, methods, and variables: `snake_case`.
-- Types, traits, and enum variants: `UpperCamelCase`.
-- Constants and statics: `SCREAMING_SNAKE_CASE`.
-- Generic type parameters: short `UpperCamelCase` names such as `T`, `E`, `P`.
-- Lifetimes: short lowercase names such as `'a`; use descriptive names only when they clarify an unusual relationship.
-- Cargo feature names: `kebab-case`.
 - Avoid `manager`, `helper`, `util`, and `common` unless the name is already established locally.
 
 ### Module Naming
@@ -36,7 +29,6 @@
 - Avoid `as` aliases unless they remove ambiguity or follow a local convention.
 - Prefer `crate::` for crate-local imports and `super::` for parent-module test imports.
 - Keep trait imports close to the code that needs method resolution.
-- Do not use glob imports in production modules except for explicit prelude modules.
 
 ## Whitespace and Line Breaks
 
