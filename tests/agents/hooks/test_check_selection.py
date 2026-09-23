@@ -56,6 +56,26 @@ def test_javascript_without_a_test_command_is_not_success(tmp_path: Path) -> Non
         selection.language_plan(tmp_path, rules, ("src/file.ts",))
 
 
+def test_sources_mapped_to_another_language_run_only_that_language(tmp_path: Path) -> None:
+    rules = project(tmp_path, {"src/assets/**": ["src/bridges.rs", "tests/artifacts.rs"]})
+    (tmp_path / "package.json").write_text(json.dumps({"devDependencies": {"@openai/codex": "1.0.0"}}))
+    touch_all(tmp_path, ["Cargo.toml", "src/bridges.rs", "tests/artifacts.rs"])
+    commands, errors = selection.language_plan(tmp_path, rules, ("src/assets/pi/hook_bridge.ts",))
+    assert not errors
+    assert [item.arguments for item in commands] == [
+        ("cargo", "test", "bridges", "--quiet"),
+        ("cargo", "test", "--test", "artifacts", "--quiet"),
+    ]
+
+
+def test_unmapped_sources_beside_mapped_ones_still_require_their_runner(tmp_path: Path) -> None:
+    rules = project(tmp_path, {"src/assets/**": ["tests/artifacts.rs"]})
+    (tmp_path / "package.json").write_text("{}")
+    touch_all(tmp_path, ["Cargo.toml", "tests/artifacts.rs"])
+    with pytest.raises(selection.UnknownTestCommand):
+        selection.language_plan(tmp_path, rules, ("src/assets/bridge.ts", "src/app.ts"))
+
+
 PYTEST = ("uv", "run", "--frozen", "pytest", "--no-header", "-q")
 
 
