@@ -4,6 +4,7 @@
     "tests/agents/hooks/test_check_selection.py"
   ],
   "agents/hooks/rules/secret_path_policy.json": [
+    "tests/agents/hooks/test_secret_path_policy.py",
     "tests/agents/codex/test_hook_adapter_cli.py",
     "tests/agents/hooks/test_verification_rule.py"
   ],
@@ -331,5 +332,14 @@
   "agents/pi/hooks/hook_adapter.py": [
     "tests/agents/pi/test_pi_hook_adapter.py",
     "tests/agents/test_hook_generation.py"
+  ],
+  "agents/hooks/lib/provider_adapter.py": [
+    "tests/agents/test_provider_adapters.py",
+    "tests/agents/hooks/test_hook_boundary.py",
+    "tests/agents/codex/test_hook_adapter_cli.py",
+    "tests/agents/devin/test_hook_adapter.py",
+    "tests/agents/hermes/test_hermes_hook_adapter.py",
+    "tests/agents/pi/test_pi_hook_adapter.py",
+    "tests/agents/test_python_runtime.py"
   ]
 }

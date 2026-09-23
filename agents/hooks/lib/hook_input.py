@@ -29,6 +29,12 @@ EXTENSIONS = {
     ".sty": "tex",
 }
 EDIT_TOOLS = frozenset({"Write", "Edit", "MultiEdit", "NotebookEdit", "apply_patch"})
+FILE_FIELDS = ("file_path", "path", "notebook_path")
+
+
+def file_path(values: dict) -> str:
+    """Return the single file a tool names, whichever provider field carries it."""
+    return next((value for key in FILE_FIELDS if isinstance(value := values.get(key), str) and value), "")
 
 
 def _cwd(payload: dict) -> Path:
@@ -74,9 +80,8 @@ def _input_names(payload: dict) -> tuple[str, ...]:
     if tool and tool not in EDIT_TOOLS:
         return ()
     names = list(patch_input.paths(patch_body(values, tool)))
-    file_path = values.get("file_path") or values.get("path")
-    if isinstance(file_path, str):
-        names.append(file_path)
+    if name := file_path(values):
+        names.append(name)
     edits = values.get("edits")
     if isinstance(edits, list):
         names.extend(
