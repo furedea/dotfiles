@@ -46,6 +46,18 @@ def test_validate_html_accepts_self_contained_page_with_external_source_link() -
         '<style>.diagram { background: url("https://cdn.example.com/bg.png"); }</style>',
         '<style>.diagram { background: url("bg.png"); }</style>',
         '<script type="module">import value from "./value.js";</script>',
+        '<svg><image href="https://cdn.example.com/diagram.png"/></svg>',
+        '<svg><image xlink:href="diagram.png"/></svg>',
+        '<svg><use href="https://cdn.example.com/icons.svg#arrow"/></svg>',
+        '<svg><use xlink:href="icons.svg#arrow"/></svg>',
+        '<embed src="https://cdn.example.com/diagram.pdf">',
+        '<video><track src="captions.vtt"></video>',
+        '<input type="image" src="https://cdn.example.com/button.png" alt="submit">',
+        '<input type="IMAGE" src="button.png" alt="submit">',
+        '<meta http-equiv="refresh" content="0;url=https://example.com/elsewhere">',
+        '<meta http-equiv="Refresh" content="0; URL=\'next.html\'">',
+        '<img srcset="data:image/png;base64,iVBORw0KGgo= 1x, https://cdn.example.com/diagram@2x.png 2x">',
+        '<picture><source srcset="diagram.webp"></picture>',
     ],
 )
 def test_validate_html_rejects_externally_loaded_resources(resource: str) -> None:
@@ -69,6 +81,24 @@ def test_validate_html_allows_embedded_resources_and_source_examples() -> None:
         '<main><a href="https://example.com/pull/42">Source</a></main>',
         body,
     )
+
+    assert verify_page.validate_html(html) == ()
+
+
+@pytest.mark.parametrize(
+    "resource",
+    [
+        '<img srcset="data:image/png;base64,iVBORw0KGgo= 1x, data:image/png;base64,AAAA 2x" alt="diagram">',
+        '<picture><source srcset="data:image/webp;base64,UklGRg=="></picture>',
+        '<svg><defs><path id="arrow" d="M0 0"/></defs><use href="#arrow"/><use xlink:href="#arrow"/></svg>',
+        '<svg><image href="data:image/png;base64,iVBORw0KGgo="/></svg>',
+        '<input type="text" src="ignored.png">',
+        '<meta http-equiv="refresh" content="30">',
+        '<meta http-equiv="content-type" content="text/html; charset=utf-8">',
+    ],
+)
+def test_validate_html_allows_embedded_or_non_loading_references(resource: str) -> None:
+    html = VALID_HTML.replace("<main>", f"<main>{resource}")
 
     assert verify_page.validate_html(html) == ()
 
