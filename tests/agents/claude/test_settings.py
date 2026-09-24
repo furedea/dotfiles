@@ -22,7 +22,12 @@ def test_model_cannot_escape_the_sandbox_on_its_own() -> None:
 
 def test_verification_and_agent_tools_work_without_escaping_the_sandbox() -> None:
     sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
-    assert {"~/.cache/nix", "~/.cache/uv"} <= set(sandbox["filesystem"]["allowWrite"])
+    assert {
+        "~/.cache/nix",
+        "~/.cache/uv",
+        "~/Library/Caches/dprint",
+        "~/.local/state/agent-harness",
+    } <= set(sandbox["filesystem"]["allowWrite"])
     assert {"gh", "herdr"} <= set(sandbox["excludedCommands"])
 
 

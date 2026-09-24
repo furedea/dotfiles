@@ -125,6 +125,21 @@ def test_container_execution_requires_approval(prefix: tuple[str, ...]) -> None:
     assert prefix not in ALLOW
 
 
+@pytest.mark.parametrize(
+    "prefix",
+    [
+        ("herdr", "pane", "run"),
+        ("herdr", "pane", "send-text"),
+        ("herdr", "pane", "send-keys"),
+        ("herdr", "agent", "start"),
+        ("herdr", "agent", "prompt"),
+        ("herdr", "agent", "send-keys"),
+    ],
+)
+def test_driving_other_terminal_panes_requires_approval(prefix: tuple[str, ...]) -> None:
+    assert prefix in ASK
+
+
 def test_justifications_are_provider_neutral() -> None:
     provider_specific = [rule for rule in POLICY["rules"] if re.search(r"\b(Codex|Claude)\b", rule["justification"])]
     assert provider_specific == []

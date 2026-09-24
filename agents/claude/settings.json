@@ -49,7 +49,9 @@
     "filesystem": {
       "allowWrite": [
         "~/.cache/nix",
-        "~/.cache/uv"
+        "~/.cache/uv",
+        "~/Library/Caches/dprint",
+        "~/.local/state/agent-harness"
       ]
     },
     "network": {

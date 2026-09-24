@@ -1323,7 +1323,12 @@
     },
     {
       "decision": "ask",
-      "prefix": ["herdr", "pane", "send"],
+      "prefix": ["herdr", "pane", "send-text"],
+      "justification": "Ask before controlling other panes; their commands run outside this policy."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["herdr", "pane", "send-keys"],
       "justification": "Ask before controlling other panes; their commands run outside this policy."
     },
     {
@@ -1343,7 +1348,12 @@
     },
     {
       "decision": "ask",
-      "prefix": ["herdr", "agent", "send"],
+      "prefix": ["herdr", "agent", "send-keys"],
+      "justification": "Ask before controlling other panes; their commands run outside this policy."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["herdr", "agent", "prompt"],
       "justification": "Ask before controlling other panes; their commands run outside this policy."
     },
     {
