@@ -111,6 +111,13 @@ in
         "codex"
       ];
     no-unguarded-agent-packages = !(builtins.elem "opencode" homeNames);
+    # lefthook before 2.1.6 runs hook commands under a pty, which agent sandboxes deny.
+    sandbox-compatible-git-hooks =
+      let
+        lefthookVersions = versions "lefthook" home.home.packages;
+      in
+      lefthookVersions != [ ]
+      && builtins.all (version: lib.versionAtLeast version "2.1.6") lefthookVersions;
     commit-message-alias-avoids-removed-codex-flag =
       !(lib.hasInfix "--full-auto" home.programs.git.settings.alias.cc);
     shared-agent-input =

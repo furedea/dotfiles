@@ -197,7 +197,7 @@ in
     autocorrect
     commitlint
     dprint
-    lefthook
+    unstable.lefthook
     ls-lint
     # prettierd: used for markdown because dprint-plugin-markdown hardcodes 2-space list indent.
     # tabWidth:4 in ~/.prettierrc gives 4-space list nesting to match Obsidian.
