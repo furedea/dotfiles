@@ -48,8 +48,8 @@
     "allowUnsandboxedCommands": false,
     "filesystem": {
       "allowWrite": [
-        "$HOME/.cache/nix",
-        "$HOME/.cache/uv"
+        "~/.cache/nix",
+        "~/.cache/uv"
       ]
     },
     "network": {
@@ -60,6 +60,7 @@
     "excludedCommands": [
       "docker",
       "gh",
+      "herdr",
       "watchman"
     ]
   },

@@ -20,7 +20,12 @@ def test_model_cannot_escape_the_sandbox_on_its_own() -> None:
     assert sandbox["allowUnsandboxedCommands"] is False
 
 
-def test_verification_and_github_tools_work_without_escaping_the_sandbox() -> None:
+def test_verification_and_agent_tools_work_without_escaping_the_sandbox() -> None:
     sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
-    assert "$HOME/.cache/uv" in sandbox["filesystem"]["allowWrite"]
-    assert "gh" in sandbox["excludedCommands"]
+    assert {"~/.cache/nix", "~/.cache/uv"} <= set(sandbox["filesystem"]["allowWrite"])
+    assert {"gh", "herdr"} <= set(sandbox["excludedCommands"])
+
+
+def test_sandbox_paths_use_the_home_prefix_the_sandbox_expands() -> None:
+    sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
+    assert [path for path in sandbox["filesystem"]["allowWrite"] if "$" in path] == []
