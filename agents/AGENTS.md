@@ -39,3 +39,5 @@ Existing project style takes precedence over these rules.
 - Prefer Collection Objects for domain collections with invariants; do not expose mutable raw collections
 - Use Entities only when stable identity matters across state changes
 - Use classification objects/enums when categories or state transitions have domain rules
+- Parse raw input into constrained types once at the boundary; do not re-validate the same value downstream
+- Make invalid states unrepresentable where the language allows: return expected failures as values (Result or an equivalent) and handle sum types exhaustively. Types do not replace tests for business rules, ordering, side effects, or integration
