@@ -14,16 +14,17 @@ from pytest_mock import MockerFixture
 from tests.runtime import REPO_ROOT, load_script_module
 
 hook_adapter = load_script_module("agents/codex/hooks/hook_adapter.py", "codex_hook_adapter")
+shared = hook_adapter.provider_adapter
 files = load_script_module("agents/hooks/guard_file.py", "guard_file")
 audit = load_script_module("agents/hooks/audit_log.py", "audit_log")
 
 
 def test_patch_paths_include_moves_and_deletions_once() -> None:
     patch = "*** Add File: a.py\n*** Update File: a.py\n*** Delete File: old.py\n*** Move to: new.py"
-    assert hook_adapter.patch_input.paths(patch) == ("a.py", "new.py", "old.py")
+    assert shared.patch_input.paths(patch) == ("a.py", "new.py", "old.py")
 
 
-hook_input = hook_adapter.lint_format.hook_input
+hook_input = shared.lint_format.hook_input
 
 
 def test_patch_body_requires_tool_or_format_evidence() -> None:
@@ -59,7 +60,7 @@ def test_shell_commands_are_not_patch_targets() -> None:
 
 
 def test_scanner_receives_only_added_lines() -> None:
-    assert hook_adapter.patch_input.added_text("--- old\n+++ new\n context\n-old\n+new\n+more") == "new\nmore"
+    assert shared.patch_input.added_text("--- old\n+++ new\n context\n-old\n+new\n+more") == "new\nmore"
 
 
 @pytest.mark.parametrize(
@@ -88,11 +89,13 @@ def test_scanner_receives_only_added_lines() -> None:
     ],
 )
 def test_formatter_routes_supported_extensions(suffix: str, kind: str) -> None:
-    assert hook_adapter.EXTENSIONS[Path("file" + suffix).suffix] == kind
+    assert shared.lint_format.EXTENSIONS[Path("file" + suffix).suffix] == kind
 
 
 def test_translated_command_preserves_session_and_provider_context() -> None:
-    assert hook_adapter.translated({"session_id": "s", "untrusted": "ignored"}, "Bash", {"command": "git status"}) == {
+    assert hook_adapter.ADAPTER.translated(
+        {"session_id": "s", "untrusted": "ignored"}, "Bash", {"command": "git status"}
+    ) == {
         "tool_name": "Bash",
         "tool_input": {"command": "git status"},
         "session_id": "s",
@@ -193,11 +196,11 @@ def test_blocked_audit_rows_preserve_schema_and_append(tmp_path: Path, mocker: M
     ],
 )
 def test_ast_command_boundaries_preserve_literals(source: str, expected: list[str]) -> None:
-    assert [command.raw for command in hook_adapter.shell_syntax.parse(source)] == expected
+    assert [command.raw for command in shared.shell_syntax.parse(source)] == expected
 
 
 def test_redirect_paths_are_inspected_separately_from_command_arguments() -> None:
-    command = hook_adapter.shell_syntax.parse("printf x > .env")[0]
+    command = shared.shell_syntax.parse("printf x > .env")[0]
     assert command.arguments == ("printf", "x")
     assert command.redirections == (".env",)
 
@@ -209,16 +212,16 @@ def test_shell_translation_calls_shared_policy(
 ) -> None:
     monkeypatch.setenv("AGENT_HARNESS_ROOT", str(tmp_path))
     target = (
-        hook_adapter.guard_command
+        shared.guard_command
         if mode in {"allowed", "forbidden"}
-        else hook_adapter.guard_git
+        else shared.guard_git
         if mode == "git"
-        else hook_adapter.guard_file
+        else shared.guard_file
     )
     check = Mock(return_value=2)
     monkeypatch.setattr(target, "check", check)
     payload = {"tool_input": {field: "git status"}, "session_id": "session-one"}
-    assert hook_adapter.dispatch("shell", [mode], payload) == 2
+    assert hook_adapter.ADAPTER.dispatch("shell", [mode], payload) == 2
     translated = {
         "tool_name": "Bash",
         "tool_input": {"command": "git status"},
@@ -235,17 +238,17 @@ def test_shell_translation_calls_shared_policy(
 def test_adapter_applies_payload_cwd_before_enforcement(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.chdir(tmp_path.parent)
     payload = {"cwd": str(tmp_path), "tool_input": {"cmd": "git status"}}
-    monkeypatch.setattr(hook_adapter.sys, "stdin", io.StringIO(json.dumps(payload)))
+    monkeypatch.setattr(shared.sys, "stdin", io.StringIO(json.dumps(payload)))
     observed = []
-    monkeypatch.setattr(hook_adapter.guard_git, "check", lambda _: observed.append(Path.cwd()) or 0)
-    assert hook_adapter.main(["shell", "git"]) == 0
+    monkeypatch.setattr(shared.guard_git, "check", lambda _: observed.append(Path.cwd()) or 0)
+    assert hook_adapter.ADAPTER.main(["shell", "git"]) == 0
     assert observed == [tmp_path]
 
 
 @pytest.mark.parametrize("raw", ["{", "null", "[]", '{"tool_input":true}'])
 def test_adapter_rejects_invalid_input(monkeypatch: pytest.MonkeyPatch, raw: str) -> None:
-    monkeypatch.setattr(hook_adapter.sys, "stdin", io.StringIO(raw))
-    assert hook_adapter.main(["shell", "git"]) == 2
+    monkeypatch.setattr(shared.sys, "stdin", io.StringIO(raw))
+    assert hook_adapter.ADAPTER.main(["shell", "git"]) == 2
 
 
 def test_lint_only_checks_existing_supported_patch_files(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -253,20 +256,20 @@ def test_lint_only_checks_existing_supported_patch_files(monkeypatch: pytest.Mon
     (tmp_path / "source.py").touch()
     (tmp_path / "unknown.bin").touch()
     check = Mock(return_value=())
-    monkeypatch.setattr(hook_adapter.lint_format, "check_file", check)
+    monkeypatch.setattr(shared.lint_format, "check_file", check)
     patch = "\n".join(f"*** Update File: {name}" for name in ("source.py", "unknown.bin", "missing.py"))
-    assert hook_adapter.lint({"tool_input": {"command": patch}}) == 0
+    assert hook_adapter.ADAPTER.lint({"tool_input": {"command": patch}}) == 0
     check.assert_called_once_with("py", tmp_path / "source.py")
 
 
 @pytest.mark.parametrize(
     "module,mode,identifier",
     [
-        (hook_adapter.guard_command, "allowed", "guard_allowed_commands.sh"),
-        (hook_adapter.guard_command, "forbidden", "guard_forbidden_commands.sh"),
-        (hook_adapter.guard_git, "", "guard_dangerous_git.sh"),
-        (hook_adapter.guard_file, "commit", "guard_secret_commit.sh"),
-        (hook_adapter.guard_file, "harness", "guard_harness_files.sh"),
+        (shared.guard_command, "allowed", "guard_allowed_commands.sh"),
+        (shared.guard_command, "forbidden", "guard_forbidden_commands.sh"),
+        (shared.guard_git, "", "guard_dangerous_git.sh"),
+        (shared.guard_file, "commit", "guard_secret_commit.sh"),
+        (shared.guard_file, "harness", "guard_harness_files.sh"),
     ],
 )
 def test_malformed_guard_input_remains_auditable(

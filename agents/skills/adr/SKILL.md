@@ -1,8 +1,10 @@
 ---
 name: adr
 description: >
-    Use to decide whether a broad design decision needs an Architecture Decision Record (ADR),
-    or to create, review, update, supersede, or deprecate ADRs.
+    Use to create, review, update, supersede, or deprecate ADRs under docs/adr/, or when a change
+    selects a library, framework, database, protocol, hosting, or tool among real alternatives;
+    picks an architectural pattern; sets a durable constraint not obvious from code; or reverses
+    a previous decision. Not for local implementation details understandable from the code.
 ---
 
 # Architecture Decision Records
@@ -13,22 +15,9 @@ Use this together with `tsdd` when the work involves both executable behavior an
 
 ## Core Rule
 
-When a change introduces or reverses a broad project decision, create or update an ADR under `docs/adr/` as part of the same task.
-
-When Decision Test identifies a broad decision requiring an ADR, record its rationale before
-finishing the work rather than leaving it as an optional follow-up.
-
-## When To Load
-
-Load this skill before making or reviewing changes involving:
-
-- Architecture Decision Records, decision records, ADRs, or `docs/adr/`.
-- Library, framework, database, protocol, hosting, or tooling selection where real alternatives exist.
-- Architectural patterns such as server-rendered vs SPA, sessions vs tokens, monolith vs services, sync vs async, polling vs events, or generated vs handwritten artifacts.
-- Durable constraints that are not obvious from code, such as "no runtime dependencies", "Nix owns this configuration", or "requirement intent remains independent of executable test evidence".
-- Reversing, superseding, deprecating, or intentionally rejecting a previous decision.
-
-Do not load it for a local implementation detail that can be understood from the code in under a minute.
+When a change introduces or reverses a broad project decision that the Decision Test identifies,
+create or update an ADR under `docs/adr/` in the same task, before finishing the work rather than
+as an optional follow-up.
 
 ## Decision Test
 
@@ -155,23 +144,8 @@ Use the longer template only when a Y-Statement would be too compressed:
 
 ## Workflow
 
-For decision-relevant implementation tasks:
-
-1. Load `tsdd` and any language-specific skill required by the code.
-2. Establish the executable behavior with tests when the change has behavior.
-3. Inspect existing ADRs before choosing or recording the decision.
-4. Implement the code change.
-5. Create or supersede the ADR before finishing.
-6. Confirm the relevant verification results. Follow `tsdd`'s Automatic Verification policy for execution needs and reuse of successful hook evidence.
-7. Report the ADR path and the verification result.
-
-For documentation-only decision tasks:
-
-1. Inspect existing ADRs.
-2. Decide whether this is a new decision, a duplicate, or a supersession.
-3. Create or update only the necessary ADR files.
-4. Confirm the repository's markdown or generated-artifact check results when available. Follow `tsdd`'s Automatic Verification policy for execution needs and reuse of successful hook evidence.
-5. Report the ADR path.
+After [Repository Inspection](#repository-inspection), create or supersede only the necessary ADR
+files before finishing, then report the ADR path.
 
 ## Non-Goals
 

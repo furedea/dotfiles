@@ -48,11 +48,14 @@ rationale, API reference, user guidance, migration guidance, or an operational r
 
 ## Information Placement
 
-- **Issue body** → this task's purpose, scope, acceptance criteria, and requirement sources.
-- **Plan comment** → this task's implementation approach, major steps, and important assumptions.
-  A plan is not the authority for requirements; existing formal specifications and user
-  requirements retain their authority under this skill's conflict policy.
-- **PR body** → actual changes, verification results, and material departures from the plan.
+- **Issue body** → this task's requirements; its contents follow
+  [Issue Resolution](../issue-workflow/SKILL.md#issue-resolution).
+- **Plan comment** → this task's implementation approach; its contents follow
+  [Plan Comments](../issue-workflow/SKILL.md#plan-comments). A plan is not the authority for
+  requirements; existing formal specifications and user requirements retain their authority under
+  this skill's conflict policy.
+- **PR body** → actual changes, verification results, and material departures from the plan;
+  its format follows [Pull Request Body](../git-workflow/references/delivery.md#pull-request-body).
   Link these artifacts to each other instead of manually maintaining the same details in all three.
 - **Requirement purpose, source, scope, or accepted risk** → user request, issue or reproduced
   defect, public interface, external standard, product record, or behavior intentionally preserved
@@ -79,8 +82,8 @@ rationale, API reference, user guidance, migration guidance, or an operational r
 - **Agent navigation** → the repository-defined entry map described under Agent Entry Maps.
 
 Domain vocabulary is cross-cutting rather than a separate document by default. Within a bounded
-context, use the same terms in code, types, tests, diagrams, and prose. Add a short glossary only
-when code cannot communicate the distinctions to every relevant audience.
+context, use the same terms in code, types, tests, diagrams, and prose. Glossary rules belong to
+[domain-modeling](../domain-modeling/SKILL.md#preserve-useful-knowledge).
 
 ## Duplication Test
 

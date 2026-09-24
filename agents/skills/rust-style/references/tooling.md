@@ -43,7 +43,6 @@ tests/
 
 - Let `rustfmt` define formatting. Do not hand-format around rustfmt.
 - Keep files focused and cohesive.
-- Prefer modules of roughly 200-500 lines. Split when multiple responsibilities appear.
 - Keep public items before private helpers when it improves scanning.
 - Use `mod.rs` only when the existing project already uses that style; otherwise prefer `module_name.rs` plus `module_name/child.rs`.
 - Put one top-level concept per file when the concept has real behavior.

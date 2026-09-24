@@ -2,6 +2,7 @@
   "version": 1,
   "runtime_commands": [
     "bash",
+    "git",
     "jq",
     "python3",
     "shfmt",

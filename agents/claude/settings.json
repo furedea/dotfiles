@@ -45,10 +45,13 @@
   "sandbox": {
     "enabled": true,
     "autoAllowBashIfSandboxed": false,
-    "allowUnsandboxedCommands": true,
+    "allowUnsandboxedCommands": false,
     "filesystem": {
       "allowWrite": [
-        "$HOME/.cache/nix"
+        "~/.cache/nix",
+        "~/.cache/uv",
+        "~/Library/Caches/dprint",
+        "~/.local/state/agent-harness"
       ]
     },
     "network": {
@@ -58,6 +61,8 @@
     },
     "excludedCommands": [
       "docker",
+      "gh",
+      "herdr",
       "watchman"
     ]
   },

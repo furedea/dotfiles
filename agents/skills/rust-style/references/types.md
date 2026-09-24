@@ -24,11 +24,17 @@ Value Object pattern:
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SkillName(String);
 
+#[derive(Debug, thiserror::Error)]
+pub enum SkillNameError {
+    #[error("skill name must not be empty")]
+    Empty,
+}
+
 impl SkillName {
-    pub fn parse(value: impl Into<String>) -> anyhow::Result<Self> {
+    pub fn parse(value: impl Into<String>) -> Result<Self, SkillNameError> {
         let value = value.into();
         if value.is_empty() {
-            anyhow::bail!("skill name must not be empty");
+            return Err(SkillNameError::Empty);
         }
         Ok(Self(value))
     }

@@ -197,7 +197,7 @@ in
     autocorrect
     commitlint
     dprint
-    lefthook
+    unstable.lefthook
     ls-lint
     # prettierd: used for markdown because dprint-plugin-markdown hardcodes 2-space list indent.
     # tabWidth:4 in ~/.prettierrc gives 4-space list nesting to match Obsidian.
@@ -217,7 +217,6 @@ in
     devinCliPackage
     herdrCompatibleCodex
     hermesAgentPackage
-    unstable.opencode
     unstable.pi-coding-agent
 
     # Nix tooling
@@ -338,7 +337,7 @@ in
         receive.fsckObjects = true;
         status.short = true;
         status.branch = true;
-        alias.cc = "!f() { tmpf=$(mktemp) && codex exec --full-auto -o \"$tmpf\" 'Review the staged diff and generate a Conventional Commits message. Output ONLY the commit message, nothing else.' && git commit -F \"$tmpf\"; rm -f \"$tmpf\"; }; f";
+        alias.cc = "!f() { tmpf=$(mktemp) && codex exec -s read-only -o \"$tmpf\" 'Review the staged diff and generate a Conventional Commits message. Output ONLY the commit message, nothing else.' && git commit -F \"$tmpf\"; rm -f \"$tmpf\"; }; f";
         alias.wtd = "wt -D";
       };
     };

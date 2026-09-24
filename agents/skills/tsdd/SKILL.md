@@ -95,7 +95,8 @@ merely because there is more than one assertion or example row.
    unclear names, mixed responsibilities, and unnecessary coupling. Refactor when a concrete
    improvement is warranted, then re-run the relevant gate. Do not manufacture edits or speculative
    abstractions merely to perform a Refactor step.
-7. **Finish in a coherent verified state.** VCS recording and delivery are governed by the
+7. **Finish in a coherent verified state.** Continue with the next slice while required work
+   remains; the first Green does not end the task. VCS recording and delivery are governed by the
    `git-workflow` skill.
 
 ### Work without a contract gap
@@ -174,31 +175,7 @@ Direct execution of narrow tests for intermediate decisions is allowed. Report e
 and known coverage limits. Concrete CLI syntax and delivery ordering belong to
 [Git Delivery](../git-workflow/references/delivery.md#local-verification-before-delivery).
 
-## Type-Driven Design
-
-Types carry compile-time invariants and constraints. They are not a second requirements source;
-they make invalid states unrepresentable.
-
-### Patterns
-
-- **Value Objects** wrap primitives with domain constraints. Construct through a validating
-  boundary and keep fields immutable.
-- **Branded or newtypes** prevent mixing structurally identical but semantically distinct values.
-- **Result or Either types** force callers to handle expected success and failure paths.
-- **Exhaustive sum types** make unhandled state-machine cases visible to the compiler.
-- **Parse, do not validate repeatedly.** Turn raw boundary input into a constrained type once.
-
-Tests still cover behavior that types cannot express, including business rules, ordering, side
-effects, integration, concurrency, and external-system interactions.
-
 ## Enforcement Mechanisms
 
-This section applies only when the user asks to establish or revise TSDD's development workflow.
-Ordinary feature work uses existing mechanisms; it does not require creating hooks, wrappers, or PR
-templates. Consider the following mechanisms to make the intended path observable:
-
-- A workflow or wrapper that supports selecting Red or Green-baseline paths without manufacturing
-  Red. Determining whether a real contract gap exists still requires judgment.
-- Hooks and CI gates for tests, type checks, lint, formatting, and risk-specific evaluation.
-- A PR template that records the requirement source, behavior slice, Red or baseline evidence,
-  final Green evidence, review needs, and ADR impact.
+Only when the user asks to establish or revise TSDD's development workflow, read
+[Enforcement mechanisms](references/enforcement.md).

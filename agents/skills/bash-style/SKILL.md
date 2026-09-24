@@ -38,11 +38,11 @@ set -x
 
 ## usage Function
 
-Every script must define a `usage` function that prints documentation to stderr and exits with failure. Use heredoc + redirect inside the function body:
+Every script must define a `usage` function that prints documentation. Use a heredoc inside the function body:
 
 ```sh
 function usage() {
-  cat <<EOF >&2
+  cat <<EOF
 Description:
     Description of this script.
 
@@ -53,18 +53,18 @@ Options:
     --version, -v: print "$(basename "$0")" version
     --help, -h: print this
 EOF
-  exit 1
 }
 ```
 
-Call `usage` for `--help`/`-h` flags and for invalid argument combinations.
+For requested help (`--help`/`-h`), call `usage` and `exit 0`. For missing or invalid arguments,
+call `usage >&2` and `exit 1`.
 
 ## Constants
 
 Declare constants with `readonly`. Names use `SCREAMING_SNAKE_CASE`:
 
 ```sh
-readonly INPUT_DIR="../data/input"
+readonly INPUT_DIR="$SCRIPT_DIR/../data/input"
 readonly MAX_RETRY=3
 ```
 
@@ -88,8 +88,6 @@ Always quote the right-hand side — values may contain spaces or special charac
 | Variables       | `snake_case`                        | `input_file="..."`      |
 | Functions       | `snake_case`                        | `function parse_args()` |
 | Local variables | `_snake_case` (leading underscore)  | `local _tmp_dir`        |
-| Files           | `snake_case`                        | `lint_format.sh`        |
-| Directories     | `kebab-case`                        | `claude-scripts/`       |
 
 Do not start names with a digit.
 
