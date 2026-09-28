@@ -60,10 +60,10 @@
       ]
     },
     "excludedCommands": [
-      "docker",
-      "gh",
-      "herdr",
-      "watchman"
+      "docker *",
+      "gh *",
+      "herdr *",
+      "watchman *"
     ]
   },
   "effortLevel": "xhigh",

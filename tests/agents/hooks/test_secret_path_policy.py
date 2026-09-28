@@ -13,6 +13,7 @@ RULES = policy.load(REPO_ROOT / "agents/hooks/rules/secret_path_policy.json")
     "path",
     [
         ".env",
+        ".env.local",
         "config/github.token",
         "config/api_token",
         "auth/token.json",
@@ -33,6 +34,7 @@ def test_credential_paths_are_denied(path: str) -> None:
     "path",
     [
         ".venv/lib/python3.14/site-packages/pygments/token.py",
+        ".envrc",
         "src/tokenizer.rs",
         "src/keyboard.ts",
         "lib/monkey_patch.py",
