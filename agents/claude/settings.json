@@ -10,7 +10,10 @@
     "GIT_CONFIG_VALUE_0": "false"
   },
   "permissions": {
-    "defaultMode": "auto"
+    "defaultMode": "auto",
+    "ask": [
+      "Bash(dangerouslyDisableSandbox:true)"
+    ]
   },
   "model": "fable",
   "preferredNotifChannel": "auto",
@@ -45,7 +48,7 @@
   "sandbox": {
     "enabled": true,
     "autoAllowBashIfSandboxed": false,
-    "allowUnsandboxedCommands": false,
+    "allowUnsandboxedCommands": true,
     "filesystem": {
       "allowWrite": [
         "~/.cache/nix",

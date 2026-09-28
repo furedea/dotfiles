@@ -14,10 +14,9 @@ def test_agent_git_commands_run_without_the_sandboxed_fsmonitor_daemon() -> None
     assert configured["core.fsmonitor"] == "false"
 
 
-def test_model_cannot_escape_the_sandbox_on_its_own() -> None:
+def test_commands_run_sandboxed_by_default() -> None:
     sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
     assert sandbox["enabled"] is True
-    assert sandbox["allowUnsandboxedCommands"] is False
 
 
 def test_verification_and_agent_tools_work_without_escaping_the_sandbox() -> None:
