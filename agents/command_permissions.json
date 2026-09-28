@@ -1019,32 +1019,27 @@
     {
       "decision": "allow",
       "prefix": ["docker", "ps"],
-      "justification": "Allow read-only container inspection and image builds."
+      "justification": "Allow read-only container inspection."
     },
     {
       "decision": "allow",
       "prefix": ["docker", "images"],
-      "justification": "Allow read-only container inspection and image builds."
+      "justification": "Allow read-only container inspection."
     },
     {
       "decision": "allow",
       "prefix": ["docker", "logs"],
-      "justification": "Allow read-only container inspection and image builds."
-    },
-    {
-      "decision": "allow",
-      "prefix": ["docker", "build"],
-      "justification": "Allow read-only container inspection and image builds."
+      "justification": "Allow read-only container inspection."
     },
     {
       "decision": "allow",
       "prefix": ["docker", "compose", "ps"],
-      "justification": "Allow read-only container inspection and image builds."
+      "justification": "Allow read-only container inspection."
     },
     {
       "decision": "allow",
       "prefix": ["docker", "compose", "logs"],
-      "justification": "Allow read-only container inspection and image builds."
+      "justification": "Allow read-only container inspection."
     },
     {
       "decision": "allow",
@@ -1328,7 +1323,12 @@
     },
     {
       "decision": "ask",
-      "prefix": ["herdr", "pane", "send"],
+      "prefix": ["herdr", "pane", "send-text"],
+      "justification": "Ask before controlling other panes; their commands run outside this policy."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["herdr", "pane", "send-keys"],
       "justification": "Ask before controlling other panes; their commands run outside this policy."
     },
     {
@@ -1348,7 +1348,12 @@
     },
     {
       "decision": "ask",
-      "prefix": ["herdr", "agent", "send"],
+      "prefix": ["herdr", "agent", "send-keys"],
+      "justification": "Ask before controlling other panes; their commands run outside this policy."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["herdr", "agent", "prompt"],
       "justification": "Ask before controlling other panes; their commands run outside this policy."
     },
     {
@@ -1380,6 +1385,11 @@
       "decision": "ask",
       "prefix": ["esa", "post", "update"],
       "justification": "Ask before publishing or triggering work that is visible to others."
+    },
+    {
+      "decision": "ask",
+      "prefix": ["docker", "build"],
+      "justification": "Ask before building images; build steps run arbitrary commands outside the sandbox."
     },
     {
       "decision": "ask",

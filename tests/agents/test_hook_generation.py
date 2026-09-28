@@ -15,11 +15,27 @@ def test_generated_claude_lint_hook_uses_the_dispatcher_without_if(agent_harness
     path = tmp_path / "settings.json"
     agent_harness("generate-claude-settings", "--output", str(path))
     settings = json.loads(path.read_text())
-    groups = [group for group in settings["hooks"]["PostToolUse"] if group.get("matcher") == "Write|Edit"]
+    groups = [group for group in settings["hooks"]["PostToolUse"] if group.get("matcher") == "Write|Edit|NotebookEdit"]
     lint_hooks = [hook for group in groups for hook in group["hooks"] if "lint_format.py" in hook["command"]]
     assert len(lint_hooks) == 1
     assert lint_hooks[0]["command"].endswith('lint_format.py"')
     assert "if" not in lint_hooks[0]
+
+
+@pytest.mark.parametrize(
+    "matcher,mode",
+    [("Write|Edit|NotebookEdit", "harness"), ("Write|Edit|NotebookEdit", "write"), ("Read|Grep", "read")],
+)
+def test_generated_claude_file_guards_cover_every_file_tool(
+    agent_harness: CliRunner, tmp_path: Path, matcher: str, mode: str
+) -> None:
+    path = tmp_path / "settings.json"
+    agent_harness("generate-claude-settings", "--output", str(path))
+    groups = [
+        group for group in json.loads(path.read_text())["hooks"]["PreToolUse"] if group.get("matcher") == matcher
+    ]
+    commands = [hook["command"] for group in groups for hook in group["hooks"]]
+    assert any(command.endswith(f'guard_file.py" {mode}') for command in commands)
 
 
 def test_generated_codex_lint_hook_matches_native_apply_patch_aliases(

@@ -14,6 +14,7 @@ sys.path.insert(0, str(ROOT / "lib"))
 
 import audit_log
 from command_policy import regex_matches
+import hook_input
 
 
 def policy_path(environment: str, name: str, directory: Path) -> Path:
@@ -97,8 +98,9 @@ def content_text(mode: str, payload: dict) -> str:
     if mode == "prompt":
         return payload.get("prompt") or ""
     if mode == "write":
-        return (values.get("content") or "") + (values.get("new_string") or "")
-    path = values.get("file_path") or ""
+        return "".join(values.get(key) or "" for key in ("content", "new_string", "new_source"))
+    # Grep may name a directory; only a single file target can be scanned before the tool runs.
+    path = hook_input.file_path(values)
     if not path or not Path(path).is_file():
         return ""
     with Path(path).open("rb") as stream:
@@ -141,7 +143,7 @@ def scan_content(mode: str, payload: dict, directory: Path) -> None:
     tool = (
         "UserPromptSubmit" if mode == "prompt" else "Read" if mode == "read" else payload.get("tool_name") or "Write"
     )
-    summary = "<prompt body elided>" if mode == "prompt" else values.get("file_path") or ""
+    summary = "<prompt body elided>" if mode == "prompt" else hook_input.file_path(values)
     audit_log.blocked(
         tool,
         summary,
@@ -177,9 +179,7 @@ def check(mode: str, payload: dict, directory: Path = ROOT) -> int:
             return 0
         values = payload.get("tool_input") or {}
         tool = payload.get("tool_name") or tool
-        value = (
-            values.get("command") or "" if mode == "commit" else values.get("file_path") or values.get("path") or ""
-        )
+        value = values.get("command") or "" if mode == "commit" else hook_input.file_path(values)
         if not value:
             return 0
         reason = (

@@ -17,6 +17,7 @@ sys.path.insert(0, str(SCRIPT.parent / "lib"))
 
 from session_store import file_lock, private_directory, worktree_id
 
+import hook_input
 import patch_input
 
 
@@ -89,8 +90,7 @@ def _targets(tool: str, values: dict, cwd: Path) -> list[str]:
         if isinstance(command, str):
             names = patch_input.paths(command)
     elif tool in FILE_TOOLS:
-        file_path = values.get("file_path") or values.get("path")
-        names = (file_path,) if isinstance(file_path, str) else ()
+        names = (name,) if (name := hook_input.file_path(values)) else ()
         edits = values.get("edits")
         if isinstance(edits, list):
             names += tuple(

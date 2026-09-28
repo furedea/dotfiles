@@ -19,9 +19,8 @@ number and plan URL from issue-workflow and associate them with the branch or PR
 - Inspect Git state before edits: current branch, `git status --porcelain=v1`, and recent commit style when commit messages will be written.
 - Never overwrite, reset, clean, or discard user changes unless the user explicitly asked for that exact destructive action.
 - Do not push directly to the default / protected branch, and rewrite published history only with the leased force push described in [Delivery](references/delivery.md). Ordinary implementation and PR-creation requests do not authorize merging; merge only when explicitly requested and permitted by repository and runtime rules.
-- Complete requested implementation, relevant verification, and fixes for problems caused by the change. Do not stop at the first implementation or first Green when required work remains.
 - Commit, push, and create pull requests only within the user's request or an explicit standing authorization. Permission to execute a command is not authorization to perform that action for the task. Do not repeat confirmation for steps already covered by the authorized workflow; runtime approval requirements still apply.
-- When commits are authorized, group them by reviewable intent. Multiple TSDD cycles may belong to one commit; do not force a commit for every cycle. Both TSDD paths end Green.
+- When commits are authorized, group them by reviewable intent. Multiple TSDD cycles may belong to one commit; do not force a commit for every cycle.
 - Keep branch names and commit subjects aligned with the primary intent of the change, not with filenames.
 
 Review-only requests authorize inspection and findings, not edits or delivery. A request to fix a bug

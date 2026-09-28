@@ -34,6 +34,11 @@ SCRIPT_RESOURCE_PATTERN = re.compile(
     r"(?:\bfrom\s+|\bimport\s*\(\s*|\bimport\s+|\bfetch\s*\(\s*)[\"']([^\"']+)[\"']",
     re.IGNORECASE,
 )
+SRCSET_URL_PATTERN = re.compile(r"[\s,]*(\S*[^\s,])(?:,+|\s[^,]*,?|$)")
+REFRESH_URL_PATTERN = re.compile(
+    r"^\s*[\d.]*\s*[;,]?\s*(?:url\s*=\s*)?([\"']?)(.*?)\1\s*$",
+    re.IGNORECASE | re.DOTALL,
+)
 BROWSER_COMMANDS = (
     "google-chrome",
     "google-chrome-stable",
@@ -49,13 +54,22 @@ BROWSER_PATHS = (
 RESOURCE_ATTRIBUTES = {
     "audio": ("src",),
     "base": ("href",),
+    "embed": ("src",),
     "iframe": ("src",),
+    "image": ("href", "xlink:href"),
     "img": ("src", "srcset"),
     "link": ("href",),
     "object": ("data",),
     "script": ("src",),
     "source": ("src", "srcset"),
+    "track": ("src",),
+    "use": ("href", "xlink:href"),
     "video": ("poster", "src"),
+}
+# Tags that load a resource only when a qualifying attribute has the given value.
+CONDITIONAL_RESOURCE_ATTRIBUTES = {
+    "input": ("type", "image", "src"),
+    "meta": ("http-equiv", "refresh", "content"),
 }
 
 
@@ -103,9 +117,9 @@ class _PageInspector(HTMLParser):
             content = attributes.get("content")
             if name is not None and content is not None:
                 self.metadata[name] = content.strip()
-        for attribute in RESOURCE_ATTRIBUTES.get(tag, ()):
+        for attribute in _resource_attributes(tag, attributes):
             value = attributes.get(attribute)
-            if value is not None and (attribute == "srcset" or _loads_external_resource(value)):
+            if value is not None and any(map(_is_external_reference, _referenced_urls(attribute, value))):
                 self.external_resources.append(f"{tag}[{attribute}]={value}")
         style = attributes.get("style")
         if style is not None:
@@ -193,8 +207,22 @@ def viewport_height(dom: str) -> tuple[int, str | None]:
     return bounded_height, None
 
 
-def _loads_external_resource(value: str) -> bool:
-    return _is_external_reference(value)
+def _resource_attributes(tag: str, attributes: dict[str, str | None]) -> tuple[str, ...]:
+    condition = CONDITIONAL_RESOURCE_ATTRIBUTES.get(tag)
+    if condition is None:
+        return RESOURCE_ATTRIBUTES.get(tag, ())
+    qualifier, expected_value, resource_attribute = condition
+    is_loading = (attributes.get(qualifier) or "").strip().lower() == expected_value
+    return (resource_attribute,) if is_loading else ()
+
+
+def _referenced_urls(attribute: str, value: str) -> tuple[str, ...]:
+    if attribute == "srcset":
+        return tuple(SRCSET_URL_PATTERN.findall(value))
+    if attribute == "content":
+        match = REFRESH_URL_PATTERN.match(value)
+        return (match.group(2),) if match is not None else (value,)
+    return (value,)
 
 
 def _external_css_resources(styles: Iterable[str]) -> tuple[str, ...]:

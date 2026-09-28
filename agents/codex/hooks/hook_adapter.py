@@ -1,152 +1,25 @@
 #!/usr/bin/env -S python3 -IB
 """Translate Codex hook payloads at the boundary to shared hook implementations."""
 
-import json
-import os
 from pathlib import Path
 import sys
 
 SCRIPT = Path(__file__).resolve()
-COMMON = SCRIPT.parents[2] / (".claude/hooks" if SCRIPT.parent.parent.name == ".codex" else "hooks")
+# Deployed adapters live in ~/.<provider>/hooks beside ~/.claude/hooks; the source tree keeps agents/hooks.
+COMMON = SCRIPT.parents[2] / (".claude/hooks" if SCRIPT.parent.parent.name.startswith(".") else "hooks")
 sys.path.insert(0, str(COMMON))
 sys.path.insert(0, str(COMMON / "lib"))
 
-import audit_log
-import guard_command
-import guard_git
-import guard_file
-import hook_input
-import lint_format
-import patch_input
-import secret_path_policy
-import shell_syntax
+import provider_adapter
 
-EXTENSIONS = lint_format.EXTENSIONS
-
-
-def shared_directory() -> Path:
-    return Path(os.environ.get("AGENT_HARNESS_ROOT", str(Path.home()))) / ".claude/hooks"
-
-
-def translated(payload: dict, tool: str, values: dict) -> dict:
-    return {
-        "tool_name": tool,
-        "tool_input": values,
-        "session_id": payload.get("session_id") or "",
-        "cwd": payload.get("cwd") or "",
-        "provider": "codex",
-    }
-
-
-def lint(payload: dict) -> int:
-    """Report shared quality diagnostics using Codex's PostToolUse JSON contract."""
-    lint_format.emit(lint_format.diagnostics(payload))
-    return 0
-
-
-def harness(payload: dict) -> int:
-    values = payload.get("tool_input") or {}
-    body = hook_input.patch_body(values, payload.get("tool_name"))
-    for name in patch_input.paths(body):
-        absolute = name if name.startswith(("/", "~/")) else str(Path.cwd() / name)
-        if status := guard_file.check(
-            "harness", translated(payload, "apply_patch", {"file_path": absolute}), shared_directory()
-        ):
-            return status
-    return 0
-
-
-def check_paths(mode: str, payload: dict) -> int:
-    policy = Path(
-        os.environ.get("AGENT_SECRET_PATH_POLICY", str(shared_directory() / "rules/secret_path_policy.json"))
+ADAPTER = provider_adapter.Adapter(
+    provider_adapter.Profile(
+        name="codex",
+        content_modes=("prompt", "apply-patch"),
+        cwd_fallback=provider_adapter.no_cwd,
     )
-    rules = secret_path_policy.load(policy)
-    values = payload.get("tool_input") or {}
-    command = values.get("command") or values.get("cmd") or ""
-    if mode == "command":
-        try:
-            commands = shell_syntax.parse(command)
-        except shell_syntax.UnsupportedSyntax as error:
-            raise ValueError(f"{error}\n\nCommand: {shell_syntax.command_preview(command)}") from error
-        candidates = [word for item in commands for word in (*item.arguments, *item.redirections)]
-        candidates += [word.partition("=")[2] for word in candidates if "=" in word]
-    else:
-        candidates = [
-            values.get("file_path") or values.get("path") or "",
-            *patch_input.paths(hook_input.patch_body(values, payload.get("tool_name"))),
-        ]
-    for value in candidates:
-        if rule := secret_path_policy.blocked_rule(value, rules):
-            audit_log.blocked(
-                "Bash" if mode == "command" else "apply_patch",
-                command if mode == "command" else value,
-                f"{rule['reason']}: {value}",
-                "adapt_guard_secret_paths.sh",
-                payload.get("session_id") or "",
-                payload=payload,
-                targets=() if mode == "command" else (value,),
-            )
-            raise ValueError(
-                f"secret path policy matched.\n\nPath: {value}\nPattern: {rule['pattern']}\n\nWhy:\n  {rule['reason']}"
-            )
-    return 0
-
-
-def dispatch(kind: str, arguments: list[str], payload: dict) -> int:
-    values = payload.get("tool_input") or {}
-    if kind == "shell":
-        command = translated(payload, "Bash", {"command": values.get("command") or values.get("cmd") or ""})
-        if arguments[0] in {"allowed", "forbidden"}:
-            return guard_command.check(arguments[0], command, shared_directory())
-        if arguments[0] == "git":
-            return guard_git.check(command)
-        return guard_file.check("commit", command, shared_directory())
-    if kind == "lint":
-        return lint(payload)
-    if kind == "harness":
-        return harness(payload)
-    if kind == "paths":
-        return check_paths(arguments[0], payload)
-    if arguments[0] == "prompt":
-        return guard_file.check("prompt", payload, shared_directory())
-    return guard_file.check(
-        "write",
-        translated(
-            payload,
-            "Edit",
-            {"content": patch_input.added_text(hook_input.patch_body(values, payload.get("tool_name")))},
-        ),
-        shared_directory(),
-    )
-
-
-def main(arguments: list[str]) -> int:
-    kind = arguments[0] if arguments else ""
-    rest = arguments[1:]
-    valid = (
-        (kind in {"lint", "harness"} and not rest)
-        or (kind == "shell" and len(rest) == 1 and rest[0] in {"allowed", "forbidden", "git", "commit"})
-        or (
-            kind in {"paths", "content"}
-            and len(rest) == 1
-            and rest[0] in ({"command", "patch"} if kind == "paths" else {"prompt", "apply-patch"})
-        )
-    )
-    if not valid or any(value in {"-h", "--help"} for value in rest):
-        print(
-            "Usage: hook_adapter.py <shell allowed/forbidden/git/commit|lint|harness|paths command/patch|content prompt/apply-patch>",
-            file=sys.stderr,
-        )
-        return 1
-    try:
-        payload = json.load(sys.stdin)
-        if payload.get("cwd"):
-            os.chdir(payload["cwd"])
-        return dispatch(kind, rest, payload)
-    except (OSError, ValueError, TypeError, AttributeError) as error:
-        print(f"BLOCKED: {error}", file=sys.stderr)
-        return 2
+)
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    sys.exit(ADAPTER.main(sys.argv[1:]))

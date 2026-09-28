@@ -144,7 +144,6 @@
         "^docker ps( [^;&|<>$`]+)?$",
         "^docker images( [^;&|<>$`]+)?$",
         "^docker logs( [^;&|<>$`]+)?$",
-        "^docker build( [^;&|<>$`]+)?$",
         "^docker compose ps( [^;&|<>$`]+)?$",
         "^docker compose logs( [^;&|<>$`]+)?$",
         "^kubectl get( [^;&|<>$`]+)?$",

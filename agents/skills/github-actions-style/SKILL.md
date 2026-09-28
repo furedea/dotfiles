@@ -7,7 +7,7 @@ description: >
 
 # GitHub Actions Coding Conventions
 
-Claude already knows the basic structure of GitHub Actions (events, workflows, jobs, steps). Focus on the following patterns that are easy to overlook but important for security and reliability.
+These patterns are easy to overlook but important for security and reliability.
 
 ## 1. Permissions — Whitelist Approach
 
@@ -27,28 +27,27 @@ Common permission keys: `contents`, `issues`, `pull-requests`, `packages`, `id-t
 
 ## 2. Version Pinning
 
-Tags like `@v4` can be moved or deleted by the action author — the same tag may point to different code over time. Pin to an exact version tag or commit SHA.
+Tags such as `@v4` or `@v4.2.1` can be moved or deleted by the action author, so the same tag may
+point to different code over time. Pin every action to a full commit SHA and record the version in
+a comment for readability and update tooling.
 
 ```yaml
 # Avoid — tag can move
 - uses: actions/checkout@v4
 
-# Recommended — exact version tag
-- uses: actions/checkout@v4.2.1
-
-# High security — immutable SHA (add the tag as a comment for readability)
+# Recommended — immutable SHA with the version as a comment
 - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.1
 ```
 
 ## 3. Script Injection Prevention
 
-GitHub context values like PR titles, issue bodies, and branch names come from untrusted external sources. Interpolating them directly into `run:` allows an attacker to inject arbitrary shell commands. Always pass them through `env:` instead.
+GitHub context values like PR titles, issue bodies, and branch names come from untrusted external sources. Interpolating them directly into `run:` allows an attacker to inject arbitrary shell commands. Always pass them through `env:` instead, and quote the variable in the script. This is not escaping: the value never becomes part of the script text.
 
 ```yaml
 # Dangerous — PR title injected directly into shell
 - run: echo "${{ github.event.pull_request.title }}"
 
-# Safe — value passed as environment variable (shell-escaped automatically)
+# Safe — the shell reads the value from a variable; it is never interpolated into the script
 - env:
       TITLE: ${{ github.event.pull_request.title }}
   run: echo "$TITLE"

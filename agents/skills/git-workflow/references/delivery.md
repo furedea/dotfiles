@@ -10,7 +10,7 @@ For implementation tasks:
     - `git fetch origin`
     - optionally `git rebase origin/<base>` before the first push when the feature branch should be refreshed onto the latest base
     - `git push -u origin <branch>`
-    - `gh pr create -f --base <base>`
+    - `gh pr create --base <base> --title "<title>" --body-file <file>`, with a [pull request body](#pull-request-body)
 6. Stop before merge; merging is a human decision unless the user explicitly asks for it. When the user asks, `gh pr merge` prompts for approval, and that prompt is the authorization step.
 
 For explicit PR requests:
@@ -18,7 +18,8 @@ For explicit PR requests:
 1. If the user asked for a stacked or red-green pull request, follow [Stacked pull requests](stacked_prs.md) instead of steps 2 and 3.
 2. Confirm the target base branch if it is not obvious from the repo default.
 3. Follow [Local Verification Before Delivery](#local-verification-before-delivery), then push the feature branch with `git push -u origin <branch>`.
-4. Create a normal PR with `gh pr create -f --base <base>`.
+4. Create a normal PR with `gh pr create --base <base> --title "<title>" --body-file <file>`, with a
+   [pull request body](#pull-request-body).
 
 For rebase and force-push:
 
@@ -26,6 +27,20 @@ For rebase and force-push:
 - `git rebase --continue` and `git rebase --abort` complete or recover a rebase.
 - Interactive rebase is outside the default workflow.
 - After rebasing a branch this task already pushed, publish it with `git push --force-with-lease --force-if-includes origin <branch>`. The lease refuses to overwrite commits that were pushed elsewhere, and `--force-if-includes` refuses when a background fetch hid them. Never use bare `--force`, `+refspec` pushes, or any force push to the default branch. If the lease is rejected, stop and ask the user.
+
+## Pull Request Body
+
+Write the title as a Conventional Commits subject stating the primary intent, and keep the body
+short. Do not use `-f`/`--fill`; commit messages do not carry this content. The body must include:
+
+- A few lines on what actually changed.
+- `Closes #N` only when the PR fully resolves the Issue; otherwise `Refs #N`.
+- A link to the plan comment, when one exists.
+- Verification evidence: what ran and its result, or what could not run.
+- Material departures from the plan, or none.
+
+For what the PR body owns relative to the Issue and plan, follow
+[Information Placement](../../source-of-truth/SKILL.md#information-placement).
 
 ## Local Verification Before Delivery
 

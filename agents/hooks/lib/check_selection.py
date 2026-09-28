@@ -193,6 +193,8 @@ def language_plan(root: Path, rules: dict, changed: tuple[str, ...]) -> tuple[li
         affected = changed_language(rule, changed) or triggered
         if not affected and not explicit[language]:
             continue
+        if not triggered and not explicit[language] and delegated(rule, changed, covered, language):
+            continue
         markers = rule.get("project_markers", ())
         if language == "javascript_typescript":
             markers = ("package.json",)
@@ -246,6 +248,13 @@ def language_plan(root: Path, rules: dict, changed: tuple[str, ...]) -> tuple[li
                 javascript_plan(root, changed, targets, rule, triggered=triggered, unresolved=unresolved)
             )
     return invocations, errors
+
+
+def delegated(rule: dict, changed: tuple[str, ...], covered: dict[str, set[str]], language: str) -> bool:
+    """Whether every changed source of a language is explicitly verified by another language's tests."""
+    sources = {path for path in changed if any(path.endswith(extension) for extension in rule["source_extensions"])}
+    others = set().union(*(files for name, files in covered.items() if name != language))
+    return bool(sources) and sources <= others
 
 
 def matching_targets(root: Path, language: str, rule: dict, changed: tuple[str, ...]) -> tuple[set[str], set[str]]:

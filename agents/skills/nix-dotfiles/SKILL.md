@@ -130,36 +130,11 @@ and Atuin modules disable generated Zsh integration for this reason.
 
 ## Dotfile Symlinks
 
-### Editable symlinks (mkOutOfStoreSymlink)
-
-```nix
-let
-  link = path: config.lib.file.mkOutOfStoreSymlink "${dotfilesDir}/${path}";
-in
-{
-  home.file = {
-    ".zshrc".source    = link "zsh/.zshrc";
-    ".config/nvim".source = link "nvim";       # directory symlink
-    # ... etc
-  };
-}
-```
-
-Read `home.file` and `xdg.configFile` in `nix/home/default.nix` for each target's source. Entries
-using `link` point at editable working-tree files. Agent deployment follows the managed-source
-lifecycle above.
-
-Use `mkOutOfStoreSymlink` for files edited frequently — changes apply immediately without rebuild.
-
-### Nix-generated files
-
-```nix
-home.file.".config/zsh/nix-plugins.zsh".text = ''
-  source ${pkgs.zsh-autosuggestions}/share/zsh-autosuggestions/zsh-autosuggestions.zsh
-'';
-```
-
-Use `.text` when the file content depends on Nix store paths (e.g. plugin source paths that change on every nixpkgs update).
+Read `home.file` and `xdg.configFile` in `nix/home/default.nix` for each target's source.
+Entries using the `link` helper (`mkOutOfStoreSymlink`) point at editable working-tree files;
+use it for frequently edited files, since changes apply without a rebuild. Use a generated
+`.text` file only when its content depends on Nix store paths. Agent deployment follows the
+managed-source lifecycle above.
 
 ## Activation Hooks
 
@@ -189,37 +164,6 @@ that require the primary user's context. Preserve those execution boundaries whe
 
 ## Homebrew (via nix-homebrew)
 
-```nix
-nix-homebrew = {
-  enable = true;
-  user = username;
-  autoMigrate = true;
-};
-
-homebrew = {
-  enable = true;
-  onActivation = {
-    autoUpdate = true;
-    upgrade = true;
-    cleanup = "uninstall";   # remove unlisted casks/brews on rebuild
-  };
-  casks = [ ... ];           # GUI apps
-  taps = [ ... ];            # third-party repos
-  brews = [ ... ];           # formulae not in nixpkgs
-};
-```
-
-`cleanup = "uninstall"` means any cask or brew removed from the list will be uninstalled on the next `darwin-rebuild switch`. This keeps the machine declarative.
-
-## Key Patterns
-
-| Pattern                                       | Usage                                                             |
-| --------------------------------------------- | ----------------------------------------------------------------- |
-| `with pkgs;`                                  | Avoids repeating `pkgs.` in `home.packages` list                  |
-| `unstable.xxx`                                | Package from `nixpkgs-unstable` (passed via `extraSpecialArgs`)   |
-| `input.packages.${system}.default`            | Package from a third-party flake input                            |
-| `link "path"`                                 | Helper for `mkOutOfStoreSymlink` (defined in `let` block)         |
-| `${pkgs.xxx}` in `.text`                      | Embeds Nix store paths into generated files                       |
-| `enableZshIntegration = false`                | Keep shell initialization in the linked `.zshrc` where configured |
-| `\|\| true` in activation                     | Prevents non-fatal errors from aborting rebuild                   |
-| `homebrew.onActivation.cleanup = "uninstall"` | Declarative cask management                                       |
+Read `nix-homebrew` and `homebrew` in `nix/darwin/default.nix` for the current settings and
+lists. `onActivation.cleanup = "uninstall"` uninstalls any cask or brew removed from those lists
+on the next `darwin-rebuild switch`, so remove an app by deleting its entry.

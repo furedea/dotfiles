@@ -217,9 +217,10 @@
             in
             {
               default = shellPkgs.mkShell {
-                packages = with shellPkgs; [
-                  commitlint
-                  lefthook
+                packages = [
+                  shellPkgs.commitlint
+                  # lefthook before 2.1.6 runs hooks under a pty, which agent sandboxes deny.
+                  nixpkgs-unstable.legacyPackages.${sys}.lefthook
                 ];
               };
             }

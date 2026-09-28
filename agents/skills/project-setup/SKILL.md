@@ -1,8 +1,10 @@
 ---
 name: project-setup
 description: >
-    Set up per-project Nix development environments and create or configure GitHub repositories
-    using this user's templates and repo commands. For requested setup, not routine code edits.
+    Use only when the user requests creating a GitHub repository, applying standard GitHub
+    settings to one, or setting up a per-project Nix devShell or development environment, using
+    this user's templates and repo commands. Not for ordinary code edits or other work in
+    existing projects.
 ---
 
 # Project Setup

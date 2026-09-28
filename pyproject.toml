@@ -29,6 +29,7 @@ known_first_party = [
   "lib",
   "lint_format",
   "patch_input",
+  "provider_adapter",
   "secret_path_policy",
   "shell_syntax",
   "session_gate",

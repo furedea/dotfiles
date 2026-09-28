@@ -48,7 +48,7 @@
         ]
       },
       {
-        "matcher": "Read",
+        "matcher": "Read|Grep",
         "hooks": [
           {
             "command": "\"$HOME/.claude/hooks/audit_log.py\" tool claude",
@@ -61,7 +61,7 @@
         ]
       },
       {
-        "matcher": "Write|Edit",
+        "matcher": "Write|Edit|NotebookEdit",
         "hooks": [
           {
             "command": "\"$HOME/.claude/hooks/audit_log.py\" tool claude",
@@ -80,7 +80,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Write|Edit",
+        "matcher": "Write|Edit|NotebookEdit",
         "hooks": [
           {
             "command": "\"$HOME/.claude/hooks/lint_format.py\"",

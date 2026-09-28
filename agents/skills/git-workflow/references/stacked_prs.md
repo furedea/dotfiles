@@ -29,7 +29,8 @@ before publishing, as `tsdd` requires for Red.
 4. `gh stack add fix/<subject>` creates layer 2 on top of layer 1 and checks it out.
 5. Remove the marker and its comment, implement the fix, and commit as `fix(<scope>): ...`.
 6. `gh stack submit --auto` pushes both branches and opens two linked draft pull requests. Set
-   each title and body with `gh pr edit`, then mark them ready with `gh pr ready`.
+   each title and body with `gh pr edit` following [Pull request body](delivery.md#pull-request-body),
+   then mark them ready with `gh pr ready`.
 7. Report the stack with `gh stack view --short`.
 
 Rules:

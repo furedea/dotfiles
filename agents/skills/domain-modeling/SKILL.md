@@ -52,7 +52,8 @@ Use `source-of-truth` when durable placement, duplication, or conflicting author
 judgment. Reuse existing authoritative material; do not automatically create `CONTEXT.md` or a
 context map when the first term is clarified.
 
-When a glossary is warranted, follow its existing format. Keep definitions concise but sufficient
+Add a short glossary only when code cannot communicate the distinctions to every relevant
+audience. When a glossary is warranted, follow its existing format. Keep definitions concise but sufficient
 to distinguish concepts, identify the applicable context, and note easily confused terms where
 useful. Include domain-specific meanings, not a general programming tutorial. Do not copy
 implementation details or behavioral specifications into the glossary.

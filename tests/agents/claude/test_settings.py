@@ -12,3 +12,29 @@ def test_agent_git_commands_run_without_the_sandboxed_fsmonitor_daemon() -> None
         environment[f"GIT_CONFIG_KEY_{index}"]: environment[f"GIT_CONFIG_VALUE_{index}"] for index in range(count)
     }
     assert configured["core.fsmonitor"] == "false"
+
+
+def test_commands_run_sandboxed_by_default() -> None:
+    sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
+    assert sandbox["enabled"] is True
+
+
+def test_verification_and_agent_tools_work_without_escaping_the_sandbox() -> None:
+    sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
+    assert {
+        "~/.cache/nix",
+        "~/.cache/uv",
+        "~/Library/Caches/dprint",
+        "~/.local/state/agent-harness",
+    } <= set(sandbox["filesystem"]["allowWrite"])
+    assert {"gh *", "herdr *"} <= set(sandbox["excludedCommands"])
+
+
+def test_excluded_commands_match_invocations_with_arguments() -> None:
+    sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
+    assert [command for command in sandbox["excludedCommands"] if not command.endswith(" *")] == []
+
+
+def test_sandbox_paths_use_the_home_prefix_the_sandbox_expands() -> None:
+    sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
+    assert [path for path in sandbox["filesystem"]["allowWrite"] if "$" in path] == []
