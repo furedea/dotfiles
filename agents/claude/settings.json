@@ -3,7 +3,7 @@
   "cleanupPeriodDays": 9999,
   "env": {
     "CLAUDE_CODE_NO_FLICKER": "1",
-    "CLAUDE_CODE_SUBAGENT_MODEL": "opus",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
     "ENABLE_TOOL_SEARCH": "true",
     "GIT_CONFIG_COUNT": "1",
     "GIT_CONFIG_KEY_0": "core.fsmonitor",
@@ -15,7 +15,7 @@
       "Bash(dangerouslyDisableSandbox:true)"
     ]
   },
-  "model": "fable",
+  "model": "opus",
   "preferredNotifChannel": "auto",
   "enableAllProjectMcpServers": false,
   "statusLine": {
@@ -69,7 +69,7 @@
       "watchman *"
     ]
   },
-  "effortLevel": "xhigh",
+  "effortLevel": "medium",
   "autoMemoryEnabled": false,
   "skipAutoPermissionPrompt": true,
   "editorMode": "vim"
