@@ -156,6 +156,13 @@ in
   };
 
   host-configuration = check "host-configuration" {
+    host-names-pinned =
+      mbp.networking.hostName == "mbp"
+      && mbp.networking.localHostName == "mbp"
+      && mbp.networking.computerName == "mbp"
+      && mba.networking.hostName == "mba"
+      && mba.networking.localHostName == "mba"
+      && mba.networking.computerName == "mba";
     binary-cache-trust = cacheTrusted mbp && cacheTrusted mba;
     devin-smart-permission-mode =
       mbp.environment.variables.DEVIN_PERMISSION_MODE == "smart"

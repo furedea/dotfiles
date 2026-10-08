@@ -2,6 +2,7 @@
   pkgs,
   config,
   lib,
+  hostName,
   enableHisterService,
   histerServerUrl,
   username,
@@ -106,6 +107,14 @@ in
   };
 
   nixpkgs.hostPlatform = "aarch64-darwin";
+
+  # Pin every macOS name explicitly; with HostName unset, macOS adopts the
+  # DHCP/reverse-DNS name of the current network and the prompt follows it.
+  networking = {
+    inherit hostName;
+    localHostName = hostName;
+    computerName = hostName;
+  };
 
   # Required for home-manager to resolve home directory.
   users.users.${username}.home = "/Users/${username}";

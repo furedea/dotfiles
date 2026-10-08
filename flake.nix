@@ -111,6 +111,7 @@
       };
       mkDarwinConfiguration =
         {
+          hostName,
           enableHisterService,
           enableMoshiService,
         }:
@@ -118,6 +119,7 @@
           specialArgs = {
             inherit
               username
+              hostName
               enableHisterService
               enableMoshiService
               histerServerUrl
@@ -166,10 +168,12 @@
 
       darwinConfigurations = {
         mba = mkDarwinConfiguration {
+          hostName = "mba";
           enableHisterService = false;
           enableMoshiService = false;
         };
         mbp = mkDarwinConfiguration {
+          hostName = "mbp";
           enableHisterService = true;
           enableMoshiService = true;
         };
