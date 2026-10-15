@@ -3,6 +3,7 @@
 from dataclasses import dataclass, replace
 from collections.abc import Iterator
 import json
+import os
 from pathlib import Path
 import re
 import shlex
@@ -12,8 +13,25 @@ from typing import Self
 
 COMMAND_PREVIEW_LIMIT = 200
 ALLOWED_NODES = frozenset(
-    {None, "File", "CallExpr", "BinaryCmd", "Subshell", "Block", "Lit", "SglQuoted", "DblQuoted", "TimeClause"}
+    {
+        None,
+        "File",
+        "CallExpr",
+        "BinaryCmd",
+        "Subshell",
+        "Block",
+        "Lit",
+        "SglQuoted",
+        "DblQuoted",
+        "ParamExp",
+        "TimeClause",
+    }
 )
+# ParamExp is admitted here only so literal_word can accept the home directory and refuse the rest.
+WORD_PARTS = frozenset({None, "Lit", "SglQuoted", "DblQuoted", "ParamExp"})
+QUOTED_PARTS = frozenset({"SglQuoted", "DblQuoted"})
+HOME_PARAMETER = "HOME"
+PARAMETER_MODIFIERS = ("Excl", "Length", "Width", "Index", "Slice", "Repl", "Exp")
 SHELLS = frozenset({"bash", "sh", "zsh"})
 COMMAND_LOOKUP = frozenset({"-v", "-V"})
 ASSIGNMENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=")
@@ -152,19 +170,66 @@ def source_text(node: dict, source: bytes) -> str:
 
 
 def literal_word(word: dict, source: bytes) -> str:
-    """Decode quoting only after the syntax tree has excluded executable expansions."""
+    """Decode quoting after the syntax tree has excluded every expansion but the home directory."""
     for part in nodes(word):
-        if part.get("Dollar"):
+        if part.get("Type") in QUOTED_PARTS and part.get("Dollar"):
             raise UnsupportedSyntax("dollar-quoted shell words require explicit review")
-        if part.get("Type") not in {None, "Lit", "SglQuoted", "DblQuoted"}:
+        if part.get("Type") == "ParamExp" and not is_home_parameter(part):
             raise UnsupportedSyntax("shell expansions require explicit review")
-    for part in word.get("Parts", []):
-        if part.get("Type") == "Lit" and re.search(r"(?<!\\)[*?\[]|^~", part.get("Value", "")):
+        if part.get("Type") not in WORD_PARTS:
+            raise UnsupportedSyntax("shell expansions require explicit review")
+    parts = word.get("Parts", [])
+    for index, part in enumerate(parts):
+        if part.get("Type") == "Lit" and not is_literal_text(part.get("Value", ""), first=index == 0):
             raise UnsupportedSyntax("unquoted shell expansion requires explicit review")
-    values = shlex.split(source_text(word, source), posix=True)
+    return "".join(literal_part(index, part, source) for index, part in enumerate(parts))
+
+
+def is_home_parameter(part: dict) -> bool:
+    """Accept a plain $HOME or ${HOME}; any modifier would compute a value the hook cannot predict."""
+    name = part.get("Param", {}).get("Value")
+    return name == HOME_PARAMETER and not any(part.get(key) for key in PARAMETER_MODIFIERS)
+
+
+def is_literal_text(value: str, *, first: bool) -> bool:
+    """Unquoted globs expand at run time, and so does a leading tilde unless it names the home directory."""
+    if re.search(r"(?<!\\)[*?\[]", value):
+        return False
+    if value.startswith("~"):
+        return first and (value == "~" or value.startswith("~/"))
+    return True
+
+
+def literal_part(index: int, part: dict, source: bytes) -> str:
+    """Decode one word part, substituting the home directory where the tree allowed it."""
+    kind = part.get("Type")
+    if kind == "ParamExp":
+        return home_directory()
+    if kind == "SglQuoted":
+        return part.get("Value", "")
+    if kind == "DblQuoted":
+        return "".join(
+            home_directory() if inner.get("Type") == "ParamExp" else unquoted('"' + source_text(inner, source) + '"')
+            for inner in part.get("Parts", [])
+        )
+    value = unquoted(source_text(part, source))
+    if index == 0 and value.startswith("~"):
+        return home_directory() + value[1:]
+    return value
+
+
+def unquoted(text: str) -> str:
+    values = shlex.split(text, posix=True)
     if len(values) != 1:
         raise UnsupportedSyntax("a shell word could not be decoded unambiguously")
     return values[0]
+
+
+def home_directory() -> str:
+    home = os.path.expanduser("~")
+    if home == "~":
+        raise UnsupportedSyntax("the home directory is unknown, so its expansion requires explicit review")
+    return home
 
 
 def unwrapped(command: Command) -> list[Command]:
