@@ -1,6 +1,6 @@
 # ADR-0031: Permit agent commands by reversibility
 
-- Status: Accepted
+- Status: Superseded by [ADR-0034](0034_ask_only_for_effects_that_escape_the_sandbox.md)
 - Date: 2026-09-17
 
 In the context of the command policy that Claude Code and Codex enforce through the shared hooks
