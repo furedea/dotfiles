@@ -56,6 +56,14 @@ def test_javascript_without_a_test_command_is_not_success(tmp_path: Path) -> Non
         selection.language_plan(tmp_path, rules, ("src/file.ts",))
 
 
+def test_dependency_only_javascript_changes_need_no_runner_without_javascript_tests(tmp_path: Path) -> None:
+    rules = project(tmp_path, {})
+    (tmp_path / "package.json").write_text(json.dumps({"devDependencies": {"oxlint": "1.0.0"}}))
+    commands, errors = selection.language_plan(tmp_path, rules, ("package.json", "package-lock.json"))
+    assert not errors
+    assert commands == []
+
+
 def test_sources_mapped_to_another_language_run_only_that_language(tmp_path: Path) -> None:
     rules = project(tmp_path, {"src/assets/**": ["src/bridges.rs", "tests/artifacts.rs"]})
     (tmp_path / "package.json").write_text(json.dumps({"devDependencies": {"@openai/codex": "1.0.0"}}))
