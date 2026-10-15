@@ -233,6 +233,10 @@ whose form the precise rules do not list, a command the static inspection cannot
 tool target outside both the worktree and the session temp directories is escalated to the
 provider's permission prompt instead; see
 [ADR-0033](docs/adr/0033_escalate_unrecognized_command_forms_to_the_provider_prompt.md).
+Commands whose effects the sandbox contains, such as script execution, in-place edits, and
+read-only inspection with any argument, run without a prompt; only effects that escape the
+sandbox or cannot be undone ask; see
+[ADR-0034](docs/adr/0034_ask_only_for_effects_that_escape_the_sandbox.md).
 
 Herdr is pinned as a flake input and replaces tmux for local and managed remote
 terminal sessions. The local configuration uses `ctrl+a` as its prefix and adds

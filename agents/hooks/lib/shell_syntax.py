@@ -64,7 +64,12 @@ class UnsupportedSyntax(ValueError):
 
 @dataclass(frozen=True, slots=True)
 class Command:
-    """A parsed literal command and its original source representation."""
+    """A parsed literal command and its original source representation.
+
+    `dynamic` flags arguments whose value is only known at run time (a glob or a parameter other
+    than the home directory); such arguments carry their source text. `writes` lists the files
+    that output redirections would create or overwrite.
+    """
 
     raw: str
     arguments: tuple[str, ...]
@@ -72,10 +77,22 @@ class Command:
     redirections: tuple[str, ...] = ()
     words: tuple[str, ...] = ()
     trailer: str = ""
+    dynamic: tuple[bool, ...] = ()
+    writes: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.words:
             object.__setattr__(self, "words", self.arguments)
+        if not self.dynamic:
+            object.__setattr__(self, "dynamic", (False,) * len(self.arguments))
+
+    @property
+    def has_dynamic_words(self) -> bool:
+        return any(self.dynamic)
+
+    @property
+    def program_is_dynamic(self) -> bool:
+        return bool(self.dynamic) and self.dynamic[0]
 
     def rebased(self, index: int, head: tuple[str, ...] = (), depth: int | None = None) -> Self:
         """Keep the arguments from one index onward, optionally behind a canonical head or one wrapper deeper."""
@@ -83,7 +100,12 @@ class Command:
         raw = " ".join((*words, self.trailer)).rstrip()
         wrapper_depth = self.wrapper_depth if depth is None else depth
         return replace(
-            self, raw=raw, arguments=(*head, *self.arguments[index:]), wrapper_depth=wrapper_depth, words=words
+            self,
+            raw=raw,
+            arguments=(*head, *self.arguments[index:]),
+            wrapper_depth=wrapper_depth,
+            words=words,
+            dynamic=((False,) * len(head)) + self.dynamic[index:],
         )
 
 
@@ -153,15 +175,32 @@ def literal_command(node: dict, owner: dict, data: bytes, depth: int) -> Command
         raw = raw[:-1].rstrip()
     if owner.get("Background") and raw.endswith("&"):
         raw = raw[:-1].rstrip()
-    redirects = owner.get("Redirs", [])
+    redirects = [redirect for redirect in owner.get("Redirs", []) if redirect.get("Word")]
+    decoded = [literal_word(word, data) for word in node["Args"]]
+    targets = [literal_word(redirect["Word"], data)[0] for redirect in redirects]
     return Command(
         raw,
-        tuple(literal_word(word, data) for word in node["Args"]),
+        tuple(value for value, _ in decoded),
         depth,
-        tuple(literal_word(redirect["Word"], data) for redirect in redirects if redirect.get("Word")),
+        tuple(targets),
         tuple(source_text(word, data) for word in node["Args"]),
         " ".join(source_text(redirect, data) for redirect in redirects),
+        tuple(flag for _, flag in decoded),
+        tuple(
+            target for redirect, target in zip(redirects, targets, strict=True) if writes_file(redirect, target, data)
+        ),
     )
+
+
+def writes_file(redirect: dict, target: str, data: bytes) -> bool:
+    """Whether a redirection creates or overwrites a file, judged by its operator text, not by parser codes."""
+    operator = re.match(r"\d*(&>>|&>|>>|>\||>&|<&|<<<|<>|<|>)", source_text(redirect, data))
+    if operator is None:
+        return True
+    symbol = operator.group(1)
+    if symbol in {">&", "<&"}:
+        return symbol == ">&" and not (target.isdigit() or target == "-")
+    return symbol in {">", ">>", ">|", "&>", "&>>", "<>"}
 
 
 def source_text(node: dict, source: bytes) -> str:
@@ -169,20 +208,28 @@ def source_text(node: dict, source: bytes) -> str:
     return source[node["Pos"]["Offset"] : node["End"]["Offset"]].decode()
 
 
-def literal_word(word: dict, source: bytes) -> str:
-    """Decode quoting after the syntax tree has excluded every expansion but the home directory."""
+def literal_word(word: dict, source: bytes) -> tuple[str, bool]:
+    """Decode a word the tree proves static, or return its source text flagged as dynamic.
+
+    Only substitutions that run code (command, process, and arithmetic substitution) and
+    dollar-quoted or heredoc forms are refused outright; a glob or a parameter other than the
+    home directory is reported to the caller, which decides whether the program can take it.
+    """
+    dynamic = False
     for part in nodes(word):
         if part.get("Type") in QUOTED_PARTS and part.get("Dollar"):
             raise UnsupportedSyntax("dollar-quoted shell words require explicit review")
-        if part.get("Type") == "ParamExp" and not is_home_parameter(part):
-            raise UnsupportedSyntax("shell expansions require explicit review")
-        if part.get("Type") not in WORD_PARTS:
+        if part.get("Type") == "ParamExp":
+            dynamic |= not is_home_parameter(part)
+        elif part.get("Type") not in WORD_PARTS:
             raise UnsupportedSyntax("shell expansions require explicit review")
     parts = word.get("Parts", [])
     for index, part in enumerate(parts):
         if part.get("Type") == "Lit" and not is_literal_text(part.get("Value", ""), first=index == 0):
-            raise UnsupportedSyntax("unquoted shell expansion requires explicit review")
-    return "".join(literal_part(index, part, source) for index, part in enumerate(parts))
+            dynamic = True
+    if dynamic:
+        return source_text(word, source), True
+    return "".join(literal_part(index, part, source) for index, part in enumerate(parts)), False
 
 
 def is_home_parameter(part: dict) -> bool:

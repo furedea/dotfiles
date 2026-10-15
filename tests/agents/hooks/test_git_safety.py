@@ -55,11 +55,54 @@ def test_unicode_and_quotes_do_not_shift_command_boundaries() -> None:
 
 
 @pytest.mark.parametrize(
-    "command", ['echo "$(git reset --hard)"', 'git push origin "$TARGET"', "if true; then git status; fi"]
+    "command", ['echo "$(git reset --hard)"', "echo <(git status)", "echo $((1+1))", "if true; then git status; fi"]
 )
-def test_unsupported_execution_or_expansion_is_not_automatically_approved(command: str) -> None:
+def test_code_running_substitutions_are_not_statically_inspectable(command: str) -> None:
     with pytest.raises(syntax.UnsupportedSyntax):
         syntax.parse(command)
+
+
+@pytest.mark.parametrize(
+    "command,arguments,dynamic",
+    [
+        ('git push origin "$TARGET"', ("git", "push", "origin", '"$TARGET"'), (False, False, False, True)),
+        ("rg foo *.py", ("rg", "foo", "*.py"), (False, False, True)),
+        ("cat ${HOME:-/tmp}/x", ("cat", "${HOME:-/tmp}/x"), (False, True)),
+        ("cat ~tester/x", ("cat", "~tester/x"), (False, True)),
+        ("$CMD --version", ("$CMD", "--version"), (True, False)),
+        ("ls -la", ("ls", "-la"), (False, False)),
+    ],
+)
+def test_run_time_words_are_reported_rather_than_refused(
+    command: str, arguments: tuple[str, ...], dynamic: tuple[bool, ...]
+) -> None:
+    parsed = syntax.parse(command)[0]
+    assert parsed.arguments == arguments
+    assert parsed.dynamic == dynamic
+    assert parsed.program_is_dynamic == dynamic[0]
+
+
+def test_dynamic_flags_follow_arguments_through_wrappers() -> None:
+    innermost = syntax.parse("env CI=1 rg foo *.py")[-1]
+    assert innermost.arguments == ("rg", "foo", "*.py")
+    assert innermost.dynamic == (False, False, True)
+
+
+@pytest.mark.parametrize(
+    "command,writes",
+    [
+        ("rg foo > out.txt", ("out.txt",)),
+        ("rg foo >> log 2>&1", ("log",)),
+        ("rg foo 2>/dev/null >/dev/null", ("/dev/null", "/dev/null")),
+        ("rg foo 2>&1 | wc -l", ()),
+        ("cat < input.txt", ()),
+        ("rg foo &> all.txt", ("all.txt",)),
+        ("rg foo >| clobber.txt", ("clobber.txt",)),
+        ("rg foo >&2", ()),
+    ],
+)
+def test_output_redirections_are_reported_as_writes(command: str, writes: tuple[str, ...]) -> None:
+    assert syntax.parse(command)[0].writes == writes
 
 
 def test_home_directory_expansions_are_resolved_statically(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -84,9 +127,10 @@ def test_single_quoted_home_text_stays_literal(monkeypatch: pytest.MonkeyPatch) 
     "command",
     ["cat ~tester/x", "cat $HOME_DIR/x", "cat ${HOME:-/tmp}/x", "cat ${#HOME}", "cat ${HOME}/$TARGET"],
 )
-def test_other_expansions_still_require_review(command: str) -> None:
-    with pytest.raises(syntax.UnsupportedSyntax):
-        syntax.parse(command)
+def test_other_expansions_are_not_resolved(command: str) -> None:
+    parsed = syntax.parse(command)[0]
+    assert parsed.dynamic == (False, True)
+    assert "/home/" not in parsed.arguments[1]
 
 
 def test_literal_wrapper_commands_are_inspected_recursively() -> None:

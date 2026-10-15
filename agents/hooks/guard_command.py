@@ -23,6 +23,9 @@ from hook_decision import Verdict
 import shell_syntax
 
 
+DEVICE_SINKS = frozenset({"/dev/null", "/dev/stdout", "/dev/stderr"})
+
+
 def policies(kind: str, directory: Path) -> tuple[list[dict], list[dict]]:
     """Load required global rules and optional project additions exactly once."""
     permissions = Path(os.environ.get("AGENT_COMMAND_PERMISSIONS", str(directory / "rules/command_permissions.json")))
@@ -50,24 +53,40 @@ def policies(kind: str, directory: Path) -> tuple[list[dict], list[dict]]:
 def objection(
     kind: str, item: shell_syntax.Command, candidate: shell_syntax.Command, prefixes: list[dict], rules: list[dict]
 ) -> Verdict:
-    """Judge one segment by its literal text and by its canonical program and subcommand."""
-    matched = command_policy.regex_reason(item.raw, rules) or command_policy.regex_reason(candidate.raw, rules)
+    """Judge one segment by its literal text and by its canonical program and subcommand.
+
+    The forbidden kind only denies: a literal deny prefix or pattern wins even beside a run-time
+    argument. The allowed kind lets a read-only program take any argument, even one the shell
+    expands at run time, as long as no redirection writes a file, and hands any other program with
+    a run-time argument to the user, because no rule can see what it will receive.
+    """
     preview = shell_syntax.command_preview(item.raw)
-    if kind == "allowed":
-        governed = command_policy.prefix_rule(candidate.arguments, prefixes, "allow")
-        if governed is None or matched:
+    matched = command_policy.regex_reason(item.raw, rules) or command_policy.regex_reason(candidate.raw, rules)
+    if kind == "forbidden":
+        reason = command_policy.prefix_reason(candidate.arguments, prefixes, "deny") or matched
+        if not reason:
             return hook_decision.ALLOW
-        prefix = " ".join(governed["prefix"])
-        return hook_decision.ask(
-            f"Needs review: command not in allowlist. '{prefix}' is approved, but not in this form.\n\n"
-            f"Command: {preview}",
-            prefix,
+        return hook_decision.deny(
+            f"BLOCKED: forbidden command: {reason}.\n\nCommand: {preview}\n\n{hook_decision.REVIEW_HINT}"
         )
-    reason = command_policy.prefix_reason(candidate.arguments, prefixes, "deny") or matched
-    if not reason:
+    read_only = not candidate.program_is_dynamic and candidate.arguments[0] in command_policy.read_only_programs(rules)
+    if item.has_dynamic_words and not read_only:
+        return dynamic_escalation(preview)
+    if read_only and all(target in DEVICE_SINKS for target in item.writes):
         return hook_decision.ALLOW
-    return hook_decision.deny(
-        f"BLOCKED: forbidden command: {reason}.\n\nCommand: {preview}\n\n{hook_decision.REVIEW_HINT}"
+    governed = command_policy.prefix_rule(candidate.arguments, prefixes, "allow")
+    if governed is None or matched:
+        return hook_decision.ALLOW
+    prefix = " ".join(governed["prefix"])
+    return hook_decision.ask(
+        f"Needs review: command not in allowlist. '{prefix}' is approved, but not in this form.\n\nCommand: {preview}",
+        prefix,
+    )
+
+
+def dynamic_escalation(preview: str) -> Verdict:
+    return hook_decision.ask(
+        f"Needs review: a shell expansion decides what this command receives.\n\nCommand: {preview}", "syntax"
     )
 
 

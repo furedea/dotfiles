@@ -99,7 +99,6 @@
         "^pnpm install --frozen-lockfile$",
         "^pnpm run build( [^;&|<>$`]+)?$",
         "^prettierd( [^;&|<>$`]+)?$",
-        "^python3 -I -B [A-Za-z0-9._/-]+\\.py( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
         "^shfmt -w( [^;&|<>$`]+)?$",
         "^stylua( [^;&|<>$`]+)?$",
         "^tex-fmt( [^;&|<>$`]+)?$",
@@ -169,9 +168,56 @@
         "^mkdir -p [A-Za-z0-9._/][A-Za-z0-9._/-]*( [A-Za-z0-9._/][A-Za-z0-9._/-]*)*$",
         "^touch [A-Za-z0-9._/][A-Za-z0-9._/-]*( [A-Za-z0-9._/][A-Za-z0-9._/-]*)*$",
         "^mv -n [A-Za-z0-9._/][A-Za-z0-9._/-]* [A-Za-z0-9._/][A-Za-z0-9._/-]*$",
-        "^cp -n( -r| -R)? [A-Za-z0-9._/][A-Za-z0-9._/-]* [A-Za-z0-9._/][A-Za-z0-9._/-]*$"
+        "^cp -n( -r| -R)? [A-Za-z0-9._/][A-Za-z0-9._/-]* [A-Za-z0-9._/][A-Za-z0-9._/-]*$",
+        "^echo( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
+        "^printf( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
+        "^pwd$",
+        "^date( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
+        "^true$",
+        "^false$",
+        "^test( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
+        "^basename( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
+        "^dirname( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
+        "^realpath( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
+        "^readlink( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
+        "^seq( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$"
       ],
-      "justification": "Allow read-only inspection, local-server requests, and non-overwriting file creation without redirection."
+      "programs": [
+        "basename",
+        "bat",
+        "cat",
+        "cut",
+        "date",
+        "diff",
+        "dirname",
+        "echo",
+        "eza",
+        "false",
+        "fd",
+        "file",
+        "find",
+        "grep",
+        "head",
+        "jq",
+        "ls",
+        "nl",
+        "printf",
+        "pwd",
+        "readlink",
+        "realpath",
+        "rg",
+        "seq",
+        "sort",
+        "stat",
+        "tail",
+        "test",
+        "tr",
+        "true",
+        "uniq",
+        "wc",
+        "which"
+      ],
+      "justification": "Allow read-only inspection, local-server requests, and non-overwriting file creation without redirection. The listed programs may take any literal, glob, or variable argument, since only a redirection into a file would write."
     },
     {
       "patterns": [
@@ -279,6 +325,29 @@
         "^git worktree prune$"
       ],
       "justification": "Allow precise command forms within prefixes approved by the shared command permissions."
+    },
+    {
+      "patterns": [
+        "^python3( -[IBuOqWX]+)* [A-Za-z0-9._/-]+\\.py( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
+        "^python( -[IBuOqWX]+)* [A-Za-z0-9._/-]+\\.py( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
+        "^python3( -[IBuOqWX]+)* -c ('[^']*'|\"[^\"$`\\\\]*\")$",
+        "^python( -[IBuOqWX]+)* -c ('[^']*'|\"[^\"$`\\\\]*\")$",
+        "^python3( -[IBuOqWX]+)* -m (pytest|unittest|json\\.tool|timeit|py_compile|compileall)( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
+        "^python( -[IBuOqWX]+)* -m (pytest|unittest|json\\.tool|timeit|py_compile|compileall)( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
+        "^uv run python( -[IBuOqWX]+)* [A-Za-z0-9._/-]+\\.py( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
+        "^uv run python( -[IBuOqWX]+)* -c ('[^']*'|\"[^\"$`\\\\]*\")$",
+        "^uv run python( -[IBuOqWX]+)* -m (pytest|unittest|json\\.tool|timeit|py_compile|compileall)( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
+        "^uv run --frozen python( -[IBuOqWX]+)* [A-Za-z0-9._/-]+\\.py( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
+        "^uv run --frozen python( -[IBuOqWX]+)* -c ('[^']*'|\"[^\"$`\\\\]*\")$",
+        "^uv run --frozen python( -[IBuOqWX]+)* -m (pytest|unittest|json\\.tool|timeit|py_compile|compileall)( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
+        "^node( --[a-z-]+)* [A-Za-z0-9._/-]+\\.(js|mjs|cjs|ts)( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
+        "^node (-e|--eval) ('[^']*'|\"[^\"$`\\\\]*\")$",
+        "^sed -i( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")+$",
+        "^perl -i( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")+$",
+        "^tee( -a)? [A-Za-z0-9._/-]+( [A-Za-z0-9._/-]+)*$",
+        "^truncate -s [0-9]+[KMGkmg]? [A-Za-z0-9._/-]+$"
+      ],
+      "justification": "Allow script execution and in-place edits whose effects the sandbox confines to the worktree and temp directories; fetched packages and dependency changes still ask."
     }
   ]
 }
