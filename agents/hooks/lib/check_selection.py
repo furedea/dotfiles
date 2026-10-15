@@ -327,10 +327,13 @@ def javascript_plan(
         "bun": ("bun", "x"),
     }.get(manager, ("false",))
     if not runner:
-        if not test_script:
+        if test_script:
+            arguments = (manager, "run", "test") if manager == "bun" else (manager, "test")
+            return [Invocation(f"{manager} test", "full suite", arguments)]
+        if targets or changed_language(rule, changed):
             raise UnknownTestCommand("test command could not be determined")
-        arguments = (manager, "run", "test") if manager == "bun" else (manager, "test")
-        return [Invocation(f"{manager} test", "full suite", arguments)]
+        # A dependency or lockfile bump in a project that declares no JavaScript tests has nothing to run.
+        return []
     arguments = ("node", "--test") if runner == "node" else (*prefix, runner)
     escalate = triggered or bool(unresolved and rule.get("fallback_on_unmatched_source") and runner != "vitest")
     if runner != "vitest":
