@@ -2,8 +2,10 @@
 """Mechanical lifecycle entry points for registered verification sessions."""
 
 import json
+import os
 from pathlib import Path
 import sys
+import tempfile
 
 
 ROOT = Path(__file__).resolve().parent
@@ -14,10 +16,11 @@ import patch_input
 import session_gate
 import shell_syntax
 from session_snapshot import repository_root
-from session_store import SessionRecord, StateError, load, prune, register, session_directory
+from session_store import ScopeError, SessionRecord, StateError, load, prune, register, session_directory
 
 
 EVENTS = ("session-start", "pre-tool-use", "stop", "session-end")
+TEMPORARY_DIRECTORY_VARIABLES = ("TMPDIR", "CLAUDE_TMPDIR", "CLAUDE_CODE_TMPDIR")
 
 
 def registered_record(provider: str, payload: dict, *, starting: bool = False) -> SessionRecord:
@@ -66,10 +69,16 @@ def check_scope(record: SessionRecord, payload: dict) -> None:
 
 
 def require_inside(record: SessionRecord, path: Path) -> None:
-    if not path.expanduser().resolve().is_relative_to(record.root):
-        raise StateError(
-            f"Tool target is outside the registered worktree {record.root}; launch a session in that worktree"
-        )
+    resolved = path.expanduser().resolve()
+    if resolved.is_relative_to(record.root) or any(resolved.is_relative_to(root) for root in temporary_roots()):
+        return
+    raise ScopeError(f"Tool target {resolved} is outside the registered worktree {record.root}")
+
+
+def temporary_roots() -> tuple[Path, ...]:
+    values = [os.environ.get(name) for name in TEMPORARY_DIRECTORY_VARIABLES]
+    values.append(tempfile.gettempdir())
+    return tuple(Path(value).expanduser().resolve() for value in values if value)
 
 
 def check_shell_directories(record: SessionRecord, cwd: Path, command: str) -> None:
@@ -113,11 +122,12 @@ def dispatch(provider: str, event: str, payload: dict) -> dict[str, object]:
 def failure(event: str, payload: dict, error: Exception) -> dict[str, object]:
     message = f"Verification unresolved · {error}"
     if event == "pre-tool-use":
+        escalated = isinstance(error, ScopeError)
         return {
             "hookSpecificOutput": {
                 "hookEventName": "PreToolUse",
-                "permissionDecision": "deny",
-                "permissionDecisionReason": message,
+                "permissionDecision": "ask" if escalated else "deny",
+                "permissionDecisionReason": f"Needs review · {error}" if escalated else message,
             }
         }
     if event in {"stop", "verify"} and not payload.get("stop_hook_active"):

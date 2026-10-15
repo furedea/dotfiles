@@ -24,6 +24,17 @@ def repository(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return root
 
 
+@pytest.fixture
+def scratch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Point the session temp directory away from the pytest tree so its parent counts as outside."""
+    directory = tmp_path / "scratch"
+    directory.mkdir()
+    monkeypatch.setenv("TMPDIR", str(directory))
+    for name in ("CLAUDE_TMPDIR", "CLAUDE_CODE_TMPDIR"):
+        monkeypatch.delenv(name, raising=False)
+    return directory
+
+
 def invoke(event: str, payload: dict) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, "-I", "-B", str(hook), "codex", event],
@@ -78,9 +89,9 @@ def test_busy_registration_denies_tools_without_waiting_for_hook_timeout(reposit
         {"workdir": "..", "command": "echo changed"},
     ],
 )
-def test_explicit_mutation_outside_registered_root_is_denied(
+def test_explicit_mutation_outside_registered_root_asks_for_review(
     repository: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    scratch: Path,
     tool_input: dict,
 ) -> None:
     store.register(repository, "codex", "session")
@@ -93,7 +104,7 @@ def test_explicit_mutation_outside_registered_root_is_denied(
             "tool_input": tool_input,
         },
     )
-    assert json.loads(result.stdout)["hookSpecificOutput"]["permissionDecision"] == "deny"
+    assert json.loads(result.stdout)["hookSpecificOutput"]["permissionDecision"] == "ask"
 
 
 def test_different_worktree_cannot_reuse_registration(
@@ -299,9 +310,9 @@ def test_directory_words_in_command_arguments_are_not_treated_as_directory_chang
 
 
 @pytest.mark.parametrize("command", ["cd ..", "git -C .. status", "bash -c 'cd ..'"])
-def test_literal_shell_worktree_changes_are_denied(
+def test_literal_shell_worktree_changes_ask_for_review(
     repository: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    scratch: Path,
     command: str,
 ) -> None:
     store.register(repository, "codex", "session")
@@ -314,4 +325,40 @@ def test_literal_shell_worktree_changes_are_denied(
             "tool_input": {"command": command},
         },
     )
-    assert json.loads(result.stdout)["hookSpecificOutput"]["permissionDecision"] == "deny"
+    output = json.loads(result.stdout)["hookSpecificOutput"]
+    assert output["permissionDecision"] == "ask"
+    assert "outside the registered worktree" in output["permissionDecisionReason"]
+
+
+def test_writes_outside_the_worktree_ask_for_review(repository: Path, tmp_path: Path, scratch: Path) -> None:
+    store.register(repository, "codex", "session")
+    result = invoke(
+        "pre-tool-use",
+        {
+            "cwd": str(repository),
+            "session_id": "session",
+            "tool_name": "Write",
+            "tool_input": {"file_path": str(tmp_path / "elsewhere.md"), "content": "x"},
+        },
+    )
+    assert json.loads(result.stdout)["hookSpecificOutput"]["permissionDecision"] == "ask"
+
+
+@pytest.mark.parametrize(
+    "tool_name,tool_input",
+    [
+        ("Write", {"file_path": "{scratch}/notes.md", "content": "x"}),
+        ("Bash", {"command": "cd {scratch}"}),
+        ("Bash", {"command": "git -C {scratch}/clone status"}),
+    ],
+)
+def test_session_temporary_directories_are_within_scope(
+    repository: Path, scratch: Path, tool_name: str, tool_input: dict
+) -> None:
+    store.register(repository, "codex", "session")
+    values = {key: value.format(scratch=scratch) for key, value in tool_input.items()}
+    result = invoke(
+        "pre-tool-use",
+        {"cwd": str(repository), "session_id": "session", "tool_name": tool_name, "tool_input": values},
+    )
+    assert json.loads(result.stdout) == {}
