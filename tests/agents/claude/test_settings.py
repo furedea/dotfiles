@@ -38,3 +38,8 @@ def test_excluded_commands_match_invocations_with_arguments() -> None:
 def test_sandbox_paths_use_the_home_prefix_the_sandbox_expands() -> None:
     sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
     assert [path for path in sandbox["filesystem"]["allowWrite"] if "$" in path] == []
+
+
+def test_go_clis_can_verify_tls_inside_the_sandbox() -> None:
+    sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
+    assert sandbox["enableWeakerNetworkIsolation"] is True

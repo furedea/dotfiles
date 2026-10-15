@@ -47,6 +47,7 @@
   "language": "Japanese",
   "sandbox": {
     "enabled": true,
+    "enableWeakerNetworkIsolation": true,
     "autoAllowBashIfSandboxed": false,
     "allowUnsandboxedCommands": true,
     "filesystem": {
