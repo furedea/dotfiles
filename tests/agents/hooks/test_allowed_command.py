@@ -441,6 +441,13 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
         pytest.param("git worktree move ../old ../new", "ask", [], id="blocks worktree maintenance commands 3"),
         pytest.param("git worktree repair", "ask", [], id="blocks worktree maintenance commands 4"),
         pytest.param("git fetch origin", "allow", [], id="allows PR delivery commands 1"),
+        pytest.param("git fetch origin -q", "allow", [], id="allows quiet and pruning fetches 1"),
+        pytest.param("git fetch --prune origin", "allow", [], id="allows quiet and pruning fetches 2"),
+        pytest.param("git switch main -q", "allow", [], id="allows quiet switches 0"),
+        pytest.param("git switch main --force", "ask", ["git switch"], id="keeps other switch flags under review"),
+        pytest.param("git switch -q main", "allow", [], id="allows quiet switches 1"),
+        pytest.param("git switch -q -c feat/topic", "allow", [], id="allows quiet switches 2"),
+        pytest.param("git pull -q --ff-only", "allow", [], id="allows quiet pulls"),
         pytest.param("git pull --ff-only", "allow", [], id="allows PR delivery commands 2"),
         pytest.param("git push -u origin feat/agent-pr-delivery", "allow", [], id="allows PR delivery commands 3"),
         pytest.param(

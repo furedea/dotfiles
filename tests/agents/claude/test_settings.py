@@ -43,3 +43,8 @@ def test_sandbox_paths_use_the_home_prefix_the_sandbox_expands() -> None:
 def test_go_clis_can_verify_tls_inside_the_sandbox() -> None:
     sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
     assert sandbox["enableWeakerNetworkIsolation"] is True
+
+
+def test_git_delivery_commands_chain_outside_the_sandbox() -> None:
+    sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
+    assert {"git add *", "git status *", "git commit *", "git push *"} <= set(sandbox["excludedCommands"])
