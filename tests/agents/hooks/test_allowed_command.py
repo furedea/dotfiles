@@ -237,6 +237,15 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
         pytest.param("python3 -m http.server 8000", "ask", ["python3"], id="unlisted python modules ask"),
         pytest.param("sed -i '' 's/a/b/' README.md", "allow", [], id="allows in-place edits inside the worktree 1"),
         pytest.param("tee -a notes.txt", "allow", [], id="allows in-place edits inside the worktree 2"),
+        pytest.param("cd agents && rg -n foo lib", "allow", [], id="allows sandbox-contained shell helpers 1"),
+        pytest.param("sed -E 's/a+/b/' README.md", "allow", [], id="allows sandbox-contained shell helpers 2"),
+        pytest.param("awk '{print $1}' README.md", "allow", [], id="allows sandbox-contained shell helpers 3"),
+        pytest.param(
+            "find . -name '*.py' | xargs grep -l foo", "allow", [], id="allows sandbox-contained shell helpers 4"
+        ),
+        pytest.param("cp -r docs build/docs", "allow", [], id="allows sandbox-contained shell helpers 5"),
+        pytest.param("mv old.md new.md", "allow", [], id="allows sandbox-contained shell helpers 6"),
+        pytest.param("cp *.md backup/", "ask", ["expansion"], id="run-time words in copies still ask"),
         pytest.param("echo hello world", "allow", [], id="allows trivial builtins 1"),
         pytest.param("printf '%s\\n' a b", "allow", [], id="allows trivial builtins 2"),
         pytest.param("uv run --frozen ruff check", "allow", [], id="allows Python style frozen ruff commands 1"),
