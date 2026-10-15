@@ -15,6 +15,7 @@ import audit_log
 import guard_command
 import guard_file
 import guard_git
+import hook_decision
 import hook_dispatch
 import hook_input
 import lint_format
@@ -35,9 +36,9 @@ Formatter = Callable[[str, dict], dict]
 
 
 def denial(result: dict) -> dict | None:
-    """Return the block decision for a shared Claude-shaped denial, if the result is one."""
+    """Return the block decision for a Claude-shaped denial or escalation; these providers cannot prompt."""
     specific = result.get("hookSpecificOutput")
-    if not isinstance(specific, dict) or specific.get("permissionDecision") != "deny":
+    if not isinstance(specific, dict) or specific.get("permissionDecision") not in {"deny", "ask"}:
         return None
     return {"decision": "block", "reason": specific.get("permissionDecisionReason") or "Blocked by hook policy"}
 
@@ -158,11 +159,12 @@ class Adapter:
     def shell(self, mode: str, payload: dict) -> int:
         values = {"command": command_text(self.normalized(payload)["tool_input"])}
         command = self.translated(payload, "Bash", values)
-        if mode == "git":
-            return guard_git.check(command)
         if mode == "commit":
             return guard_file.check("commit", command, shared_directory())
-        return guard_command.check(mode, command, shared_directory())
+        verdict = (
+            guard_git.decide(command) if mode == "git" else guard_command.decide(mode, command, shared_directory())
+        )
+        return hook_decision.emit(verdict.hardened())
 
     def lint(self, payload: dict) -> int:
         """Report shared quality diagnostics using the PostToolUse JSON contract."""

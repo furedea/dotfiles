@@ -12,17 +12,31 @@ sys.path.insert(0, str(ROOT / "lib"))
 
 import audit_log
 import git_safety
+import hook_decision
+from hook_decision import Verdict
 import shell_syntax
 
 
-def check(payload: dict) -> int:
-    """Inspect parsed literal commands and reject uninspectable input."""
+RULE = "guard_dangerous_git.sh"
+
+
+def decide(payload: dict) -> Verdict:
+    """Inspect parsed literal commands; hand uninspectable input to the user and deny destructive forms."""
     command = ""
     try:
         if not isinstance(payload, dict):
             raise ValueError("invalid hook input: expected an object")
         command = payload.get("tool_input", {}).get("command") or ""
-        for item in shell_syntax.parse(command):
+        try:
+            commands = shell_syntax.parse(command)
+        except shell_syntax.UnsupportedSyntax as error:
+            preview = shell_syntax.command_preview(command)
+            verdict = hook_decision.ask(f"Needs review: {error}.\n\nCommand: {preview}", "syntax")
+            audit_log.escalated(
+                "Bash", command, verdict.reason, RULE, session(payload), payload=payload, detail="syntax"
+            )
+            return verdict
+        for item in commands:
             if reason := git_safety.reason(item.arguments):
                 if item.wrapper_depth:
                     reason = f"shell wrapper contains {reason}"
@@ -33,13 +47,21 @@ def check(payload: dict) -> int:
             "Bash",
             command,
             message.splitlines()[0],
-            "guard_dangerous_git.sh",
-            payload.get("session_id", "") if isinstance(payload, dict) else "",
+            RULE,
+            session(payload),
             payload=payload if isinstance(payload, dict) else None,
         )
-        print(message, file=sys.stderr)
-        return 2
-    return 0
+        return hook_decision.deny(message)
+    return hook_decision.ALLOW
+
+
+def session(payload: object) -> str:
+    return payload.get("session_id", "") if isinstance(payload, dict) else ""
+
+
+def check(payload: dict) -> int:
+    """Enforce the dangerous-Git policy for an already decoded provider payload."""
+    return hook_decision.emit(decide(payload))
 
 
 def main() -> int:
@@ -49,7 +71,7 @@ def main() -> int:
     try:
         payload = json.load(sys.stdin)
     except (ValueError, OSError) as error:
-        audit_log.blocked("Bash", "", f"BLOCKED: {error}", "guard_dangerous_git.sh", "")
+        audit_log.blocked("Bash", "", f"BLOCKED: {error}", RULE, "")
         print(f"BLOCKED: {error}", file=sys.stderr)
         return 2
     return check(payload)

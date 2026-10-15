@@ -93,16 +93,21 @@ def canonical(command: shell_syntax.Command) -> shell_syntax.Command:
     return command.rebased(1 + len(globals_), ("git",))
 
 
-def prefix_reason(arguments: tuple[str, ...], rules: list[dict], decision: str) -> str:
+def prefix_rule(arguments: tuple[str, ...], rules: list[dict], decision: str) -> dict | None:
     """Match complete parsed arguments rather than flattening away token boundaries."""
     return next(
         (
-            rule["justification"]
+            rule
             for rule in rules
             if rule["decision"] == decision and arguments[: len(rule["prefix"])] == tuple(rule["prefix"])
         ),
-        "",
+        None,
     )
+
+
+def prefix_reason(arguments: tuple[str, ...], rules: list[dict], decision: str) -> str:
+    rule = prefix_rule(arguments, rules, decision)
+    return rule["justification"] if rule else ""
 
 
 def regex_reason(raw: str, rules: list[dict]) -> str:

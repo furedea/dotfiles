@@ -1,5 +1,7 @@
 """Git safety contracts inspect text without executing the submitted commands."""
 
+import json
+
 import pytest
 
 from tests.runtime import load_script_module
@@ -12,12 +14,6 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
 @pytest.mark.parametrize(
     "command,status,fragments",
     [
-        pytest.param(
-            'echo "$(git reset --hard)"',
-            2,
-            ["BLOCKED"],
-            id="blocks command substitution that cannot be statically approved",
-        ),
         pytest.param("git push origin feature/foo", 0, [], id="allows push to feature branch"),
         pytest.param(
             "git push -u origin feature/foo",
@@ -201,3 +197,20 @@ def test_dangerous_git_contract(
     assert captured.out == ""
     for fragment in fragments:
         assert fragment in captured.err
+
+
+@pytest.mark.parametrize(
+    "command",
+    ['echo "$(git reset --hard)"', 'git push origin "$BRANCH"', "git reset --hard $(git rev-parse HEAD)"],
+)
+def test_uninspectable_commands_are_left_to_the_user(command: str) -> None:
+    verdict = guard.decide({"tool_input": {"command": command}})
+    assert verdict.decision == "ask"
+    assert "review" in verdict.reason
+
+
+def test_escalations_report_an_ask_decision_instead_of_an_exit_status(capsys: pytest.CaptureFixture[str]) -> None:
+    assert guard.check({"tool_input": {"command": 'git push origin "$BRANCH"'}}) == 0
+    captured = capsys.readouterr()
+    assert captured.err == ""
+    assert json.loads(captured.out)["hookSpecificOutput"]["permissionDecision"] == "ask"

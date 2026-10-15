@@ -235,6 +235,14 @@
     "tests/agents/hooks/test_command_cli.py",
     "tests/agents/hooks/test_forbidden_command.py"
   ],
+  "agents/hooks/lib/hook_decision.py": [
+    "tests/agents/hooks/test_allowed_command.py",
+    "tests/agents/hooks/test_command_cli.py",
+    "tests/agents/hooks/test_forbidden_command.py",
+    "tests/agents/hooks/test_guard_git.py",
+    "tests/agents/hooks/test_hook_boundary.py",
+    "tests/agents/test_provider_adapters.py"
+  ],
   "agents/hooks/lib/git_safety.py": [
     "tests/agents/hooks/test_guard_git.py",
     "tests/agents/hooks/test_command_cli.py",

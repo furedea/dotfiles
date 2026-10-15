@@ -126,3 +126,27 @@ def test_reversible_or_asked_operations_are_not_forbidden(command: str) -> None:
 def test_global_prefix_rejects_home_manager_activation(capsys: pytest.CaptureFixture[str]) -> None:
     assert guard.check("forbidden", {"tool_input": {"command": "home-manager switch --flake ./#kaito"}}) == 2
     assert "Do not activate Home Manager configurations" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("kind", ["allowed", "forbidden"])
+@pytest.mark.parametrize("command", ['echo "$(date)"', "cat <<EOF\nbody\nEOF", "rm -rf $TARGET", "ls *.md"])
+def test_uninspectable_commands_are_left_to_the_user(kind: str, command: str) -> None:
+    verdict = guard.decide(kind, {"tool_input": {"command": command}})
+    assert verdict.decision == "ask"
+    assert "review" in verdict.reason
+
+
+def test_denials_keep_their_exit_status_and_escalations_report_an_ask_decision(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert guard.check("forbidden", {"tool_input": {"command": "rm -rf build"}}) == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "forbidden command" in captured.err
+    assert guard.check("forbidden", {"tool_input": {"command": 'echo "$(date)"'}}) == 0
+    captured = capsys.readouterr()
+    assert captured.err == ""
+    decision = json.loads(captured.out)["hookSpecificOutput"]
+    assert decision["hookEventName"] == "PreToolUse"
+    assert decision["permissionDecision"] == "ask"
+    assert "review" in decision["permissionDecisionReason"]

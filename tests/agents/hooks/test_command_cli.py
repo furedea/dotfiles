@@ -80,16 +80,10 @@ def test_invalid_command_json_remains_a_cli_error(run_cli: CliRunner) -> None:
 @pytest.mark.parametrize(
     "script,arguments,command,reason",
     [
-        (
-            "guard_command.py",
-            ("allowed",),
-            'uv run --frozen pytest "' + "x" * 1000 + ';literal"',
-            "command not in allowlist",
-        ),
         ("guard_command.py", ("forbidden",), "rm -rf " + "x" * 1000, "forbidden command"),
         ("guard_git.py", (), "git reset --hard " + "x" * 1000, "BLOCKED:"),
     ],
-    ids=["allowlist", "forbidden", "dangerous-git"],
+    ids=["forbidden", "dangerous-git"],
 )
 def test_command_denial_previews_are_bounded(
     run_cli: CliRunner, script: str, arguments: tuple[str, ...], command: str, reason: str
@@ -99,6 +93,39 @@ def test_command_denial_previews_are_bounded(
     assert reason in result.stderr
     assert "omitted" in result.stderr.lower()
     assert len(result.stderr) < 500
+
+
+def test_escalation_previews_are_bounded(run_cli: CliRunner) -> None:
+    command = 'uv run --frozen pytest "' + "x" * 1000 + ';literal"'
+    result = run_cli("agents/hooks/guard_command.py", "allowed", payload={"tool_input": {"command": command}})
+    assert result.returncode == 0
+    assert result.stderr == ""
+    reason = json.loads(result.stdout)["hookSpecificOutput"]["permissionDecisionReason"]
+    assert "command not in allowlist" in reason
+    assert "omitted" in reason.lower()
+    assert len(reason) < 500
+
+
+@pytest.mark.parametrize(
+    "script,arguments,command",
+    [
+        ("guard_command.py", ("allowed",), "gh pr review 42 --approve"),
+        ("guard_command.py", ("allowed",), 'git commit -m "$(cat message.txt)"'),
+        ("guard_command.py", ("forbidden",), 'git commit -m "$(cat message.txt)"'),
+        ("guard_git.py", (), 'git push origin "$BRANCH"'),
+    ],
+    ids=["unlisted-allowed-form", "uninspectable-allowed", "uninspectable-forbidden", "uninspectable-git"],
+)
+def test_escalations_ask_the_user_through_the_native_hook_contract(
+    run_cli: CliRunner, script: str, arguments: tuple[str, ...], command: str
+) -> None:
+    result = run_cli(f"agents/hooks/{script}", *arguments, payload={"tool_input": {"command": command}})
+    assert result.returncode == 0
+    assert result.stderr == ""
+    output = json.loads(result.stdout)["hookSpecificOutput"]
+    assert output["hookEventName"] == "PreToolUse"
+    assert output["permissionDecision"] == "ask"
+    assert output["permissionDecisionReason"]
 
 
 @pytest.mark.parametrize("branch,status", [("main", 2), ("feature/bar", 0), ("feature/foo", 0)])

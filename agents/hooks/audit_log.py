@@ -338,8 +338,44 @@ def blocked(
     payload: dict | None = None,
     provider: str | None = None,
     targets: tuple[str, ...] = (),
+    detail: str = "",
 ) -> None:
     """Record a denial without using the supplied command or reason as log content."""
+    _refusal(
+        "Blocked", "blocked", tool, hook, session, payload=payload, provider=provider, targets=targets, detail=detail
+    )
+
+
+def escalated(
+    tool: str,
+    value: str = "",
+    reason: str = "",
+    hook: str = "",
+    session: str = "",
+    *,
+    payload: dict | None = None,
+    provider: str | None = None,
+    targets: tuple[str, ...] = (),
+    detail: str = "",
+) -> None:
+    """Record that a call was handed to the user, keeping only a short label such as the governed prefix."""
+    _refusal(
+        "Escalated", "asked", tool, hook, session, payload=payload, provider=provider, targets=targets, detail=detail
+    )
+
+
+def _refusal(
+    event: str,
+    status: str,
+    tool: str,
+    hook: str,
+    session: str,
+    *,
+    payload: dict | None,
+    provider: str | None,
+    targets: tuple[str, ...],
+    detail: str,
+) -> None:
     context = dict(payload) if isinstance(payload, dict) else {}
     context.setdefault("tool_name", tool)
     context.setdefault("session_id", session)
@@ -349,9 +385,11 @@ def blocked(
         return
     if entry is None:
         return
-    entry["event"] = "Blocked"
-    entry["status"] = "blocked"
+    entry["event"] = event
+    entry["status"] = status
     entry["rule"] = _label(hook)
+    if detail:
+        entry["detail"] = _label(detail)
     if targets:
         cwd = _cwd(context)
         entry["targets"] = [target for value in targets if (target := _target(value, cwd)) is not None][:MAX_TARGETS]

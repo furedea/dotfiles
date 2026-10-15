@@ -158,6 +158,32 @@ def test_timestamp_is_utc_when_appended(tmp_path: Path, monkeypatch: pytest.Monk
     assert timestamp.utcoffset() == timedelta(0)
 
 
+def test_escalation_records_the_governed_prefix_without_the_command(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    command = "git commit -m 'token=secret-value'"
+    audit.escalated(
+        "Bash",
+        command,
+        f"command not in allowlist: {command}",
+        "guard_allowed_commands.sh",
+        "session-one",
+        payload={"tool_name": "Bash", "tool_input": {"command": command}, "session_id": "session-one"},
+        detail="git commit",
+    )
+    [row] = [
+        json.loads(line)
+        for path in (tmp_path / "state/agent-harness/audit").glob("*/*/*.jsonl")
+        for line in path.read_text().splitlines()
+    ]
+    assert row["event"] == "Escalated"
+    assert row["status"] == "asked"
+    assert row["rule"] == "guard_allowed_commands.sh"
+    assert row["detail"] == "git_commit"
+    assert "secret-value" not in json.dumps(row)
+
+
 def test_rotation_keeps_each_audit_file_under_the_limit(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     worktree = tmp_path / "worktree"
     state = tmp_path / "state"
