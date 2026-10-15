@@ -62,6 +62,16 @@ test(auth): cover refresh-token expiry edge case
 build(deps): bump axios from 1.6.0 to 1.7.2
 ```
 
+## Commit Command Form
+
+Pass the subject, each body paragraph, and each trailer as separate `-m` arguments. Single or
+double quotes both work, and a quoted argument may span lines. Do not read the message from a
+file, a heredoc, or a command substitution; those forms are handed to the user for review.
+
+```bash
+git commit -m "<type>(<scope>): <subject>" -m "<body paragraph>" -m "<trailer>: <value>"
+```
+
 For explicit commit requests:
 
 1. Inspect staged, unstaged, and untracked changes, then group them using the intent rules above. Do not assume the existing staging matches the intended commit boundaries.

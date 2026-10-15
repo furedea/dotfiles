@@ -227,6 +227,13 @@ Ended or inactive records expire after seven days; failure logs are capped at
 1 MiB each and 100 MiB in total. See
 [ADR-0029](docs/adr/0029_register_verification_in_native_hooks.md) for the design rationale.
 
+Hook denials are reserved for deny prefixes, forbidden patterns, dangerous Git operations,
+secret policies, and missing verification registration. A command inside an approved family
+whose form the precise rules do not list, a command the static inspection cannot decode, or a
+tool target outside both the worktree and the session temp directories is escalated to the
+provider's permission prompt instead; see
+[ADR-0033](docs/adr/0033_escalate_unrecognized_command_forms_to_the_provider_prompt.md).
+
 Herdr is pinned as a flake input and replaces tmux for local and managed remote
 terminal sessions. The local configuration uses `ctrl+a` as its prefix and adds
 popup commands for Yazi, Lazygit, a scratch shell, and the `reviewr` plugin.
