@@ -56,19 +56,26 @@ def load_rules(path: Path, prefixes: bool = False) -> list[dict]:
             ):
                 raise ValueError("missing justification")
             values = rule.get("prefix" if prefixes else "patterns")
-            if (
-                not isinstance(values, list)
-                or not values
-                or not all(isinstance(item, str) and item for item in values)
-            ):
+            if not is_name_list(values):
                 raise ValueError("invalid command rule")
             if prefixes and rule.get("decision") not in {"allow", "ask", "deny"}:
                 raise ValueError("invalid decision")
+            if not prefixes and "programs" in rule and not is_name_list(rule["programs"]):
+                raise ValueError("invalid read-only program list")
         if not prefixes:
             any_regex_matches(all_patterns(rules), "")
         return rules
     except (OSError, ValueError, TypeError) as error:
         raise ValueError(f"invalid command policy: {path}") from error
+
+
+def is_name_list(value: object) -> bool:
+    return isinstance(value, list) and bool(value) and all(isinstance(item, str) and item for item in value)
+
+
+def read_only_programs(rules: list[dict]) -> frozenset[str]:
+    """Programs that may take any literal, glob, or variable argument as long as nothing is written."""
+    return frozenset(program for rule in rules for program in rule.get("programs", ()))
 
 
 def project_file(name: str) -> Path | None:
@@ -115,8 +122,8 @@ def regex_reason(raw: str, rules: list[dict]) -> str:
     raw = re.sub(r"\s+(?:2>&1|2>/dev/null|>&2)\s*$", "", raw.strip())
     if not any_regex_matches(all_patterns(rules), raw):
         return ""
-    return next((rule["justification"] for rule in rules if any_regex_matches(rule["patterns"], raw)), "")
+    return next((rule["justification"] for rule in rules if any_regex_matches(rule.get("patterns", ()), raw)), "")
 
 
 def all_patterns(rules: list[dict]) -> list[str]:
-    return [pattern for rule in rules for pattern in rule["patterns"]]
+    return [pattern for rule in rules for pattern in rule.get("patterns", ())]

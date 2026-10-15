@@ -72,6 +72,22 @@ def test_empty_pattern_lists_never_match() -> None:
     assert policy.any_regex_matches((), "anything") is False
 
 
+def test_read_only_programs_are_listed_beside_patterns() -> None:
+    rules = policy.load_rules(ALLOWED_RULES)
+    programs = policy.read_only_programs(rules)
+    assert {"rg", "grep", "cat", "ls", "echo"} <= programs
+    assert "git" not in programs
+    assert "sed" not in programs
+
+
+def test_an_invalid_program_list_is_rejected(tmp_path: Path) -> None:
+    path = tmp_path / "rules.json"
+    rules = [{"patterns": ["^ok$"], "programs": ["", "rg"], "justification": "broken"}]
+    path.write_text(json.dumps({"version": 1, "rules": rules}))
+    with pytest.raises(ValueError, match="invalid command policy"):
+        policy.load_rules(path)
+
+
 def test_rules_judge_the_whole_segment_rather_than_any_single_line() -> None:
     rules = [{"patterns": ["^git status$"], "justification": "status"}]
     assert policy.regex_reason('git commit -m "subject\ngit status\n"', rules) == ""

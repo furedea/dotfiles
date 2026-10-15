@@ -309,7 +309,7 @@ def test_directory_words_in_command_arguments_are_not_treated_as_directory_chang
     assert json.loads(result.stdout) == {}
 
 
-@pytest.mark.parametrize("command", ["cd ..", "git -C .. status", "bash -c 'cd ..'"])
+@pytest.mark.parametrize("command", ["cd ..", "git -C .. status", "bash -c 'cd ..'", "cd $DIR", "git -C $DIR status"])
 def test_literal_shell_worktree_changes_ask_for_review(
     repository: Path,
     scratch: Path,

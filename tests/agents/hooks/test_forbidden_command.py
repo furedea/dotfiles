@@ -87,6 +87,10 @@ def test_generated_deny_prefixes(
         "find . -name '*.pyc' -delete",
         "find . -type f -exec rm {} +",
         "find . -name x -execdir rm {} +",
+        "python3 -m pip install requests",
+        "python -m pip install requests",
+        "python3 -I -m ensurepip",
+        "uv run --frozen python -m pip install requests",
     ],
 )
 def test_global_rules_reject_policy_bypasses(command: str) -> None:
@@ -129,11 +133,22 @@ def test_global_prefix_rejects_home_manager_activation(capsys: pytest.CaptureFix
 
 
 @pytest.mark.parametrize("kind", ["allowed", "forbidden"])
-@pytest.mark.parametrize("command", ['echo "$(date)"', "cat <<EOF\nbody\nEOF", "rm -rf $TARGET", "ls *.md"])
+@pytest.mark.parametrize("command", ['echo "$(date)"', "cat <<EOF\nbody\nEOF"])
 def test_uninspectable_commands_are_left_to_the_user(kind: str, command: str) -> None:
     verdict = guard.decide(kind, {"tool_input": {"command": command}})
     assert verdict.decision == "ask"
     assert "review" in verdict.reason
+
+
+def test_literal_deny_prefixes_win_over_run_time_arguments() -> None:
+    verdict = guard.decide("forbidden", {"tool_input": {"command": "rm -rf $TARGET"}})
+    assert verdict.decision == "deny"
+    assert "directory trees" in verdict.reason
+
+
+@pytest.mark.parametrize("command", ["git push $FLAGS origin topic", "cd $DIR", "$CMD --help", "ls *.md"])
+def test_run_time_arguments_are_the_allowed_kinds_concern(command: str) -> None:
+    assert guard.decide("forbidden", {"tool_input": {"command": command}}).decision == "allow"
 
 
 def test_denials_keep_their_exit_status_and_escalations_report_an_ask_decision(

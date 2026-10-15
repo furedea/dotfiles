@@ -161,7 +161,7 @@ def test_heredoc_denial_omits_the_body(run_cli: CliRunner, harness: Path, field:
 
 
 def test_long_command_denial_has_a_bounded_preview(run_cli: CliRunner, harness: Path) -> None:
-    command = "echo " + "x" * 1000 + " $uninspectable_variable"
+    command = "echo " + "x" * 1000 + " $(uninspectable)"
     result = run_cli(SCRIPT, "paths", "command", payload={"tool_input": {"cmd": command}})
     assert result.returncode == 2
     assert "BLOCKED:" in result.stderr

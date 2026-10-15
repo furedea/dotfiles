@@ -201,12 +201,22 @@ def test_dangerous_git_contract(
 
 @pytest.mark.parametrize(
     "command",
-    ['echo "$(git reset --hard)"', 'git push origin "$BRANCH"', "git reset --hard $(git rev-parse HEAD)"],
+    [
+        'echo "$(git reset --hard)"',
+        'git push origin "$BRANCH"',
+        "git reset --hard $(git rev-parse HEAD)",
+        "gh pr merge $NUMBER",
+        "$GIT push --force origin main",
+    ],
 )
 def test_uninspectable_commands_are_left_to_the_user(command: str) -> None:
     verdict = guard.decide({"tool_input": {"command": command}})
     assert verdict.decision == "ask"
     assert "review" in verdict.reason
+
+
+def test_run_time_arguments_of_other_programs_do_not_concern_the_git_guard() -> None:
+    assert guard.decide({"tool_input": {"command": "rg $PATTERN agents"}}).decision == "allow"
 
 
 def test_escalations_report_an_ask_decision_instead_of_an_exit_status(capsys: pytest.CaptureFixture[str]) -> None:

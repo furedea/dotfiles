@@ -18,6 +18,7 @@ import shell_syntax
 
 
 RULE = "guard_dangerous_git.sh"
+GUARDED = frozenset({"git", "gh"})
 
 
 def decide(payload: dict) -> Verdict:
@@ -37,6 +38,16 @@ def decide(payload: dict) -> Verdict:
             )
             return verdict
         for item in commands:
+            if item.has_dynamic_words and (item.program_is_dynamic or Path(item.arguments[0]).name in GUARDED):
+                preview = shell_syntax.command_preview(item.raw)
+                verdict = hook_decision.ask(
+                    f"Needs review: a shell expansion decides what this Git command does.\n\nSegment: {preview}",
+                    "syntax",
+                )
+                audit_log.escalated(
+                    "Bash", command, verdict.reason, RULE, session(payload), payload=payload, detail="syntax"
+                )
+                return verdict
             if reason := git_safety.reason(item.arguments):
                 if item.wrapper_depth:
                     reason = f"shell wrapper contains {reason}"

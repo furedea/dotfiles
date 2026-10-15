@@ -692,14 +692,14 @@
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["uv", "run", "python"],
-      "justification": "Ask before running scripts that policy cannot inspect."
+      "justification": "Allow script execution the sandbox confines to the worktree and temp directories; fetched packages ask first."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["uv", "run", "--frozen", "python"],
-      "justification": "Ask before running scripts that policy cannot inspect."
+      "justification": "Allow script execution the sandbox confines to the worktree and temp directories; fetched packages ask first."
     },
     {
       "decision": "allow",
@@ -823,8 +823,78 @@
     },
     {
       "decision": "allow",
-      "prefix": ["python3", "-I", "-B"],
-      "justification": "Allow the repository's isolated Python entry points; ad hoc scripts ask first."
+      "prefix": ["python3"],
+      "justification": "Allow script execution the sandbox confines to the worktree and temp directories; fetched packages ask first."
+    },
+    {
+      "decision": "allow",
+      "prefix": ["python"],
+      "justification": "Allow script execution the sandbox confines to the worktree and temp directories; fetched packages ask first."
+    },
+    {
+      "decision": "allow",
+      "prefix": ["node"],
+      "justification": "Allow script execution the sandbox confines to the worktree and temp directories; fetched packages ask first."
+    },
+    {
+      "decision": "allow",
+      "prefix": ["echo"],
+      "justification": "Allow trivial read-only builtins so they never reach the classifier."
+    },
+    {
+      "decision": "allow",
+      "prefix": ["printf"],
+      "justification": "Allow trivial read-only builtins so they never reach the classifier."
+    },
+    {
+      "decision": "allow",
+      "prefix": ["pwd"],
+      "justification": "Allow trivial read-only builtins so they never reach the classifier."
+    },
+    {
+      "decision": "allow",
+      "prefix": ["date"],
+      "justification": "Allow trivial read-only builtins so they never reach the classifier."
+    },
+    {
+      "decision": "allow",
+      "prefix": ["true"],
+      "justification": "Allow trivial read-only builtins so they never reach the classifier."
+    },
+    {
+      "decision": "allow",
+      "prefix": ["false"],
+      "justification": "Allow trivial read-only builtins so they never reach the classifier."
+    },
+    {
+      "decision": "allow",
+      "prefix": ["test"],
+      "justification": "Allow trivial read-only builtins so they never reach the classifier."
+    },
+    {
+      "decision": "allow",
+      "prefix": ["basename"],
+      "justification": "Allow trivial read-only builtins so they never reach the classifier."
+    },
+    {
+      "decision": "allow",
+      "prefix": ["dirname"],
+      "justification": "Allow trivial read-only builtins so they never reach the classifier."
+    },
+    {
+      "decision": "allow",
+      "prefix": ["realpath"],
+      "justification": "Allow trivial read-only builtins so they never reach the classifier."
+    },
+    {
+      "decision": "allow",
+      "prefix": ["readlink"],
+      "justification": "Allow trivial read-only builtins so they never reach the classifier."
+    },
+    {
+      "decision": "allow",
+      "prefix": ["seq"],
+      "justification": "Allow trivial read-only builtins so they never reach the classifier."
     },
     {
       "decision": "allow",
@@ -1218,26 +1288,6 @@
     },
     {
       "decision": "ask",
-      "prefix": ["python3", "-c"],
-      "justification": "Ask before running scripts that policy cannot inspect."
-    },
-    {
-      "decision": "ask",
-      "prefix": ["python", "-c"],
-      "justification": "Ask before running scripts that policy cannot inspect."
-    },
-    {
-      "decision": "ask",
-      "prefix": ["node", "-e"],
-      "justification": "Ask before running scripts that policy cannot inspect."
-    },
-    {
-      "decision": "ask",
-      "prefix": ["node", "--eval"],
-      "justification": "Ask before running scripts that policy cannot inspect."
-    },
-    {
-      "decision": "ask",
       "prefix": ["rm"],
       "justification": "Ask before removing files that Git cannot restore; recursive removal stays denied."
     },
@@ -1247,24 +1297,24 @@
       "justification": "Ask before writes that bypass the Edit hooks or overwrite existing files."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["sed", "-i"],
-      "justification": "Ask before writes that bypass the Edit hooks or overwrite existing files."
+      "justification": "Allow in-place writes the sandbox confines to the worktree; Git can restore tracked files."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["perl", "-i"],
-      "justification": "Ask before writes that bypass the Edit hooks or overwrite existing files."
+      "justification": "Allow in-place writes the sandbox confines to the worktree; Git can restore tracked files."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["tee"],
-      "justification": "Ask before writes that bypass the Edit hooks or overwrite existing files."
+      "justification": "Allow in-place writes the sandbox confines to the worktree; Git can restore tracked files."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["truncate"],
-      "justification": "Ask before writes that bypass the Edit hooks or overwrite existing files."
+      "justification": "Allow in-place writes the sandbox confines to the worktree; Git can restore tracked files."
     },
     {
       "decision": "ask",

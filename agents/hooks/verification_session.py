@@ -87,15 +87,30 @@ def check_shell_directories(record: SessionRecord, cwd: Path, command: str) -> N
     except shell_syntax.UnsupportedSyntax:
         return
     for parsed in commands:
+        if parsed.program_is_dynamic:
+            continue
         executable = Path(parsed.arguments[0]).name
         if executable in {"cd", "pushd"}:
-            targets = [value for value in parsed.arguments[1:] if value not in {"--", "-L", "-P", "-e"}]
-            if targets and targets[0] != "-":
-                require_inside(record, cwd / Path(targets[0]).expanduser())
+            targets = [
+                (value, flag)
+                for value, flag in zip(parsed.arguments[1:], parsed.dynamic[1:], strict=True)
+                if value not in {"--", "-L", "-P", "-e"}
+            ]
+            if targets and targets[0][0] != "-":
+                require_static(record, cwd, *targets[0])
         elif executable == "git":
             for index, token in enumerate(parsed.arguments[:-1]):
                 if token == "-C":
-                    require_inside(record, cwd / Path(parsed.arguments[index + 1]).expanduser())
+                    require_static(record, cwd, parsed.arguments[index + 1], parsed.dynamic[index + 1])
+
+
+def require_static(record: SessionRecord, cwd: Path, target: str, dynamic: bool) -> None:
+    """A directory the shell computes at run time cannot be placed inside or outside the worktree."""
+    if dynamic:
+        raise ScopeError(
+            f"Directory target {target} is a shell expansion, so it may lie outside the registered worktree {record.root}"
+        )
+    require_inside(record, cwd / Path(target).expanduser())
 
 
 def dispatch(provider: str, event: str, payload: dict) -> dict[str, object]:
