@@ -70,3 +70,13 @@ def test_trailing_stderr_redirections_stay_ignored() -> None:
 
 def test_empty_pattern_lists_never_match() -> None:
     assert policy.any_regex_matches((), "anything") is False
+
+
+def test_rules_judge_the_whole_segment_rather_than_any_single_line() -> None:
+    rules = [{"patterns": ["^git status$"], "justification": "status"}]
+    assert policy.regex_reason('git commit -m "subject\ngit status\n"', rules) == ""
+
+
+def test_anchored_rules_match_multi_line_quoted_arguments() -> None:
+    rules = [{"patterns": ['^git commit -m "[^"]*"$'], "justification": "commit"}]
+    assert policy.regex_reason('git commit -m "subject\n\nCo-Authored-By: X <x@y>"', rules) == "commit"

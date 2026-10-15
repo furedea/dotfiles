@@ -17,14 +17,18 @@ def regex_matches(pattern: str, value: str, insensitive: bool = False) -> bool:
 
 
 def any_regex_matches(patterns: Sequence[str], value: str, insensitive: bool = False) -> bool:
-    """Spawn one grep for a whole pattern set; process start-up, not matching, dominates each decision."""
+    """Spawn one grep for a whole pattern set; process start-up, not matching, dominates each decision.
+
+    The value is one NUL-free record, so anchors span a whole shell segment and a newline inside a
+    quoted argument can neither hide a segment from an anchored rule nor satisfy one by itself.
+    """
     if not patterns:
         return False
     flags = "-qiE" if insensitive else "-qE"
     selectors = [argument for pattern in patterns for argument in ("-e", pattern)]
     result = subprocess.run(
-        ["grep", flags, *selectors],
-        input=value + "\n",
+        ["grep", "--null-data", flags, *selectors],
+        input=value,
         text=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
