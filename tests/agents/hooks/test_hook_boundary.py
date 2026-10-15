@@ -211,15 +211,12 @@ def test_shell_translation_calls_shared_policy(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, field: str, mode: str
 ) -> None:
     monkeypatch.setenv("AGENT_HARNESS_ROOT", str(tmp_path))
-    target = (
-        shared.guard_command
-        if mode in {"allowed", "forbidden"}
-        else shared.guard_git
-        if mode == "git"
-        else shared.guard_file
-    )
-    check = Mock(return_value=2)
-    monkeypatch.setattr(target, "check", check)
+    if mode == "commit":
+        check = Mock(return_value=2)
+        monkeypatch.setattr(shared.guard_file, "check", check)
+    else:
+        check = Mock(return_value=shared.hook_decision.deny("BLOCKED: test"))
+        monkeypatch.setattr(shared.guard_git if mode == "git" else shared.guard_command, "decide", check)
     payload = {"tool_input": {field: "git status"}, "session_id": "session-one"}
     assert hook_adapter.ADAPTER.dispatch("shell", [mode], payload) == 2
     translated = {
@@ -235,12 +232,27 @@ def test_shell_translation_calls_shared_policy(
         check.assert_called_once_with(mode, translated, tmp_path / ".claude/hooks")
 
 
+@pytest.mark.parametrize("mode", ["allowed", "forbidden", "git"])
+def test_shell_translation_hardens_escalations_into_denials(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str], mode: str
+) -> None:
+    monkeypatch.setenv("AGENT_HARNESS_ROOT", str(tmp_path))
+    target = shared.guard_git if mode == "git" else shared.guard_command
+    monkeypatch.setattr(target, "decide", Mock(return_value=shared.hook_decision.ask("needs review")))
+    assert hook_adapter.ADAPTER.dispatch("shell", [mode], {"tool_input": {"command": "git status"}}) == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "needs review" in captured.err
+
+
 def test_adapter_applies_payload_cwd_before_enforcement(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.chdir(tmp_path.parent)
     payload = {"cwd": str(tmp_path), "tool_input": {"cmd": "git status"}}
     monkeypatch.setattr(shared.sys, "stdin", io.StringIO(json.dumps(payload)))
     observed = []
-    monkeypatch.setattr(shared.guard_git, "check", lambda _: observed.append(Path.cwd()) or 0)
+    monkeypatch.setattr(
+        shared.guard_git, "decide", lambda _: observed.append(Path.cwd()) or shared.hook_decision.ALLOW
+    )
     assert hook_adapter.ADAPTER.main(["shell", "git"]) == 0
     assert observed == [tmp_path]
 

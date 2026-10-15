@@ -121,6 +121,18 @@ def test_normalization_leaves_the_provider_payload_untouched(provider: str) -> N
 
 
 @pytest.mark.parametrize("provider", PROVIDERS)
+@pytest.mark.parametrize("mode", ["allowed", "forbidden", "git"])
+def test_escalations_are_denied_for_providers_whose_hooks_cannot_ask(
+    run_cli: CliRunner, harness: Path, provider: str, mode: str
+) -> None:
+    payload = {"session_id": "adapter-session", "tool_input": {"command": 'git push origin "$BRANCH"'}}
+    result = run_cli(script(provider), "shell", mode, payload=payload)
+    assert result.returncode == 2
+    assert result.stdout == ""
+    assert "review" in result.stderr
+
+
+@pytest.mark.parametrize("provider", PROVIDERS)
 @pytest.mark.parametrize("raw", ["{", "null", "[]"])
 def test_non_object_payloads_are_rejected(run_cli: CliRunner, harness: Path, provider: str, raw: str) -> None:
     result = run_cli(script(provider), "shell", "git", payload=raw)

@@ -25,6 +25,10 @@ class StateError(ValueError):
     """Verification registration or evidence cannot be trusted."""
 
 
+class ScopeError(StateError):
+    """A tool target lies outside the registered worktree and needs the user's judgment."""
+
+
 @dataclass(frozen=True, slots=True)
 class SessionRecord:
     """One registered provider session: its baseline, receipts, logs, and lock."""

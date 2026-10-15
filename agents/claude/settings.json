@@ -65,6 +65,8 @@
     "excludedCommands": [
       "docker *",
       "gh *",
+      "git commit *",
+      "git push *",
       "herdr *",
       "watchman *"
     ]

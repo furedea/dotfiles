@@ -17,14 +17,18 @@ def regex_matches(pattern: str, value: str, insensitive: bool = False) -> bool:
 
 
 def any_regex_matches(patterns: Sequence[str], value: str, insensitive: bool = False) -> bool:
-    """Spawn one grep for a whole pattern set; process start-up, not matching, dominates each decision."""
+    """Spawn one grep for a whole pattern set; process start-up, not matching, dominates each decision.
+
+    The value is one NUL-free record, so anchors span a whole shell segment and a newline inside a
+    quoted argument can neither hide a segment from an anchored rule nor satisfy one by itself.
+    """
     if not patterns:
         return False
     flags = "-qiE" if insensitive else "-qE"
     selectors = [argument for pattern in patterns for argument in ("-e", pattern)]
     result = subprocess.run(
-        ["grep", flags, *selectors],
-        input=value + "\n",
+        ["grep", "--null-data", flags, *selectors],
+        input=value,
         text=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
@@ -89,16 +93,21 @@ def canonical(command: shell_syntax.Command) -> shell_syntax.Command:
     return command.rebased(1 + len(globals_), ("git",))
 
 
-def prefix_reason(arguments: tuple[str, ...], rules: list[dict], decision: str) -> str:
+def prefix_rule(arguments: tuple[str, ...], rules: list[dict], decision: str) -> dict | None:
     """Match complete parsed arguments rather than flattening away token boundaries."""
     return next(
         (
-            rule["justification"]
+            rule
             for rule in rules
             if rule["decision"] == decision and arguments[: len(rule["prefix"])] == tuple(rule["prefix"])
         ),
-        "",
+        None,
     )
+
+
+def prefix_reason(arguments: tuple[str, ...], rules: list[dict], decision: str) -> str:
+    rule = prefix_rule(arguments, rules, decision)
+    return rule["justification"] if rule else ""
 
 
 def regex_reason(raw: str, rules: list[dict]) -> str:

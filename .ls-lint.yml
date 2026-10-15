@@ -16,6 +16,8 @@ ignore:
   - "**/{.venv,.uv-cache,.ruff_cache,.pytest_cache,.ipynb_checkpoints,__pycache__,node_modules,target}"
   - docs/logs
   - "**/docs/logs"
+  # Agent-local workspaces are ignored by Git and are not part of the repository layout.
+  - "*-workspace"
 
   - "tinycast/*.rayconfig"
   - "tinycast/*.tinycast"

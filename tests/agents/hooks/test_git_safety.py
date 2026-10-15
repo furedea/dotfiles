@@ -62,6 +62,33 @@ def test_unsupported_execution_or_expansion_is_not_automatically_approved(comman
         syntax.parse(command)
 
 
+def test_home_directory_expansions_are_resolved_statically(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HOME", "/home/tester")
+    command = syntax.parse('cat "$HOME/notes.txt" ~/todo.txt ~ ${HOME}/x')[0]
+    assert command.arguments == (
+        "cat",
+        "/home/tester/notes.txt",
+        "/home/tester/todo.txt",
+        "/home/tester",
+        "/home/tester/x",
+    )
+    assert command.raw == 'cat "$HOME/notes.txt" ~/todo.txt ~ ${HOME}/x'
+
+
+def test_single_quoted_home_text_stays_literal(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HOME", "/home/tester")
+    assert syntax.parse("printf '%s' '$HOME' '~'")[0].arguments == ("printf", "%s", "$HOME", "~")
+
+
+@pytest.mark.parametrize(
+    "command",
+    ["cat ~tester/x", "cat $HOME_DIR/x", "cat ${HOME:-/tmp}/x", "cat ${#HOME}", "cat ${HOME}/$TARGET"],
+)
+def test_other_expansions_still_require_review(command: str) -> None:
+    with pytest.raises(syntax.UnsupportedSyntax):
+        syntax.parse(command)
+
+
 def test_literal_wrapper_commands_are_inspected_recursively() -> None:
     assert syntax.parse("bash -lc 'git status'")[-1].arguments == ("git", "status")
 

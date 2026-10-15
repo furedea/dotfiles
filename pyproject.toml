@@ -24,6 +24,7 @@ known_first_party = [
   "guard_command",
   "guard_file",
   "guard_git",
+  "hook_decision",
   "hook_dispatch",
   "hook_input",
   "lib",
