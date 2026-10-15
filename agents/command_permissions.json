@@ -928,8 +928,23 @@
     },
     {
       "decision": "allow",
-      "prefix": ["sed", "-n"],
-      "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
+      "prefix": ["sed"],
+      "justification": "Allow stream editing; in-place writes stay inside the worktree, where Git restores tracked files."
+    },
+    {
+      "decision": "allow",
+      "prefix": ["awk"],
+      "justification": "Allow text processing the sandbox confines to the worktree and temp directories."
+    },
+    {
+      "decision": "allow",
+      "prefix": ["xargs"],
+      "justification": "Allow argument fan-out; the hooks judge the wrapped command on its own."
+    },
+    {
+      "decision": "allow",
+      "prefix": ["cd"],
+      "justification": "Allow directory changes; the verification scope check asks for targets outside the worktree and temp directories."
     },
     {
       "decision": "allow",
@@ -1028,13 +1043,13 @@
     },
     {
       "decision": "allow",
-      "prefix": ["mv", "-n"],
-      "justification": "Allow moves and copies that refuse to overwrite existing files."
+      "prefix": ["mv"],
+      "justification": "Allow moves and copies the sandbox confines to the worktree, where Git restores tracked files."
     },
     {
       "decision": "allow",
-      "prefix": ["cp", "-n"],
-      "justification": "Allow moves and copies that refuse to overwrite existing files."
+      "prefix": ["cp"],
+      "justification": "Allow moves and copies the sandbox confines to the worktree, where Git restores tracked files."
     },
     {
       "decision": "allow",
@@ -1295,11 +1310,6 @@
       "decision": "ask",
       "prefix": ["ln", "-s"],
       "justification": "Ask before writes that bypass the Edit hooks or overwrite existing files."
-    },
-    {
-      "decision": "allow",
-      "prefix": ["sed", "-i"],
-      "justification": "Allow in-place writes the sandbox confines to the worktree; Git can restore tracked files."
     },
     {
       "decision": "allow",
