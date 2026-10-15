@@ -72,9 +72,10 @@ file, a heredoc, or a command substitution; those forms are handed to the user f
 git commit -m "<type>(<scope>): <subject>" -m "<body paragraph>" -m "<trailer>: <value>"
 ```
 
-Run it as a standalone, single-line command: no leading `cd`, no `&&`, and no pipe. The runtime
-sandboxes compound commands, and commit signing cannot reach the signing key or the agent from
-inside the sandbox, so a chained or piped commit fails or is recorded unsigned.
+Run it as a standalone, single-line command: no `cd`, no `git -C`, no `&&`, no pipe, and no
+redirection other than `2>&1`. The runtime sandboxes any other call shape, and commit signing
+cannot reach the signing key or the agent from inside the sandbox, so such a commit fails or is
+recorded unsigned.
 
 For explicit commit requests:
 

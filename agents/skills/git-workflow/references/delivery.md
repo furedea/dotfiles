@@ -21,9 +21,9 @@ For explicit PR requests:
 4. Create a normal PR with `gh pr create --base <base> --title "<title>" --body-file <file>`, with a
    [pull request body](#pull-request-body).
 
-Run `git push` as a standalone, single-line command, like `git commit` in
+Run `git push` as a standalone, single-line command with the same restrictions as `git commit` in
 [Commit Command Form](commits.md#commit-command-form): the credential helper cannot read its
-configuration from inside the sandbox that compound commands run in.
+configuration from inside the sandbox that any other call shape runs in.
 
 For rebase and force-push:
 
