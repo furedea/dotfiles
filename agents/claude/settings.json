@@ -53,7 +53,7 @@
     "enabled": true,
     "enableWeakerNetworkIsolation": true,
     "autoAllowBashIfSandboxed": false,
-    "allowUnsandboxedCommands": true,
+    "allowUnsandboxedCommands": false,
     "filesystem": {
       "allowWrite": [
         "~/.cache/nix",
@@ -65,6 +65,9 @@
     "network": {
       "allowedDomains": [
         "api.day.app"
+      ],
+      "allowUnixSockets": [
+        "/nix/var/nix/daemon-socket/socket"
       ]
     },
     "excludedCommands": [
