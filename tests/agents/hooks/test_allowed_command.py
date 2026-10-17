@@ -45,6 +45,12 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
         pytest.param("gh run rerun 123", id="reviewable GitHub operations 3"),
         pytest.param("gh api user", id="GitHub reads 1"),
         pytest.param(
+            "gh api 'search/code?q=%22struct+X%22+repo:openai/codex' --jq '.items[].path'", id="GitHub searches"
+        ),
+        pytest.param(
+            "gh api repos/o/r/actions/runs --paginate -H 'Accept: application/json'", id="GitHub reads with headers"
+        ),
+        pytest.param(
             "gh api 'repos/openai/codex/contents/a.rs?ref=rust-v0.163.0' --jq .content", id="GitHub reads with bare jq"
         ),
         pytest.param("gh api repos/furedea/$r/dependabot/alerts --jq '.[] | .number'", id="GitHub reads at run time"),
