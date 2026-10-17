@@ -112,6 +112,8 @@ def reason(arguments: tuple[str, ...]) -> str:
     if not command:
         return ""
     verb, *remaining = command
+    if sandboxed := sandbox_form_reason(verb, tuple(remaining)):
+        return sandboxed
     options = {argument.split("=", 1)[0] for argument in remaining}
     if verb == "push":
         return push_reason(tuple(remaining), globals_)
@@ -123,3 +125,19 @@ def reason(arguments: tuple[str, ...]) -> str:
     if verb == "restore":
         destructive = not bool(options & {"--staged", "-S"}) or bool(options & {"--worktree", "-W", "--source", "-s"})
     return f"destructive git operation: {verb}" if destructive else ""
+
+
+def sandbox_form_reason(verb: str, arguments: tuple[str, ...]) -> str:
+    """Name the agent form of a Git command whose usual form fails inside the sandbox."""
+    signing = {"commit": ("-S", "--gpg-sign"), "tag": ("-s", "--sign", "-u", "--local-user")}
+    if any(argument.split("=", 1)[0] in signing.get(verb, ()) for argument in arguments):
+        return (
+            "agent commits and tags are unsigned; drop the signing option, "
+            "since the sandbox cannot reach the SSH agent that signs"
+        )
+    if verb == "push" and {"-u", "--set-upstream"} & set(arguments):
+        return (
+            "the sandbox cannot write .git/config; push with `git push origin <branch>` "
+            "and open the pull request with `gh pr create --head <branch>`"
+        )
+    return ""

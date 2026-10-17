@@ -13,7 +13,7 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
     "command",
     [
         pytest.param(
-            'git commit -S -m "style: subject" -m "Body line one\nline two." -m "Refs #18" 2>&1 | head -40',
+            'git commit -m "style: subject" -m "Body line one\nline two." -m "Refs #18" 2>&1 | head -40',
             id="git commit in any form",
         ),
         pytest.param("git commit -F .git/COMMIT_MSG", id="git commit messages read from files"),
