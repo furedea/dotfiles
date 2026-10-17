@@ -74,7 +74,7 @@ def test_empty_pattern_lists_never_match() -> None:
 
 def test_only_programs_that_reach_past_the_sandbox_are_governed() -> None:
     rules = policy.load_rules(ALLOWED_RULES)
-    assert policy.governed_programs(rules) == {"gh", "curl", "wget"}
+    assert policy.governed_programs(rules) == {"gh", "curl", "wget", "herdr"}
 
 
 def test_an_invalid_program_list_is_rejected(tmp_path: Path) -> None:

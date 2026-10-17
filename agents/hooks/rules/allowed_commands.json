@@ -58,6 +58,29 @@
         "^wget( -[A-Za-z]+)*( -O [A-Za-z0-9._/-]+)? https?://(localhost|127\\.0\\.0\\.1)(:[0-9]+)?[A-Za-z0-9._/?&=%-]*$"
       ],
       "justification": "Allow requests to local servers; remote fetches leave the machine."
+    },
+    {
+      "programs": [
+        "herdr"
+      ],
+      "patterns": [
+        "^herdr status( |$)",
+        "^herdr --help( |$)",
+        "^herdr --version( |$)",
+        "^herdr pane list( |$)",
+        "^herdr pane read( |$)",
+        "^herdr pane current( |$)",
+        "^herdr plugin list( |$)",
+        "^herdr plugin log( |$)",
+        "^herdr config check( |$)",
+        "^herdr agent list( |$)",
+        "^herdr api snapshot( |$)",
+        "^herdr worktree create( --(cwd|branch|base|path|label|workspace) ('[^']*'|\"([^\"\\\\]|\\\\.)*\"|[^ '\"]+)| --(no-)?focus)*$",
+        "^herdr pane split( --(pane|direction|ratio|cwd) ('[^']*'|\"([^\"\\\\]|\\\\.)*\"|[^ '\"]+)| --current| --(no-)?focus)*$",
+        "^herdr agent start [a-z][a-z0-9_-]*( --kind (claude|codex)| --pane [^ ]+| --timeout [0-9]+)+$",
+        "^herdr agent prompt [a-z][a-z0-9_-]* ('[^']*'|\"([^\"\\\\]|\\\\.)*\"|[^ '\"]+)( --wait| --until [a-z]+| --timeout [0-9]+)*$"
+      ],
+      "justification": "Allow Herdr reads and handing work to a new Claude or Codex session; repository trust, pane environments, other agent kinds, and driving existing panes run outside the sandbox and ask."
     }
   ]
 }

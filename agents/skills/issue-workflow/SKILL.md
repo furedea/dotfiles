@@ -60,6 +60,11 @@ inline, while `gh --attach` uploads need a user token that the agent GitHub App 
   decisions, migration, or handoff across sessions. Omit a plan for an obvious, short fix.
 - A request only to discuss a plan does not authorize publication or implementation.
 - Include major steps, verification strategy, and important assumptions or unresolved questions.
+- Split implementation into lanes that touch disjoint files, each with a lane name and branch.
+  Work that cannot be split is one lane.
+- After posting the plan, stop until the user approves it. Approval authorizes each lane's
+  worktree session, commits, pushes, and pull request, not merging; see
+  [Branches and worktrees](../git-workflow/references/branches.md).
 - Confirm the posted comment ID or permalink; do not post the same plan twice.
 - Update the managed comment for significant changes in direction rather than adding comments
   for routine progress. Read its current contents first and preserve user additions.

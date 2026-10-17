@@ -91,6 +91,8 @@ def test_generated_deny_prefixes(
         "python -m pip install requests",
         "python3 -I -m ensurepip",
         "uv run --frozen python -m pip install requests",
+        "herdr agent start lane-a --kind claude --pane w1:p2 -- --dangerously-skip-permissions",
+        "herdr agent start lane-a --kind codex --pane w1:p2 -- --sandbox danger-full-access",
     ],
 )
 def test_global_rules_reject_policy_bypasses(command: str) -> None:

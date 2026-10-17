@@ -13,14 +13,16 @@ the request, evaluates the returned work, and reports the outcome to the user.
 
 ## Scope and Dependencies
 
-- Apply this workflow to requested cross-session work. Do not infer permission to delegate from
-  an ordinary coding request, a local review, or an opportunity to work in parallel.
+- Apply this workflow to requested cross-session work and to the lanes of an approved plan,
+  which `git-workflow` hands to task worktree sessions. Do not infer permission to delegate
+  from an ordinary coding request, a local review, or an opportunity to work in parallel.
 - Read the `herdr` skill before operating another session. It owns prerequisites, CLI discovery,
   agent identity, layout, prompting, waiting, approvals, and recovering complete output. Follow
   its environment check; if Herdr is unavailable, report the limitation without silently
   switching to another transport.
 - Use `git-workflow` for branch and worktree choices and authorized Git delivery. Delegation
-  alone does not require a new worktree or authorize commits, pushes, or pull requests.
+  alone does not require a new worktree or authorize commits, pushes, or pull requests; an
+  approved plan authorizes them for its lanes, never merging.
 - Use `tsdd` and the target repository's applicable conventions for implementation and
   verification. Each session must follow its own repository instructions and permission rules.
 
