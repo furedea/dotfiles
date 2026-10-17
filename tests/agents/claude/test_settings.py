@@ -72,4 +72,4 @@ def test_nix_reaches_its_daemon_from_inside_the_sandbox() -> None:
 
 def test_nix_resolves_the_flake_registry_from_inside_the_sandbox() -> None:
     sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
-    assert "channels.nixos.org" in sandbox["network"]["allowedDomains"]
+    assert {"channels.nixos.org"} <= set(sandbox["network"]["allowedDomains"])
