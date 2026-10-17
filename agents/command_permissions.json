@@ -1282,9 +1282,9 @@
       "justification": "Ask before running scripts or fetched packages that policy cannot inspect."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["nix", "develop"],
-      "justification": "Ask before running scripts or fetched packages that policy cannot inspect."
+      "justification": "Allow entering a project's development shell, which its flake.lock pins, inside the sandbox."
     },
     {
       "decision": "ask",

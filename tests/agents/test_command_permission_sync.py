@@ -149,3 +149,8 @@ def test_justifications_are_provider_neutral() -> None:
 def test_ask_prefix_has_no_allow_ancestor() -> None:
     for ask in ASK:
         assert not any(ask[: len(allow)] == allow for allow in ALLOW), ask
+
+
+def test_a_locked_development_shell_runs_while_arbitrary_packages_ask() -> None:
+    assert ("nix", "develop") in ALLOW
+    assert {("nix", "shell"), ("nix", "run")} <= ASK

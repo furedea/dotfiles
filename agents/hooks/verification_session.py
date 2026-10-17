@@ -14,7 +14,6 @@ sys.path.insert(0, str(ROOT / "lib"))
 import hook_input
 import patch_input
 import session_gate
-import shell_syntax
 from session_snapshot import repository_root
 from session_store import ScopeError, SessionRecord, StateError, load, prune, register, session_directory
 
@@ -46,7 +45,7 @@ def registered_record(provider: str, payload: dict, *, starting: bool = False) -
 
 
 def check_scope(record: SessionRecord, payload: dict) -> None:
-    """Check observable tool paths; native permissions still govern shell execution."""
+    """Check the paths a tool names; the sandbox, not this check, confines what a shell command writes."""
     value = payload.get("tool_input", {})
     if not isinstance(value, dict):
         raise StateError("Invalid tool input")
@@ -54,9 +53,6 @@ def check_scope(record: SessionRecord, payload: dict) -> None:
     for key in ("cwd", "workdir"):
         if directory := value.get(key):
             require_inside(record, cwd / directory)
-    command = value.get("command", value.get("cmd", ""))
-    if isinstance(command, str):
-        check_shell_directories(record, cwd, command)
     try:
         patch = hook_input.patch_body(value, payload.get("tool_name"))
     except ValueError as error:
@@ -79,38 +75,6 @@ def temporary_roots() -> tuple[Path, ...]:
     values = [os.environ.get(name) for name in TEMPORARY_DIRECTORY_VARIABLES]
     values.append(tempfile.gettempdir())
     return tuple(Path(value).expanduser().resolve() for value in values if value)
-
-
-def check_shell_directories(record: SessionRecord, cwd: Path, command: str) -> None:
-    try:
-        commands = shell_syntax.parse(command)
-    except shell_syntax.UnsupportedSyntax:
-        return
-    for parsed in commands:
-        if parsed.program_is_dynamic:
-            continue
-        executable = Path(parsed.arguments[0]).name
-        if executable in {"cd", "pushd"}:
-            targets = [
-                (value, flag)
-                for value, flag in zip(parsed.arguments[1:], parsed.dynamic[1:], strict=True)
-                if value not in {"--", "-L", "-P", "-e"}
-            ]
-            if targets and targets[0][0] != "-":
-                require_static(record, cwd, *targets[0])
-        elif executable == "git":
-            for index, token in enumerate(parsed.arguments[:-1]):
-                if token == "-C":
-                    require_static(record, cwd, parsed.arguments[index + 1], parsed.dynamic[index + 1])
-
-
-def require_static(record: SessionRecord, cwd: Path, target: str, dynamic: bool) -> None:
-    """A directory the shell computes at run time cannot be placed inside or outside the worktree."""
-    if dynamic:
-        raise ScopeError(
-            f"Directory target {target} is a shell expansion, so it may lie outside the registered worktree {record.root}"
-        )
-    require_inside(record, cwd / Path(target).expanduser())
 
 
 def dispatch(provider: str, event: str, payload: dict) -> dict[str, object]:

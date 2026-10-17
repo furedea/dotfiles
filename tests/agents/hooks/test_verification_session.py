@@ -290,12 +290,11 @@ def test_explicit_verify_exits_unsuccessfully_for_a_reused_failure(
     assert "unresolved" in json.loads(result.stdout)["systemMessage"]
 
 
-@pytest.mark.parametrize("command", ["printf '%s\\n' cd /tmp", "printf '%s\\n' git -C /tmp"])
-def test_directory_words_in_command_arguments_are_not_treated_as_directory_changes(
-    repository: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    command: str,
-) -> None:
+@pytest.mark.parametrize(
+    "command",
+    ["cd ..", "git -C .. status", "bash -c 'cd ..'", "cd $DIR", "git -C $DIR status", "printf '%s\\n' cd /tmp"],
+)
+def test_shell_directory_changes_are_left_to_the_sandbox(repository: Path, command: str) -> None:
     store.register(repository, "codex", "session")
     result = invoke(
         "pre-tool-use",
@@ -307,27 +306,6 @@ def test_directory_words_in_command_arguments_are_not_treated_as_directory_chang
         },
     )
     assert json.loads(result.stdout) == {}
-
-
-@pytest.mark.parametrize("command", ["cd ..", "git -C .. status", "bash -c 'cd ..'", "cd $DIR", "git -C $DIR status"])
-def test_literal_shell_worktree_changes_ask_for_review(
-    repository: Path,
-    scratch: Path,
-    command: str,
-) -> None:
-    store.register(repository, "codex", "session")
-    result = invoke(
-        "pre-tool-use",
-        {
-            "cwd": str(repository),
-            "session_id": "session",
-            "tool_name": "Bash",
-            "tool_input": {"command": command},
-        },
-    )
-    output = json.loads(result.stdout)["hookSpecificOutput"]
-    assert output["permissionDecision"] == "ask"
-    assert "outside the registered worktree" in output["permissionDecisionReason"]
 
 
 def test_writes_outside_the_worktree_ask_for_review(repository: Path, tmp_path: Path, scratch: Path) -> None:
