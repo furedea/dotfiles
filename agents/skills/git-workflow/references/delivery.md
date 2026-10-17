@@ -21,10 +21,6 @@ For explicit PR requests:
 4. Create a normal PR with `gh pr create --base <base> --title "<title>" --body-file <file>`, with a
    [pull request body](#pull-request-body).
 
-Issue `git push` under the same call-shape rule as `git commit` in
-[Commit Command Form](commits.md#commit-command-form): it may share a call with `git add`,
-`git status`, and `git commit`, but nothing else, so that it runs outside the sandbox.
-
 For rebase and force-push:
 
 - `git rebase origin/<base>` refreshes a PR branch before its first push. Non-interactive rebases onto other refs, including `--onto`, are allowed when the task needs them; reflog can undo them.

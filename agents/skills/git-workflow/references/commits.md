@@ -72,10 +72,9 @@ file, a heredoc, or a command substitution; those forms are handed to the user f
 git commit -m "<type>(<scope>): <subject>" -m "<body paragraph>" -m "<trailer>: <value>"
 ```
 
-Commit signing works only outside the sandbox, and a call leaves the sandbox only when every
-command in it is `git add`, `git status`, `git commit`, or `git push`. Chain those freely, as in
-`git add a.py && git commit -m "…" && git push`, but keep `cd`, `git -C`, pipes, other commands,
-and redirections other than `2>&1` out of the call; otherwise the commit runs sandboxed and fails.
+Agent git runs inside the sandbox, so the call may chain other commands. Agent commits and tags
+are intentionally unsigned; the squash merge into main is signed by GitHub. Do not re-enable
+signing with `-S` or `-c commit.gpgsign=true`, and do not bypass the repository hooks.
 
 For explicit commit requests:
 
