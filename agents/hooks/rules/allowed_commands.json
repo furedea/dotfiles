@@ -330,25 +330,26 @@
     },
     {
       "patterns": [
+        "^uv run python( .*)?$",
+        "^uv run --frozen python( .*)?$",
         "^python3( -[IBuOqWX]+)* [A-Za-z0-9._/-]+\\.py( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
         "^python( -[IBuOqWX]+)* [A-Za-z0-9._/-]+\\.py( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
         "^python3( -[IBuOqWX]+)* -c ('[^']*'|\"[^\"$`\\\\]*\")$",
         "^python( -[IBuOqWX]+)* -c ('[^']*'|\"[^\"$`\\\\]*\")$",
         "^python3( -[IBuOqWX]+)* -m (pytest|unittest|json\\.tool|timeit|py_compile|compileall)( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
         "^python( -[IBuOqWX]+)* -m (pytest|unittest|json\\.tool|timeit|py_compile|compileall)( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
-        "^uv run python( -[IBuOqWX]+)* [A-Za-z0-9._/-]+\\.py( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
-        "^uv run python( -[IBuOqWX]+)* -c ('[^']*'|\"[^\"$`\\\\]*\")$",
-        "^uv run python( -[IBuOqWX]+)* -m (pytest|unittest|json\\.tool|timeit|py_compile|compileall)( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
-        "^uv run --frozen python( -[IBuOqWX]+)* [A-Za-z0-9._/-]+\\.py( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
-        "^uv run --frozen python( -[IBuOqWX]+)* -c ('[^']*'|\"[^\"$`\\\\]*\")$",
-        "^uv run --frozen python( -[IBuOqWX]+)* -m (pytest|unittest|json\\.tool|timeit|py_compile|compileall)( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
         "^node( --[a-z-]+)* [A-Za-z0-9._/-]+\\.(js|mjs|cjs|ts)( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")*$",
         "^node (-e|--eval) ('[^']*'|\"[^\"$`\\\\]*\")$",
         "^perl -i( [^;&|<>$`'\"]+| [^;&|<>$`'\"]*'[^']*'| [^;&|<>$`'\"]*\"[^\"$`\\\\]*\")+$",
         "^tee( -a)? [A-Za-z0-9._/-]+( [A-Za-z0-9._/-]+)*$",
         "^truncate -s [0-9]+[KMGkmg]? [A-Za-z0-9._/-]+$"
       ],
-      "justification": "Allow script execution and in-place edits whose effects the sandbox confines to the worktree and temp directories; fetched packages and dependency changes still ask."
+      "justification": "Allow script execution and in-place edits whose effects the sandbox confines to the worktree and temp directories; interpreters may take any argument, fetched packages and dependency changes still ask.",
+      "programs": [
+        "node",
+        "python",
+        "python3"
+      ]
     }
   ]
 }

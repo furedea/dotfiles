@@ -23,9 +23,6 @@ from hook_decision import Verdict
 import shell_syntax
 
 
-DEVICE_SINKS = frozenset({"/dev/null", "/dev/stdout", "/dev/stderr"})
-
-
 def policies(kind: str, directory: Path) -> tuple[list[dict], list[dict]]:
     """Load required global rules and optional project additions exactly once."""
     permissions = Path(os.environ.get("AGENT_COMMAND_PERMISSIONS", str(directory / "rules/command_permissions.json")))
@@ -53,15 +50,18 @@ def policies(kind: str, directory: Path) -> tuple[list[dict], list[dict]]:
 def objection(
     kind: str, item: shell_syntax.Command, candidate: shell_syntax.Command, prefixes: list[dict], rules: list[dict]
 ) -> Verdict:
-    """Judge one segment by its literal text and by its canonical program and subcommand.
+    """Judge one segment by its own words and by its canonical program and subcommand.
 
-    The forbidden kind only denies: a literal deny prefix or pattern wins even beside a run-time
-    argument. The allowed kind lets a read-only program take any argument, even one the shell
-    expands at run time, as long as no redirection writes a file, and hands any other program with
-    a run-time argument to the user, because no rule can see what it will receive.
+    Rules see only the command's words: redirections stay inside the sandbox, and heredoc bodies
+    are data, not commands. The forbidden kind only denies: a literal deny prefix or pattern wins
+    even beside a run-time argument. The allowed kind lets a sandbox-contained program take any
+    argument, even one the shell computes at run time, and hands any other program with a run-time
+    argument to the user, because no rule can see what it will receive.
     """
     preview = shell_syntax.command_preview(item.raw)
-    matched = command_policy.regex_reason(item.raw, rules) or command_policy.regex_reason(candidate.raw, rules)
+    matched = command_policy.regex_reason(item.words_text, rules) or command_policy.regex_reason(
+        candidate.words_text, rules
+    )
     if kind == "forbidden":
         reason = command_policy.prefix_reason(candidate.arguments, prefixes, "deny") or matched
         if not reason:
@@ -69,11 +69,11 @@ def objection(
         return hook_decision.deny(
             f"BLOCKED: forbidden command: {reason}.\n\nCommand: {preview}\n\n{hook_decision.REVIEW_HINT}"
         )
-    read_only = not candidate.program_is_dynamic and candidate.arguments[0] in command_policy.read_only_programs(rules)
-    if item.has_dynamic_words and not read_only:
-        return dynamic_escalation(preview)
-    if read_only and all(target in DEVICE_SINKS for target in item.writes):
+    contained = not candidate.program_is_dynamic and candidate.arguments[0] in command_policy.read_only_programs(rules)
+    if contained:
         return hook_decision.ALLOW
+    if item.has_dynamic_words:
+        return dynamic_escalation(preview)
     governed = command_policy.prefix_rule(candidate.arguments, prefixes, "allow")
     if governed is None or matched:
         return hook_decision.ALLOW

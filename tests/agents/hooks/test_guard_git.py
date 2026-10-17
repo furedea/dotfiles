@@ -202,7 +202,6 @@ def test_dangerous_git_contract(
 @pytest.mark.parametrize(
     "command",
     [
-        'echo "$(git reset --hard)"',
         'git push origin "$BRANCH"',
         "git reset --hard $(git rev-parse HEAD)",
         "gh pr merge $NUMBER",
@@ -213,6 +212,18 @@ def test_uninspectable_commands_are_left_to_the_user(command: str) -> None:
     verdict = guard.decide({"tool_input": {"command": command}})
     assert verdict.decision == "ask"
     assert "review" in verdict.reason
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        'echo "$(git reset --hard)"',
+        "for b in a; do git push --force origin topic; done",
+        "if x; then git clean -fd; fi",
+    ],
+)
+def test_destructive_git_inside_substitutions_and_clauses_is_denied(command: str) -> None:
+    assert guard.decide({"tool_input": {"command": command}}).decision == "deny"
 
 
 def test_run_time_arguments_of_other_programs_do_not_concern_the_git_guard() -> None:

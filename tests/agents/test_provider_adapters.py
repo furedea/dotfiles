@@ -125,7 +125,7 @@ def test_normalization_leaves_the_provider_payload_untouched(provider: str) -> N
 def test_escalations_are_denied_for_providers_whose_hooks_cannot_ask(
     run_cli: CliRunner, harness: Path, provider: str, mode: str
 ) -> None:
-    command = 'git push origin "$(git branch --show-current)"'
+    command = "git push origin $'topic'"
     payload = {"session_id": "adapter-session", "tool_input": {"command": command}}
     result = run_cli(script(provider), "shell", mode, payload=payload)
     assert result.returncode == 2
