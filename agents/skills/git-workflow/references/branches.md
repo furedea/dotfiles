@@ -37,9 +37,11 @@ Rules:
 - The brief follows [herdr-delegation](../../herdr-delegation/SKILL.md): Issue, plan link, lane scope,
   and delivery authority (commit, push, and open a PR; never merge).
 - Herdr places the checkout under its `worktrees.directory`; do not pass `--path` without a reason.
-- Remove a task worktree only after its branch is merged or abandoned and its tree is clean; never
-  force removal. Use `herdr worktree remove --workspace <id>`, which runs `git worktree remove`
-  and keeps the branch. Moving and repairing worktrees stay outside the agent workflow.
+- Merged task worktrees and branches, in this repository and every repository with a Herdr task
+  worktree, are removed at the next Claude session start, or on demand
+  with `~/.claude/hooks/cleanup_worktrees.py [--dry-run]`: only when a merged pull request's head
+  is the branch tip and the tree is clean. Do not delete them by hand. An abandoned worktree is
+  the user's to remove. Moving and repairing worktrees stay outside the agent workflow.
 - When updating `main` itself, use `git pull --ff-only` in the main worktree. Do not use
   `git pull --rebase origin main` for the base branch.
 - For a requested stacked pull request, `gh stack init` and `gh stack add` create the layer branches;
