@@ -2,7 +2,7 @@
 name: source-of-truth
 description: >
     Use when choosing where durable repository information belongs, resolving duplicated or
-    conflicting sources, or changing the navigation in AGENTS.md or CLAUDE.md.
+    conflicting sources, or changing the navigation in AGENTS.md.
 ---
 
 # Source of Truth
@@ -139,9 +139,11 @@ specification. Posting and updating Issue comments belongs to
 
 ## Agent Entry Maps
 
-Use the repository-defined agent entry file, such as `AGENTS.md`, `CLAUDE.md`, or a generated
-provider equivalent, as a map rather than a textbook. Prefer one canonical source and generate
-provider-specific equivalents when multiple files must carry the same instructions.
+Keep a repository's agent instructions in `AGENTS.md` as its single entry file, and use it as a map
+rather than a textbook. Do not add a repository `CLAUDE.md`: Claude Code reads `AGENTS.md` when no
+`CLAUDE.md` exists, and reads only `CLAUDE.md` by default when both do. `@` imports in `AGENTS.md`
+are honored. The user-level `~/.claude/CLAUDE.md` stays, since a user-level `AGENTS.md` is not read.
+When an existing repository has a `CLAUDE.md`, move its content into `AGENTS.md` and remove it.
 
 An entry map may contain:
 

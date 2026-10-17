@@ -64,7 +64,8 @@
     },
     "network": {
       "allowedDomains": [
-        "api.day.app"
+        "api.day.app",
+        "channels.nixos.org"
       ],
       "allowUnixSockets": [
         "/nix/var/nix/daemon-socket/socket"

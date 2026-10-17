@@ -68,3 +68,8 @@ def test_no_command_escapes_the_sandbox_except_the_excluded_tools() -> None:
 def test_nix_reaches_its_daemon_from_inside_the_sandbox() -> None:
     sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
     assert sandbox["network"]["allowUnixSockets"] == ["/nix/var/nix/daemon-socket/socket"]
+
+
+def test_nix_resolves_the_flake_registry_from_inside_the_sandbox() -> None:
+    sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
+    assert {"channels.nixos.org"} <= set(sandbox["network"]["allowedDomains"])

@@ -17,25 +17,42 @@ Choose the workspace in this order:
 5. If the target branch is already checked out in another worktree, use that worktree or choose a
    different branch name. Do not force-checkout the same branch in two places.
 
-Task worktree hand-off through Herdr, once per lane:
+Task worktree hand-off through Herdr, once per lane, each line as its own Bash call:
 
 ```bash
 git fetch origin
 herdr worktree create --cwd <primary-checkout> --branch <branch> --base origin/<base> --label <branch> --no-focus
 herdr agent start <lane-name> --kind <claude|codex> --pane <root-pane-id>
-herdr agent prompt <lane-name> "<brief>"
+herdr agent prompt <lane-name> "Read your brief at <scratchpad>/briefs/<lane-name>.md and carry it out."
+herdr agent wait <lane-name> --until working                 # in the background
+herdr agent wait <lane-name> --until done --until blocked    # in the background, after the first returns
+herdr agent read <lane-name>
 ```
 
 Rules:
 
+- Run each `herdr` command as a single Bash call. Herdr leaves the sandbox only when the whole
+  call is one `herdr` command; chaining (`git fetch origin && herdr ...`) runs it inside the
+  sandbox, where it fails. Fetch first in a separate call.
+- Keep the prompt text literal. A substitution such as `"$(cat brief.md)"` also makes the call
+  more than one `herdr` command. Write the brief to a file in this session's scratchpad and
+  prompt the lane to read that file.
+- Learn that the lane finished by waiting in the background right after the prompt: first
+  `--until working`, then `--until done --until blocked`, each as its own `herdr` call. Waiting
+  only for done or blocked can return at once while the agent still shows done from an earlier
+  turn. Then read the lane's reply with `herdr agent read` and check its PR. This works for Claude
+  and Codex lanes alike.
 - Read the workspace and root pane IDs from the JSON that `worktree create` returns
   (`.result.workspace.workspace_id`, `.result.root_pane.pane_id`); never predict them.
 - `<lane-name>` matches `[a-z][a-z0-9_-]{0,31}` and is new: the hooks let a session prompt only the
   agents it started, and they ask before claiming a name another agent holds.
 - Start the same provider as this session unless the user chose another. Pass nothing after `--`:
   agent arguments are denied, since they could switch off the child's sandbox or approvals.
-- The brief follows [herdr-delegation](../../herdr-delegation/SKILL.md): Issue, plan link, lane scope,
-  and delivery authority (commit, push, and open a PR; never merge).
+- The brief follows [herdr-delegation](../../herdr-delegation/SKILL.md) and is self-contained: the
+  Issue body and the approved plan text, not only their numbers or links, the lane scope, delivery
+  authority (commit, push, and open a PR; never merge), and the reply format.
+- A linked worktree session cannot write another repository's `.git`, and this session cannot
+  fetch another repository for it, so the lane fetches and rebases onto its base before editing.
 - Herdr places the checkout under its `worktrees.directory`; do not pass `--path` without a reason.
 - Merged task worktrees and branches, in this repository and every repository with a Herdr task
   worktree, are removed at the next Claude session start, or on demand
