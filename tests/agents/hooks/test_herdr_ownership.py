@@ -33,8 +33,11 @@ def herdr(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     names = tmp_path / "live_agents.txt"
     names.write_text("")
     script = directory / "herdr"
+    workspaces = tmp_path / "workspaces.json"
+    workspaces.write_text('{"result":{"workspaces":[]}}')
     script.write_text(
         "#!/bin/sh\n"
+        f'if [ "$1 $2" = "workspace list" ]; then cat {workspaces}; exit 0; fi\n'
         f'agents=$(sed -E \'s/^([^ ]*) ?(.*)$/{{"name":"\\1","workspace_id":"\\2"}}/\' {names} | paste -sd, -)\n'
         'printf \'{"result":{"agents":[%s]}}\\n\' "$agents"\n'
     )
@@ -130,3 +133,33 @@ def test_closing_a_workspace_with_other_or_no_agents_asks(repository: Path, herd
     run(repository, "herdr agent start lane-a --kind claude --pane w9:p1")
     herdr.write_text(agents)
     assert decision(run(repository, "herdr workspace close w9")) == "ask"
+
+
+def open_workspaces(tmp_path: Path, *entries: tuple[str, str]) -> None:
+    rows = [
+        {"workspace_id": ws, "worktree": {"checkout_path": path, "is_linked_worktree": False}} for ws, path in entries
+    ]
+    (tmp_path / "workspaces.json").write_text(json.dumps({"result": {"workspaces": rows}}))
+
+
+def test_the_parent_workspace_a_worktree_opened_closes_with_the_lane(
+    repository: Path, herdr: Path, tmp_path: Path
+) -> None:
+    run(repository, "herdr worktree create --cwd /repos/site --branch feat/x --no-focus")
+    open_workspaces(tmp_path, ("w5", "/repos/site"))
+    assert decision(run(repository, "herdr workspace close w5")) == "allow"
+
+
+def test_a_parent_workspace_the_user_already_had_open_is_left_alone(
+    repository: Path, herdr: Path, tmp_path: Path
+) -> None:
+    open_workspaces(tmp_path, ("w5", "/repos/site"))
+    run(repository, "herdr worktree create --cwd /repos/site --branch feat/x --no-focus")
+    assert decision(run(repository, "herdr workspace close w5")) == "ask"
+
+
+def test_a_recorded_parent_with_an_agent_in_it_asks(repository: Path, herdr: Path, tmp_path: Path) -> None:
+    run(repository, "herdr worktree create --cwd /repos/site --branch feat/x --no-focus")
+    open_workspaces(tmp_path, ("w5", "/repos/site"))
+    herdr.write_text(" w5\n")
+    assert decision(run(repository, "herdr workspace close w5")) == "ask"

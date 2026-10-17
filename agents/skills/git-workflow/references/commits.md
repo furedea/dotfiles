@@ -65,8 +65,8 @@ build(deps): bump axios from 1.6.0 to 1.7.2
 ## Commit Command Form
 
 Pass the subject, each body paragraph, and each trailer as separate `-m` arguments. Single or
-double quotes both work, and a quoted argument may span lines. Do not read the message from a
-file, a heredoc, or a command substitution; those forms are handed to the user for review.
+double quotes both work, and a quoted argument may span lines. Do not write the message to a
+file; a paragraph with backticks or `$` goes in single quotes so the shell keeps it literal.
 
 ```bash
 git commit -m "<type>(<scope>): <subject>" -m "<body paragraph>" -m "<trailer>: <value>"
