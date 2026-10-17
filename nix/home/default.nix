@@ -445,6 +445,15 @@ in
         herdr = herdrHookBundle;
         moshi = moshiHookBundle;
       };
+      # gh runs sandboxed with a one-hour token minted from this GitHub App; the key stays unreadable.
+      github.agentToken = {
+        enable = true;
+        source = "app";
+        app = {
+          id = 5354507;
+          privateKeyPath = "${config.home.homeDirectory}/.ssh/github_app.pem";
+        };
+      };
     };
 
     yazi = {
