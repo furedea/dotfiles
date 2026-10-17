@@ -31,6 +31,10 @@ def check(record: SessionRecord, command: str) -> None:
             claim(record, target(parsed))
         elif action == ("agent", "prompt"):
             require_owned(record, target(parsed))
+        elif action == ("workspace", "close"):
+            require_owned_workspace(record, target(parsed))
+        elif action == ("worktree", "remove"):
+            require_owned_workspace(record, option_value(parsed, "--workspace"))
         elif action == ("agent", "rename"):
             raise ScopeError("Renaming a Herdr agent could hand one of this session's names to another pane")
 
@@ -39,6 +43,23 @@ def target(parsed: shell_syntax.Command) -> str:
     if len(parsed.arguments) < 4 or parsed.dynamic[3]:
         return ""
     return parsed.arguments[3]
+
+
+def option_value(parsed: shell_syntax.Command, option: str) -> str:
+    arguments = parsed.arguments
+    for index, argument in enumerate(arguments[:-1]):
+        if argument == option and not parsed.dynamic[index + 1]:
+            return arguments[index + 1]
+    return ""
+
+
+def require_owned_workspace(record: SessionRecord, workspace: str) -> None:
+    """A workspace may be closed only when every agent in it is one this session started."""
+    names = [agent.get("name") for agent in live_agents() if workspace and agent.get("workspace_id") == workspace]
+    if names and all(isinstance(name, str) and name in owned(record) for name in names):
+        return
+    shown = workspace or "chosen at run time"
+    raise ScopeError(f"Herdr workspace {shown} does not hold only agents this session started")
 
 
 def claim(record: SessionRecord, name: str) -> None:
@@ -67,11 +88,15 @@ def owned(record: SessionRecord) -> set[str]:
 
 def live_agent_names() -> set[str]:
     """Names Herdr already serves; an unreachable Herdr cannot vouch for a name, so the claim asks."""
+    return {agent["name"] for agent in live_agents() if isinstance(agent.get("name"), str) and agent["name"]}
+
+
+def live_agents() -> list[dict]:
     try:
         result = subprocess.run(
             ["herdr", "agent", "list"], capture_output=True, text=True, check=True, timeout=LIST_TIMEOUT_SECONDS
         )
         agents = json.loads(result.stdout)["result"]["agents"]
     except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError) as error:
-        raise ScopeError("Herdr agent names could not be listed, so this session cannot claim one") from error
-    return {agent["name"] for agent in agents if isinstance(agent, dict) and isinstance(agent.get("name"), str)}
+        raise ScopeError("Herdr agents could not be listed, so ownership cannot be checked") from error
+    return [agent for agent in agents if isinstance(agent, dict)]

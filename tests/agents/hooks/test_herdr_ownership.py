@@ -35,7 +35,7 @@ def herdr(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     script = directory / "herdr"
     script.write_text(
         "#!/bin/sh\n"
-        f'agents=$(sed \'s/.*/{{"name":"&"}}/\' {names} | paste -sd, -)\n'
+        f'agents=$(sed -E \'s/^([^ ]*) ?(.*)$/{{"name":"\\1","workspace_id":"\\2"}}/\' {names} | paste -sd, -)\n'
         'printf \'{"result":{"agents":[%s]}}\\n\' "$agents"\n'
     )
     script.chmod(0o755)
@@ -114,3 +114,19 @@ def test_other_herdr_commands_are_not_the_ownership_checks_concern(
     repository: Path, herdr: Path, command: str
 ) -> None:
     assert decision(run(repository, command)) == "allow"
+
+
+@pytest.mark.parametrize("command", ["herdr workspace close w9", "herdr worktree remove --workspace w9"])
+def test_a_session_closes_the_workspace_its_lane_ran_in(repository: Path, herdr: Path, command: str) -> None:
+    run(repository, "herdr agent start lane-a --kind claude --pane w9:p1")
+    herdr.write_text("lane-a w9\n")
+    assert decision(run(repository, command)) == "allow"
+
+
+@pytest.mark.parametrize(
+    "agents", ["reviewer w9\n", "lane-a w9\n w9\n", ""], ids=["another agent", "an unnamed agent", "no agent"]
+)
+def test_closing_a_workspace_with_other_or_no_agents_asks(repository: Path, herdr: Path, agents: str) -> None:
+    run(repository, "herdr agent start lane-a --kind claude --pane w9:p1")
+    herdr.write_text(agents)
+    assert decision(run(repository, "herdr workspace close w9")) == "ask"
