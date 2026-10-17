@@ -180,3 +180,60 @@ def test_merged_herdr_lanes_of_other_repositories_are_swept_too(
     assert cleanup(unrelated).returncode == 0
     assert not lane.exists()
     assert branches(primary) == {"main"}
+
+
+def advance_origin(primary: Path, tmp_path: Path) -> str:
+    """Give the primary an origin whose main is one squash-merge commit ahead, as after a merged PR."""
+    origin = tmp_path / "origin.git"
+    git("clone", "--quiet", "--bare", str(primary), str(origin), cwd=tmp_path)
+    git("remote", "add", "origin", str(origin), cwd=primary)
+    git("fetch", "--quiet", "origin", cwd=primary)
+    git("branch", "--quiet", "--set-upstream-to=origin/main", "main", cwd=primary)
+    upstream = tmp_path / "upstream"
+    git("clone", "--quiet", str(origin), str(upstream), cwd=tmp_path)
+    for key, value in (("user.email", "test@example.com"), ("user.name", "Test"), ("commit.gpgsign", "false")):
+        git("config", key, value, cwd=upstream)
+    (upstream / "merged.txt").write_text("merged\n")
+    git("add", "merged.txt", cwd=upstream)
+    git("commit", "--quiet", "-m", "squash merge", cwd=upstream)
+    git("push", "--quiet", "origin", "main", cwd=upstream)
+    return git("rev-parse", "HEAD", cwd=upstream)
+
+
+def test_main_fast_forwards_after_a_merged_lane_is_removed(
+    primary: Path, merged: dict[str, str], tmp_path: Path
+) -> None:
+    path = task_worktree(primary, "feat/done")
+    merged["feat/done"] = git("rev-parse", "HEAD", cwd=path)
+    head = advance_origin(primary, tmp_path)
+    cleanup(primary)
+    assert git("rev-parse", "main", cwd=primary) == head
+    assert (primary / "merged.txt").exists()
+
+
+def test_main_advances_without_touching_another_checked_out_branch(
+    primary: Path, merged: dict[str, str], tmp_path: Path
+) -> None:
+    path = task_worktree(primary, "feat/done")
+    merged["feat/done"] = git("rev-parse", "HEAD", cwd=path)
+    head = advance_origin(primary, tmp_path)
+    git("switch", "--quiet", "-c", "feat/mine", cwd=primary)
+    cleanup(primary)
+    assert git("rev-parse", "main", cwd=primary) == head
+    assert git("branch", "--show-current", cwd=primary) == "feat/mine"
+    assert not (primary / "merged.txt").exists()
+
+
+@pytest.mark.parametrize("state", ["dirty main", "nothing removed"])
+def test_main_stays_when_pulling_could_disturb_work_or_nothing_merged(
+    primary: Path, merged: dict[str, str], tmp_path: Path, state: str
+) -> None:
+    if state == "dirty main":
+        path = task_worktree(primary, "feat/done")
+        merged["feat/done"] = git("rev-parse", "HEAD", cwd=path)
+    before = git("rev-parse", "main", cwd=primary)
+    advance_origin(primary, tmp_path)
+    if state == "dirty main":
+        (primary / "README.md").write_text("edited\n")
+    cleanup(primary)
+    assert git("rev-parse", "main", cwd=primary) == before
