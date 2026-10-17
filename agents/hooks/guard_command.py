@@ -1,8 +1,8 @@
 #!/usr/bin/env -S python3 -IB
 """Evaluate generated prefixes and precise global/project command policy.
 
-Deny prefixes and forbidden patterns stay hard denials. A command inside an approved family
-whose form is not in the precise allowlist, or a command that cannot be inspected statically,
+Deny prefixes and forbidden patterns stay hard denials. A command that reaches past the sandbox
+in a form the precise allowlist does not list, or a command that cannot be inspected statically,
 is handed to the user instead of being refused outright.
 """
 
@@ -54,39 +54,31 @@ def objection(
 
     Rules see only the command's words: redirections stay inside the sandbox, and heredoc bodies
     are data, not commands. The forbidden kind only denies: a literal deny prefix or pattern wins
-    even beside a run-time argument. The allowed kind lets a sandbox-contained program take any
-    argument, even one the shell computes at run time, and hands any other program with a run-time
-    argument to the user, because no rule can see what it will receive.
+    even beside a run-time argument. The allowed kind reviews only programs whose effects reach
+    past the sandbox, such as GitHub writes and remote fetches, and lets every other program take
+    any form, since the sandbox confines it. A run-time word in a governed program counts as a plain
+    placeholder, so it passes only where any value would.
     """
     preview = shell_syntax.command_preview(item.raw)
-    matched = command_policy.regex_reason(item.words_text, rules) or command_policy.regex_reason(
-        candidate.words_text, rules
-    )
     if kind == "forbidden":
+        matched = command_policy.regex_reason(item.words_text, rules) or command_policy.regex_reason(
+            candidate.words_text, rules
+        )
         reason = command_policy.prefix_reason(candidate.arguments, prefixes, "deny") or matched
         if not reason:
             return hook_decision.ALLOW
         return hook_decision.deny(
             f"BLOCKED: forbidden command: {reason}.\n\nCommand: {preview}\n\n{hook_decision.REVIEW_HINT}"
         )
-    contained = not candidate.program_is_dynamic and candidate.arguments[0] in command_policy.read_only_programs(rules)
-    if contained:
+    if candidate.program_is_dynamic or candidate.arguments[0] not in command_policy.governed_programs(rules):
         return hook_decision.ALLOW
-    if item.has_dynamic_words:
-        return dynamic_escalation(preview)
     governed = command_policy.prefix_rule(candidate.arguments, prefixes, "allow")
-    if governed is None or matched:
+    if governed is None or command_policy.regex_reason(candidate.static_words_text, rules):
         return hook_decision.ALLOW
     prefix = " ".join(governed["prefix"])
     return hook_decision.ask(
         f"Needs review: command not in allowlist. '{prefix}' is approved, but not in this form.\n\nCommand: {preview}",
         prefix,
-    )
-
-
-def dynamic_escalation(preview: str) -> Verdict:
-    return hook_decision.ask(
-        f"Needs review: a shell expansion decides what this command receives.\n\nCommand: {preview}", "syntax"
     )
 
 

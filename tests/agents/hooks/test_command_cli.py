@@ -96,7 +96,7 @@ def test_command_denial_previews_are_bounded(
 
 
 def test_escalation_previews_are_bounded(run_cli: CliRunner) -> None:
-    command = 'uv run --frozen pytest "' + "x" * 1000 + ';literal"'
+    command = 'gh pr review 42 --approve -b "' + "x" * 1000 + ';literal"'
     result = run_cli("agents/hooks/guard_command.py", "allowed", payload={"tool_input": {"command": command}})
     assert result.returncode == 0
     assert result.stderr == ""
@@ -110,7 +110,7 @@ def test_escalation_previews_are_bounded(run_cli: CliRunner) -> None:
     "script,arguments,command",
     [
         ("guard_command.py", ("allowed",), "gh pr review 42 --approve"),
-        ("guard_command.py", ("allowed",), 'git commit -m "$(cat message.txt)"'),
+        ("guard_command.py", ("allowed",), "gh api $ENDPOINT --method DELETE"),
         ("guard_command.py", ("forbidden",), "git commit -m $'message'"),
         ("guard_git.py", (), 'git push origin "$BRANCH"'),
     ],

@@ -1307,9 +1307,9 @@
       "justification": "Ask before removing files that Git cannot restore; recursive removal stays denied."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": ["ln", "-s"],
-      "justification": "Ask before writes that bypass the Edit hooks or overwrite existing files."
+      "justification": "Allow links the sandbox confines to the worktree; without -f a link never overwrites a file."
     },
     {
       "decision": "allow",

@@ -18,7 +18,6 @@ import shell_syntax
 
 
 RULE = "guard_dangerous_git.sh"
-GUARDED = frozenset({"git", "gh"})
 
 
 def decide(payload: dict) -> Verdict:
@@ -38,7 +37,7 @@ def decide(payload: dict) -> Verdict:
             )
             return verdict
         for item in commands:
-            if item.has_dynamic_words and (item.program_is_dynamic or Path(item.arguments[0]).name in GUARDED):
+            if hides_verdict(item):
                 preview = shell_syntax.command_preview(item.raw)
                 verdict = hook_decision.ask(
                     f"Needs review: a shell expansion decides what this Git command does.\n\nSegment: {preview}",
@@ -64,6 +63,40 @@ def decide(payload: dict) -> Verdict:
         )
         return hook_decision.deny(message)
     return hook_decision.ALLOW
+
+
+def hides_verdict(item: shell_syntax.Command) -> bool:
+    """Whether a run-time word could turn this command into one the guard would deny.
+
+    A run-time word hides the verdict when it names the program or subcommand, sits among the
+    arguments of a verb whose verdict depends on them, or picks the repository whose current branch
+    an implicit push would update. Any other run-time word, such as a message or a path, cannot.
+    """
+    if not item.has_dynamic_words:
+        return False
+    if item.program_is_dynamic:
+        return True
+    name = Path(item.arguments[0]).name
+    if name == "gh":
+        subcommand_end = 2 if item.arguments[1:2] == ("api",) else 3
+        return any(item.dynamic[1:subcommand_end]) or item.arguments[1:3] == ("pr", "merge")
+    if name != "git":
+        return False
+    try:
+        globals_, command = git_safety.git_arguments(item.arguments)
+    except ValueError:
+        return False
+    start = 1 + len(globals_)
+    if not command or item.dynamic[start]:
+        return True
+    verb = command[0]
+    if verb == "push" and any(item.dynamic[1:start]) and git_safety.pushes_current_branch(command[1:]):
+        return True
+    if verb in git_safety.SUBCOMMAND_VERBS and len(command) > 1:
+        if item.dynamic[start + 1]:
+            return True
+        return command[1] in git_safety.SUBCOMMAND_VERBS[verb] and any(item.dynamic[start + 2 :])
+    return verb in git_safety.OPTION_VERBS and any(item.dynamic[start + 1 :])
 
 
 def session(payload: object) -> str:

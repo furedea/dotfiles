@@ -7,6 +7,21 @@ import subprocess
 PROTECTED_BRANCHES = {"main", "master"}
 DESTRUCTIVE_VERBS = {"clean", "filter-branch", "filter-repo", "replace"}
 FORCE_FLAGS = {"-f", "--force"}
+DANGEROUS_OPTIONS = {
+    "branch": {"-D"},
+    "rm": FORCE_FLAGS,
+    "mv": FORCE_FLAGS,
+    "symbolic-ref": {"-d", "--delete"},
+    "update-ref": {"-d", "--delete"},
+    "gc": {"--prune"},
+    "reset": {"--hard", "--keep", "--merge"},
+    "switch": {"-f", "--force", "-C", "--discard-changes"},
+    "checkout": {"-f", "--force", "-B", "--", "."},
+}
+OPTION_VERBS = frozenset({*DANGEROUS_OPTIONS, "push", "restore"})
+"""Verbs whose verdict depends on their arguments, so a run-time argument can hide a destructive form."""
+SUBCOMMAND_VERBS = {"worktree": {"remove"}, "reflog": set()}
+"""Verbs judged by a subcommand, mapped to the subcommands whose verdict also depends on their arguments."""
 
 
 def branch(arguments: tuple[str, ...] = ()) -> str:
@@ -44,20 +59,7 @@ def push_reason(arguments: tuple[str, ...], globals_: tuple[str, ...]) -> str:
         return "force-push flag detected"
     if "--force-with-lease" in flags and "--force-if-includes" not in flags:
         return "force-with-lease without --force-if-includes detected"
-    positional: list[str] = []
-    index = 0
-    while index < len(arguments):
-        argument = arguments[index]
-        if argument == "--":
-            positional.extend(arguments[index + 1 :])
-            break
-        if argument in {"--repo", "--receive-pack", "--exec"}:
-            index += 2
-            continue
-        if not argument.startswith("-"):
-            positional.append(argument)
-        index += 1
-    refspecs = positional[1:]
+    refspecs = push_refspecs(arguments)
     if not refspecs:
         destination = branch(globals_)
         return f"push target is '{destination}'" if destination in PROTECTED_BRANCHES else ""
@@ -71,6 +73,30 @@ def push_reason(arguments: tuple[str, ...], globals_: tuple[str, ...]) -> str:
         if destination in PROTECTED_BRANCHES:
             return f"push target is '{destination}'"
     return ""
+
+
+def push_refspecs(arguments: tuple[str, ...]) -> list[str]:
+    """Return the refspecs after the remote, skipping options and their values."""
+    positional: list[str] = []
+    index = 0
+    while index < len(arguments):
+        argument = arguments[index]
+        if argument == "--":
+            positional.extend(arguments[index + 1 :])
+            break
+        if argument in {"--repo", "--receive-pack", "--exec"}:
+            index += 2
+            continue
+        if not argument.startswith("-"):
+            positional.append(argument)
+        index += 1
+    return positional[1:]
+
+
+def pushes_current_branch(arguments: tuple[str, ...]) -> bool:
+    """Whether the push destination is read from the repository rather than named in the command."""
+    refspecs = push_refspecs(arguments)
+    return not refspecs or any(refspec.rsplit(":", 1)[-1] == "HEAD" for refspec in refspecs)
 
 
 def reason(arguments: tuple[str, ...]) -> str:
@@ -93,18 +119,7 @@ def reason(arguments: tuple[str, ...]) -> str:
     destructive |= verb == "worktree" and bool(remaining) and remaining[0] in {"move", "repair"}
     destructive |= verb == "worktree" and remaining[:1] == ["remove"] and bool(options & FORCE_FLAGS)
     destructive |= verb == "reflog" and bool(remaining) and remaining[0] in {"delete", "expire"}
-    dangerous_options = {
-        "branch": {"-D"},
-        "rm": FORCE_FLAGS,
-        "mv": FORCE_FLAGS,
-        "symbolic-ref": {"-d", "--delete"},
-        "update-ref": {"-d", "--delete"},
-        "gc": {"--prune"},
-        "reset": {"--hard", "--keep", "--merge"},
-        "switch": {"-f", "--force", "-C", "--discard-changes"},
-        "checkout": {"-f", "--force", "-B", "--", "."},
-    }
-    destructive |= bool(options & dangerous_options.get(verb, set()))
+    destructive |= bool(options & DANGEROUS_OPTIONS.get(verb, set()))
     if verb == "restore":
         destructive = not bool(options & {"--staged", "-S"}) or bool(options & {"--worktree", "-W", "--source", "-s"})
     return f"destructive git operation: {verb}" if destructive else ""
