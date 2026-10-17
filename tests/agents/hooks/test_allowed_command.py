@@ -44,6 +44,9 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
         pytest.param("gh pr close 42", id="reviewable GitHub operations 2"),
         pytest.param("gh run rerun 123", id="reviewable GitHub operations 3"),
         pytest.param("gh api user", id="GitHub reads 1"),
+        pytest.param(
+            "gh api 'repos/openai/codex/contents/a.rs?ref=rust-v0.163.0' --jq .content", id="GitHub reads with bare jq"
+        ),
         pytest.param("gh api repos/furedea/$r/dependabot/alerts --jq '.[] | .number'", id="GitHub reads at run time"),
         pytest.param("gh api repos/owner/repo/pulls/1/comments --jq '.[] | .body'", id="GitHub reads 2"),
         pytest.param("gh api '/advisories?ecosystem=pip&affects=urllib3' --jq '.[] | .summary'", id="GitHub reads 3"),
