@@ -1,6 +1,7 @@
 """Policy regexes keep their POSIX ERE dialect while each decision spawns a bounded number of processes."""
 
 import json
+import os
 from pathlib import Path
 import subprocess
 from unittest.mock import Mock
@@ -17,7 +18,11 @@ ALLOWED_RULES = REPO_ROOT / "agents/hooks/rules/allowed_commands.json"
 
 
 def grep_calls(spy: Mock) -> int:
-    return sum(1 for call in spy.call_args_list if call.args[0][0] == "grep")
+    return sum(
+        1
+        for call in spy.call_args_list
+        if Path(str(call.args[0][0])).name == "grep" and "--version" not in call.args[0]
+    )
 
 
 def test_loading_validates_every_pattern_with_one_grep(mocker: MockerFixture) -> None:
@@ -93,3 +98,28 @@ def test_rules_judge_the_whole_segment_rather_than_any_single_line() -> None:
 def test_anchored_rules_match_multi_line_quoted_arguments() -> None:
     rules = [{"patterns": ['^git commit -m "[^"]*"$'], "justification": "commit"}]
     assert policy.regex_reason('git commit -m "subject\n\nCo-Authored-By: X <x@y>"', rules) == "commit"
+
+
+def fake_bsd_grep(directory: Path) -> None:
+    directory.mkdir()
+    script = directory / "grep"
+    script.write_text("#!/bin/sh\necho 'grep (BSD grep, GNU compatible) 2.6.0-FreeBSD'\nexit 1\n")
+    script.chmod(0o755)
+
+
+def test_a_later_gnu_grep_on_path_is_used_over_an_earlier_bsd_grep(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake_bsd_grep(tmp_path / "bsd")
+    monkeypatch.setenv("PATH", f"{tmp_path / 'bsd'}{os.pathsep}{os.environ['PATH']}")
+    policy.gnu_grep.cache_clear()
+    assert policy.regex_matches("^a.b$", "a\nb")
+
+
+def test_without_gnu_grep_the_policy_fails_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    fake_bsd_grep(tmp_path / "bsd")
+    monkeypatch.setenv("PATH", str(tmp_path / "bsd"))
+    policy.gnu_grep.cache_clear()
+    with pytest.raises(ValueError, match="GNU grep"):
+        policy.regex_matches("^a$", "a")
+    policy.gnu_grep.cache_clear()
