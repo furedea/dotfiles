@@ -1,7 +1,6 @@
 """Load command policy once and preserve the existing POSIX ERE matching contract."""
 
 from collections.abc import Sequence
-from functools import cache
 import json
 import os
 from pathlib import Path
@@ -20,16 +19,17 @@ def regex_matches(pattern: str, value: str, insensitive: bool = False) -> bool:
 def any_regex_matches(patterns: Sequence[str], value: str, insensitive: bool = False) -> bool:
     """Spawn one grep for a whole pattern set; process start-up, not matching, dominates each decision.
 
-    The value is one NUL-free record, so anchors span a whole shell segment and a newline inside a
-    quoted argument can neither hide a segment from an anchored rule nor satisfy one by itself.
+    Line breaks become spaces, so the value is one line for any grep: anchors span a whole shell
+    segment, and a newline inside a quoted argument can neither hide a segment from an anchored
+    rule nor satisfy one by itself. GNU and BSD grep then agree, whichever is first on PATH.
     """
     if not patterns:
         return False
     flags = "-qiE" if insensitive else "-qE"
     selectors = [argument for pattern in patterns for argument in ("-e", pattern)]
     result = subprocess.run(
-        [gnu_grep(), "--null-data", flags, *selectors],
-        input=value,
+        ["grep", flags, *selectors],
+        input=re.sub(r"[\r\n]", " ", value),
         text=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
@@ -38,28 +38,6 @@ def any_regex_matches(patterns: Sequence[str], value: str, insensitive: bool = F
     if result.returncode > 1:
         raise ValueError("invalid POSIX extended regex rule")
     return result.returncode == 0
-
-
-@cache
-def gnu_grep() -> str:
-    """Prefer GNU grep anywhere on PATH, since an earlier BSD grep matches each line on its own.
-
-    Sessions started by another process can put /usr/bin ahead of the Nix profile, and BSD grep
-    ignores --null-data record boundaries, so anchors would match single lines of a quoted
-    argument. A session without GNU grep keeps the first grep on PATH rather than refusing every
-    command; providing GNU grep to every session is the harness's job.
-    """
-    for directory in os.environ.get("PATH", "").split(os.pathsep):
-        candidate = Path(directory) / "grep"
-        if not os.access(candidate, os.X_OK):
-            continue
-        try:
-            version = subprocess.run([candidate, "--version"], capture_output=True, text=True, check=False).stdout
-        except OSError:
-            continue
-        if version.startswith("grep (GNU grep)"):
-            return str(candidate)
-    return "grep"
 
 
 def load_rules(path: Path, prefixes: bool = False) -> list[dict]:
