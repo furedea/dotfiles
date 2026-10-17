@@ -215,3 +215,8 @@ def test_prose_arguments_do_not_trigger_forbidden_patterns(command: str) -> None
 )
 def test_forbidden_patterns_still_reach_commands_that_run(command: str) -> None:
     assert guard.decide("forbidden", {"tool_input": {"command": command}}).decision == "deny"
+
+
+def test_inline_pr_bodies_that_mention_forbidden_commands_pass() -> None:
+    command = "gh pr create --head topic --body \"$(cat <<'EOF'\nNever run git add -A or --no-verify.\nEOF\n)\""
+    assert guard.decide("forbidden", {"tool_input": {"command": command}}).decision == "allow"
