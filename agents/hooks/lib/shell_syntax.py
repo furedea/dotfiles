@@ -116,6 +116,18 @@ class Command:
         return " ".join(self.words)
 
     @property
+    def command_words_text(self) -> str:
+        """The command's words with each argument containing whitespace as a placeholder.
+
+        Such an argument is prose such as a PR body or commit message; a shell runs it as a command
+        only through eval or a shell -c wrapper, whose script parse judges as separate commands.
+        """
+        return " ".join(
+            RUN_TIME_PLACEHOLDER if re.search(r"\s", argument) else word
+            for word, argument in zip(self.words, self.arguments, strict=True)
+        )
+
+    @property
     def static_words_text(self) -> str:
         """The command's words with each run-time word as a plain placeholder, for judging the static form."""
         return " ".join(

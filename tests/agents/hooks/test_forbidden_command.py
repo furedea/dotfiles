@@ -186,3 +186,32 @@ def test_denials_keep_their_exit_status_and_escalations_report_an_ask_decision(
     assert decision["hookEventName"] == "PreToolUse"
     assert decision["permissionDecision"] == "ask"
     assert "review" in decision["permissionDecisionReason"]
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        'gh pr create --title fix --body "Do not use git add -A here"',
+        'git commit -m "explain --no-verify policy"',
+        "echo 'never run find . -delete here'",
+    ],
+)
+def test_prose_arguments_do_not_trigger_forbidden_patterns(command: str) -> None:
+    assert guard.decide("forbidden", {"tool_input": {"command": command}}).decision == "allow"
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "git add -A",
+        "xargs git add -A",
+        "env GIT_PAGER=cat git add -A",
+        "timeout 30 git add -A",
+        "bash -c 'git add -A'",
+        "xargs sh -c 'git commit --no-verify -m x'",
+        'eval "git add -A"',
+        'echo "$(git add -A)"',
+    ],
+)
+def test_forbidden_patterns_still_reach_commands_that_run(command: str) -> None:
+    assert guard.decide("forbidden", {"tool_input": {"command": command}}).decision == "deny"
