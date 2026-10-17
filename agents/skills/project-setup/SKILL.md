@@ -32,6 +32,8 @@ branches and authorized commits, pushes, and PRs belong to `git-workflow`.
 - Inspect the chosen template or existing project for actual versions and provided files.
   Templates and project configuration own those facts, not copied inventories in this skill.
 - Preserve checked-in locks. Environment initialization is not a dependency-upgrade request.
+- Keep the repository's agent instructions in `AGENTS.md` and do not add a `CLAUDE.md`; Claude
+  Code reads `AGENTS.md` when no `CLAUDE.md` exists. See `source-of-truth`, Agent Entry Maps.
 - Run language setup in the project's effective development environment, not the global fallback.
   Reading permission for `.envrc` and activation of that environment are distinct steps.
 - Complete the requested setup and relevant verification. Report partial completion and blockers

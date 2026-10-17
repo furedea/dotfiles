@@ -54,6 +54,7 @@ complete. Supply:
   requirements from the author's assumptions.
 - **Location:** the absolute repository or worktree path, branch, and relevant base and head
   commits. Tell the recipient to read the applicable instructions in that location.
+- **Issue:** the Issue body itself, not only its number, so the recipient need not read it again.
 - **Input:** the exact plan text or plan file, code review range, or implementation scope. For
   uncommitted code, identify whether staged, unstaged, and untracked files are included, and
   provide a stable snapshot when the checkout may still change.
@@ -114,7 +115,13 @@ Ask the worker to return:
 ## Run and Reconcile
 
 Submit the brief through `herdr` and retain the recipient identity and input revision in the
-originating session. Follow `herdr` for waiting, blocked sessions, and complete response retrieval.
+originating session. Write the brief to a file in the originating session's scratchpad and
+prompt the recipient, in literal text, to read that file. Run each `herdr` command as its own
+Bash call: Herdr leaves the sandbox only when the whole call is a single `herdr` command, so
+chaining (`git fetch origin && herdr ...`) or a substitution such as `"$(cat brief.md)"` runs it
+inside the sandbox, where it fails. Fetch in a separate call first. A recipient in a linked
+worktree of another repository fetches and rebases there itself, since the originating session
+cannot write that repository's `.git`. Follow `herdr` for waiting, blocked sessions, and complete response retrieval.
 Successful submission or a settled agent state does not prove that the assigned task is complete;
 read the response and compare it with the requested outcome.
 
