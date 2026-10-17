@@ -53,7 +53,7 @@ def objection(
     """Judge one segment by its own words and by its canonical program and subcommand.
 
     Rules see only the command's words: redirections stay inside the sandbox, and heredoc bodies
-    are data, not commands. The forbidden kind only denies: a literal deny prefix or pattern wins
+    are data, not commands, and so is an argument containing whitespace. The forbidden kind only denies: a literal deny prefix or pattern wins
     even beside a run-time argument. The allowed kind reviews only programs whose effects reach
     past the sandbox, such as GitHub writes and remote fetches, and lets every other program take
     any form, since the sandbox confines it. A run-time word in a governed program counts as a plain
@@ -61,8 +61,8 @@ def objection(
     """
     preview = shell_syntax.command_preview(item.raw)
     if kind == "forbidden":
-        matched = command_policy.regex_reason(item.words_text, rules) or command_policy.regex_reason(
-            candidate.words_text, rules
+        matched = command_policy.regex_reason(item.command_words_text, rules) or command_policy.regex_reason(
+            candidate.command_words_text, rules
         )
         reason = command_policy.prefix_reason(candidate.arguments, prefixes, "deny") or matched
         if not reason:
