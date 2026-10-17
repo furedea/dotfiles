@@ -32,7 +32,7 @@ the request, evaluates the returned work, and reports the outcome to the user.
 | ------------------------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------ |
 | Review a plan                              | Claude for a Codex-authored plan; Codex for a Claude-authored plan | Findings only; do not rewrite the plan or implement it |
 | Review code                                | Claude for Codex-authored code; Codex for Claude-authored code     | Findings only; do not edit the reviewed source         |
-| Implement in another directory or worktree | A separate session of the same provider as the originating session | Changes limited to the delegated scope                 |
+| Implement in another directory or worktree | A separate Claude session, since a Codex session cannot commit in a linked worktree | Changes limited to the delegated scope                 |
 
 Honor an explicit provider choice. Keep plan review, code review, and implementation as distinct
 assignments; asking for findings does not authorize the reviewer to fix them.
