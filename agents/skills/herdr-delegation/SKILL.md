@@ -121,7 +121,14 @@ Bash call: Herdr leaves the sandbox only when the whole call is a single `herdr`
 chaining (`git fetch origin && herdr ...`) or a substitution such as `"$(cat brief.md)"` runs it
 inside the sandbox, where it fails. Fetch in a separate call first. A recipient in a linked
 worktree of another repository fetches and rebases there itself, since the originating session
-cannot write that repository's `.git`. Follow `herdr` for waiting, blocked sessions, and complete response retrieval.
+cannot write that repository's `.git`.
+
+Right after prompting, wait in the background for the recipient to finish: first
+`herdr agent wait <name> --until working`, then `herdr agent wait <name> --until done --until blocked`,
+each as its own single `herdr` call. Waiting only for done or blocked can return at once while
+the agent still shows done from an earlier turn. Then read the reply with `herdr agent read`
+and, for an implementation, check its PR. This works for Claude and Codex recipients alike.
+Follow `herdr` for waiting, blocked sessions, and complete response retrieval.
 Successful submission or a settled agent state does not prove that the assigned task is complete;
 read the response and compare it with the requested outcome.
 

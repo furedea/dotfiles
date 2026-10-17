@@ -24,6 +24,9 @@ git fetch origin
 herdr worktree create --cwd <primary-checkout> --branch <branch> --base origin/<base> --label <branch> --no-focus
 herdr agent start <lane-name> --kind <claude|codex> --pane <root-pane-id>
 herdr agent prompt <lane-name> "Read your brief at <scratchpad>/briefs/<lane-name>.md and carry it out."
+herdr agent wait <lane-name> --until working                 # in the background
+herdr agent wait <lane-name> --until done --until blocked    # in the background, after the first returns
+herdr agent read <lane-name>
 ```
 
 Rules:
@@ -34,6 +37,11 @@ Rules:
 - Keep the prompt text literal. A substitution such as `"$(cat brief.md)"` also makes the call
   more than one `herdr` command. Write the brief to a file in this session's scratchpad and
   prompt the lane to read that file.
+- Learn that the lane finished by waiting in the background right after the prompt: first
+  `--until working`, then `--until done --until blocked`, each as its own `herdr` call. Waiting
+  only for done or blocked can return at once while the agent still shows done from an earlier
+  turn. Then read the lane's reply with `herdr agent read` and check its PR. This works for Claude
+  and Codex lanes alike.
 - Read the workspace and root pane IDs from the JSON that `worktree create` returns
   (`.result.workspace.workspace_id`, `.result.root_pane.pane_id`); never predict them.
 - `<lane-name>` matches `[a-z][a-z0-9_-]{0,31}` and is new: the hooks let a session prompt only the
