@@ -133,11 +133,29 @@ def test_global_prefix_rejects_home_manager_activation(capsys: pytest.CaptureFix
 
 
 @pytest.mark.parametrize("kind", ["allowed", "forbidden"])
-@pytest.mark.parametrize("command", ['echo "$(date)"', "cat <<EOF\nbody\nEOF"])
+@pytest.mark.parametrize("command", ["bash <<EOF\necho $X\nEOF", "echo $'\\x41'"])
 def test_uninspectable_commands_are_left_to_the_user(kind: str, command: str) -> None:
     verdict = guard.decide(kind, {"tool_input": {"command": command}})
     assert verdict.decision == "ask"
     assert "review" in verdict.reason
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        'echo "$(rm -rf build)"',
+        'for d in a b; do rm -rf "$d"; done',
+        "bash <<'EOF'\nrm -rf build\nEOF",
+        "if true; then git add -A; fi",
+    ],
+)
+def test_denials_apply_to_commands_inside_substitutions_clauses_and_shell_heredocs(command: str) -> None:
+    assert guard.decide("forbidden", {"tool_input": {"command": command}}).decision == "deny"
+
+
+def test_heredoc_bodies_are_data_not_commands() -> None:
+    command = "python3 - <<'EOF'\nprint('git add -A && git commit --no-verify')\nEOF"
+    assert guard.decide("forbidden", {"tool_input": {"command": command}}).decision == "allow"
 
 
 def test_literal_deny_prefixes_win_over_run_time_arguments() -> None:
@@ -158,7 +176,7 @@ def test_denials_keep_their_exit_status_and_escalations_report_an_ask_decision(
     captured = capsys.readouterr()
     assert captured.out == ""
     assert "forbidden command" in captured.err
-    assert guard.check("forbidden", {"tool_input": {"command": 'echo "$(date)"'}}) == 0
+    assert guard.check("forbidden", {"tool_input": {"command": "echo $'date'"}}) == 0
     captured = capsys.readouterr()
     assert captured.err == ""
     decision = json.loads(captured.out)["hookSpecificOutput"]

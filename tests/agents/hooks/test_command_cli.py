@@ -111,7 +111,7 @@ def test_escalation_previews_are_bounded(run_cli: CliRunner) -> None:
     [
         ("guard_command.py", ("allowed",), "gh pr review 42 --approve"),
         ("guard_command.py", ("allowed",), 'git commit -m "$(cat message.txt)"'),
-        ("guard_command.py", ("forbidden",), 'git commit -m "$(cat message.txt)"'),
+        ("guard_command.py", ("forbidden",), "git commit -m $'message'"),
         ("guard_git.py", (), 'git push origin "$BRANCH"'),
     ],
     ids=["unlisted-allowed-form", "uninspectable-allowed", "uninspectable-forbidden", "uninspectable-git"],

@@ -25,10 +25,33 @@ ALLOWED_NODES = frozenset(
         "DblQuoted",
         "ParamExp",
         "TimeClause",
+        "CmdSubst",
+        "ProcSubst",
+        "ArithmExp",
+        "ArithmCmd",
+        "BinaryArithm",
+        "UnaryArithm",
+        "ParenArithm",
+        "ForClause",
+        "WordIter",
+        "CStyleLoop",
+        "WhileClause",
+        "IfClause",
+        "CaseClause",
+        "CaseItem",
+        "TestClause",
+        "BinaryTest",
+        "UnaryTest",
+        "ParenTest",
+        "DeclClause",
+        "Word",
     }
 )
+# Every command inside a substitution or clause is a CallExpr that parse judges on its own; the
+# substituted word itself is only known at run time.
+SUBSTITUTIONS = frozenset({"CmdSubst", "ProcSubst", "ArithmExp"})
 # ParamExp is admitted here only so literal_word can accept the home directory and refuse the rest.
-WORD_PARTS = frozenset({None, "Lit", "SglQuoted", "DblQuoted", "ParamExp"})
+WORD_PARTS = frozenset({None, "Lit", "SglQuoted", "DblQuoted", "ParamExp"}) | SUBSTITUTIONS
 QUOTED_PARTS = frozenset({"SglQuoted", "DblQuoted"})
 HOME_PARAMETER = "HOME"
 PARAMETER_MODIFIERS = ("Excl", "Length", "Width", "Index", "Slice", "Repl", "Exp")
@@ -87,6 +110,11 @@ class Command:
             object.__setattr__(self, "dynamic", (False,) * len(self.arguments))
 
     @property
+    def words_text(self) -> str:
+        """The command's own words, without redirections or heredoc bodies, for rule matching."""
+        return " ".join(self.words)
+
+    @property
     def has_dynamic_words(self) -> bool:
         return any(self.dynamic)
 
@@ -127,8 +155,6 @@ def parse(source: str, depth: int = 0) -> tuple[Command, ...]:
         raise UnsupportedSyntax("shell wrapper nesting exceeds the inspection limit")
     records = tuple(nodes(syntax_tree(source)))
     owners = {id(node["Cmd"]): node for node in records if isinstance(node.get("Cmd"), dict)}
-    if any(node.get("Hdoc") for node in records):
-        raise UnsupportedSyntax("heredoc syntax requires explicit review")
     if any(node.get("Type") not in ALLOWED_NODES for node in records):
         raise UnsupportedSyntax("dynamic or unsupported shell syntax requires explicit review")
     data = source.encode()
@@ -136,12 +162,27 @@ def parse(source: str, depth: int = 0) -> tuple[Command, ...]:
     for node in records:
         if node.get("Type") != "CallExpr" or not node.get("Args"):
             continue
-        command = literal_command(node, owners.get(id(node), node), data, depth)
+        owner = owners.get(id(node), node)
+        command = literal_command(node, owner, data, depth)
         commands.append(command)
         commands.extend(unwrapped(command))
-        if script := shell_script(commands[-1].arguments):
-            commands.extend(parse(script, commands[-1].wrapper_depth + 1))
+        innermost = commands[-1]
+        if script := shell_script(innermost):
+            commands.extend(parse(script, innermost.wrapper_depth + 1))
+        elif Path(innermost.arguments[0]).name in SHELLS and (stdin := heredoc_script(owner)):
+            commands.extend(parse(stdin, innermost.wrapper_depth + 1))
     return tuple(commands)
+
+
+def heredoc_script(owner: dict) -> str:
+    """Return the static script a shell reads from a heredoc, refusing one the shell computes."""
+    bodies = [redirect["Hdoc"] for redirect in owner.get("Redirs", []) if redirect.get("Hdoc")]
+    if not bodies:
+        return ""
+    parts = [part for body in bodies for part in body.get("Parts", [])]
+    if any(part.get("Type") != "Lit" for part in parts):
+        raise UnsupportedSyntax("a shell heredoc whose text is computed requires explicit review")
+    return "".join(part.get("Value", "") for part in parts)
 
 
 def syntax_tree(source: str) -> dict:
@@ -216,11 +257,13 @@ def literal_word(word: dict, source: bytes) -> tuple[str, bool]:
     home directory is reported to the caller, which decides whether the program can take it.
     """
     dynamic = False
-    for part in nodes(word):
+    for part in word_nodes(word):
         if part.get("Type") in QUOTED_PARTS and part.get("Dollar"):
             raise UnsupportedSyntax("dollar-quoted shell words require explicit review")
         if part.get("Type") == "ParamExp":
             dynamic |= not is_home_parameter(part)
+        elif part.get("Type") in SUBSTITUTIONS:
+            dynamic = True
         elif part.get("Type") not in WORD_PARTS:
             raise UnsupportedSyntax("shell expansions require explicit review")
     parts = word.get("Parts", [])
@@ -230,6 +273,19 @@ def literal_word(word: dict, source: bytes) -> tuple[str, bool]:
     if dynamic:
         return source_text(word, source), True
     return "".join(literal_part(index, part, source) for index, part in enumerate(parts)), False
+
+
+def word_nodes(value: object) -> Iterator[dict]:
+    """Walk a word's parts without entering substitutions, whose commands parse judges separately."""
+    if isinstance(value, dict):
+        yield value
+        if value.get("Type") in SUBSTITUTIONS:
+            return
+        for child in value.values():
+            yield from word_nodes(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from word_nodes(child)
 
 
 def is_home_parameter(part: dict) -> bool:
@@ -329,10 +385,13 @@ def is_flag(name: str, token: str, flags: frozenset[str], valued: frozenset[str]
     return name == "caffeinate" and re.fullmatch(r"-[dimsu]+", token) is not None
 
 
-def shell_script(arguments: tuple[str, ...]) -> str:
+def shell_script(command: Command) -> str:
     """Return the literal script that eval or a shell -c invocation runs, or an empty string."""
+    arguments = command.arguments
     executable = Path(arguments[0]).name
     if executable == "eval":
+        if any(command.dynamic[1:]):
+            raise UnsupportedSyntax("eval of a computed script requires explicit review")
         return " ".join(arguments[1:])
     if executable not in SHELLS:
         return ""
@@ -348,4 +407,6 @@ def shell_script(arguments: tuple[str, ...]) -> str:
         return ""
     if option + 1 >= len(arguments):
         raise UnsupportedSyntax("shell wrapper has no literal command")
+    if command.dynamic[option + 1]:
+        raise UnsupportedSyntax("a shell wrapper running a computed script requires explicit review")
     return arguments[option + 1]

@@ -55,9 +55,40 @@ def test_unicode_and_quotes_do_not_shift_command_boundaries() -> None:
 
 
 @pytest.mark.parametrize(
-    "command", ['echo "$(git reset --hard)"', "echo <(git status)", "echo $((1+1))", "if true; then git status; fi"]
+    "command,inner",
+    [
+        ('echo "$(git reset --hard)"', ("git", "reset", "--hard")),
+        ("echo <(git status)", ("git", "status")),
+        ("echo `git status`", ("git", "status")),
+        ("if true; then git status; fi", ("git", "status")),
+        ("for f in $(ls); do echo done; done", ("ls",)),
+        ("while true; do git status; done", ("git", "status")),
+        ("cat <<EOF\n$(rm -rf build)\nEOF", ("rm", "-rf", "build")),
+    ],
 )
-def test_code_running_substitutions_are_not_statically_inspectable(command: str) -> None:
+def test_commands_inside_substitutions_and_clauses_are_exposed(command: str, inner: tuple[str, ...]) -> None:
+    assert inner in [parsed.arguments for parsed in syntax.parse(command)]
+
+
+@pytest.mark.parametrize("command", ['echo "$(date)"', "echo $((1 + 1))", "echo <(git status)"])
+def test_substituted_words_are_run_time_words(command: str) -> None:
+    assert syntax.parse(command)[0].dynamic == (False, True)
+
+
+def test_quoted_heredocs_are_standard_input() -> None:
+    parsed = syntax.parse("python3 - <<'EOF' > out.txt\nprint('$HOME')\nEOF")[0]
+    assert parsed.arguments == ("python3", "-")
+    assert parsed.writes == ("out.txt",)
+    assert parsed.words_text == "python3 -"
+
+
+def test_a_heredoc_fed_to_a_shell_is_parsed_as_a_script() -> None:
+    commands = syntax.parse("bash <<'EOF'\ngit reset --hard\nEOF")
+    assert ("git", "reset", "--hard") in [parsed.arguments for parsed in commands]
+
+
+@pytest.mark.parametrize("command", ["bash <<EOF\necho $X\nEOF", "echo $'\\x41'"])
+def test_scripts_whose_text_is_computed_still_require_review(command: str) -> None:
     with pytest.raises(syntax.UnsupportedSyntax):
         syntax.parse(command)
 
