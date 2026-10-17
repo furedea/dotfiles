@@ -70,7 +70,8 @@
       ],
       "allowUnixSockets": [
         "/nix/var/nix/daemon-socket/socket"
-      ]
+      ],
+      "allowLocalBinding": true
     },
     "excludedCommands": [
       "docker *",

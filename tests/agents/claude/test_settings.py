@@ -78,3 +78,8 @@ def test_nix_resolves_the_flake_registry_from_inside_the_sandbox() -> None:
 def test_pnpm_installs_into_its_shared_store_from_inside_the_sandbox() -> None:
     sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
     assert {"~/.local/share/pnpm"} <= set(sandbox["filesystem"]["allowWrite"])
+
+
+def test_dev_servers_and_end_to_end_tests_can_listen_on_local_ports() -> None:
+    sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
+    assert sandbox["network"]["allowLocalBinding"] is True
