@@ -2065,13 +2065,13 @@
       "justification": "Ask before changing dependencies or lock files; the request should name the change."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": [
         "nix",
         "flake",
         "lock"
       ],
-      "justification": "Ask before changing dependencies or lock files; the request should name the change."
+      "justification": "Allow recording missing flake inputs; nix flake update, which moves existing inputs, still asks."
     },
     {
       "decision": "ask",
@@ -2335,9 +2335,73 @@
       "decision": "ask",
       "prefix": [
         "herdr",
-        "workspace"
+        "workspace",
+        "create"
       ],
-      "justification": "Ask before changing Herdr layout or server state."
+      "justification": "Ask before managing workspaces that may belong to the user; the hooks let a session close only its own."
+    },
+    {
+      "decision": "ask",
+      "prefix": [
+        "herdr",
+        "workspace",
+        "focus"
+      ],
+      "justification": "Ask before managing workspaces that may belong to the user; the hooks let a session close only its own."
+    },
+    {
+      "decision": "ask",
+      "prefix": [
+        "herdr",
+        "workspace",
+        "rename"
+      ],
+      "justification": "Ask before managing workspaces that may belong to the user; the hooks let a session close only its own."
+    },
+    {
+      "decision": "ask",
+      "prefix": [
+        "herdr",
+        "workspace",
+        "report-metadata"
+      ],
+      "justification": "Ask before managing workspaces that may belong to the user; the hooks let a session close only its own."
+    },
+    {
+      "decision": "allow",
+      "prefix": [
+        "herdr",
+        "workspace",
+        "close"
+      ],
+      "justification": "Allow closing a workspace this session's lanes ran in; the hooks ask for any other workspace."
+    },
+    {
+      "decision": "allow",
+      "prefix": [
+        "herdr",
+        "worktree",
+        "remove"
+      ],
+      "justification": "Allow closing a workspace this session's lanes ran in; the hooks ask for any other workspace."
+    },
+    {
+      "decision": "allow",
+      "prefix": [
+        "herdr",
+        "workspace",
+        "list"
+      ],
+      "justification": "Allow read-only Herdr inspection; controlling other panes asks first."
+    },
+    {
+      "decision": "allow",
+      "prefix": [
+        "herdr",
+        "workspace",
+        "get"
+      ],
+      "justification": "Allow read-only Herdr inspection; controlling other panes asks first."
     },
     {
       "decision": "ask",

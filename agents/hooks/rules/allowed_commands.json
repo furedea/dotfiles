@@ -77,7 +77,11 @@
         "^herdr worktree create( --(cwd|branch|base|path|label|workspace) ('[^']*'|\"([^\"\\\\]|\\\\.)*\"|[^ '\"]+)| --(no-)?focus)*$",
         "^herdr pane split( --(pane|direction|ratio|cwd) ('[^']*'|\"([^\"\\\\]|\\\\.)*\"|[^ '\"]+)| --current| --(no-)?focus)*$",
         "^herdr agent start [a-z][a-z0-9_-]*( --kind (claude|codex)| --pane [^ ]+| --timeout [0-9]+)+$",
-        "^herdr agent prompt [a-z][a-z0-9_-]* ('[^']*'|\"([^\"\\\\]|\\\\.)*\"|[^ '\"]+)( --wait| --until [a-z]+| --timeout [0-9]+)*$"
+        "^herdr agent prompt [a-z][a-z0-9_-]* ('[^']*'|\"([^\"\\\\]|\\\\.)*\"|[^ '\"]+)( --wait| --until [a-z]+| --timeout [0-9]+)*$",
+        "^herdr workspace close [^ -][^ ]*$",
+        "^herdr worktree remove --workspace [^ -][^ ]*$",
+        "^herdr workspace list( |$)",
+        "^herdr workspace get( |$)"
       ],
       "justification": "Allow Herdr reads and handing work to a new Claude or Codex session; repository trust, pane environments, other agent kinds, and driving existing panes run outside the sandbox and ask."
     }
