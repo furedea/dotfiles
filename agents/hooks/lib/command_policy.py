@@ -1,6 +1,7 @@
 """Load command policy once and preserve the existing POSIX ERE matching contract."""
 
 from collections.abc import Sequence
+from functools import cache
 import json
 import os
 from pathlib import Path
@@ -27,7 +28,7 @@ def any_regex_matches(patterns: Sequence[str], value: str, insensitive: bool = F
     flags = "-qiE" if insensitive else "-qE"
     selectors = [argument for pattern in patterns for argument in ("-e", pattern)]
     result = subprocess.run(
-        ["grep", "--null-data", flags, *selectors],
+        [gnu_grep(), "--null-data", flags, *selectors],
         input=value,
         text=True,
         stdout=subprocess.DEVNULL,
@@ -37,6 +38,27 @@ def any_regex_matches(patterns: Sequence[str], value: str, insensitive: bool = F
     if result.returncode > 1:
         raise ValueError("invalid POSIX extended regex rule")
     return result.returncode == 0
+
+
+@cache
+def gnu_grep() -> str:
+    """Find GNU grep anywhere on PATH, since an earlier BSD grep matches each line on its own.
+
+    Sessions started by another process can put /usr/bin ahead of the Nix profile, and BSD grep
+    ignores --null-data record boundaries, so anchors would match single lines of a quoted
+    argument. Without GNU grep the policy cannot keep that contract, so it fails closed.
+    """
+    for directory in os.environ.get("PATH", "").split(os.pathsep):
+        candidate = Path(directory) / "grep"
+        if not os.access(candidate, os.X_OK):
+            continue
+        try:
+            version = subprocess.run([candidate, "--version"], capture_output=True, text=True, check=False).stdout
+        except OSError:
+            continue
+        if version.startswith("grep (GNU grep)"):
+            return str(candidate)
+    raise ValueError("GNU grep is required for command policy but was not found on PATH")
 
 
 def load_rules(path: Path, prefixes: bool = False) -> list[dict]:
