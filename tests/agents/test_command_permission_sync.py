@@ -165,3 +165,7 @@ def test_a_locked_development_shell_runs_while_arbitrary_packages_ask() -> None:
 )
 def test_handing_work_to_a_new_herdr_session_runs_without_approval(prefix: tuple[str, ...]) -> None:
     assert prefix in ALLOW
+
+
+def test_generated_settings_keep_the_scratchpad_edit_rules(generated_permissions: dict) -> None:
+    assert "Edit(//private/tmp/claude-*/**)" in generated_permissions["allow"]

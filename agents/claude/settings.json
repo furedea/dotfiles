@@ -14,10 +14,14 @@
     "GIT_CONFIG_VALUE_2": "false"
   },
   "permissions": {
-    "defaultMode": "auto",
+    "allow": [
+      "Edit(//private/tmp/claude-*/**)",
+      "Edit(//tmp/claude-*/**)"
+    ],
     "ask": [
       "Bash(dangerouslyDisableSandbox:true)"
-    ]
+    ],
+    "defaultMode": "auto"
   },
   "model": "opus",
   "preferredNotifChannel": "auto",

@@ -83,3 +83,8 @@ def test_pnpm_installs_into_its_shared_store_from_inside_the_sandbox() -> None:
 def test_dev_servers_and_end_to_end_tests_can_listen_on_local_ports() -> None:
     sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
     assert sandbox["network"]["allowLocalBinding"] is True
+
+
+def test_sessions_write_their_own_scratchpad_without_prompts() -> None:
+    permissions = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["permissions"]
+    assert {"Edit(//private/tmp/claude-*/**)", "Edit(//tmp/claude-*/**)"} <= set(permissions["allow"])
