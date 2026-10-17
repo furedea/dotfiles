@@ -58,3 +58,13 @@ def test_agent_commits_and_tags_are_left_unsigned() -> None:
     }
     assert configured["commit.gpgsign"] == "false"
     assert configured["tag.gpgsign"] == "false"
+
+
+def test_no_command_escapes_the_sandbox_except_the_excluded_tools() -> None:
+    sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
+    assert sandbox["allowUnsandboxedCommands"] is False
+
+
+def test_nix_reaches_its_daemon_from_inside_the_sandbox() -> None:
+    sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
+    assert sandbox["network"]["allowUnixSockets"] == ["/nix/var/nix/daemon-socket/socket"]

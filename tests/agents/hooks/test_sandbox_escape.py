@@ -1,4 +1,4 @@
-"""Leaving the sandbox is possible only through a human approval, even in auto mode."""
+"""No agent command leaves the sandbox; only the excluded tools run outside it."""
 
 import json
 from pathlib import Path
@@ -19,13 +19,13 @@ def generated_settings(agent_harness: CliRunner, tmp_path_factory: pytest.TempPa
 
 
 @pytest.mark.integration
-def test_sandbox_escape_is_available(generated_settings: dict) -> None:
+def test_the_sandbox_escape_is_closed(generated_settings: dict) -> None:
     assert generated_settings["sandbox"]["enabled"] is True
-    assert generated_settings["sandbox"]["allowUnsandboxedCommands"] is True
+    assert generated_settings["sandbox"]["allowUnsandboxedCommands"] is False
 
 
 @pytest.mark.integration
-def test_every_sandbox_escape_asks_the_user(generated_settings: dict) -> None:
+def test_an_escape_request_would_still_ask_if_the_runtime_honored_it(generated_settings: dict) -> None:
     permissions = generated_settings["permissions"]
     assert ESCAPE_RULE in permissions["ask"]
     assert ESCAPE_RULE not in permissions.get("allow", [])
