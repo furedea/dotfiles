@@ -9,17 +9,21 @@ For implementation tasks:
 5. If delivery is authorized under [Operating Rules](../SKILL.md#operating-rules), commit by intent and perform the requested publication steps:
     - `git fetch origin`
     - optionally `git rebase origin/<base>` before the first push when the feature branch should be refreshed onto the latest base
-    - `git push -u origin <branch>`
-    - `gh pr create --base <base> --title "<title>" --body-file <file>`, with a [pull request body](#pull-request-body)
+    - `git push origin <branch>`
+    - `gh pr create --base <base> --head <branch> --title "<title>" --body-file <file>`, with a [pull request body](#pull-request-body)
 6. Stop before merge; merging is a human decision unless the user explicitly asks for it. When the user asks, `gh pr merge` prompts for approval, and that prompt is the authorization step.
 
 For explicit PR requests:
 
 1. If the user asked for a stacked or red-green pull request, follow [Stacked pull requests](stacked_prs.md) instead of steps 2 and 3.
 2. Confirm the target base branch if it is not obvious from the repo default.
-3. Follow [Local Verification Before Delivery](#local-verification-before-delivery), then push the feature branch with `git push -u origin <branch>`.
-4. Create a normal PR with `gh pr create --base <base> --title "<title>" --body-file <file>`, with a
+3. Follow [Local Verification Before Delivery](#local-verification-before-delivery), then push the feature branch with `git push origin <branch>`.
+4. Create a normal PR with `gh pr create --base <base> --head <branch> --title "<title>" --body-file <file>`, with a
    [pull request body](#pull-request-body).
+
+Do not pass `-u` or `--set-upstream` to `git push`: setting the upstream writes `.git/config`,
+which the sandbox protects, so the push succeeds but the command exits with an error. Name the
+branch explicitly in later pushes and in `gh pr create --head`.
 
 For rebase and force-push:
 
