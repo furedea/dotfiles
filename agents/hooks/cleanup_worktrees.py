@@ -3,9 +3,11 @@
 
 A branch goes only when a merged pull request's head is exactly its tip and its worktree is
 clean, so a squash merge counts as merged while later or uncommitted work is kept. The primary
-checkout, the worktree the caller runs in, and the default branch are never touched.
+checkout, the worktree the caller runs in, and the default branch are never touched. The sweep
+covers the caller's repository and every repository with a Herdr task worktree, so lanes merged
+elsewhere go wherever the next session starts.
 
-Usage: cleanup_worktrees.py [--dry-run]   from inside a repository
+Usage: cleanup_worktrees.py [--dry-run]
        cleanup_worktrees.py session-start  as a hook, reading the payload's cwd
 """
 
@@ -20,6 +22,8 @@ import sys
 PROTECTED_BRANCHES = frozenset({"main", "master"})
 MERGED_PULL_REQUEST_LIMIT = "200"
 TIMEOUT_SECONDS = 30
+HERDR_WORKTREES = Path(".herdr/worktrees")
+"""Herdr's default worktrees.directory, holding <repo>/<branch-slug> checkouts."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,7 +36,7 @@ def main(arguments: list[str]) -> int:
     if arguments == ["session-start"]:
         try:
             payload = json.load(sys.stdin)
-            cleanup(Path(payload["cwd"]), dry_run=False)
+            sweep(Path(payload["cwd"]), dry_run=False)
         except ValueError, KeyError, TypeError, OSError, subprocess.SubprocessError:
             pass
         return 0
@@ -40,7 +44,7 @@ def main(arguments: list[str]) -> int:
         print(__doc__, file=sys.stderr)
         return 1
     try:
-        for line in cleanup(Path.cwd(), dry_run=bool(arguments)):
+        for line in sweep(Path.cwd(), dry_run=bool(arguments)):
             print(line)
     except (OSError, subprocess.SubprocessError, ValueError) as error:
         print(f"cleanup failed: {error}", file=sys.stderr)
@@ -48,11 +52,37 @@ def main(arguments: list[str]) -> int:
     return 0
 
 
-def cleanup(cwd: Path, *, dry_run: bool) -> list[str]:
-    """Remove what is merged and return one line per removal."""
-    current = Path(run("git", "rev-parse", "--show-toplevel", cwd=cwd)).resolve()
-    common = Path(run("git", "rev-parse", "--path-format=absolute", "--git-common-dir", cwd=cwd))
-    primary = common.parent.resolve()
+def sweep(cwd: Path, *, dry_run: bool) -> list[str]:
+    """Clean the caller's repository and every repository with a Herdr task worktree."""
+    current = toplevel(cwd)
+    lanes = sorted(path for path in (Path.home() / HERDR_WORKTREES).glob("*/*") if path.is_dir())
+    primaries = {primary for primary in map(primary_checkout, [cwd, *lanes]) if primary}
+    report = []
+    for primary in sorted(primaries):
+        try:
+            report += cleanup(primary, current, dry_run=dry_run)
+        except (OSError, subprocess.SubprocessError, ValueError) as error:
+            report.append(f"skip {primary}: {error}")
+    return report
+
+
+def toplevel(path: Path) -> Path | None:
+    try:
+        return Path(run("git", "rev-parse", "--show-toplevel", cwd=path)).resolve()
+    except OSError, subprocess.SubprocessError:
+        return None
+
+
+def primary_checkout(path: Path) -> Path | None:
+    try:
+        common = Path(run("git", "rev-parse", "--path-format=absolute", "--git-common-dir", cwd=path))
+    except OSError, subprocess.SubprocessError:
+        return None
+    return common.parent.resolve()
+
+
+def cleanup(primary: Path, current: Path | None, *, dry_run: bool) -> list[str]:
+    """Remove what is merged in one repository and return one line per removal."""
     merged = merged_heads(primary)
     worktrees = linked_worktrees(primary)
     checked_out = {worktree.branch for worktree in worktrees} | {current_branch(primary)}

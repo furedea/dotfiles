@@ -164,3 +164,19 @@ def test_an_open_herdr_workspace_is_closed_with_its_worktree(
     assert (tmp_path / "herdr_removed.txt").read_text().split() == ["worktree", "remove", "--workspace", "w9"]
     assert not path.exists()
     assert branches(primary) == {"main"}
+
+
+def test_merged_herdr_lanes_of_other_repositories_are_swept_too(
+    primary: Path, merged: dict[str, str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home = tmp_path / "home"
+    lane = home / ".herdr/worktrees/repo/feat-elsewhere"
+    lane.parent.mkdir(parents=True)
+    git("worktree", "add", "--quiet", "-b", "feat/elsewhere", str(lane), cwd=primary)
+    merged["feat/elsewhere"] = git("rev-parse", "HEAD", cwd=lane)
+    monkeypatch.setenv("HOME", str(home))
+    unrelated = tmp_path / "unrelated"
+    unrelated.mkdir()
+    assert cleanup(unrelated).returncode == 0
+    assert not lane.exists()
+    assert branches(primary) == {"main"}
