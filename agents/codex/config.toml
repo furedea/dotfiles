@@ -2,12 +2,25 @@ model = "gpt-6-astra"
 model_reasoning_effort = "max"
 personality = "pragmatic"
 approval_policy = "on-request"
-sandbox_mode = "read-only"
+sandbox_mode = "workspace-write"
 approvals_reviewer = "guardian_subagent"
 # `[permissions.guarded.filesystem]` is appended by `agent-harness
 # generate-codex-config-source`. Do not set `default_permissions = "guarded"` by default:
 # Codex treats that profile as the full filesystem sandbox policy, so a profile
 # containing only harness files prevents even read-only commands from starting.
+
+[sandbox_workspace_write]
+network_access = true
+
+# Same Git environment as Claude: no fsmonitor daemon, unsigned agent commits and tags.
+[shell_environment_policy.set]
+GIT_CONFIG_COUNT = "3"
+GIT_CONFIG_KEY_0 = "core.fsmonitor"
+GIT_CONFIG_VALUE_0 = "false"
+GIT_CONFIG_KEY_1 = "commit.gpgsign"
+GIT_CONFIG_VALUE_1 = "false"
+GIT_CONFIG_KEY_2 = "tag.gpgsign"
+GIT_CONFIG_VALUE_2 = "false"
 
 [notice]
 fast_default_opt_out = true

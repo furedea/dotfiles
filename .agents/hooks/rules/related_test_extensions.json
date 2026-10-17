@@ -43,7 +43,8 @@
     "tests/agents/test_notification.py"
   ],
   "agents/codex/config.toml": [
-    "tests/agents/test_notification.py"
+    "tests/agents/test_notification.py",
+    "tests/agents/codex/test_config.py"
   ],
   "bash/.bashrc": [
     "tests/nix/configuration.bats"
@@ -57,7 +58,8 @@
     "tests/agents/hooks/test_verification_rule.py",
     "tests/agents/test_python_runtime.py",
     "tests/agents/hooks/test_verification_session.py",
-    "tests/agents/test_hook_generation.py"
+    "tests/agents/test_hook_generation.py",
+    "tests/agents/codex/test_config.py"
   ],
   "agents/hooks/lib/session_*.py": [
     "tests/agents/hooks/test_verification_status.py",
