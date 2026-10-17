@@ -620,6 +620,12 @@ in
       config.home.file."Library/Application Support/lazygit/config.yml".source;
     # Automation must not inherit a project's virtualenv interpreter or user site packages.
     "dotfiles/bin/python3".source = lib.getExe pkgs.python314;
+    # Packages unpack into the shared virtual store outside the project, where the agent sandbox
+    # allows the .idea and .vscode directories some packages ship; node_modules holds only links.
+    "pnpm/rc".text = ''
+      store-dir=${config.xdg.dataHome}/pnpm/store
+      enable-global-virtual-store=true
+    '';
   };
 
   home.file = {
