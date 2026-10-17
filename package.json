@@ -5,7 +5,7 @@
   "description": "Locked JavaScript tools used by personal agent tests.",
   "devDependencies": {
     "@openai/codex": "0.162.1",
-    "oxfmt": "0.52.0",
+    "oxfmt": "0.73.0",
     "oxlint": "1.67.0"
   }
 }
