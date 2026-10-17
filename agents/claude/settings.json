@@ -59,7 +59,8 @@
         "~/.cache/nix",
         "~/.cache/uv",
         "~/Library/Caches/dprint",
-        "~/.local/state/agent-harness"
+        "~/.local/state/agent-harness",
+        "~/.local/share/pnpm"
       ]
     },
     "network": {

@@ -89,6 +89,11 @@ in
       "clippy"
       "rustfmt"
     ] homeNames;
+    pnpm-shared-virtual-store =
+      home.xdg.configFile."pnpm/rc".text == ''
+        store-dir=${home.xdg.dataHome}/pnpm/store
+        enable-global-virtual-store=true
+      '';
     no-mutable-language-installers =
       !(builtins.elem "rustup" homeNames)
       && !(home.home.activation ? rustupInit)
