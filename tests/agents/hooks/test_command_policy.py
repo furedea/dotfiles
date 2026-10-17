@@ -18,11 +18,7 @@ ALLOWED_RULES = REPO_ROOT / "agents/hooks/rules/allowed_commands.json"
 
 
 def grep_calls(spy: Mock) -> int:
-    return sum(
-        1
-        for call in spy.call_args_list
-        if Path(str(call.args[0][0])).name == "grep" and "--version" not in call.args[0]
-    )
+    return sum(1 for call in spy.call_args_list if Path(str(call.args[0][0])).name == "grep")
 
 
 def test_loading_validates_every_pattern_with_one_grep(mocker: MockerFixture) -> None:
@@ -100,27 +96,13 @@ def test_anchored_rules_match_multi_line_quoted_arguments() -> None:
     assert policy.regex_reason('git commit -m "subject\n\nCo-Authored-By: X <x@y>"', rules) == "commit"
 
 
-def fake_bsd_grep(directory: Path) -> None:
-    directory.mkdir()
-    script = directory / "grep"
-    script.write_text("#!/bin/sh\necho 'grep (BSD grep, GNU compatible) 2.6.0-FreeBSD'\nexit 1\n")
-    script.chmod(0o755)
-
-
-def test_a_later_gnu_grep_on_path_is_used_over_an_earlier_bsd_grep(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("grep_directory", ["", "/usr/bin"], ids=["PATH grep", "macOS grep first"])
+def test_a_multi_line_command_is_judged_as_one_line_by_any_grep(
+    monkeypatch: pytest.MonkeyPatch, grep_directory: str
 ) -> None:
-    fake_bsd_grep(tmp_path / "bsd")
-    monkeypatch.setenv("PATH", f"{tmp_path / 'bsd'}{os.pathsep}{os.environ['PATH']}")
-    policy.gnu_grep.cache_clear()
-    assert policy.regex_matches("^a.b$", "a\nb")
-
-
-def test_without_gnu_grep_the_policy_keeps_working_with_the_first_grep(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    fake_bsd_grep(tmp_path / "bsd")
-    monkeypatch.setenv("PATH", str(tmp_path / "bsd"))
-    policy.gnu_grep.cache_clear()
-    assert policy.gnu_grep() == "grep"
-    policy.gnu_grep.cache_clear()
+    if grep_directory:
+        monkeypatch.setenv("PATH", f"{grep_directory}{os.pathsep}{os.environ['PATH']}")
+    assert policy.regex_matches("^gh api user$", "gh api user") is True
+    assert policy.regex_matches("^gh api 'repos/x .*$", "gh api 'repos/x\n' --method DELETE") is True
+    assert policy.regex_matches("^gh api 'repos/x$", "gh api 'repos/x\n' --method DELETE") is False
+    assert policy.regex_matches("^--method DELETE$", "gh api 'repos/x\n' --method DELETE") is False
