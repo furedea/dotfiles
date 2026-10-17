@@ -19,6 +19,7 @@ known_first_party = [
   "check_evidence",
   "check_execution",
   "check_selection",
+  "cleanup_worktrees",
   "command_policy",
   "git_safety",
   "guard_command",

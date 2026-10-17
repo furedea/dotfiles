@@ -142,6 +142,16 @@
         ]
       },
       {
+        "hooks": [
+          {
+            "command": "\"$HOME/.claude/hooks/cleanup_worktrees.py\" session-start",
+            "type": "command",
+            "async": true,
+            "timeout": 120
+          }
+        ]
+      },
+      {
         "matcher": "compact|resume",
         "hooks": [
           {
