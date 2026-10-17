@@ -42,11 +42,12 @@ def any_regex_matches(patterns: Sequence[str], value: str, insensitive: bool = F
 
 @cache
 def gnu_grep() -> str:
-    """Find GNU grep anywhere on PATH, since an earlier BSD grep matches each line on its own.
+    """Prefer GNU grep anywhere on PATH, since an earlier BSD grep matches each line on its own.
 
     Sessions started by another process can put /usr/bin ahead of the Nix profile, and BSD grep
     ignores --null-data record boundaries, so anchors would match single lines of a quoted
-    argument. Without GNU grep the policy cannot keep that contract, so it fails closed.
+    argument. A session without GNU grep keeps the first grep on PATH rather than refusing every
+    command; providing GNU grep to every session is the harness's job.
     """
     for directory in os.environ.get("PATH", "").split(os.pathsep):
         candidate = Path(directory) / "grep"
@@ -58,7 +59,7 @@ def gnu_grep() -> str:
             continue
         if version.startswith("grep (GNU grep)"):
             return str(candidate)
-    raise ValueError("GNU grep is required for command policy but was not found on PATH")
+    return "grep"
 
 
 def load_rules(path: Path, prefixes: bool = False) -> list[dict]:

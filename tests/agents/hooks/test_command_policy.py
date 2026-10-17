@@ -116,10 +116,11 @@ def test_a_later_gnu_grep_on_path_is_used_over_an_earlier_bsd_grep(
     assert policy.regex_matches("^a.b$", "a\nb")
 
 
-def test_without_gnu_grep_the_policy_fails_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_without_gnu_grep_the_policy_keeps_working_with_the_first_grep(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     fake_bsd_grep(tmp_path / "bsd")
     monkeypatch.setenv("PATH", str(tmp_path / "bsd"))
     policy.gnu_grep.cache_clear()
-    with pytest.raises(ValueError, match="GNU grep"):
-        policy.regex_matches("^a$", "a")
+    assert policy.gnu_grep() == "grep"
     policy.gnu_grep.cache_clear()
