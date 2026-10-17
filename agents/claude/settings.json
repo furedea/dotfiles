@@ -5,9 +5,13 @@
     "CLAUDE_CODE_NO_FLICKER": "1",
     "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
     "ENABLE_TOOL_SEARCH": "true",
-    "GIT_CONFIG_COUNT": "1",
+    "GIT_CONFIG_COUNT": "3",
     "GIT_CONFIG_KEY_0": "core.fsmonitor",
-    "GIT_CONFIG_VALUE_0": "false"
+    "GIT_CONFIG_VALUE_0": "false",
+    "GIT_CONFIG_KEY_1": "commit.gpgsign",
+    "GIT_CONFIG_VALUE_1": "false",
+    "GIT_CONFIG_KEY_2": "tag.gpgsign",
+    "GIT_CONFIG_VALUE_2": "false"
   },
   "permissions": {
     "defaultMode": "auto",
@@ -66,10 +70,6 @@
     "excludedCommands": [
       "docker *",
       "gh *",
-      "git add *",
-      "git commit *",
-      "git push *",
-      "git status *",
       "herdr *",
       "watchman *"
     ]

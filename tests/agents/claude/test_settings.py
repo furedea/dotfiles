@@ -45,6 +45,16 @@ def test_go_clis_can_verify_tls_inside_the_sandbox() -> None:
     assert sandbox["enableWeakerNetworkIsolation"] is True
 
 
-def test_git_delivery_commands_chain_outside_the_sandbox() -> None:
+def test_agent_git_and_its_hooks_run_inside_the_sandbox() -> None:
     sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
-    assert {"git add *", "git status *", "git commit *", "git push *"} <= set(sandbox["excludedCommands"])
+    assert [command for command in sandbox["excludedCommands"] if command.startswith("git ")] == []
+
+
+def test_agent_commits_and_tags_are_left_unsigned() -> None:
+    environment = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["env"]
+    count = int(environment["GIT_CONFIG_COUNT"])
+    configured = {
+        environment[f"GIT_CONFIG_KEY_{index}"]: environment[f"GIT_CONFIG_VALUE_{index}"] for index in range(count)
+    }
+    assert configured["commit.gpgsign"] == "false"
+    assert configured["tag.gpgsign"] == "false"
