@@ -59,7 +59,8 @@ Rules:
 - Merged task worktrees and branches, in this repository and every repository with a Herdr task
   worktree, are removed at the next Claude session start, or on demand
   with `~/.claude/hooks/cleanup_worktrees.py [--dry-run]`: only when a merged pull request's head
-  is the branch tip and the tree is clean. Do not delete them by hand. An abandoned worktree is
+  is the branch tip and the tree is clean, and the primary checkout's `main` then fast-forwards.
+  Do not delete them or pull by hand. An abandoned worktree is
   the user's to remove. Moving and repairing worktrees stay outside the agent workflow.
 - When updating `main` itself, use `git pull --ff-only` in the main worktree. Do not use
   `git pull --rebase origin main` for the base branch.
