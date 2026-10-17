@@ -12,6 +12,7 @@ from typing import Self
 
 
 COMMAND_PREVIEW_LIMIT = 200
+RUN_TIME_PLACEHOLDER = "_"
 ALLOWED_NODES = frozenset(
     {
         None,
@@ -50,8 +51,8 @@ ALLOWED_NODES = frozenset(
 # Every command inside a substitution or clause is a CallExpr that parse judges on its own; the
 # substituted word itself is only known at run time.
 SUBSTITUTIONS = frozenset({"CmdSubst", "ProcSubst", "ArithmExp"})
-# ParamExp is admitted here only so literal_word can accept the home directory and refuse the rest.
-WORD_PARTS = frozenset({None, "Lit", "SglQuoted", "DblQuoted", "ParamExp"}) | SUBSTITUTIONS
+# A ParamExp other than the home directory makes its word a run-time word; Word is an operand inside it.
+WORD_PARTS = frozenset({None, "Lit", "SglQuoted", "DblQuoted", "ParamExp", "Word"}) | SUBSTITUTIONS
 QUOTED_PARTS = frozenset({"SglQuoted", "DblQuoted"})
 HOME_PARAMETER = "HOME"
 PARAMETER_MODIFIERS = ("Excl", "Length", "Width", "Index", "Slice", "Repl", "Exp")
@@ -113,6 +114,13 @@ class Command:
     def words_text(self) -> str:
         """The command's own words, without redirections or heredoc bodies, for rule matching."""
         return " ".join(self.words)
+
+    @property
+    def static_words_text(self) -> str:
+        """The command's words with each run-time word as a plain placeholder, for judging the static form."""
+        return " ".join(
+            RUN_TIME_PLACEHOLDER if dynamic else word for word, dynamic in zip(self.words, self.dynamic, strict=True)
+        )
 
     @property
     def has_dynamic_words(self) -> bool:
@@ -295,8 +303,11 @@ def is_home_parameter(part: dict) -> bool:
 
 
 def is_literal_text(value: str, *, first: bool) -> bool:
-    """Unquoted globs expand at run time, and so does a leading tilde unless it names the home directory."""
-    if re.search(r"(?<!\\)[*?\[]", value):
+    """Unquoted globs expand at run time, and so does a leading tilde unless it names the home directory.
+
+    A bracket opens a glob only when a closing bracket follows, so the test command `[` stays literal.
+    """
+    if re.search(r"(?<!\\)[*?]|(?<!\\)\[.+\]", value):
         return False
     if value.startswith("~"):
         return first and (value == "~" or value.startswith("~/"))

@@ -23,7 +23,7 @@ def grep_calls(spy: Mock) -> int:
 def test_loading_validates_every_pattern_with_one_grep(mocker: MockerFixture) -> None:
     spy = mocker.spy(subprocess, "run")
     rules = policy.load_rules(ALLOWED_RULES)
-    assert sum(len(rule["patterns"]) for rule in rules) > 100
+    assert sum(len(rule["patterns"]) for rule in rules) > 30
     assert grep_calls(spy) == 1
 
 
@@ -72,12 +72,9 @@ def test_empty_pattern_lists_never_match() -> None:
     assert policy.any_regex_matches((), "anything") is False
 
 
-def test_read_only_programs_are_listed_beside_patterns() -> None:
+def test_only_programs_that_reach_past_the_sandbox_are_governed() -> None:
     rules = policy.load_rules(ALLOWED_RULES)
-    programs = policy.read_only_programs(rules)
-    assert {"rg", "grep", "cat", "ls", "echo"} <= programs
-    assert "git" not in programs
-    assert "sed" not in programs
+    assert policy.governed_programs(rules) == {"gh", "curl", "wget"}
 
 
 def test_an_invalid_program_list_is_rejected(tmp_path: Path) -> None:

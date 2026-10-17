@@ -1,8 +1,9 @@
 # ADR-0034: Ask only for effects that escape the sandbox
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-10-15
 - Supersedes: ADR-0031
+- Superseded by: ADR-0036
 
 In the context of the three command tiers from
 [ADR-0031](0031_permit_agent_commands_by_reversibility.md), facing an OS sandbox that now confines

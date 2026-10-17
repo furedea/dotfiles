@@ -203,15 +203,45 @@ def test_dangerous_git_contract(
     "command",
     [
         'git push origin "$BRANCH"',
+        "git push $FLAGS origin topic",
+        "git -C $W push",
+        "git -C $W push origin HEAD",
         "git reset --hard $(git rev-parse HEAD)",
+        "git reset $MODE HEAD~1",
+        "git -C $W branch $FLAG topic",
+        "git -C $W worktree remove $TREE",
+        "git worktree $ACTION ../topic",
+        "./bin/[ab]* push",
+        "git $SUBCOMMAND",
         "gh pr merge $NUMBER",
+        "gh $COMMAND list",
         "$GIT push --force origin main",
     ],
 )
-def test_uninspectable_commands_are_left_to_the_user(command: str) -> None:
+def test_run_time_words_that_can_change_the_verdict_are_left_to_the_user(command: str) -> None:
     verdict = guard.decide({"tool_input": {"command": command}})
     assert verdict.decision == "ask"
     assert "review" in verdict.reason
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "git -C $W push origin feat/topic",
+        "git -C $W diff --stat",
+        "git -C $W add src/main.py",
+        "git -C $R worktree add -q -b topic $W origin/topic",
+        '[ -d "$W" ] && git -C "$W" status',
+        'git commit -m "$MESSAGE"',
+        "git log $(git merge-base main HEAD)..HEAD",
+        "gh pr view $NUMBER --json state",
+        "gh api $ENDPOINT --jq .name",
+        'gh pr create --head topic --body-file "$D/pr.md"',
+        "rg $PATTERN agents",
+    ],
+)
+def test_run_time_words_that_cannot_change_the_verdict_pass(command: str) -> None:
+    assert guard.decide({"tool_input": {"command": command}}).decision == "allow"
 
 
 @pytest.mark.parametrize(
@@ -224,10 +254,6 @@ def test_uninspectable_commands_are_left_to_the_user(command: str) -> None:
 )
 def test_destructive_git_inside_substitutions_and_clauses_is_denied(command: str) -> None:
     assert guard.decide({"tool_input": {"command": command}}).decision == "deny"
-
-
-def test_run_time_arguments_of_other_programs_do_not_concern_the_git_guard() -> None:
-    assert guard.decide({"tool_input": {"command": "rg $PATTERN agents"}}).decision == "allow"
 
 
 def test_escalations_report_an_ask_decision_instead_of_an_exit_status(capsys: pytest.CaptureFixture[str]) -> None:

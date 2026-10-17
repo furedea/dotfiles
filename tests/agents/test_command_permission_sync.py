@@ -88,10 +88,11 @@ def test_generated_bash_allows_exactly_match_shared_allow_prefixes(generated_per
     assert bash_prefixes(generated_permissions, "allow") == {" ".join(prefix) for prefix in ALLOW}
 
 
-def test_every_shared_allow_prefix_has_a_precise_global_rule() -> None:
+def test_every_shared_allow_prefix_of_a_governed_program_has_a_precise_global_rule() -> None:
     rules = json.loads((REPO_ROOT / "agents/hooks/rules/allowed_commands.json").read_text())
     patterns = [pattern for rule in rules["rules"] for pattern in rule["patterns"]]
-    for prefix in ALLOW:
+    governed = {program for rule in rules["rules"] for program in rule["programs"]}
+    for prefix in (prefix for prefix in ALLOW if prefix[0] in governed):
         start = "^" + " ".join(prefix)
         assert any(
             pattern.startswith(start + boundary) for pattern in patterns for boundary in (" ", "(", "$", r"\s")

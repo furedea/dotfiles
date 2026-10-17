@@ -147,6 +147,7 @@ def test_uninspectable_commands_are_left_to_the_user(kind: str, command: str) ->
         'for d in a b; do rm -rf "$d"; done',
         "bash <<'EOF'\nrm -rf build\nEOF",
         "if true; then git add -A; fi",
+        'echo "${TARGET:-$(rm -rf build)}"',
     ],
 )
 def test_denials_apply_to_commands_inside_substitutions_clauses_and_shell_heredocs(command: str) -> None:

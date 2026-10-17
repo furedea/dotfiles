@@ -61,7 +61,7 @@ def load_rules(path: Path, prefixes: bool = False) -> list[dict]:
             if prefixes and rule.get("decision") not in {"allow", "ask", "deny"}:
                 raise ValueError("invalid decision")
             if not prefixes and "programs" in rule and not is_name_list(rule["programs"]):
-                raise ValueError("invalid read-only program list")
+                raise ValueError("invalid governed program list")
         if not prefixes:
             any_regex_matches(all_patterns(rules), "")
         return rules
@@ -73,8 +73,8 @@ def is_name_list(value: object) -> bool:
     return isinstance(value, list) and bool(value) and all(isinstance(item, str) and item for item in value)
 
 
-def read_only_programs(rules: list[dict]) -> frozenset[str]:
-    """Programs that may take any literal, glob, or variable argument as long as nothing is written."""
+def governed_programs(rules: list[dict]) -> frozenset[str]:
+    """Programs whose effects reach past the sandbox, so only their listed forms pass unreviewed."""
     return frozenset(program for rule in rules for program in rule.get("programs", ()))
 
 
