@@ -11,6 +11,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "lib"))
 
+import herdr_ownership
 import hook_input
 import patch_input
 import session_gate
@@ -53,6 +54,9 @@ def check_scope(record: SessionRecord, payload: dict) -> None:
     for key in ("cwd", "workdir"):
         if directory := value.get(key):
             require_inside(record, cwd / directory)
+    command = value.get("command", value.get("cmd", ""))
+    if isinstance(command, str):
+        herdr_ownership.check(record, command)
     try:
         patch = hook_input.patch_body(value, payload.get("tool_name"))
     except ValueError as error:

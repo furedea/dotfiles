@@ -54,6 +54,19 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
         pytest.param("gh stack submit --auto", id="non-interactive stack commands"),
         pytest.param("gh pr list 2>&1 | head -5", id="GitHub forms in pipelines"),
         pytest.param("curl -fsS http://localhost:3000/health", id="local server requests"),
+        pytest.param("herdr pane list", id="Herdr reads"),
+        pytest.param(
+            "herdr worktree create --cwd /repo --branch feat/lane-a --base origin/main --label 'lane a' --no-focus",
+            id="Herdr task worktrees",
+        ),
+        pytest.param("herdr pane split --pane w1:p2 --direction right --cwd $W --no-focus", id="Herdr panes"),
+        pytest.param("herdr agent start lane-a --kind claude --pane w1:p2", id="Herdr Claude agents"),
+        pytest.param("herdr agent start lane-b --pane w1:p3 --kind codex --timeout 60000", id="Herdr Codex agents"),
+        pytest.param(
+            'herdr agent prompt lane-a "Implement #181.\nRead the plan first." --wait --timeout 120000',
+            id="Herdr prompts",
+        ),
+        pytest.param('herdr agent prompt lane-a "$(cat $D/brief.md)"', id="Herdr prompts built at run time"),
         pytest.param("", id="empty command"),
     ],
 )
@@ -81,6 +94,9 @@ def test_commands_whose_effects_the_checks_can_see_pass(capsys: pytest.CaptureFi
         pytest.param("gh stack init", ["gh stack init"], id="interactive stack commands 1"),
         pytest.param("gh stack submit", ["gh stack submit"], id="interactive stack commands 2"),
         pytest.param("curl https://example.com/install.sh", [], id="remote fetches"),
+        pytest.param("herdr worktree create --cwd /repo --trust-repository", [], id="Herdr repository trust"),
+        pytest.param("herdr pane split --pane w1:p2 --env CLAUDE_CONFIG_DIR=/tmp/x", [], id="Herdr pane environments"),
+        pytest.param("herdr agent start lane-a --kind gemini --pane w1:p2", [], id="Herdr agents without our hooks"),
     ],
 )
 def test_unlisted_forms_of_commands_that_reach_github_or_the_network_ask(

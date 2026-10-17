@@ -3,2122 +3,3475 @@
   "rules": [
     {
       "decision": "allow",
-      "prefix": ["actionlint"],
+      "prefix": [
+        "actionlint"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["autocorrect", "--lint"],
+      "prefix": [
+        "autocorrect",
+        "--lint"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["autocorrect", "--fix"],
+      "prefix": [
+        "autocorrect",
+        "--fix"
+      ],
       "justification": "Allow explicit formatting because it changes files instead of duplicating verification."
     },
     {
       "decision": "allow",
-      "prefix": ["bats"],
+      "prefix": [
+        "bats"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["bash", "-n"],
+      "prefix": [
+        "bash",
+        "-n"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["cargo", "build"],
+      "prefix": [
+        "cargo",
+        "build"
+      ],
       "justification": "Allow explicit Rust artifact builds that are not verification gates."
     },
     {
       "decision": "allow",
-      "prefix": ["cargo", "metadata"],
+      "prefix": [
+        "cargo",
+        "metadata"
+      ],
       "justification": "Allow read-only Rust workspace metadata queries."
     },
     {
       "decision": "allow",
-      "prefix": ["cargo", "run"],
+      "prefix": [
+        "cargo",
+        "run"
+      ],
       "justification": "Allow explicit Rust program execution that is not a verification gate."
     },
     {
       "decision": "allow",
-      "prefix": ["cargo", "test"],
+      "prefix": [
+        "cargo",
+        "test"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["cargo", "check"],
+      "prefix": [
+        "cargo",
+        "check"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["cargo", "clippy"],
+      "prefix": [
+        "cargo",
+        "clippy"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["cargo", "fmt", "--check"],
+      "prefix": [
+        "cargo",
+        "fmt",
+        "--check"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["cargo", "fmt"],
+      "prefix": [
+        "cargo",
+        "fmt"
+      ],
       "justification": "Allow explicit formatting because it changes files instead of duplicating verification."
     },
     {
       "decision": "allow",
-      "prefix": ["cargo", "doc"],
+      "prefix": [
+        "cargo",
+        "doc"
+      ],
       "justification": "Allow documentation builds; they only write under the target directory."
     },
     {
       "decision": "allow",
-      "prefix": ["cargo", "tree"],
+      "prefix": [
+        "cargo",
+        "tree"
+      ],
       "justification": "Allow read-only Rust dependency inspection."
     },
     {
       "decision": "allow",
-      "prefix": ["cargo", "bench"],
+      "prefix": [
+        "cargo",
+        "bench"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["commitlint"],
+      "prefix": [
+        "commitlint"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["deadnix"],
+      "prefix": [
+        "deadnix"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["dprint", "check"],
+      "prefix": [
+        "dprint",
+        "check"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["dprint", "fmt"],
+      "prefix": [
+        "dprint",
+        "fmt"
+      ],
       "justification": "Allow explicit formatting because it changes files instead of duplicating verification."
     },
     {
       "decision": "allow",
-      "prefix": ["gh", "api"],
+      "prefix": [
+        "gh",
+        "api"
+      ],
       "justification": "Allow read-only GitHub API queries and the enumerated write forms the precise rules accept."
     },
     {
       "decision": "allow",
-      "prefix": ["gh", "issue"],
+      "prefix": [
+        "gh",
+        "issue"
+      ],
       "justification": "Allow issue operations that can be edited or reopened; deletion stays denied."
     },
     {
       "decision": "allow",
-      "prefix": ["gh", "label"],
+      "prefix": [
+        "gh",
+        "label"
+      ],
       "justification": "Allow label listing and creation."
     },
     {
       "decision": "allow",
-      "prefix": ["gh", "pr", "list"],
+      "prefix": [
+        "gh",
+        "pr",
+        "list"
+      ],
       "justification": "Allow read-only pull request inspection."
     },
     {
       "decision": "allow",
-      "prefix": ["gh", "pr", "status"],
+      "prefix": [
+        "gh",
+        "pr",
+        "status"
+      ],
       "justification": "Allow read-only pull request inspection."
     },
     {
       "decision": "allow",
-      "prefix": ["gh", "pr", "checks"],
+      "prefix": [
+        "gh",
+        "pr",
+        "checks"
+      ],
       "justification": "Allow read-only pull request inspection."
     },
     {
       "decision": "allow",
-      "prefix": ["gh", "pr", "diff"],
+      "prefix": [
+        "gh",
+        "pr",
+        "diff"
+      ],
       "justification": "Allow read-only pull request inspection."
     },
     {
       "decision": "allow",
-      "prefix": ["gh", "pr", "view"],
+      "prefix": [
+        "gh",
+        "pr",
+        "view"
+      ],
       "justification": "Allow read-only pull request inspection."
     },
     {
       "decision": "allow",
-      "prefix": ["gh", "pr", "create"],
+      "prefix": [
+        "gh",
+        "pr",
+        "create"
+      ],
       "justification": "Allow pull request delivery; merging stays a human decision."
     },
     {
       "decision": "allow",
-      "prefix": ["gh", "pr", "checkout"],
+      "prefix": [
+        "gh",
+        "pr",
+        "checkout"
+      ],
       "justification": "Allow checking out a pull request branch; the dangerous-Git guard still applies."
     },
     {
       "decision": "allow",
-      "prefix": ["gh", "pr", "comment"],
+      "prefix": [
+        "gh",
+        "pr",
+        "comment"
+      ],
       "justification": "Allow reviewable pull request operations that can be edited or reverted."
     },
     {
       "decision": "allow",
-      "prefix": ["gh", "pr", "edit"],
+      "prefix": [
+        "gh",
+        "pr",
+        "edit"
+      ],
       "justification": "Allow reviewable pull request operations that can be edited or reverted."
     },
     {
       "decision": "allow",
-      "prefix": ["gh", "pr", "ready"],
+      "prefix": [
+        "gh",
+        "pr",
+        "ready"
+      ],
       "justification": "Allow reviewable pull request operations that can be edited or reverted."
     },
     {
       "decision": "allow",
-      "prefix": ["gh", "pr", "close"],
+      "prefix": [
+        "gh",
+        "pr",
+        "close"
+      ],
       "justification": "Allow reviewable pull request operations that can be edited or reverted."
     },
     {
       "decision": "allow",
-      "prefix": ["gh", "pr", "reopen"],
+      "prefix": [
+        "gh",
+        "pr",
+        "reopen"
+      ],
       "justification": "Allow reviewable pull request operations that can be edited or reverted."
     },
     {
       "decision": "allow",
-      "prefix": ["gh", "pr", "review"],
+      "prefix": [
+        "gh",
+        "pr",
+        "review"
+      ],
       "justification": "Allow review comments and change requests; approvals are not for the author's own agent."
     },
     {
       "decision": "allow",
-      "prefix": ["gh", "run"],
+      "prefix": [
+        "gh",
+        "run"
+      ],
       "justification": "Allow workflow run inspection, reruns, downloads, and cancellation; all are repeatable."
     },
     {
       "decision": "allow",
-      "prefix": ["gh", "repo", "view"],
+      "prefix": [
+        "gh",
+        "repo",
+        "view"
+      ],
       "justification": "Allow read-only repository inspection."
     },
     {
       "decision": "allow",
-      "prefix": ["gh", "repo", "clone"],
+      "prefix": [
+        "gh",
+        "repo",
+        "clone"
+      ],
       "justification": "Allow cloning into the working directory."
     },
     {
       "decision": "allow",
-      "prefix": ["gh", "stack", "view"],
+      "prefix": [
+        "gh",
+        "stack",
+        "view"
+      ],
       "justification": "Allow read-only inspection of stacked pull requests."
     },
     {
       "decision": "allow",
-      "prefix": ["gh", "stack", "init"],
+      "prefix": [
+        "gh",
+        "stack",
+        "init"
+      ],
       "justification": "Allow creating and publishing stacked pull requests; merging stays a human decision."
     },
     {
       "decision": "allow",
-      "prefix": ["gh", "stack", "add"],
+      "prefix": [
+        "gh",
+        "stack",
+        "add"
+      ],
       "justification": "Allow creating and publishing stacked pull requests; merging stays a human decision."
     },
     {
       "decision": "allow",
-      "prefix": ["gh", "stack", "submit"],
+      "prefix": [
+        "gh",
+        "stack",
+        "submit"
+      ],
       "justification": "Allow creating and publishing stacked pull requests; merging stays a human decision."
     },
     {
       "decision": "allow",
-      "prefix": ["gh", "stack", "push"],
+      "prefix": [
+        "gh",
+        "stack",
+        "push"
+      ],
       "justification": "Allow leased pushes of the stack's own branches, matching the git push lease policy."
     },
     {
       "decision": "allow",
-      "prefix": ["gh", "stack", "sync"],
+      "prefix": [
+        "gh",
+        "stack",
+        "sync"
+      ],
       "justification": "Allow leased pushes of the stack's own branches, matching the git push lease policy."
     },
     {
       "decision": "allow",
-      "prefix": ["gh", "stack", "rebase"],
+      "prefix": [
+        "gh",
+        "stack",
+        "rebase"
+      ],
       "justification": "Allow local rebases across the stack; reflog can undo them."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "add"],
+      "prefix": [
+        "git",
+        "add"
+      ],
       "justification": "Allow staging explicit paths; bulk staging stays forbidden."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "branch"],
+      "prefix": [
+        "git",
+        "branch"
+      ],
       "justification": "Allow branch listing, creation, renames, and safe deletion; force deletion stays denied."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "commit"],
+      "prefix": [
+        "git",
+        "commit"
+      ],
       "justification": "Allow commits with inline messages; verification bypasses stay forbidden."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "fetch"],
+      "prefix": [
+        "git",
+        "fetch"
+      ],
       "justification": "Allowed for refreshing remote refs before creating a pull request."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "ls-files"],
+      "prefix": [
+        "git",
+        "ls-files"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "pull"],
+      "prefix": [
+        "git",
+        "pull"
+      ],
       "justification": "Allow fast-forward and rebase pulls onto the current branch."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "push"],
+      "prefix": [
+        "git",
+        "push"
+      ],
       "justification": "Publishing needs no prompt; the dangerous-Git guard rejects unleased force pushes and protected branches."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "rebase"],
+      "prefix": [
+        "git",
+        "rebase"
+      ],
       "justification": "Allow non-interactive rebases; reflog can undo them and pushes are checked separately."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "worktree"],
+      "prefix": [
+        "git",
+        "worktree"
+      ],
       "justification": "Allow worktree creation, listing, clean removal, and pruning; forced removal, moves, and repairs stay denied."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "switch"],
+      "prefix": [
+        "git",
+        "switch"
+      ],
       "justification": "Allow Git operations that reflog or HEAD can undo; destructive flags stay with the dangerous-Git guard."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "restore"],
+      "prefix": [
+        "git",
+        "restore"
+      ],
       "justification": "Allow unstaging; restoring the working tree stays with the dangerous-Git guard."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "stash", "push"],
+      "prefix": [
+        "git",
+        "stash",
+        "push"
+      ],
       "justification": "Allow Git operations that reflog or HEAD can undo; destructive flags stay with the dangerous-Git guard."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "stash", "pop"],
+      "prefix": [
+        "git",
+        "stash",
+        "pop"
+      ],
       "justification": "Allow Git operations that reflog or HEAD can undo; destructive flags stay with the dangerous-Git guard."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "stash", "apply"],
+      "prefix": [
+        "git",
+        "stash",
+        "apply"
+      ],
       "justification": "Allow Git operations that reflog or HEAD can undo; destructive flags stay with the dangerous-Git guard."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "stash", "list"],
+      "prefix": [
+        "git",
+        "stash",
+        "list"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "stash", "show"],
+      "prefix": [
+        "git",
+        "stash",
+        "show"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "reset"],
+      "prefix": [
+        "git",
+        "reset"
+      ],
       "justification": "Allow soft and mixed resets; hard resets stay with the dangerous-Git guard."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "merge"],
+      "prefix": [
+        "git",
+        "merge"
+      ],
       "justification": "Allow Git operations that reflog or HEAD can undo; destructive flags stay with the dangerous-Git guard."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "cherry-pick"],
+      "prefix": [
+        "git",
+        "cherry-pick"
+      ],
       "justification": "Allow Git operations that reflog or HEAD can undo; destructive flags stay with the dangerous-Git guard."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "revert"],
+      "prefix": [
+        "git",
+        "revert"
+      ],
       "justification": "Allow Git operations that reflog or HEAD can undo; destructive flags stay with the dangerous-Git guard."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "tag"],
+      "prefix": [
+        "git",
+        "tag"
+      ],
       "justification": "Allow local tag creation and listing; tag pushes follow the push rules."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "rm"],
+      "prefix": [
+        "git",
+        "rm"
+      ],
       "justification": "Allow removing tracked files that HEAD can restore; forced removal stays with the dangerous-Git guard."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "mv"],
+      "prefix": [
+        "git",
+        "mv"
+      ],
       "justification": "Allow renaming tracked files that HEAD can restore; forced overwrites stay with the dangerous-Git guard."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "status"],
+      "prefix": [
+        "git",
+        "status"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "log"],
+      "prefix": [
+        "git",
+        "log"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "diff"],
+      "prefix": [
+        "git",
+        "diff"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "show"],
+      "prefix": [
+        "git",
+        "show"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "blame"],
+      "prefix": [
+        "git",
+        "blame"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "rev-parse"],
+      "prefix": [
+        "git",
+        "rev-parse"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "rev-list"],
+      "prefix": [
+        "git",
+        "rev-list"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "merge-base"],
+      "prefix": [
+        "git",
+        "merge-base"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "describe"],
+      "prefix": [
+        "git",
+        "describe"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "cat-file"],
+      "prefix": [
+        "git",
+        "cat-file"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "for-each-ref"],
+      "prefix": [
+        "git",
+        "for-each-ref"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "shortlog"],
+      "prefix": [
+        "git",
+        "shortlog"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "check-ignore"],
+      "prefix": [
+        "git",
+        "check-ignore"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "reflog"],
+      "prefix": [
+        "git",
+        "reflog"
+      ],
       "justification": "Allow reading the reflog; deleting or expiring entries stays denied."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "config"],
+      "prefix": [
+        "git",
+        "config"
+      ],
       "justification": "Allow reading Git configuration; writes are not matched by the precise rules."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "remote", "-v"],
+      "prefix": [
+        "git",
+        "remote",
+        "-v"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "remote", "show"],
+      "prefix": [
+        "git",
+        "remote",
+        "show"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["git", "remote", "get-url"],
+      "prefix": [
+        "git",
+        "remote",
+        "get-url"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["nixfmt", "--check"],
+      "prefix": [
+        "nixfmt",
+        "--check"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["nixfmt"],
+      "prefix": [
+        "nixfmt"
+      ],
       "justification": "Allow explicit formatting because it changes files instead of duplicating verification."
     },
     {
       "decision": "allow",
-      "prefix": ["npm", "run", "test"],
+      "prefix": [
+        "npm",
+        "run",
+        "test"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["npm", "test"],
+      "prefix": [
+        "npm",
+        "test"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["npm", "run", "lint"],
+      "prefix": [
+        "npm",
+        "run",
+        "lint"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["npm", "run", "format-check"],
+      "prefix": [
+        "npm",
+        "run",
+        "format-check"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["npm", "run", "format:check"],
+      "prefix": [
+        "npm",
+        "run",
+        "format:check"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["npm", "run", "typecheck"],
+      "prefix": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["npm", "run", "check"],
+      "prefix": [
+        "npm",
+        "run",
+        "check"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["npm", "run", "knip"],
+      "prefix": [
+        "npm",
+        "run",
+        "knip"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["npm", "run", "build"],
+      "prefix": [
+        "npm",
+        "run",
+        "build"
+      ],
       "justification": "Allow project builds; they only write under the project's build output."
     },
     {
       "decision": "allow",
-      "prefix": ["npm", "ci"],
+      "prefix": [
+        "npm",
+        "ci"
+      ],
       "justification": "Allow lockfile-faithful dependency installation; changing dependencies asks first."
     },
     {
       "decision": "allow",
-      "prefix": ["npm", "exec", "--", "vitest"],
+      "prefix": [
+        "npm",
+        "exec",
+        "--",
+        "vitest"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["npm", "exec", "--", "jest"],
+      "prefix": [
+        "npm",
+        "exec",
+        "--",
+        "jest"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["node", "--test"],
+      "prefix": [
+        "node",
+        "--test"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["oxfmt", "--check"],
+      "prefix": [
+        "oxfmt",
+        "--check"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["oxfmt"],
+      "prefix": [
+        "oxfmt"
+      ],
       "justification": "Allow explicit formatting because it changes files instead of duplicating verification."
     },
     {
       "decision": "allow",
-      "prefix": ["oxlint"],
+      "prefix": [
+        "oxlint"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["pnpm", "test"],
+      "prefix": [
+        "pnpm",
+        "test"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["pnpm", "lint"],
+      "prefix": [
+        "pnpm",
+        "lint"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["pnpm", "format-check"],
+      "prefix": [
+        "pnpm",
+        "format-check"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["pnpm", "typecheck"],
+      "prefix": [
+        "pnpm",
+        "typecheck"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["pnpm", "run", "test"],
+      "prefix": [
+        "pnpm",
+        "run",
+        "test"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["pnpm", "run", "lint"],
+      "prefix": [
+        "pnpm",
+        "run",
+        "lint"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["pnpm", "run", "format-check"],
+      "prefix": [
+        "pnpm",
+        "run",
+        "format-check"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["pnpm", "run", "format:check"],
+      "prefix": [
+        "pnpm",
+        "run",
+        "format:check"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["pnpm", "run", "typecheck"],
+      "prefix": [
+        "pnpm",
+        "run",
+        "typecheck"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["pnpm", "check"],
+      "prefix": [
+        "pnpm",
+        "check"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["pnpm", "run", "check"],
+      "prefix": [
+        "pnpm",
+        "run",
+        "check"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["pnpm", "run", "knip"],
+      "prefix": [
+        "pnpm",
+        "run",
+        "knip"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["pnpm", "build"],
+      "prefix": [
+        "pnpm",
+        "build"
+      ],
       "justification": "Allow project builds; they only write under the project's build output."
     },
     {
       "decision": "allow",
-      "prefix": ["pnpm", "run", "build"],
+      "prefix": [
+        "pnpm",
+        "run",
+        "build"
+      ],
       "justification": "Allow project builds; they only write under the project's build output."
     },
     {
       "decision": "allow",
-      "prefix": ["pnpm", "install", "--frozen-lockfile"],
+      "prefix": [
+        "pnpm",
+        "install",
+        "--frozen-lockfile"
+      ],
       "justification": "Allow lockfile-faithful dependency installation; changing dependencies asks first."
     },
     {
       "decision": "allow",
-      "prefix": ["pnpm", "exec", "vitest"],
+      "prefix": [
+        "pnpm",
+        "exec",
+        "vitest"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["pnpm", "exec", "tsc"],
+      "prefix": [
+        "pnpm",
+        "exec",
+        "tsc"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["pnpm", "exec", "oxlint"],
+      "prefix": [
+        "pnpm",
+        "exec",
+        "oxlint"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["pnpm", "exec", "oxfmt", "--check"],
+      "prefix": [
+        "pnpm",
+        "exec",
+        "oxfmt",
+        "--check"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["pnpm", "exec", "oxfmt"],
+      "prefix": [
+        "pnpm",
+        "exec",
+        "oxfmt"
+      ],
       "justification": "Allow explicit formatting because it changes files instead of duplicating verification."
     },
     {
       "decision": "allow",
-      "prefix": ["pnpm", "exec", "tsgolint"],
+      "prefix": [
+        "pnpm",
+        "exec",
+        "tsgolint"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["prettierd"],
+      "prefix": [
+        "prettierd"
+      ],
       "justification": "Allow explicit formatting because it changes files instead of duplicating verification."
     },
     {
       "decision": "allow",
-      "prefix": ["selene"],
+      "prefix": [
+        "selene"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["shellcheck"],
+      "prefix": [
+        "shellcheck"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["shfmt", "-w"],
+      "prefix": [
+        "shfmt",
+        "-w"
+      ],
       "justification": "Allow explicit shell formatting because it changes files instead of duplicating verification."
     },
     {
       "decision": "allow",
-      "prefix": ["shfmt", "-d"],
+      "prefix": [
+        "shfmt",
+        "-d"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["statix"],
+      "prefix": [
+        "statix"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["stylua", "--check"],
+      "prefix": [
+        "stylua",
+        "--check"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["stylua"],
+      "prefix": [
+        "stylua"
+      ],
       "justification": "Allow explicit formatting because it changes files instead of duplicating verification."
     },
     {
       "decision": "allow",
-      "prefix": ["tex-fmt", "--check"],
+      "prefix": [
+        "tex-fmt",
+        "--check"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["tex-fmt"],
+      "prefix": [
+        "tex-fmt"
+      ],
       "justification": "Allow explicit formatting because it changes files instead of duplicating verification."
     },
     {
       "decision": "allow",
-      "prefix": ["tsc", "--noEmit"],
+      "prefix": [
+        "tsc",
+        "--noEmit"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["tsgolint"],
+      "prefix": [
+        "tsgolint"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["uv", "run", "python"],
+      "prefix": [
+        "uv",
+        "run",
+        "python"
+      ],
       "justification": "Allow script execution the sandbox confines to the worktree and temp directories; fetched packages ask first."
     },
     {
       "decision": "allow",
-      "prefix": ["uv", "run", "--frozen", "python"],
+      "prefix": [
+        "uv",
+        "run",
+        "--frozen",
+        "python"
+      ],
       "justification": "Allow script execution the sandbox confines to the worktree and temp directories; fetched packages ask first."
     },
     {
       "decision": "allow",
-      "prefix": ["uv", "run", "--frozen", "pytest"],
+      "prefix": [
+        "uv",
+        "run",
+        "--frozen",
+        "pytest"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["uv", "run", "--frozen", "ruff"],
+      "prefix": [
+        "uv",
+        "run",
+        "--frozen",
+        "ruff"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["uv", "run", "--frozen", "ty"],
+      "prefix": [
+        "uv",
+        "run",
+        "--frozen",
+        "ty"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["uv", "run", "--frozen", "bats"],
+      "prefix": [
+        "uv",
+        "run",
+        "--frozen",
+        "bats"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["uv", "run", "--frozen", "--group", "audit", "deptry"],
+      "prefix": [
+        "uv",
+        "run",
+        "--frozen",
+        "--group",
+        "audit",
+        "deptry"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["uv", "run", "--frozen", "--group", "audit", "vulture"],
+      "prefix": [
+        "uv",
+        "run",
+        "--frozen",
+        "--group",
+        "audit",
+        "vulture"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["uv", "lock", "--check"],
+      "prefix": [
+        "uv",
+        "lock",
+        "--check"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["uv", "sync", "--frozen"],
+      "prefix": [
+        "uv",
+        "sync",
+        "--frozen"
+      ],
       "justification": "Allow lockfile-faithful dependency installation; changing dependencies asks first."
     },
     {
       "decision": "allow",
-      "prefix": ["lefthook", "run"],
+      "prefix": [
+        "lefthook",
+        "run"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["ls_lint"],
+      "prefix": [
+        "ls_lint"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["nix", "flake", "check"],
+      "prefix": [
+        "nix",
+        "flake",
+        "check"
+      ],
       "justification": "Allow local verification needed for the requested work; reuse successful hook results."
     },
     {
       "decision": "allow",
-      "prefix": ["nix", "flake", "metadata"],
+      "prefix": [
+        "nix",
+        "flake",
+        "metadata"
+      ],
       "justification": "Allow Nix evaluation and builds; they write only to the store and result links."
     },
     {
       "decision": "allow",
-      "prefix": ["nix", "flake", "show"],
+      "prefix": [
+        "nix",
+        "flake",
+        "show"
+      ],
       "justification": "Allow Nix evaluation and builds; they write only to the store and result links."
     },
     {
       "decision": "allow",
-      "prefix": ["nix", "eval"],
+      "prefix": [
+        "nix",
+        "eval"
+      ],
       "justification": "Allow Nix evaluation and builds; they write only to the store and result links."
     },
     {
       "decision": "allow",
-      "prefix": ["nix", "build"],
+      "prefix": [
+        "nix",
+        "build"
+      ],
       "justification": "Allow Nix evaluation and builds; they write only to the store and result links."
     },
     {
       "decision": "allow",
-      "prefix": ["nix", "derivation", "show"],
+      "prefix": [
+        "nix",
+        "derivation",
+        "show"
+      ],
       "justification": "Allow Nix evaluation and builds; they write only to the store and result links."
     },
     {
       "decision": "allow",
-      "prefix": ["nix", "store", "diff-closures"],
+      "prefix": [
+        "nix",
+        "store",
+        "diff-closures"
+      ],
       "justification": "Allow read-only Nix store inspection."
     },
     {
       "decision": "allow",
-      "prefix": ["nix", "store", "path-info"],
+      "prefix": [
+        "nix",
+        "store",
+        "path-info"
+      ],
       "justification": "Allow read-only Nix store inspection."
     },
     {
       "decision": "allow",
-      "prefix": ["nix", "hash"],
+      "prefix": [
+        "nix",
+        "hash"
+      ],
       "justification": "Allow read-only Nix store inspection."
     },
     {
       "decision": "allow",
-      "prefix": ["nix-store", "-q"],
+      "prefix": [
+        "nix-store",
+        "-q"
+      ],
       "justification": "Allow read-only Nix store inspection."
     },
     {
       "decision": "allow",
-      "prefix": ["nix-instantiate", "--parse"],
+      "prefix": [
+        "nix-instantiate",
+        "--parse"
+      ],
       "justification": "Allow Nix evaluation and builds; they write only to the store and result links."
     },
     {
       "decision": "allow",
-      "prefix": ["home-manager", "build"],
+      "prefix": [
+        "home-manager",
+        "build"
+      ],
       "justification": "Allow building configurations without activating them."
     },
     {
       "decision": "allow",
-      "prefix": ["darwin-rebuild", "build"],
+      "prefix": [
+        "darwin-rebuild",
+        "build"
+      ],
       "justification": "Allow building configurations without activating them."
     },
     {
       "decision": "allow",
-      "prefix": ["darwin-rebuild", "check"],
+      "prefix": [
+        "darwin-rebuild",
+        "check"
+      ],
       "justification": "Allow building configurations without activating them."
     },
     {
       "decision": "allow",
-      "prefix": ["python3"],
+      "prefix": [
+        "python3"
+      ],
       "justification": "Allow script execution the sandbox confines to the worktree and temp directories; fetched packages ask first."
     },
     {
       "decision": "allow",
-      "prefix": ["python"],
+      "prefix": [
+        "python"
+      ],
       "justification": "Allow script execution the sandbox confines to the worktree and temp directories; fetched packages ask first."
     },
     {
       "decision": "allow",
-      "prefix": ["node"],
+      "prefix": [
+        "node"
+      ],
       "justification": "Allow script execution the sandbox confines to the worktree and temp directories; fetched packages ask first."
     },
     {
       "decision": "allow",
-      "prefix": ["echo"],
+      "prefix": [
+        "echo"
+      ],
       "justification": "Allow trivial read-only builtins so they never reach the classifier."
     },
     {
       "decision": "allow",
-      "prefix": ["printf"],
+      "prefix": [
+        "printf"
+      ],
       "justification": "Allow trivial read-only builtins so they never reach the classifier."
     },
     {
       "decision": "allow",
-      "prefix": ["pwd"],
+      "prefix": [
+        "pwd"
+      ],
       "justification": "Allow trivial read-only builtins so they never reach the classifier."
     },
     {
       "decision": "allow",
-      "prefix": ["date"],
+      "prefix": [
+        "date"
+      ],
       "justification": "Allow trivial read-only builtins so they never reach the classifier."
     },
     {
       "decision": "allow",
-      "prefix": ["true"],
+      "prefix": [
+        "true"
+      ],
       "justification": "Allow trivial read-only builtins so they never reach the classifier."
     },
     {
       "decision": "allow",
-      "prefix": ["false"],
+      "prefix": [
+        "false"
+      ],
       "justification": "Allow trivial read-only builtins so they never reach the classifier."
     },
     {
       "decision": "allow",
-      "prefix": ["test"],
+      "prefix": [
+        "test"
+      ],
       "justification": "Allow trivial read-only builtins so they never reach the classifier."
     },
     {
       "decision": "allow",
-      "prefix": ["basename"],
+      "prefix": [
+        "basename"
+      ],
       "justification": "Allow trivial read-only builtins so they never reach the classifier."
     },
     {
       "decision": "allow",
-      "prefix": ["dirname"],
+      "prefix": [
+        "dirname"
+      ],
       "justification": "Allow trivial read-only builtins so they never reach the classifier."
     },
     {
       "decision": "allow",
-      "prefix": ["realpath"],
+      "prefix": [
+        "realpath"
+      ],
       "justification": "Allow trivial read-only builtins so they never reach the classifier."
     },
     {
       "decision": "allow",
-      "prefix": ["readlink"],
+      "prefix": [
+        "readlink"
+      ],
       "justification": "Allow trivial read-only builtins so they never reach the classifier."
     },
     {
       "decision": "allow",
-      "prefix": ["seq"],
+      "prefix": [
+        "seq"
+      ],
       "justification": "Allow trivial read-only builtins so they never reach the classifier."
     },
     {
       "decision": "allow",
-      "prefix": ["rg"],
+      "prefix": [
+        "rg"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["fd"],
+      "prefix": [
+        "fd"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["cat"],
+      "prefix": [
+        "cat"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["bat"],
+      "prefix": [
+        "bat"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["head"],
+      "prefix": [
+        "head"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["tail"],
+      "prefix": [
+        "tail"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["sed"],
+      "prefix": [
+        "sed"
+      ],
       "justification": "Allow stream editing; in-place writes stay inside the worktree, where Git restores tracked files."
     },
     {
       "decision": "allow",
-      "prefix": ["awk"],
+      "prefix": [
+        "awk"
+      ],
       "justification": "Allow text processing the sandbox confines to the worktree and temp directories."
     },
     {
       "decision": "allow",
-      "prefix": ["xargs"],
+      "prefix": [
+        "xargs"
+      ],
       "justification": "Allow argument fan-out; the hooks judge the wrapped command on its own."
     },
     {
       "decision": "allow",
-      "prefix": ["cd"],
+      "prefix": [
+        "cd"
+      ],
       "justification": "Allow directory changes; the verification scope check asks for targets outside the worktree and temp directories."
     },
     {
       "decision": "allow",
-      "prefix": ["nl"],
+      "prefix": [
+        "nl"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["wc"],
+      "prefix": [
+        "wc"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["ls"],
+      "prefix": [
+        "ls"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["eza"],
+      "prefix": [
+        "eza"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["stat"],
+      "prefix": [
+        "stat"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["file"],
+      "prefix": [
+        "file"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["jq"],
+      "prefix": [
+        "jq"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["diff"],
+      "prefix": [
+        "diff"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["sort"],
+      "prefix": [
+        "sort"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["uniq"],
+      "prefix": [
+        "uniq"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["cut"],
+      "prefix": [
+        "cut"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["tr"],
+      "prefix": [
+        "tr"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["grep"],
+      "prefix": [
+        "grep"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["find"],
+      "prefix": [
+        "find"
+      ],
       "justification": "Allow read-only inspection; deleting or executing through find stays forbidden."
     },
     {
       "decision": "allow",
-      "prefix": ["ps"],
+      "prefix": [
+        "ps"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["which"],
+      "prefix": [
+        "which"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["command", "-v"],
+      "prefix": [
+        "command",
+        "-v"
+      ],
       "justification": "Allow read-only inspection; the precise rules reject redirections that would write files."
     },
     {
       "decision": "allow",
-      "prefix": ["mkdir", "-p"],
+      "prefix": [
+        "mkdir",
+        "-p"
+      ],
       "justification": "Allow creating directories inside the working tree."
     },
     {
       "decision": "allow",
-      "prefix": ["touch"],
+      "prefix": [
+        "touch"
+      ],
       "justification": "Allow creating empty files inside the working tree."
     },
     {
       "decision": "allow",
-      "prefix": ["mv"],
+      "prefix": [
+        "mv"
+      ],
       "justification": "Allow moves and copies the sandbox confines to the worktree, where Git restores tracked files."
     },
     {
       "decision": "allow",
-      "prefix": ["cp"],
+      "prefix": [
+        "cp"
+      ],
       "justification": "Allow moves and copies the sandbox confines to the worktree, where Git restores tracked files."
     },
     {
       "decision": "allow",
-      "prefix": ["curl"],
+      "prefix": [
+        "curl"
+      ],
       "justification": "Allow requests to local servers only; the sandbox and the precise rules keep remote fetches out."
     },
     {
       "decision": "allow",
-      "prefix": ["wget"],
+      "prefix": [
+        "wget"
+      ],
       "justification": "Allow requests to local servers only; the sandbox and the precise rules keep remote fetches out."
     },
     {
       "decision": "allow",
-      "prefix": ["defaults", "read"],
+      "prefix": [
+        "defaults",
+        "read"
+      ],
       "justification": "Allow read-only inspection of macOS preferences; writes belong to nix-darwin."
     },
     {
       "decision": "allow",
-      "prefix": ["brew", "list"],
+      "prefix": [
+        "brew",
+        "list"
+      ],
       "justification": "Allow read-only Homebrew inspection; changes belong to the declarative configuration."
     },
     {
       "decision": "allow",
-      "prefix": ["brew", "info"],
+      "prefix": [
+        "brew",
+        "info"
+      ],
       "justification": "Allow read-only Homebrew inspection; changes belong to the declarative configuration."
     },
     {
       "decision": "allow",
-      "prefix": ["tailscale", "status"],
+      "prefix": [
+        "tailscale",
+        "status"
+      ],
       "justification": "Allow read-only network status; configuration changes stay denied."
     },
     {
       "decision": "allow",
-      "prefix": ["xcodes", "list"],
+      "prefix": [
+        "xcodes",
+        "list"
+      ],
       "justification": "Allow read-only toolchain inspection; installation stays denied."
     },
     {
       "decision": "allow",
-      "prefix": ["xcodes", "installed"],
+      "prefix": [
+        "xcodes",
+        "installed"
+      ],
       "justification": "Allow read-only toolchain inspection; installation stays denied."
     },
     {
       "decision": "allow",
-      "prefix": ["launchctl", "list"],
+      "prefix": [
+        "launchctl",
+        "list"
+      ],
       "justification": "Allow read-only service inspection; service changes belong to nix-darwin."
     },
     {
       "decision": "allow",
-      "prefix": ["launchctl", "print"],
+      "prefix": [
+        "launchctl",
+        "print"
+      ],
       "justification": "Allow read-only service inspection; service changes belong to nix-darwin."
     },
     {
       "decision": "allow",
-      "prefix": ["docker", "ps"],
+      "prefix": [
+        "docker",
+        "ps"
+      ],
       "justification": "Allow read-only container inspection."
     },
     {
       "decision": "allow",
-      "prefix": ["docker", "images"],
+      "prefix": [
+        "docker",
+        "images"
+      ],
       "justification": "Allow read-only container inspection."
     },
     {
       "decision": "allow",
-      "prefix": ["docker", "logs"],
+      "prefix": [
+        "docker",
+        "logs"
+      ],
       "justification": "Allow read-only container inspection."
     },
     {
       "decision": "allow",
-      "prefix": ["docker", "compose", "ps"],
+      "prefix": [
+        "docker",
+        "compose",
+        "ps"
+      ],
       "justification": "Allow read-only container inspection."
     },
     {
       "decision": "allow",
-      "prefix": ["docker", "compose", "logs"],
+      "prefix": [
+        "docker",
+        "compose",
+        "logs"
+      ],
       "justification": "Allow read-only container inspection."
     },
     {
       "decision": "allow",
-      "prefix": ["kubectl", "get"],
+      "prefix": [
+        "kubectl",
+        "get"
+      ],
       "justification": "Allow read-only cluster inspection; mutations stay denied."
     },
     {
       "decision": "allow",
-      "prefix": ["kubectl", "describe"],
+      "prefix": [
+        "kubectl",
+        "describe"
+      ],
       "justification": "Allow read-only cluster inspection; mutations stay denied."
     },
     {
       "decision": "allow",
-      "prefix": ["kubectl", "logs"],
+      "prefix": [
+        "kubectl",
+        "logs"
+      ],
       "justification": "Allow read-only cluster inspection; mutations stay denied."
     },
     {
       "decision": "allow",
-      "prefix": ["terraform", "plan"],
+      "prefix": [
+        "terraform",
+        "plan"
+      ],
       "justification": "Allow planning and validation; applying infrastructure changes stays denied."
     },
     {
       "decision": "allow",
-      "prefix": ["terraform", "validate"],
+      "prefix": [
+        "terraform",
+        "validate"
+      ],
       "justification": "Allow planning and validation; applying infrastructure changes stays denied."
     },
     {
       "decision": "allow",
-      "prefix": ["terraform", "fmt"],
+      "prefix": [
+        "terraform",
+        "fmt"
+      ],
       "justification": "Allow planning and validation; applying infrastructure changes stays denied."
     },
     {
       "decision": "allow",
-      "prefix": ["herdr", "status"],
+      "prefix": [
+        "herdr",
+        "status"
+      ],
       "justification": "Allow read-only Herdr inspection; controlling other panes asks first."
     },
     {
       "decision": "allow",
-      "prefix": ["herdr", "pane", "list"],
+      "prefix": [
+        "herdr",
+        "pane",
+        "list"
+      ],
       "justification": "Allow read-only Herdr inspection; controlling other panes asks first."
     },
     {
       "decision": "allow",
-      "prefix": ["herdr", "pane", "read"],
+      "prefix": [
+        "herdr",
+        "pane",
+        "read"
+      ],
       "justification": "Allow read-only Herdr inspection; controlling other panes asks first."
     },
     {
       "decision": "allow",
-      "prefix": ["herdr", "pane", "current"],
+      "prefix": [
+        "herdr",
+        "pane",
+        "current"
+      ],
       "justification": "Allow read-only Herdr inspection; controlling other panes asks first."
     },
     {
       "decision": "allow",
-      "prefix": ["herdr", "plugin", "list"],
+      "prefix": [
+        "herdr",
+        "plugin",
+        "list"
+      ],
       "justification": "Allow read-only Herdr inspection; controlling other panes asks first."
     },
     {
       "decision": "allow",
-      "prefix": ["herdr", "plugin", "log"],
+      "prefix": [
+        "herdr",
+        "plugin",
+        "log"
+      ],
       "justification": "Allow read-only Herdr inspection; controlling other panes asks first."
     },
     {
       "decision": "allow",
-      "prefix": ["herdr", "config", "check"],
+      "prefix": [
+        "herdr",
+        "config",
+        "check"
+      ],
       "justification": "Allow read-only Herdr inspection; controlling other panes asks first."
     },
     {
       "decision": "allow",
-      "prefix": ["herdr", "agent", "list"],
+      "prefix": [
+        "herdr",
+        "agent",
+        "list"
+      ],
       "justification": "Allow read-only Herdr inspection; controlling other panes asks first."
     },
     {
       "decision": "allow",
-      "prefix": ["herdr", "api", "snapshot"],
+      "prefix": [
+        "herdr",
+        "api",
+        "snapshot"
+      ],
       "justification": "Allow read-only Herdr inspection; controlling other panes asks first."
     },
     {
       "decision": "allow",
-      "prefix": ["herdr", "--help"],
+      "prefix": [
+        "herdr",
+        "--help"
+      ],
       "justification": "Allow read-only Herdr inspection; controlling other panes asks first."
     },
     {
       "decision": "allow",
-      "prefix": ["herdr", "--version"],
+      "prefix": [
+        "herdr",
+        "--version"
+      ],
       "justification": "Allow read-only Herdr inspection; controlling other panes asks first."
     },
     {
       "decision": "allow",
-      "prefix": ["esa", "auth", "status"],
+      "prefix": [
+        "esa",
+        "auth",
+        "status"
+      ],
       "justification": "Allow read-only checks of the esa session; publishing asks first."
     },
     {
       "decision": "ask",
-      "prefix": ["uv", "add"],
+      "prefix": [
+        "uv",
+        "add"
+      ],
       "justification": "Ask before changing dependencies or lock files; the request should name the change."
     },
     {
       "decision": "ask",
-      "prefix": ["uv", "lock", "--upgrade-package"],
+      "prefix": [
+        "uv",
+        "lock",
+        "--upgrade-package"
+      ],
       "justification": "Ask before changing dependencies or lock files; the request should name the change."
     },
     {
       "decision": "ask",
-      "prefix": ["uv", "lock", "--upgrade"],
+      "prefix": [
+        "uv",
+        "lock",
+        "--upgrade"
+      ],
       "justification": "Ask before changing dependencies or lock files; the request should name the change."
     },
     {
       "decision": "ask",
-      "prefix": ["uv", "run", "--with"],
+      "prefix": [
+        "uv",
+        "run",
+        "--with"
+      ],
       "justification": "Ask before running scripts or fetched packages that policy cannot inspect."
     },
     {
       "decision": "ask",
-      "prefix": ["uvx"],
+      "prefix": [
+        "uvx"
+      ],
       "justification": "Ask before running scripts or fetched packages that policy cannot inspect."
     },
     {
       "decision": "ask",
-      "prefix": ["cargo", "add"],
+      "prefix": [
+        "cargo",
+        "add"
+      ],
       "justification": "Ask before changing dependencies or lock files; the request should name the change."
     },
     {
       "decision": "ask",
-      "prefix": ["cargo", "update"],
+      "prefix": [
+        "cargo",
+        "update"
+      ],
       "justification": "Ask before changing dependencies or lock files; the request should name the change."
     },
     {
       "decision": "ask",
-      "prefix": ["pnpm", "add"],
+      "prefix": [
+        "pnpm",
+        "add"
+      ],
       "justification": "Ask before changing dependencies or lock files; the request should name the change."
     },
     {
       "decision": "ask",
-      "prefix": ["npm", "install"],
+      "prefix": [
+        "npm",
+        "install"
+      ],
       "justification": "Ask before changing dependencies or lock files; the request should name the change."
     },
     {
       "decision": "ask",
-      "prefix": ["nix", "flake", "update"],
+      "prefix": [
+        "nix",
+        "flake",
+        "update"
+      ],
       "justification": "Ask before changing dependencies or lock files; the request should name the change."
     },
     {
       "decision": "ask",
-      "prefix": ["nix", "flake", "lock"],
+      "prefix": [
+        "nix",
+        "flake",
+        "lock"
+      ],
       "justification": "Ask before changing dependencies or lock files; the request should name the change."
     },
     {
       "decision": "ask",
-      "prefix": ["nix", "run"],
+      "prefix": [
+        "nix",
+        "run"
+      ],
       "justification": "Ask before running scripts or fetched packages that policy cannot inspect."
     },
     {
       "decision": "ask",
-      "prefix": ["nix", "shell"],
+      "prefix": [
+        "nix",
+        "shell"
+      ],
       "justification": "Ask before running scripts or fetched packages that policy cannot inspect."
     },
     {
       "decision": "allow",
-      "prefix": ["nix", "develop"],
+      "prefix": [
+        "nix",
+        "develop"
+      ],
       "justification": "Allow entering a project's development shell, which its flake.lock pins, inside the sandbox."
     },
     {
       "decision": "ask",
-      "prefix": ["npx"],
+      "prefix": [
+        "npx"
+      ],
       "justification": "Ask before running scripts or fetched packages that policy cannot inspect."
     },
     {
       "decision": "ask",
-      "prefix": ["pnpm", "dlx"],
+      "prefix": [
+        "pnpm",
+        "dlx"
+      ],
       "justification": "Ask before running scripts or fetched packages that policy cannot inspect."
     },
     {
       "decision": "ask",
-      "prefix": ["bunx"],
+      "prefix": [
+        "bunx"
+      ],
       "justification": "Ask before running scripts or fetched packages that policy cannot inspect."
     },
     {
       "decision": "ask",
-      "prefix": ["rm"],
+      "prefix": [
+        "rm"
+      ],
       "justification": "Ask before removing files that Git cannot restore; recursive removal stays denied."
     },
     {
       "decision": "allow",
-      "prefix": ["ln", "-s"],
+      "prefix": [
+        "ln",
+        "-s"
+      ],
       "justification": "Allow links the sandbox confines to the worktree; without -f a link never overwrites a file."
     },
     {
       "decision": "allow",
-      "prefix": ["perl", "-i"],
+      "prefix": [
+        "perl",
+        "-i"
+      ],
       "justification": "Allow in-place writes the sandbox confines to the worktree; Git can restore tracked files."
     },
     {
       "decision": "allow",
-      "prefix": ["tee"],
+      "prefix": [
+        "tee"
+      ],
       "justification": "Allow in-place writes the sandbox confines to the worktree; Git can restore tracked files."
     },
     {
       "decision": "allow",
-      "prefix": ["truncate"],
+      "prefix": [
+        "truncate"
+      ],
       "justification": "Allow in-place writes the sandbox confines to the worktree; Git can restore tracked files."
     },
     {
       "decision": "ask",
-      "prefix": ["kill"],
+      "prefix": [
+        "kill"
+      ],
       "justification": "Ask before signaling processes; the target may belong to the user."
     },
     {
       "decision": "ask",
-      "prefix": ["pkill"],
+      "prefix": [
+        "pkill"
+      ],
       "justification": "Ask before signaling processes; the target may belong to the user."
     },
     {
       "decision": "ask",
-      "prefix": ["git", "remote", "add"],
+      "prefix": [
+        "git",
+        "remote",
+        "add"
+      ],
       "justification": "Ask before changing where the repository publishes."
     },
     {
       "decision": "ask",
-      "prefix": ["git", "remote", "set-url"],
+      "prefix": [
+        "git",
+        "remote",
+        "set-url"
+      ],
       "justification": "Ask before changing where the repository publishes."
     },
     {
       "decision": "ask",
-      "prefix": ["git", "stash", "drop"],
+      "prefix": [
+        "git",
+        "stash",
+        "drop"
+      ],
       "justification": "Ask before dropping stashes; recovery needs dangling-commit archaeology."
     },
     {
       "decision": "ask",
-      "prefix": ["git", "stash", "clear"],
+      "prefix": [
+        "git",
+        "stash",
+        "clear"
+      ],
       "justification": "Ask before dropping stashes; recovery needs dangling-commit archaeology."
     },
     {
       "decision": "ask",
-      "prefix": ["gh", "pr", "merge"],
+      "prefix": [
+        "gh",
+        "pr",
+        "merge"
+      ],
       "justification": "Merging is a human decision; ask so the request itself authorizes it."
     },
     {
       "decision": "ask",
-      "prefix": ["gh", "stack", "merge"],
+      "prefix": [
+        "gh",
+        "stack",
+        "merge"
+      ],
       "justification": "Merging is a human decision; ask so the request itself authorizes it."
     },
     {
       "decision": "ask",
-      "prefix": ["gh", "stack", "unstack"],
+      "prefix": [
+        "gh",
+        "stack",
+        "unstack"
+      ],
       "justification": "Ask before changing stack structure on GitHub."
     },
     {
       "decision": "ask",
-      "prefix": ["gh", "workflow", "run"],
+      "prefix": [
+        "gh",
+        "workflow",
+        "run"
+      ],
       "justification": "Ask before publishing or triggering work that is visible to others."
     },
     {
       "decision": "ask",
-      "prefix": ["gh", "release"],
+      "prefix": [
+        "gh",
+        "release"
+      ],
       "justification": "Ask before publishing or triggering work that is visible to others."
     },
     {
       "decision": "ask",
-      "prefix": ["herdr", "pane", "send-text"],
+      "prefix": [
+        "herdr",
+        "pane",
+        "send-text"
+      ],
       "justification": "Ask before controlling other panes; their commands run outside this policy."
     },
     {
       "decision": "ask",
-      "prefix": ["herdr", "pane", "send-keys"],
+      "prefix": [
+        "herdr",
+        "pane",
+        "send-keys"
+      ],
       "justification": "Ask before controlling other panes; their commands run outside this policy."
     },
     {
       "decision": "ask",
-      "prefix": ["herdr", "pane", "run"],
+      "prefix": [
+        "herdr",
+        "pane",
+        "run"
+      ],
       "justification": "Ask before controlling other panes; their commands run outside this policy."
     },
     {
       "decision": "ask",
-      "prefix": ["herdr", "pane", "create"],
+      "prefix": [
+        "herdr",
+        "pane",
+        "create"
+      ],
       "justification": "Ask before controlling other panes; their commands run outside this policy."
     },
     {
-      "decision": "ask",
-      "prefix": ["herdr", "agent", "start"],
-      "justification": "Ask before controlling other panes; their commands run outside this policy."
+      "decision": "allow",
+      "prefix": [
+        "herdr",
+        "worktree",
+        "create"
+      ],
+      "justification": "Allow handing work to a new Herdr session; the hooks limit prompts to agents this session started."
+    },
+    {
+      "decision": "allow",
+      "prefix": [
+        "herdr",
+        "pane",
+        "split"
+      ],
+      "justification": "Allow handing work to a new Herdr session; the hooks limit prompts to agents this session started."
+    },
+    {
+      "decision": "allow",
+      "prefix": [
+        "herdr",
+        "agent",
+        "start"
+      ],
+      "justification": "Allow handing work to a new Herdr session; the hooks limit prompts to agents this session started."
     },
     {
       "decision": "ask",
-      "prefix": ["herdr", "agent", "send-keys"],
+      "prefix": [
+        "herdr",
+        "agent",
+        "send-keys"
+      ],
       "justification": "Ask before controlling other panes; their commands run outside this policy."
     },
     {
-      "decision": "ask",
-      "prefix": ["herdr", "agent", "prompt"],
-      "justification": "Ask before controlling other panes; their commands run outside this policy."
+      "decision": "allow",
+      "prefix": [
+        "herdr",
+        "agent",
+        "prompt"
+      ],
+      "justification": "Allow handing work to a new Herdr session; the hooks limit prompts to agents this session started."
     },
     {
       "decision": "ask",
-      "prefix": ["herdr", "workspace"],
+      "prefix": [
+        "herdr",
+        "workspace"
+      ],
       "justification": "Ask before changing Herdr layout or server state."
     },
     {
       "decision": "ask",
-      "prefix": ["herdr", "tab"],
+      "prefix": [
+        "herdr",
+        "tab"
+      ],
       "justification": "Ask before changing Herdr layout or server state."
     },
     {
       "decision": "ask",
-      "prefix": ["herdr", "server"],
+      "prefix": [
+        "herdr",
+        "server"
+      ],
       "justification": "Ask before changing Herdr layout or server state."
     },
     {
       "decision": "ask",
-      "prefix": ["herdr", "plugin", "action"],
+      "prefix": [
+        "herdr",
+        "plugin",
+        "action"
+      ],
       "justification": "Ask before changing Herdr layout or server state."
     },
     {
       "decision": "ask",
-      "prefix": ["esa", "post", "create"],
+      "prefix": [
+        "esa",
+        "post",
+        "create"
+      ],
       "justification": "Ask before publishing or triggering work that is visible to others."
     },
     {
       "decision": "ask",
-      "prefix": ["esa", "post", "update"],
+      "prefix": [
+        "esa",
+        "post",
+        "update"
+      ],
       "justification": "Ask before publishing or triggering work that is visible to others."
     },
     {
       "decision": "ask",
-      "prefix": ["docker", "build"],
+      "prefix": [
+        "docker",
+        "build"
+      ],
       "justification": "Ask before building images; build steps run arbitrary commands outside the sandbox."
     },
     {
       "decision": "ask",
-      "prefix": ["docker", "run"],
+      "prefix": [
+        "docker",
+        "run"
+      ],
       "justification": "Ask before starting containers; mounts and networks reach outside the sandbox."
     },
     {
       "decision": "ask",
-      "prefix": ["docker", "exec"],
+      "prefix": [
+        "docker",
+        "exec"
+      ],
       "justification": "Ask before starting containers; mounts and networks reach outside the sandbox."
     },
     {
       "decision": "ask",
-      "prefix": ["docker", "compose", "up"],
+      "prefix": [
+        "docker",
+        "compose",
+        "up"
+      ],
       "justification": "Ask before starting containers; mounts and networks reach outside the sandbox."
     },
     {
       "decision": "ask",
-      "prefix": ["docker", "compose", "down"],
+      "prefix": [
+        "docker",
+        "compose",
+        "down"
+      ],
       "justification": "Ask before stopping containers that may hold state."
     },
     {
       "decision": "ask",
-      "prefix": ["terraform", "init"],
+      "prefix": [
+        "terraform",
+        "init"
+      ],
       "justification": "Ask before changing dependencies or lock files; the request should name the change."
     },
     {
       "decision": "deny",
-      "prefix": ["bash", "-c"],
+      "prefix": [
+        "bash",
+        "-c"
+      ],
       "justification": "Do not hide shell commands inside a shell wrapper; policy inspects the literal command."
     },
     {
       "decision": "deny",
-      "prefix": ["bash", "-lc"],
+      "prefix": [
+        "bash",
+        "-lc"
+      ],
       "justification": "Do not hide shell commands inside a shell wrapper; policy inspects the literal command."
     },
     {
       "decision": "deny",
-      "prefix": ["sh", "-c"],
+      "prefix": [
+        "sh",
+        "-c"
+      ],
       "justification": "Do not hide shell commands inside a shell wrapper; policy inspects the literal command."
     },
     {
       "decision": "deny",
-      "prefix": ["zsh", "-c"],
+      "prefix": [
+        "zsh",
+        "-c"
+      ],
       "justification": "Do not hide shell commands inside a shell wrapper; policy inspects the literal command."
     },
     {
       "decision": "deny",
-      "prefix": ["zsh", "-lc"],
+      "prefix": [
+        "zsh",
+        "-lc"
+      ],
       "justification": "Do not hide shell commands inside a shell wrapper; policy inspects the literal command."
     },
     {
       "decision": "deny",
-      "prefix": ["rm", "-r"],
+      "prefix": [
+        "rm",
+        "-r"
+      ],
       "justification": "Do not remove directory trees from an agent session; Git cannot restore untracked files."
     },
     {
       "decision": "deny",
-      "prefix": ["rm", "-rf"],
+      "prefix": [
+        "rm",
+        "-rf"
+      ],
       "justification": "Do not remove directory trees from an agent session; Git cannot restore untracked files."
     },
     {
       "decision": "deny",
-      "prefix": ["rm", "-fr"],
+      "prefix": [
+        "rm",
+        "-fr"
+      ],
       "justification": "Do not remove directory trees from an agent session; Git cannot restore untracked files."
     },
     {
       "decision": "deny",
-      "prefix": ["rm", "-R"],
+      "prefix": [
+        "rm",
+        "-R"
+      ],
       "justification": "Do not remove directory trees from an agent session; Git cannot restore untracked files."
     },
     {
       "decision": "deny",
-      "prefix": ["rm", "-Rf"],
+      "prefix": [
+        "rm",
+        "-Rf"
+      ],
       "justification": "Do not remove directory trees from an agent session; Git cannot restore untracked files."
     },
     {
       "decision": "deny",
-      "prefix": ["rm", "--recursive"],
+      "prefix": [
+        "rm",
+        "--recursive"
+      ],
       "justification": "Do not remove directory trees from an agent session; Git cannot restore untracked files."
     },
     {
       "decision": "deny",
-      "prefix": ["chown"],
+      "prefix": [
+        "chown"
+      ],
       "justification": "Do not change file ownership from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["sudo"],
+      "prefix": [
+        "sudo"
+      ],
       "justification": "Do not run privileged commands from an agent session. Ask the user to run them manually."
     },
     {
       "decision": "deny",
-      "prefix": ["su"],
+      "prefix": [
+        "su"
+      ],
       "justification": "Do not run privileged commands from an agent session. Ask the user to run them manually."
     },
     {
       "decision": "deny",
-      "prefix": ["home-manager", "switch"],
+      "prefix": [
+        "home-manager",
+        "switch"
+      ],
       "justification": "Do not activate Home Manager configurations from an agent. Ask the user to review and run the switch manually."
     },
     {
       "decision": "deny",
-      "prefix": ["open"],
+      "prefix": [
+        "open"
+      ],
       "justification": "Do not launch GUI applications from an agent session. Ask the user to open them manually."
     },
     {
       "decision": "deny",
-      "prefix": ["osascript"],
+      "prefix": [
+        "osascript"
+      ],
       "justification": "Do not automate macOS from agent shell commands."
     },
     {
       "decision": "deny",
-      "prefix": ["pip"],
+      "prefix": [
+        "pip"
+      ],
       "justification": "Use project-managed package tooling instead of pip."
     },
     {
       "decision": "deny",
-      "prefix": ["uv", "pip"],
+      "prefix": [
+        "uv",
+        "pip"
+      ],
       "justification": "Use project-managed package tooling instead of pip."
     },
     {
       "decision": "deny",
-      "prefix": ["uv", "add", "--dev"],
+      "prefix": [
+        "uv",
+        "add",
+        "--dev"
+      ],
       "justification": "Use named dependency groups instead of the legacy dev group."
     },
     {
       "decision": "deny",
-      "prefix": ["uv", "tool", "install"],
+      "prefix": [
+        "uv",
+        "tool",
+        "install"
+      ],
       "justification": "Nix owns globally installed tools; change the declarative configuration instead."
     },
     {
       "decision": "deny",
-      "prefix": ["uv", "tool", "uninstall"],
+      "prefix": [
+        "uv",
+        "tool",
+        "uninstall"
+      ],
       "justification": "Nix owns globally installed tools; change the declarative configuration instead."
     },
     {
       "decision": "deny",
-      "prefix": ["brew", "install"],
+      "prefix": [
+        "brew",
+        "install"
+      ],
       "justification": "Nix owns globally installed tools; change the declarative configuration instead."
     },
     {
       "decision": "deny",
-      "prefix": ["brew", "uninstall"],
+      "prefix": [
+        "brew",
+        "uninstall"
+      ],
       "justification": "Nix owns globally installed tools; change the declarative configuration instead."
     },
     {
       "decision": "deny",
-      "prefix": ["brew", "upgrade"],
+      "prefix": [
+        "brew",
+        "upgrade"
+      ],
       "justification": "Nix owns globally installed tools; change the declarative configuration instead."
     },
     {
       "decision": "deny",
-      "prefix": ["brew", "update"],
+      "prefix": [
+        "brew",
+        "update"
+      ],
       "justification": "Nix owns globally installed tools; change the declarative configuration instead."
     },
     {
       "decision": "deny",
-      "prefix": ["brew", "tap"],
+      "prefix": [
+        "brew",
+        "tap"
+      ],
       "justification": "Nix owns globally installed tools; change the declarative configuration instead."
     },
     {
       "decision": "deny",
-      "prefix": ["brew", "untap"],
+      "prefix": [
+        "brew",
+        "untap"
+      ],
       "justification": "Nix owns globally installed tools; change the declarative configuration instead."
     },
     {
       "decision": "deny",
-      "prefix": ["brew", "services"],
+      "prefix": [
+        "brew",
+        "services"
+      ],
       "justification": "nix-darwin owns services and system state; ask the user to change them."
     },
     {
       "decision": "deny",
-      "prefix": ["brew", "link"],
+      "prefix": [
+        "brew",
+        "link"
+      ],
       "justification": "Nix owns globally installed tools; change the declarative configuration instead."
     },
     {
       "decision": "deny",
-      "prefix": ["brew", "unlink"],
+      "prefix": [
+        "brew",
+        "unlink"
+      ],
       "justification": "Nix owns globally installed tools; change the declarative configuration instead."
     },
     {
       "decision": "deny",
-      "prefix": ["uv", "python", "install"],
+      "prefix": [
+        "uv",
+        "python",
+        "install"
+      ],
       "justification": "Nix owns language runtimes; change the declarative configuration instead."
     },
     {
       "decision": "deny",
-      "prefix": ["uv", "python", "uninstall"],
+      "prefix": [
+        "uv",
+        "python",
+        "uninstall"
+      ],
       "justification": "Nix owns language runtimes; change the declarative configuration instead."
     },
     {
       "decision": "deny",
-      "prefix": ["uv", "remove"],
+      "prefix": [
+        "uv",
+        "remove"
+      ],
       "justification": "Do not remove project dependencies without an explicit implementation plan."
     },
     {
       "decision": "deny",
-      "prefix": ["cargo", "install"],
+      "prefix": [
+        "cargo",
+        "install"
+      ],
       "justification": "Nix owns globally installed tools; change the declarative configuration instead."
     },
     {
       "decision": "deny",
-      "prefix": ["cargo", "remove"],
+      "prefix": [
+        "cargo",
+        "remove"
+      ],
       "justification": "Do not remove project dependencies without an explicit implementation plan."
     },
     {
       "decision": "deny",
-      "prefix": ["cargo", "publish"],
+      "prefix": [
+        "cargo",
+        "publish"
+      ],
       "justification": "Do not publish packages from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["npm", "publish"],
+      "prefix": [
+        "npm",
+        "publish"
+      ],
       "justification": "Do not publish packages from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["npm", "remove"],
+      "prefix": [
+        "npm",
+        "remove"
+      ],
       "justification": "Do not remove project dependencies without an explicit implementation plan."
     },
     {
       "decision": "deny",
-      "prefix": ["npm", "uninstall"],
+      "prefix": [
+        "npm",
+        "uninstall"
+      ],
       "justification": "Do not remove project dependencies without an explicit implementation plan."
     },
     {
       "decision": "deny",
-      "prefix": ["npm", "install", "-g"],
+      "prefix": [
+        "npm",
+        "install",
+        "-g"
+      ],
       "justification": "Nix owns globally installed tools; change the declarative configuration instead."
     },
     {
       "decision": "deny",
-      "prefix": ["npm", "install", "--global"],
+      "prefix": [
+        "npm",
+        "install",
+        "--global"
+      ],
       "justification": "Nix owns globally installed tools; change the declarative configuration instead."
     },
     {
       "decision": "deny",
-      "prefix": ["pnpm", "add", "-g"],
+      "prefix": [
+        "pnpm",
+        "add",
+        "-g"
+      ],
       "justification": "Nix owns globally installed tools; change the declarative configuration instead."
     },
     {
       "decision": "deny",
-      "prefix": ["pnpm", "add", "--global"],
+      "prefix": [
+        "pnpm",
+        "add",
+        "--global"
+      ],
       "justification": "Nix owns globally installed tools; change the declarative configuration instead."
     },
     {
       "decision": "deny",
-      "prefix": ["nix", "profile", "install"],
+      "prefix": [
+        "nix",
+        "profile",
+        "install"
+      ],
       "justification": "Nix owns globally installed tools; change the declarative configuration instead."
     },
     {
       "decision": "deny",
-      "prefix": ["nix", "profile", "remove"],
+      "prefix": [
+        "nix",
+        "profile",
+        "remove"
+      ],
       "justification": "Nix owns globally installed tools; change the declarative configuration instead."
     },
     {
       "decision": "deny",
-      "prefix": ["nix-env", "-i"],
+      "prefix": [
+        "nix-env",
+        "-i"
+      ],
       "justification": "Nix owns globally installed tools; change the declarative configuration instead."
     },
     {
       "decision": "deny",
-      "prefix": ["nix-env", "--install"],
+      "prefix": [
+        "nix-env",
+        "--install"
+      ],
       "justification": "Nix owns globally installed tools; change the declarative configuration instead."
     },
     {
       "decision": "deny",
-      "prefix": ["nix-collect-garbage"],
+      "prefix": [
+        "nix-collect-garbage"
+      ],
       "justification": "Do not delete store paths from an agent session; garbage collection is scheduled declaratively."
     },
     {
       "decision": "deny",
-      "prefix": ["nix", "store", "gc"],
+      "prefix": [
+        "nix",
+        "store",
+        "gc"
+      ],
       "justification": "Do not delete store paths from an agent session; garbage collection is scheduled declaratively."
     },
     {
       "decision": "deny",
-      "prefix": ["nix", "store", "delete"],
+      "prefix": [
+        "nix",
+        "store",
+        "delete"
+      ],
       "justification": "Do not delete store paths from an agent session; garbage collection is scheduled declaratively."
     },
     {
       "decision": "deny",
-      "prefix": ["gem", "install"],
+      "prefix": [
+        "gem",
+        "install"
+      ],
       "justification": "Nix owns globally installed tools; change the declarative configuration instead."
     },
     {
       "decision": "deny",
-      "prefix": ["go", "install"],
+      "prefix": [
+        "go",
+        "install"
+      ],
       "justification": "Nix owns globally installed tools; change the declarative configuration instead."
     },
     {
       "decision": "deny",
-      "prefix": ["pipx", "install"],
+      "prefix": [
+        "pipx",
+        "install"
+      ],
       "justification": "Nix owns globally installed tools; change the declarative configuration instead."
     },
     {
       "decision": "deny",
-      "prefix": ["ssh"],
+      "prefix": [
+        "ssh"
+      ],
       "justification": "Do not open remote sessions or copy files to remote systems from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["mosh"],
+      "prefix": [
+        "mosh"
+      ],
       "justification": "Do not open remote sessions or copy files to remote systems from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["scp"],
+      "prefix": [
+        "scp"
+      ],
       "justification": "Do not open remote sessions or copy files to remote systems from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["rsync"],
+      "prefix": [
+        "rsync"
+      ],
       "justification": "Do not open remote sessions or copy files to remote systems from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["nc"],
+      "prefix": [
+        "nc"
+      ],
       "justification": "Do not open raw network connections from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["psql"],
+      "prefix": [
+        "psql"
+      ],
       "justification": "Do not connect to databases from agent shell commands."
     },
     {
       "decision": "deny",
-      "prefix": ["mysql"],
+      "prefix": [
+        "mysql"
+      ],
       "justification": "Do not connect to databases from agent shell commands."
     },
     {
       "decision": "deny",
-      "prefix": ["mongod"],
+      "prefix": [
+        "mongod"
+      ],
       "justification": "Do not start database daemons from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["docker", "push"],
+      "prefix": [
+        "docker",
+        "push"
+      ],
       "justification": "Do not publish container images from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["docker", "rm"],
+      "prefix": [
+        "docker",
+        "rm"
+      ],
       "justification": "Do not delete containers, images, or volumes from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["docker", "rmi"],
+      "prefix": [
+        "docker",
+        "rmi"
+      ],
       "justification": "Do not delete containers, images, or volumes from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["docker", "system", "prune"],
+      "prefix": [
+        "docker",
+        "system",
+        "prune"
+      ],
       "justification": "Do not delete containers, images, or volumes from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["docker", "volume", "rm"],
+      "prefix": [
+        "docker",
+        "volume",
+        "rm"
+      ],
       "justification": "Do not delete containers, images, or volumes from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["kubectl", "apply"],
+      "prefix": [
+        "kubectl",
+        "apply"
+      ],
       "justification": "Do not mutate Kubernetes clusters from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["kubectl", "delete"],
+      "prefix": [
+        "kubectl",
+        "delete"
+      ],
       "justification": "Do not mutate Kubernetes clusters from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["kubectl", "exec"],
+      "prefix": [
+        "kubectl",
+        "exec"
+      ],
       "justification": "Do not mutate Kubernetes clusters from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["kubectl", "edit"],
+      "prefix": [
+        "kubectl",
+        "edit"
+      ],
       "justification": "Do not mutate Kubernetes clusters from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["kubectl", "patch"],
+      "prefix": [
+        "kubectl",
+        "patch"
+      ],
       "justification": "Do not mutate Kubernetes clusters from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["kubectl", "rollout"],
+      "prefix": [
+        "kubectl",
+        "rollout"
+      ],
       "justification": "Do not mutate Kubernetes clusters from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["terraform", "apply"],
+      "prefix": [
+        "terraform",
+        "apply"
+      ],
       "justification": "Do not mutate infrastructure from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["terraform", "destroy"],
+      "prefix": [
+        "terraform",
+        "destroy"
+      ],
       "justification": "Do not mutate infrastructure from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["defaults", "write"],
+      "prefix": [
+        "defaults",
+        "write"
+      ],
       "justification": "Manage macOS defaults through nix-darwin instead."
     },
     {
       "decision": "deny",
-      "prefix": ["defaults", "delete"],
+      "prefix": [
+        "defaults",
+        "delete"
+      ],
       "justification": "Manage macOS defaults through nix-darwin instead."
     },
     {
       "decision": "deny",
-      "prefix": ["launchctl", "bootstrap"],
+      "prefix": [
+        "launchctl",
+        "bootstrap"
+      ],
       "justification": "nix-darwin owns services and system state; ask the user to change them."
     },
     {
       "decision": "deny",
-      "prefix": ["launchctl", "bootout"],
+      "prefix": [
+        "launchctl",
+        "bootout"
+      ],
       "justification": "nix-darwin owns services and system state; ask the user to change them."
     },
     {
       "decision": "deny",
-      "prefix": ["launchctl", "kickstart"],
+      "prefix": [
+        "launchctl",
+        "kickstart"
+      ],
       "justification": "nix-darwin owns services and system state; ask the user to change them."
     },
     {
       "decision": "deny",
-      "prefix": ["launchctl", "load"],
+      "prefix": [
+        "launchctl",
+        "load"
+      ],
       "justification": "nix-darwin owns services and system state; ask the user to change them."
     },
     {
       "decision": "deny",
-      "prefix": ["launchctl", "unload"],
+      "prefix": [
+        "launchctl",
+        "unload"
+      ],
       "justification": "nix-darwin owns services and system state; ask the user to change them."
     },
     {
       "decision": "deny",
-      "prefix": ["launchctl", "enable"],
+      "prefix": [
+        "launchctl",
+        "enable"
+      ],
       "justification": "nix-darwin owns services and system state; ask the user to change them."
     },
     {
       "decision": "deny",
-      "prefix": ["launchctl", "disable"],
+      "prefix": [
+        "launchctl",
+        "disable"
+      ],
       "justification": "nix-darwin owns services and system state; ask the user to change them."
     },
     {
       "decision": "deny",
-      "prefix": ["networksetup"],
+      "prefix": [
+        "networksetup"
+      ],
       "justification": "nix-darwin owns services and system state; ask the user to change them."
     },
     {
       "decision": "deny",
-      "prefix": ["scutil", "--set"],
+      "prefix": [
+        "scutil",
+        "--set"
+      ],
       "justification": "nix-darwin owns services and system state; ask the user to change them."
     },
     {
       "decision": "deny",
-      "prefix": ["diskutil"],
+      "prefix": [
+        "diskutil"
+      ],
       "justification": "Do not change disks or power state from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["dd"],
+      "prefix": [
+        "dd"
+      ],
       "justification": "Do not change disks or power state from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["pmset"],
+      "prefix": [
+        "pmset"
+      ],
       "justification": "Do not change disks or power state from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["shutdown"],
+      "prefix": [
+        "shutdown"
+      ],
       "justification": "Do not change disks or power state from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["reboot"],
+      "prefix": [
+        "reboot"
+      ],
       "justification": "Do not change disks or power state from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["killall"],
+      "prefix": [
+        "killall"
+      ],
       "justification": "Do not terminate processes by name from an agent session; they may belong to the user."
     },
     {
       "decision": "deny",
-      "prefix": ["security"],
+      "prefix": [
+        "security"
+      ],
       "justification": "Never read or change Keychain credentials from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["tailscale", "serve"],
+      "prefix": [
+        "tailscale",
+        "serve"
+      ],
       "justification": "Do not change network exposure or membership from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["tailscale", "up"],
+      "prefix": [
+        "tailscale",
+        "up"
+      ],
       "justification": "Do not change network exposure or membership from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["tailscale", "down"],
+      "prefix": [
+        "tailscale",
+        "down"
+      ],
       "justification": "Do not change network exposure or membership from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["tailscale", "set"],
+      "prefix": [
+        "tailscale",
+        "set"
+      ],
       "justification": "Do not change network exposure or membership from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["tailscale", "login"],
+      "prefix": [
+        "tailscale",
+        "login"
+      ],
       "justification": "Do not change network exposure or membership from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["tailscale", "logout"],
+      "prefix": [
+        "tailscale",
+        "logout"
+      ],
       "justification": "Do not change network exposure or membership from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["xcodes", "install"],
+      "prefix": [
+        "xcodes",
+        "install"
+      ],
       "justification": "Nix and the user own toolchain installation; ask before downloading Xcode."
     },
     {
       "decision": "deny",
-      "prefix": ["xcodes", "select"],
+      "prefix": [
+        "xcodes",
+        "select"
+      ],
       "justification": "Nix and the user own toolchain installation; ask before downloading Xcode."
     },
     {
       "decision": "deny",
-      "prefix": ["xcodes", "uninstall"],
+      "prefix": [
+        "xcodes",
+        "uninstall"
+      ],
       "justification": "Nix and the user own toolchain installation; ask before downloading Xcode."
     },
     {
       "decision": "deny",
-      "prefix": ["gh", "repo", "delete"],
+      "prefix": [
+        "gh",
+        "repo",
+        "delete"
+      ],
       "justification": "Do not delete, archive, rename, or reconfigure repositories from an agent session; the repo command owns policy."
     },
     {
       "decision": "deny",
-      "prefix": ["gh", "repo", "archive"],
+      "prefix": [
+        "gh",
+        "repo",
+        "archive"
+      ],
       "justification": "Do not delete, archive, rename, or reconfigure repositories from an agent session; the repo command owns policy."
     },
     {
       "decision": "deny",
-      "prefix": ["gh", "repo", "rename"],
+      "prefix": [
+        "gh",
+        "repo",
+        "rename"
+      ],
       "justification": "Do not delete, archive, rename, or reconfigure repositories from an agent session; the repo command owns policy."
     },
     {
       "decision": "deny",
-      "prefix": ["gh", "repo", "edit"],
+      "prefix": [
+        "gh",
+        "repo",
+        "edit"
+      ],
       "justification": "Do not delete, archive, rename, or reconfigure repositories from an agent session; the repo command owns policy."
     },
     {
       "decision": "deny",
-      "prefix": ["gh", "repo", "transfer"],
+      "prefix": [
+        "gh",
+        "repo",
+        "transfer"
+      ],
       "justification": "Do not delete, archive, rename, or reconfigure repositories from an agent session; the repo command owns policy."
     },
     {
       "decision": "deny",
-      "prefix": ["gh", "repo", "create"],
+      "prefix": [
+        "gh",
+        "repo",
+        "create"
+      ],
       "justification": "Do not delete, archive, rename, or reconfigure repositories from an agent session; the repo command owns policy."
     },
     {
       "decision": "deny",
-      "prefix": ["gh", "issue", "delete"],
+      "prefix": [
+        "gh",
+        "issue",
+        "delete"
+      ],
       "justification": "Do not delete issues from an agent session; closing them is reversible."
     },
     {
       "decision": "deny",
-      "prefix": ["gh", "auth"],
+      "prefix": [
+        "gh",
+        "auth"
+      ],
       "justification": "Never read or change credentials from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["gh", "secret"],
+      "prefix": [
+        "gh",
+        "secret"
+      ],
       "justification": "Never read or change credentials from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["gh", "variable", "set"],
+      "prefix": [
+        "gh",
+        "variable",
+        "set"
+      ],
       "justification": "Never read or change credentials from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["gh", "ssh-key"],
+      "prefix": [
+        "gh",
+        "ssh-key"
+      ],
       "justification": "Never read or change credentials from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["gh", "gpg-key"],
+      "prefix": [
+        "gh",
+        "gpg-key"
+      ],
       "justification": "Never read or change credentials from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["gh", "extension"],
+      "prefix": [
+        "gh",
+        "extension"
+      ],
       "justification": "Nix owns gh extensions; change the declarative configuration instead."
     },
     {
       "decision": "deny",
-      "prefix": ["git", "clean"],
+      "prefix": [
+        "git",
+        "clean"
+      ],
       "justification": "Do not discard uncommitted work or recovery data from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["git", "branch", "-D"],
+      "prefix": [
+        "git",
+        "branch",
+        "-D"
+      ],
       "justification": "Do not force-delete branches from an agent session; safe deletion remains available."
     },
     {
       "decision": "deny",
-      "prefix": ["git", "filter-branch"],
+      "prefix": [
+        "git",
+        "filter-branch"
+      ],
       "justification": "Do not rewrite repository history from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["git", "filter-repo"],
+      "prefix": [
+        "git",
+        "filter-repo"
+      ],
       "justification": "Do not rewrite repository history from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["git", "gc", "--prune"],
+      "prefix": [
+        "git",
+        "gc",
+        "--prune"
+      ],
       "justification": "Do not discard uncommitted work or recovery data from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["git", "reflog", "delete"],
+      "prefix": [
+        "git",
+        "reflog",
+        "delete"
+      ],
       "justification": "Do not discard uncommitted work or recovery data from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["git", "reflog", "expire"],
+      "prefix": [
+        "git",
+        "reflog",
+        "expire"
+      ],
       "justification": "Do not discard uncommitted work or recovery data from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["git", "replace"],
+      "prefix": [
+        "git",
+        "replace"
+      ],
       "justification": "Do not rewrite repository history from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["git", "switch", "--discard-changes"],
+      "prefix": [
+        "git",
+        "switch",
+        "--discard-changes"
+      ],
       "justification": "Do not discard uncommitted work or recovery data from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["git", "symbolic-ref", "--delete"],
+      "prefix": [
+        "git",
+        "symbolic-ref",
+        "--delete"
+      ],
       "justification": "Do not delete refs from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["git", "symbolic-ref", "-d"],
+      "prefix": [
+        "git",
+        "symbolic-ref",
+        "-d"
+      ],
       "justification": "Do not delete refs from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["git", "update-ref", "-d"],
+      "prefix": [
+        "git",
+        "update-ref",
+        "-d"
+      ],
       "justification": "Do not delete refs from an agent session."
     },
     {
       "decision": "deny",
-      "prefix": ["git", "worktree", "move"],
+      "prefix": [
+        "git",
+        "worktree",
+        "move"
+      ],
       "justification": "Do not move or repair worktrees from an agent session; report stale worktrees instead."
     },
     {
       "decision": "deny",
-      "prefix": ["git", "worktree", "repair"],
+      "prefix": [
+        "git",
+        "worktree",
+        "repair"
+      ],
       "justification": "Do not move or repair worktrees from an agent session; report stale worktrees instead."
     }
   ]

@@ -1,47 +1,49 @@
 # Branches and Worktrees
 
-Prefer a feature branch in the current checkout for a single active task. Create a separate worktree only in the cases listed below.
+Implementation starts only after the user approves the plan (see
+[issue-workflow](../../issue-workflow/SKILL.md)). Each lane of the approved plan then runs in its own
+task worktree and session, so lanes never share a checkout and the user's checkout stays untouched.
 
 Choose the workspace in this order:
 
-1. If the user explicitly asks for a worktree, parallel work, isolated work, or another simultaneous task, create a sibling worktree.
-2. If the user explicitly asks to avoid worktrees or continue in the current checkout, stay in the current checkout unless doing so would overwrite or mix unrelated changes.
-3. If already on a suitable non-default branch for the task, stay there.
-4. If on `main`, `master`, a release branch, or another protected/default branch:
-    - If the working tree is clean, create the task branch in the current checkout with `git switch -c <branch>`.
-    - If dirty changes clearly belong to this task, create the task branch in the current checkout and keep those changes.
-    - If dirty changes are unrelated to this task, create a sibling worktree.
-    - If ownership of dirty changes is unclear, ask before switching branches or creating a worktree.
-5. If on a non-default branch for a different task:
-    - If the new request is a continuation of that branch, stay there.
-    - If the new request is unrelated, create a sibling worktree.
-6. If the target branch is already checked out in another worktree, use that worktree or choose a different branch name. Do not force-checkout the same branch in two places.
+1. If this session already runs in a task worktree on a non-default branch for this task, stay there.
+2. If the user explicitly asks to stay in the current checkout, create the task branch there with
+   `git switch -c <branch>`, unless that would overwrite or mix unrelated changes.
+3. If Herdr is available (`HERDR_ENV=1`), hand each lane to a new task worktree session as below.
+4. Without Herdr, create the task branch in the current checkout for a single lane when the tree is
+   clean or its changes belong to this task. For several lanes, or unrelated dirty changes, report
+   that each lane needs its own worktree session and stop: a sandboxed session cannot write a
+   sibling checkout.
+5. If the target branch is already checked out in another worktree, use that worktree or choose a
+   different branch name. Do not force-checkout the same branch in two places.
 
-Current-checkout branch creation:
+Task worktree hand-off through Herdr, once per lane:
 
 ```bash
-git switch -c <branch>
-```
-
-Task worktree creation:
-
-```bash
-git pull --ff-only  # when on the main worktree and updating the base branch
 git fetch origin
-git worktree add -b <branch> ../<repo-name>-<branch-path-slug> origin/<base>
-cd ../<repo-name>-<branch-path-slug>
+herdr worktree create --cwd <primary-checkout> --branch <branch> --base origin/<base> --label <branch> --no-focus
+herdr agent start <lane-name> --kind <claude|codex> --pane <root-pane-id>
+herdr agent prompt <lane-name> "<brief>"
 ```
 
 Rules:
 
-- `<branch>` follows the branch name format below.
-- `<branch-path-slug>` is the branch name with `/` replaced by `-`.
-- Put task worktrees as siblings of the primary checkout under the same parent directory.
-- Example: primary checkout `/Users/kaito/ghq/github.com/furedea/agent-harness` with branch `ci/codex-conformance` uses `/Users/kaito/ghq/github.com/furedea/agent-harness-ci-codex-conformance`.
-- Append `-2`, `-3`, etc. to the worktree path if it already exists.
-- When updating `main` itself, use `git pull --ff-only` in the main worktree. Do not use `git pull --rebase origin main` for the base branch.
-- Remove a task worktree only after its branch is merged or abandoned and its tree is clean; never force removal. `git worktree prune` may follow a directory that has already disappeared. Moving and repairing worktrees stay outside the agent workflow; report those cases to the user.
-- For a requested stacked pull request, `gh stack init` and `gh stack add` create the layer branches; the branch name format below applies to each layer. See [Stacked pull requests](stacked_prs.md).
+- Read the workspace and root pane IDs from the JSON that `worktree create` returns
+  (`.result.workspace.workspace_id`, `.result.root_pane.pane_id`); never predict them.
+- `<lane-name>` matches `[a-z][a-z0-9_-]{0,31}` and is new: the hooks let a session prompt only the
+  agents it started, and they ask before claiming a name another agent holds.
+- Start the same provider as this session unless the user chose another. Pass nothing after `--`:
+  agent arguments are denied, since they could switch off the child's sandbox or approvals.
+- The brief follows [herdr-delegation](../../herdr-delegation/SKILL.md): Issue, plan link, lane scope,
+  and delivery authority (commit, push, and open a PR; never merge).
+- Herdr places the checkout under its `worktrees.directory`; do not pass `--path` without a reason.
+- Remove a task worktree only after its branch is merged or abandoned and its tree is clean; never
+  force removal. Use `herdr worktree remove --workspace <id>`, which runs `git worktree remove`
+  and keeps the branch. Moving and repairing worktrees stay outside the agent workflow.
+- When updating `main` itself, use `git pull --ff-only` in the main worktree. Do not use
+  `git pull --rebase origin main` for the base branch.
+- For a requested stacked pull request, `gh stack init` and `gh stack add` create the layer branches;
+  the branch name format below applies to each layer. See [Stacked pull requests](stacked_prs.md).
 
 Branch name format:
 

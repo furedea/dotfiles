@@ -132,8 +132,6 @@ def test_container_execution_requires_approval(prefix: tuple[str, ...]) -> None:
         ("herdr", "pane", "run"),
         ("herdr", "pane", "send-text"),
         ("herdr", "pane", "send-keys"),
-        ("herdr", "agent", "start"),
-        ("herdr", "agent", "prompt"),
         ("herdr", "agent", "send-keys"),
     ],
 )
@@ -154,3 +152,16 @@ def test_ask_prefix_has_no_allow_ancestor() -> None:
 def test_a_locked_development_shell_runs_while_arbitrary_packages_ask() -> None:
     assert ("nix", "develop") in ALLOW
     assert {("nix", "shell"), ("nix", "run")} <= ASK
+
+
+@pytest.mark.parametrize(
+    "prefix",
+    [
+        ("herdr", "worktree", "create"),
+        ("herdr", "pane", "split"),
+        ("herdr", "agent", "start"),
+        ("herdr", "agent", "prompt"),
+    ],
+)
+def test_handing_work_to_a_new_herdr_session_runs_without_approval(prefix: tuple[str, ...]) -> None:
+    assert prefix in ALLOW

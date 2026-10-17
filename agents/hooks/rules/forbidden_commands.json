@@ -17,6 +17,12 @@
         "(^|[[:space:]])find[[:space:]].*[[:space:]]-(delete|exec|execdir|ok|okdir|fprint|fprint0|fprintf|fls)([[:space:]]|$)"
       ],
       "justification": "Do not delete or execute through find; it is allowed as a read-only inspection command."
+    },
+    {
+      "patterns": [
+        "^herdr[[:space:]]+agent[[:space:]]+start([[:space:]].*)?[[:space:]]--([[:space:]]|$)"
+      ],
+      "justification": "Do not pass arguments to an agent Herdr starts; they could switch off its sandbox, hooks, or approvals."
     }
   ]
 }
