@@ -120,3 +120,9 @@ def test_unlisted_forms_of_commands_that_reach_github_or_the_network_ask(
     for fragment in fragments:
         assert fragment in verdict.reason
     assert capsys.readouterr() == ("", "")
+
+
+def test_commit_messages_inline_through_a_quoted_heredoc_pass() -> None:
+    command = "git commit -m \"$(cat <<'EOF'\nfix: don't run `rm -rf $HOME`\n\nBody.\nEOF\n)\""
+    for kind in ("allowed", "forbidden"):
+        assert guard.decide(kind, {"tool_input": {"command": command}}).decision == "allow"

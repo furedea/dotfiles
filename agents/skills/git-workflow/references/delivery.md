@@ -28,8 +28,8 @@ For explicit PR requests:
    )"
    ```
 
-   Do not write the body or a commit message to a file. The quoted `'EOF'` keeps backticks and
-   `$` literal, so code spans in the body are never run by the shell.
+   Do not write the body to a file; `--body-file -` reading the same heredoc is also fine. The
+   quoted `'EOF'` keeps backticks and `$` literal, so code spans in the body are never run.
 
 Do not pass `-u` or `--set-upstream` to `git push`: setting the upstream writes `.git/config`,
 which the sandbox protects, so the push succeeds but the command exits with an error. Name the
