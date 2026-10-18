@@ -15,7 +15,7 @@ import provider_adapter
 ADAPTER = provider_adapter.Adapter(
     provider_adapter.Profile(
         name="codex",
-        content_modes=("prompt", "apply-patch"),
+        content_modes=("prompt", "apply-patch", "suppression"),
         cwd_fallback=provider_adapter.no_cwd,
     )
 )
