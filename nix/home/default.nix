@@ -281,6 +281,8 @@ in
       enable = true;
       withPython3 = false;
       withRuby = false;
+      # ~/.config/nvim links to the dotfiles tree, which owns init.lua.
+      sideloadInitLua = true;
       plugins = [ pkgs.vimPlugins.lazy-nvim ];
     };
 
