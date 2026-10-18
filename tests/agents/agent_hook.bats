@@ -50,10 +50,12 @@ setup() {
     .hooks.Stop
       | any(.[]; any(.hooks[]; .command == "\"$HOME/.claude/hooks/verification_session.py\" codex stop"))
   ' "$_codex_hooks" >/dev/null
-  grep -Eq -- "'/nix/store/[a-z0-9]+-moshi-hook-0\\.4\\.31/bin/moshi-hook' codex-hook" \
-    "$_codex_hooks"
-  grep -Eq -- "'/nix/store/[a-z0-9]+-moshi-hook-0\\.4\\.31/bin/moshi-hook' claude-hook" \
-    "$_claude_settings"
+  local _moshi_version
+  _moshi_version=$(sed -n 's/^  version = "\([0-9.]*\)";$/\1/p' "$REPO_ROOT/nix/packages/moshi_hook.nix")
+  [[ "$_moshi_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+  local _moshi_runtime="/nix/store/[a-z0-9]+-moshi-hook-${_moshi_version//./\\.}/bin/moshi-hook"
+  grep -Eq -- "'$_moshi_runtime' codex-hook" "$_codex_hooks"
+  grep -Eq -- "'$_moshi_runtime' claude-hook" "$_claude_settings"
   run ! grep -Fq -- '/opt/homebrew/bin/moshi-hook' "$_codex_hooks"
   run ! grep -Fq -- '/opt/homebrew/bin/moshi-hook' "$_claude_settings"
 }
