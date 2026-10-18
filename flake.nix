@@ -15,7 +15,10 @@
     # python@3.11, and `brew install` then exited non-zero.
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
     llm-agents.url = "github:numtide/llm-agents.nix";
-    hermes-agent.url = "github:NousResearch/hermes-agent";
+    # Pinned: nix/patches/hermes_gateway_service_resources.patch backports
+    # NousResearch/hermes-agent#85365 and no longer applies to newer revisions, so
+    # lock file maintenance must not move this input. Unpin once #85365 is merged.
+    hermes-agent.url = "github:NousResearch/hermes-agent/56a41715dc3b8bf6f50a740ff9416c4036ef4259";
     google-workspace-cli = {
       url = "github:googleworkspace/cli";
       inputs.nixpkgs.follows = "nixpkgs";
