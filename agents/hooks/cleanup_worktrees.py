@@ -3,7 +3,8 @@
 
 A branch goes only when a merged pull request's head is exactly its tip and its worktree is
 clean, so a squash merge counts as merged while later or uncommitted work is kept. The primary
-checkout, the worktree the caller runs in, and the default branch are never touched. The sweep
+checkout, the worktree the caller runs in, and the default branch are never removed; after a
+removal the default branch fast-forwards to the merges unless that would disturb work. The sweep
 covers the caller's repository and every repository with a Herdr task worktree, so lanes merged
 elsewhere go wherever the next session starts.
 
@@ -102,7 +103,36 @@ def cleanup(primary: Path, current: Path | None, *, dry_run: bool) -> list[str]:
             report.append(f"remove branch {branch}")
             if not dry_run:
                 run("git", "branch", "-D", branch, cwd=primary)
+    if report:
+        report += fast_forward_default_branch(primary, dry_run=dry_run)
     return report
+
+
+def fast_forward_default_branch(primary: Path, *, dry_run: bool) -> list[str]:
+    """Bring the default branch up to the merges just cleaned up, without touching other work.
+
+    A checked-out default branch is pulled only when its tree is clean; otherwise only its ref
+    moves, through a fetch that refuses anything but a fast-forward.
+    """
+    branch = next((name for name in sorted(PROTECTED_BRANCHES) if has_branch(primary, name)), "")
+    if not branch:
+        return []
+    checked_out = current_branch(primary) == branch
+    if checked_out and run("git", "status", "--porcelain", cwd=primary):
+        return []
+    if not dry_run:
+        try:
+            if checked_out:
+                run("git", "pull", "--quiet", "--ff-only", cwd=primary)
+            else:
+                run("git", "fetch", "--quiet", "origin", f"{branch}:{branch}", cwd=primary)
+        except subprocess.CalledProcessError:
+            return []
+    return [f"fast-forward {branch}"]
+
+
+def has_branch(primary: Path, branch: str) -> bool:
+    return bool(run("git", "for-each-ref", "--format=%(refname)", f"refs/heads/{branch}", cwd=primary))
 
 
 def is_merged(primary: Path, branch: str, merged: dict[str, set[str]]) -> bool:
