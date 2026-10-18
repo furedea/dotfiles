@@ -52,7 +52,7 @@ Change them there before applying the configuration for another user or path.
     ```sh
     # Use .#mba on the MacBook Air.
     sudo nix run \
-      github:nix-darwin/nix-darwin/nix-darwin-25.11#darwin-rebuild \
+      github:nix-darwin/nix-darwin/nix-darwin-26.05#darwin-rebuild \
       -- switch --flake .#mbp
     ```
 

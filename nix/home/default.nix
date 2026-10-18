@@ -223,7 +223,7 @@ in
     deadnix
     home-manager
     nixd
-    nixfmt-rfc-style
+    nixfmt
     statix
     vulnix
 
@@ -245,7 +245,7 @@ in
     rustfmt
 
     # TypeScript tooling
-    nodePackages."@antfu/ni"
+    ni
     unstable.nodejs_24
     unstable.oxfmt
     unstable.oxlint
@@ -279,6 +279,10 @@ in
   programs = {
     neovim = {
       enable = true;
+      withPython3 = false;
+      withRuby = false;
+      # ~/.config/nvim links to the dotfiles tree, which owns init.lua.
+      sideloadInitLua = true;
       plugins = [ pkgs.vimPlugins.lazy-nvim ];
     };
 
