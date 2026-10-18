@@ -17,6 +17,9 @@
     "defaultMode": "auto",
     "ask": [
       "Bash(dangerouslyDisableSandbox:true)"
+    ],
+    "deny": [
+      "Read(~/.codex/auth.json)"
     ]
   },
   "model": "opus",
@@ -61,6 +64,9 @@
         "~/Library/Caches/dprint",
         "~/.local/state/agent-harness",
         "~/.local/share/pnpm"
+      ],
+      "denyRead": [
+        "~/.codex/auth.json"
       ]
     },
     "network": {
@@ -78,6 +84,7 @@
       "docker *",
       "gh *",
       "herdr *",
+      "node \"/Users/kaito/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs\" *",
       "watchman *"
     ]
   },

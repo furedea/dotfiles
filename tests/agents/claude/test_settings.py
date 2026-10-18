@@ -88,3 +88,24 @@ def test_pnpm_installs_into_its_shared_store_from_inside_the_sandbox() -> None:
 def test_dev_servers_and_end_to_end_tests_can_listen_on_local_ports() -> None:
     sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
     assert sandbox["network"]["allowLocalBinding"] is True
+
+
+def test_codex_plugin_companion_reaches_codex_outside_the_sandbox() -> None:
+    sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
+    companion = '"/Users/kaito/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs"'
+    assert f"node {companion} *" in sandbox["excludedCommands"]
+
+
+def test_excluded_commands_cannot_be_redirected_to_another_program_path() -> None:
+    sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
+    assert [command for command in sandbox["excludedCommands"] if "*" in command.removesuffix(" *")] == []
+
+
+def test_sandboxed_commands_cannot_read_the_codex_login() -> None:
+    sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
+    assert "~/.codex/auth.json" in sandbox["filesystem"]["denyRead"]
+
+
+def test_claude_code_tools_cannot_read_the_codex_login() -> None:
+    permissions = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["permissions"]
+    assert "Read(~/.codex/auth.json)" in permissions["deny"]
