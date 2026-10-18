@@ -173,6 +173,25 @@ def test_javascript_configuration_changes_select_the_full_suite(tmp_path: Path, 
     assert commands[0].scope == "full suite"
 
 
+def test_vitest_configuration_changes_run_the_whole_suite_once(tmp_path: Path) -> None:
+    rules = project(tmp_path, {})
+    (tmp_path / "package.json").write_text(
+        json.dumps({"packageManager": "pnpm@10", "devDependencies": {"vitest": "1"}})
+    )
+    commands, errors = selection.language_plan(tmp_path, rules, ("vitest.config.ts",))
+    assert not errors
+    assert [item.arguments for item in commands] == [("pnpm", "exec", "vitest", "run")]
+    assert commands[0].scope == "full suite"
+
+
+def test_bats_directory_mapping_without_tests_is_an_error(tmp_path: Path) -> None:
+    rules = project(tmp_path, {"config.json": ["tests/empty"]})
+    (tmp_path / "tests/empty").mkdir(parents=True)
+    commands, errors = selection.language_plan(tmp_path, rules, ("config.json",))
+    assert commands == []
+    assert errors == ["selected test targets do not exist or contain no tests"]
+
+
 def test_javascript_unmatched_sources_escalate_without_dependency_analysis(tmp_path: Path) -> None:
     rules = project(tmp_path, {})
     (tmp_path / "package.json").write_text(

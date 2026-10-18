@@ -10,11 +10,14 @@ from lib.formatter_policy import Step, plan
 from lib import process_runner
 
 
-def failure(label: str, target: str, status: int, output: str) -> str:
+def origin(step: Step, path: Path) -> str:
+    """Name the step and target a diagnostic belongs to."""
+    return f"{step.label} · {path}"
+
+
+def failure(source: str, status: int, output: str) -> str:
     """Describe a failed command even when it produced no diagnostic output."""
-    return (
-        f"Lint/format failed\n{label} · {target} · exit {status}\nError: {output.strip() or 'No diagnostic output.'}"
-    )
+    return f"Lint/format failed\n{source} · exit {status}\nError: {output.strip() or 'No diagnostic output.'}"
 
 
 def diagnostic_text(data: bytes, truncated: bool) -> str:
@@ -52,12 +55,11 @@ def run_step(step: Step, path: Path) -> str:
             f"Error: {diagnostics or 'Process exceeded its time limit.'}"
         )
     if result.returncode:
-        return failure(step.label, str(path), result.returncode, diagnostics)
+        return failure(origin(step, path), result.returncode, diagnostics)
     if step.writes_stdout:
         if result.formatted_output_truncated:
             return failure(
-                step.label,
-                str(path),
+                origin(step, path),
                 result.returncode,
                 f"Formatted output exceeded {process_runner.FORMATTED_OUTPUT_LIMIT_BYTES} bytes.",
             )
@@ -84,26 +86,27 @@ def check_file(kind: str, path: Path, readonly: bool = False) -> tuple[str, ...]
         try:
             message = run_step(step, path)
         except OSError as error:
-            message = failure(step.label, str(path), 1, str(error))
+            message = failure(origin(step, path), 1, str(error))
         if message:
             messages.append(message)
     return tuple(messages)
 
 
-def diagnostics(
-    paths: Iterable[Path],
-    extensions: dict[str, str],
-    kind: str | None = None,
-    *,
-    checker: Callable[[str, Path], tuple[str, ...]] | None = None,
-    readonly: bool = False,
-) -> tuple[str, ...]:
-    """Run checks for existing supported targets selected from one normalized hook payload."""
-    messages: list[str] = []
-    check = checker or (lambda language, path: check_file(language, path, readonly))
+def supported_targets(
+    paths: Iterable[Path], extensions: dict[str, str], kind: str | None = None
+) -> tuple[tuple[str, Path], ...]:
+    """Pair existing files with their quality language, optionally restricted to one language."""
+    targets: list[tuple[str, Path]] = []
     for path in paths:
         language = extensions.get(path.suffix.lower())
         if language is None or (kind is not None and language != kind) or not path.is_file():
             continue
-        messages.extend(check(language, path))
-    return tuple(messages)
+        targets.append((language, path))
+    return tuple(targets)
+
+
+def diagnostics(
+    targets: Iterable[tuple[str, Path]], checker: Callable[[str, Path], tuple[str, ...]] = check_file
+) -> tuple[str, ...]:
+    """Run checks for supported targets selected from one normalized hook payload."""
+    return tuple(message for language, path in targets for message in checker(language, path))

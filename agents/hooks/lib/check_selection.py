@@ -1,5 +1,6 @@
 """Select verification commands from changed paths and explicit project mappings."""
 
+from collections.abc import Iterator
 from dataclasses import dataclass
 import fnmatch
 import json
@@ -34,31 +35,78 @@ class Invocation:
     arguments: tuple[str, ...]
 
 
+@dataclass(frozen=True, slots=True)
+class LanguageScope:
+    """One language's rule and the changed paths it must verify."""
+
+    language: str
+    rule: dict
+    root: Path
+    changed: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class Selection:
+    """A language's resolved test targets and the reasons to widen them."""
+
+    scope: LanguageScope
+    targets: frozenset[str]
+    unresolved: frozenset[str]
+    triggered: bool
+    affected: bool
+
+    @property
+    def full(self) -> bool:
+        """Whether the language's whole suite must run instead of the selected targets."""
+        return self.triggered or bool(self.unresolved and self.scope.rule.get("fallback_on_unmatched_source"))
+
+
+RULE_ARRAYS = {
+    "source_extensions",
+    "test_dirs",
+    "test_patterns",
+    "self_test_extensions",
+    "self_test_globs",
+    "exclude_dirs",
+    "project_markers",
+    "source_dirs",
+    "full_suite_triggers",
+}
+PYTEST = ("uv", "run", "--frozen", "pytest", "--no-header", "-q")
+RUST_FULL_SUITE = Invocation("rust", "full suite", ("cargo", "test", "--quiet"))
+RUNNER_PREFIXES = {
+    "pnpm": ("pnpm", "exec"),
+    "npm": ("npm", "exec", "--"),
+    "yarn": ("yarn", "exec"),
+    "bun": ("bun", "x"),
+}
+LOCKFILE_MANAGERS = (
+    ("pnpm-lock.yaml", "pnpm"),
+    ("yarn.lock", "yarn"),
+    ("bun.lock", "bun"),
+    ("bun.lockb", "bun"),
+)
+
+
 def load_defaults(path: Path) -> dict:
     """Reject missing or malformed language rules instead of silently skipping verification."""
     try:
         rules = json.loads(path.read_text())
         if not isinstance(rules, dict) or not all(language in rules for language in LANGUAGES):
             raise ValueError("missing languages")
-        arrays = {
-            "source_extensions",
-            "test_dirs",
-            "test_patterns",
-            "self_test_extensions",
-            "self_test_globs",
-            "exclude_dirs",
-            "project_markers",
-            "source_dirs",
-            "full_suite_triggers",
-        }
         for entry in rules.values():
-            if not isinstance(entry, dict) or "source_extensions" not in entry:
-                raise ValueError("missing extensions")
-            if any(not strings(value) for key, value in entry.items() if key in arrays):
-                raise ValueError("invalid rule array")
+            validate_rule(entry)
         return rules
     except (OSError, ValueError) as error:
         raise ValueError(f"Missing or invalid configuration: {path}") from error
+
+
+def validate_rule(entry: object) -> None:
+    """Reject a language rule without source extensions or with malformed arrays."""
+    if not isinstance(entry, dict) or "source_extensions" not in entry:
+        raise ValueError("missing extensions")
+    if any(not strings(value) for key, value in entry.items() if key in RULE_ARRAYS):
+        raise ValueError("invalid rule array")
 
 
 def strings(value: object) -> bool:
@@ -84,24 +132,36 @@ def project_targets(
             f"Invalid configuration: {path}. Expected an object mapping patterns to arrays of nonempty test paths."
         ) from error
     errors: list[str] = []
+    for target, matched_files in mapped_targets(mappings, changed):
+        language, error = target_language(root, target)
+        if error:
+            errors.append(error)
+            continue
+        targets[language].add(target)
+        covered[language] |= matched_files
+    return targets, covered, errors
+
+
+def mapped_targets(mappings: dict, changed: tuple[str, ...]) -> Iterator[tuple[str, set[str]]]:
+    """Yield each configured test path with the changed files its pattern matches."""
     for pattern, paths in mappings.items():
         matched_files = {filename for filename in changed if fnmatch.fnmatchcase(filename, pattern)}
         if not matched_files:
             continue
         for target in paths:
-            target = str(Path(target))
-            absolute = root / target
-            if not absolute.exists():
-                errors.append(f"Configured test target does not exist: {target}")
-            elif absolute.is_dir():
-                targets["bats"].add(target)
-                covered["bats"] |= matched_files
-            elif language := TARGET_LANGUAGES.get(absolute.suffix):
-                targets[language].add(target)
-                covered[language] |= matched_files
-            else:
-                errors.append(f"Unsupported configured test target: {target}")
-    return targets, covered, errors
+            yield str(Path(target)), matched_files
+
+
+def target_language(root: Path, target: str) -> tuple[str, str]:
+    """Classify a configured test path as its runner language, or explain why it cannot run."""
+    absolute = root / target
+    if not absolute.exists():
+        return "", f"Configured test target does not exist: {target}"
+    if absolute.is_dir():
+        return "bats", ""
+    if language := TARGET_LANGUAGES.get(absolute.suffix):
+        return language, ""
+    return "", f"Unsupported configured test target: {target}"
 
 
 def changed_language(rule: dict, changed: tuple[str, ...]) -> bool:
@@ -161,19 +221,26 @@ def matching_tests(root: Path, rule: dict, changed: tuple[str, ...]) -> tuple[se
     patterns = {
         pattern.replace("{stem}", stem): stem for pattern in rule.get("test_patterns", ()) for stem in sources_by_stem
     }
+    matches = [
+        (str(path.relative_to(root)), stem)
+        for path in searched_files(root, rule)
+        for pattern, stem in patterns.items()
+        if fnmatch.fnmatchcase(path.name, pattern)
+    ]
+    for target, stem in matches:
+        targets.add(target)
+        for source in sources_by_stem[stem]:
+            resolved[source].add(target)
+    return targets, resolved
+
+
+def searched_files(root: Path, rule: dict) -> Iterator[Path]:
+    """Walk the rule's test directories, pruning excluded directories."""
     excluded = set(rule.get("exclude_dirs", ())) | {".git"}
     for directory in rule.get("test_dirs", ()):
         for parent, directories, files in os.walk(root / directory):
             directories[:] = [name for name in directories if name not in excluded]
-            for filename in files:
-                for pattern, stem in patterns.items():
-                    if not fnmatch.fnmatchcase(filename, pattern):
-                        continue
-                    target = str((Path(parent) / filename).relative_to(root))
-                    targets.add(target)
-                    for source in sources_by_stem[stem]:
-                        resolved[source].add(target)
-    return targets, resolved
+            yield from (Path(parent) / filename for filename in files)
 
 
 def suite_triggered(rule: dict, changed: tuple[str, ...]) -> bool:
@@ -188,78 +255,73 @@ def language_plan(root: Path, rules: dict, changed: tuple[str, ...]) -> tuple[li
     explicit, covered, errors = project_targets(root, changed)
     invocations: list[Invocation] = []
     for language in LANGUAGES:
-        rule = rules[language]
-        triggered = suite_triggered(rule, changed)
-        affected = changed_language(rule, changed) or triggered
-        if not affected and not explicit[language]:
-            continue
-        if not triggered and not explicit[language] and delegated(rule, changed, covered, language):
-            continue
-        markers = rule.get("project_markers", ())
-        if language == "javascript_typescript":
-            markers = ("package.json",)
-        if markers and not any((root / name).is_file() for name in markers):
-            subject = f"Changed {language} sources" if affected else f"Configured {language} tests"
-            errors.append(f"{subject} require a project marker such as {markers[0]}.")
-            continue
-        matched, unresolved = matching_targets(root, language, rule, changed)
-        unresolved -= covered[language]
-        targets = explicit[language] | matched
-        full = triggered or bool(unresolved and rule.get("fallback_on_unmatched_source"))
-        if language == "bats":
-            if not (root / "tests").is_dir():
-                subject = "Changed shell sources" if affected else "Configured bats tests"
-                errors.append(f"{subject} require a tests/ directory.")
-                continue
-            expanded: set[str] = set()
-            for target in targets:
-                path = root / target
-                if path.is_dir():
-                    expanded.update(
-                        str(child.relative_to(root))
-                        for child in path.glob(f"*.{os.environ.get('BATS_FILE_EXTENSION', 'bats')}")
-                        if child.is_file()
-                    )
-                else:
-                    expanded.add(target)
-            runner = os.environ.get("RUN_RELATED_TESTS_BATS_BIN", "bats")
-            if targets and not expanded:
-                errors.append("selected test targets do not exist or contain no tests")
-            if full:
-                invocations.append(Invocation("bats", "full suite", (runner, "tests/", "--recursive")))
-            elif expanded:
-                invocations.append(Invocation("bats", f"{len(expanded)} targets", (runner, *sorted(expanded))))
-        elif language == "python":
-            if full:
-                invocations.append(
-                    Invocation("pytest", "full suite", ("uv", "run", "--frozen", "pytest", "--no-header", "-q"))
-                )
-            else:
-                scope = f"{len(targets)} files" if targets else "full suite"
-                invocations.append(
-                    Invocation(
-                        "pytest", scope, ("uv", "run", "--frozen", "pytest", "--no-header", "-q", *sorted(targets))
-                    )
-                )
-        elif language == "rust":
-            invocations.extend(rust_plan(changed, targets, full, root))
-        else:
-            invocations.extend(
-                javascript_plan(root, changed, targets, rule, triggered=triggered, unresolved=unresolved)
-            )
+        scope = LanguageScope(language, rules[language], root, changed)
+        language_invocations, language_errors = scope_plan(scope, explicit[language], covered)
+        invocations.extend(language_invocations)
+        errors.extend(language_errors)
     return invocations, errors
 
 
-def delegated(rule: dict, changed: tuple[str, ...], covered: dict[str, set[str]], language: str) -> bool:
+def scope_plan(
+    scope: LanguageScope, explicit: set[str], covered: dict[str, set[str]]
+) -> tuple[list[Invocation], list[str]]:
+    """Plan one language unless no change reaches it or another language already verifies it."""
+    triggered = suite_triggered(scope.rule, scope.changed)
+    affected = changed_language(scope.rule, scope.changed) or triggered
+    if not affected and not explicit:
+        return [], []
+    if not triggered and not explicit and delegated(scope, covered):
+        return [], []
+    if error := missing_marker(scope, affected=affected):
+        return [], [error]
+    matched, unresolved = matching_targets(scope)
+    selection = Selection(
+        scope,
+        frozenset(explicit | matched),
+        frozenset(unresolved - covered[scope.language]),
+        triggered=triggered,
+        affected=affected,
+    )
+    return selection_plan(selection)
+
+
+def selection_plan(selection: Selection) -> tuple[list[Invocation], list[str]]:
+    """Dispatch a resolved selection to its language's runner."""
+    match selection.scope.language:
+        case "bats":
+            return bats_plan(selection)
+        case "python":
+            return [python_invocation(selection)], []
+        case "rust":
+            return rust_plan(selection), []
+        case _:
+            return javascript_plan(selection), []
+
+
+def delegated(scope: LanguageScope, covered: dict[str, set[str]]) -> bool:
     """Whether every changed source of a language is explicitly verified by another language's tests."""
-    sources = {path for path in changed if any(path.endswith(extension) for extension in rule["source_extensions"])}
-    others = set().union(*(files for name, files in covered.items() if name != language))
+    sources = {
+        path
+        for path in scope.changed
+        if any(path.endswith(extension) for extension in scope.rule["source_extensions"])
+    }
+    others = set().union(*(files for name, files in covered.items() if name != scope.language))
     return bool(sources) and sources <= others
 
 
-def matching_targets(root: Path, language: str, rule: dict, changed: tuple[str, ...]) -> tuple[set[str], set[str]]:
+def missing_marker(scope: LanguageScope, *, affected: bool) -> str:
+    """Explain a missing project marker, or return an empty string when the project is recognizable."""
+    markers = ("package.json",) if scope.language == "javascript_typescript" else scope.rule.get("project_markers", ())
+    if not markers or any((scope.root / name).is_file() for name in markers):
+        return ""
+    subject = f"Changed {scope.language} sources" if affected else f"Configured {scope.language} tests"
+    return f"{subject} require a project marker such as {markers[0]}."
+
+
+def matching_targets(scope: LanguageScope) -> tuple[set[str], set[str]]:
     """Return each language's matched tests and the sources that resolve to none."""
-    if language == "rust":
+    root, rule, changed = scope.root, scope.rule, scope.changed
+    if scope.language == "rust":
         sources = source_files(rule, changed)
         unresolved = {
             path
@@ -267,19 +329,61 @@ def matching_targets(root: Path, language: str, rule: dict, changed: tuple[str, 
             if not path.startswith("tests/") and not (root / "tests" / f"{Path(path).stem}.rs").is_file()
         }
         return set(), unresolved
-    if language == "python":
+    if scope.language == "python":
         return python_targets(root, rule, changed)
     targets, resolved = matching_tests(root, rule, changed)
     return targets, {source for source, matched in resolved.items() if not matched}
 
 
-def rust_plan(changed: tuple[str, ...], explicit: set[str], full: bool, root: Path) -> list[Invocation]:
+def bats_plan(selection: Selection) -> tuple[list[Invocation], list[str]]:
+    """Run whole bats directories non-recursively, or the full suite when escalated."""
+    root = selection.scope.root
+    if not (root / "tests").is_dir():
+        subject = "Changed shell sources" if selection.affected else "Configured bats tests"
+        return [], [f"{subject} require a tests/ directory."]
+    expanded = expanded_bats_targets(root, selection.targets)
+    errors = ["selected test targets do not exist or contain no tests"] if selection.targets and not expanded else []
+    runner = os.environ.get("RUN_RELATED_TESTS_BATS_BIN", "bats")
+    if selection.full:
+        return [Invocation("bats", "full suite", (runner, "tests/", "--recursive"))], errors
+    if expanded:
+        return [Invocation("bats", f"{len(expanded)} targets", (runner, *sorted(expanded)))], errors
+    return [], errors
+
+
+def expanded_bats_targets(root: Path, targets: frozenset[str]) -> set[str]:
+    """Replace directory targets with the bats files directly inside them."""
+    expanded: set[str] = set()
+    for target in targets:
+        path = root / target
+        if not path.is_dir():
+            expanded.add(target)
+            continue
+        expanded.update(
+            str(child.relative_to(root))
+            for child in path.glob(f"*.{os.environ.get('BATS_FILE_EXTENSION', 'bats')}")
+            if child.is_file()
+        )
+    return expanded
+
+
+def python_invocation(selection: Selection) -> Invocation:
+    """Run the selected pytest files, or the full suite when nothing narrower is known."""
+    targets = selection.targets
+    if selection.full:
+        return Invocation("pytest", "full suite", PYTEST)
+    scope = f"{len(targets)} files" if targets else "full suite"
+    return Invocation("pytest", scope, (*PYTEST, *sorted(targets)))
+
+
+def rust_plan(selection: Selection) -> list[Invocation]:
     """Prefer named integration targets and explicit unit filters, otherwise run the crate."""
-    if full:
-        return [Invocation("rust", "full suite", ("cargo", "test", "--quiet"))]
+    if selection.full:
+        return [RUST_FULL_SUITE]
+    explicit, root = selection.targets, selection.scope.root
     filters = {Path(path).stem for path in explicit if not path.startswith("tests/")}
     targets = {Path(path).stem for path in explicit if path.startswith("tests/")}
-    for path in changed:
+    for path in selection.scope.changed:
         if not path.endswith(".rs"):
             continue
         stem = Path(path).stem
@@ -292,74 +396,79 @@ def rust_plan(changed: tuple[str, ...], explicit: set[str], full: bool, root: Pa
         Invocation("rust", f"integration target {stem}", ("cargo", "test", "--test", stem, "--quiet"))
         for stem in sorted(targets)
     ]
-    return invocations or [Invocation("rust", "full suite", ("cargo", "test", "--quiet"))]
+    return invocations or [RUST_FULL_SUITE]
 
 
-def javascript_plan(
-    root: Path, changed: tuple[str, ...], targets: set[str], rule: dict, *, triggered: bool, unresolved: set[str]
-) -> list[Invocation]:
+def javascript_plan(selection: Selection) -> list[Invocation]:
     """Keep dependency-aware Vitest selection in addition to explicit test targets."""
+    root = selection.scope.root
     package = json.loads((root / "package.json").read_text())
-    manager = package.get("packageManager", "").split("@", 1)[0]
-    if not manager:
-        manager = next(
-            (
-                name
-                for lock, name in (
-                    ("pnpm-lock.yaml", "pnpm"),
-                    ("yarn.lock", "yarn"),
-                    ("bun.lock", "bun"),
-                    ("bun.lockb", "bun"),
-                )
-                if (root / lock).is_file()
-            ),
-            "npm",
-        )
-    dependencies = dict(package.get("dependencies") or {}, **(package.get("devDependencies") or {}))
+    manager = package_manager(root, package)
     test_script = (package.get("scripts") or {}).get("test", "")
+    runner = javascript_runner(package, test_script)
+    if not runner:
+        return script_plan(selection, manager, test_script)
+    arguments = ("node", "--test") if runner == "node" else (*RUNNER_PREFIXES.get(manager, ("false",)), runner)
+    if runner == "vitest":
+        return vitest_plan(selection, arguments)
+    if selection.full:
+        return [Invocation(runner, "full suite", arguments)]
+    targets = selection.targets
+    scope = f"{len(targets)} related tests" if targets else "full suite"
+    return [Invocation(runner, scope, (*arguments, *sorted(targets)))]
+
+
+def package_manager(root: Path, package: dict) -> str:
+    """Prefer the declared package manager, then the lockfile present, then npm."""
+    manager = package.get("packageManager", "").split("@", 1)[0]
+    if manager:
+        return manager
+    return next((name for lock, name in LOCKFILE_MANAGERS if (root / lock).is_file()), "npm")
+
+
+def javascript_runner(package: dict, test_script: str) -> str:
+    """Name the JavaScript test runner the project depends on, or an empty string when none is known."""
+    dependencies = dict(package.get("dependencies") or {}, **(package.get("devDependencies") or {}))
     runner = next((name for name in ("vitest", "jest") if dependencies.get(name) is not None), "")
     if not runner and re.search(r"(^|\s)node\s+--test(\s|$)", test_script):
-        runner = "node"
-    prefix = {
-        "pnpm": ("pnpm", "exec"),
-        "npm": ("npm", "exec", "--"),
-        "yarn": ("yarn", "exec"),
-        "bun": ("bun", "x"),
-    }.get(manager, ("false",))
-    if not runner:
-        if test_script:
-            arguments = (manager, "run", "test") if manager == "bun" else (manager, "test")
-            return [Invocation(f"{manager} test", "full suite", arguments)]
-        if targets or changed_language(rule, changed):
-            raise UnknownTestCommand("test command could not be determined")
-        # A dependency or lockfile bump in a project that declares no JavaScript tests has nothing to run.
-        return []
-    arguments = ("node", "--test") if runner == "node" else (*prefix, runner)
-    escalate = triggered or bool(unresolved and rule.get("fallback_on_unmatched_source") and runner != "vitest")
-    if runner != "vitest":
-        if escalate:
-            return [Invocation(runner, "full suite", arguments)]
-        return [
-            Invocation(
-                runner, f"{len(targets)} related tests" if targets else "full suite", (*arguments, *sorted(targets))
-            )
-        ]
-    if triggered:
-        return [Invocation(runner, "full suite", (*arguments, "run"))]
+        return "node"
+    return runner
+
+
+def script_plan(selection: Selection, manager: str, test_script: str) -> list[Invocation]:
+    """Fall back to the package's test script when no known runner is installed."""
+    if test_script:
+        arguments = (manager, "run", "test") if manager == "bun" else (manager, "test")
+        return [Invocation(f"{manager} test", "full suite", arguments)]
+    if selection.targets or changed_language(selection.scope.rule, selection.scope.changed):
+        raise UnknownTestCommand("test command could not be determined")
+    # A dependency or lockfile bump in a project that declares no JavaScript tests has nothing to run.
+    return []
+
+
+def vitest_plan(selection: Selection, arguments: tuple[str, ...]) -> list[Invocation]:
+    """Run named tests plus Vitest's dependency-aware selection for changed sources."""
+    if selection.triggered:
+        return [Invocation("vitest", "full suite", (*arguments, "run"))]
+    targets, root = selection.targets, selection.scope.root
     invocations: list[Invocation] = []
     if targets:
-        invocations.append(Invocation(runner, f"{len(targets)} related tests", (*arguments, "run", *sorted(targets))))
+        invocations.append(
+            Invocation("vitest", f"{len(targets)} related tests", (*arguments, "run", *sorted(targets)))
+        )
     sources = sorted(
         path
-        for path in changed
-        if Path(path).suffix in {".js", ".jsx", ".ts", ".tsx"} and not is_test(rule, path) and (root / path).is_file()
+        for path in selection.scope.changed
+        if Path(path).suffix in {".js", ".jsx", ".ts", ".tsx"}
+        and not is_test(selection.scope.rule, path)
+        and (root / path).is_file()
     )
     if sources:
         invocations.append(
             Invocation(
-                runner,
+                "vitest",
                 f"{len(sources)} changed files",
                 (*arguments, "related", "--run", "--passWithNoTests", *sources),
             )
         )
-    return invocations or [Invocation(runner, "full suite", (*arguments, "run"))]
+    return invocations or [Invocation("vitest", "full suite", (*arguments, "run"))]
