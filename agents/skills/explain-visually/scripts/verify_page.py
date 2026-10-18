@@ -81,6 +81,20 @@ class _BrowserResult:
     timed_out: bool
 
 
+@dataclass(frozen=True, slots=True)
+class _RenderOptions:
+    width: int
+    wait_ms: int
+    timeout_seconds: int
+
+
+class _VerificationFailure(Exception):
+    def __init__(self, errors: Sequence[str], exit_code: int) -> None:
+        super().__init__(*errors)
+        self.errors = tuple(errors)
+        self.exit_code = exit_code
+
+
 class _PageInspector(HTMLParser):
     __slots__ = (
         "_in_script",
@@ -267,15 +281,19 @@ def _run_browser(browser: Path, arguments: list[str], timeout_seconds: int) -> _
         stdout, stderr = process.communicate(timeout=timeout_seconds)
         return _BrowserResult(stdout, stderr, process.returncode, False)
     except subprocess.TimeoutExpired:
-        if os.name == "posix":
-            try:
-                os.killpg(os.getpgid(process.pid), signal.SIGKILL)
-            except ProcessLookupError:
-                pass
-        else:
-            process.kill()
+        _kill_browser(process)
         stdout, stderr = process.communicate()
         return _BrowserResult(stdout, stderr, 124, True)
+
+
+def _kill_browser(process: subprocess.Popen[str]) -> None:
+    if os.name != "posix":
+        process.kill()
+        return
+    try:
+        os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+    except ProcessLookupError:
+        pass
 
 
 def _browser_arguments(profile: Path, width: int, wait_ms: int) -> list[str]:
@@ -292,13 +310,7 @@ def _browser_arguments(profile: Path, width: int, wait_ms: int) -> list[str]:
     ]
 
 
-def _render_page(
-    html_path: Path,
-    browser: Path,
-    width: int,
-    wait_ms: int,
-    timeout_seconds: int,
-) -> tuple[Path, tuple[str, ...]]:
+def _render_page(html_path: Path, browser: Path, options: _RenderOptions) -> tuple[Path, tuple[str, ...]]:
     warnings: list[str] = []
     page_url = html_path.as_uri()
     screenshot_path = html_path.with_name(f"{html_path.stem}-shot.png")
@@ -307,8 +319,8 @@ def _render_page(
         temporary_path = Path(temporary_directory)
         profile = temporary_path / "browser-profile"
         rendered_screenshot_path = temporary_path / "rendered-page.png"
-        common_arguments = _browser_arguments(profile, width, wait_ms)
-        dom_result = _run_browser(browser, [*common_arguments, "--dump-dom", page_url], timeout_seconds)
+        common_arguments = _browser_arguments(profile, options.width, options.wait_ms)
+        dom_result = _run_browser(browser, [*common_arguments, "--dump-dom", page_url], options.timeout_seconds)
         if not dom_result.stdout and dom_result.return_code != 0:
             detail = (
                 "browser timed out before producing the rendered DOM"
@@ -323,11 +335,11 @@ def _render_page(
 
         screenshot_arguments = [
             *common_arguments,
-            f"--window-size={width},{height}",
+            f"--window-size={options.width},{height}",
             f"--screenshot={rendered_screenshot_path}",
             page_url,
         ]
-        screenshot_result = _run_browser(browser, screenshot_arguments, timeout_seconds)
+        screenshot_result = _run_browser(browser, screenshot_arguments, options.timeout_seconds)
         if not rendered_screenshot_path.is_file() or rendered_screenshot_path.stat().st_size == 0:
             detail = (
                 "browser timed out before producing the screenshot"
@@ -353,6 +365,27 @@ def _arguments(argv: Sequence[str] | None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _read_html(html_path: Path) -> str:
+    if not html_path.is_file():
+        raise _VerificationFailure([f"HTML file was not found: {html_path}"], 1)
+    try:
+        return html_path.read_text(encoding="utf-8")
+    except UnicodeError as error:
+        raise _VerificationFailure([f"HTML file is not valid UTF-8: {error}"], 1) from error
+
+
+def _resolve_browser(requested: str | None) -> Path:
+    try:
+        browser = find_browser(requested)
+    except FileNotFoundError as error:
+        raise _VerificationFailure([str(error)], 2) from error
+    if browser is None:
+        raise _VerificationFailure(
+            ["No supported browser executable was found. Use --browser or a provider rendering tool."], 2
+        )
+    return browser
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Validate, render, and report the artifact in machine-readable JSON."""
     args = _arguments(argv)
@@ -365,45 +398,20 @@ def main(argv: Sequence[str] | None = None) -> int:
         "visualInspectionRequired": False,
     }
 
-    if not html_path.is_file():
-        report["errors"] = [f"HTML file was not found: {html_path}"]
-        print(json.dumps(report, indent=2))
-        return 1
-
     try:
-        html = html_path.read_text(encoding="utf-8")
-    except UnicodeError as error:
-        report["errors"] = [f"HTML file is not valid UTF-8: {error}"]
+        html = _read_html(html_path)
+        errors = validate_html(html)
+        report["staticValid"] = not errors
+        if errors:
+            raise _VerificationFailure(errors, 1)
+        browser = _resolve_browser(args.browser)
+        report["browser"] = str(browser)
+        options = _RenderOptions(args.width, args.wait_ms, args.timeout_seconds)
+        screenshot_path, warnings = _render_page(html_path, browser, options)
+    except _VerificationFailure as failure:
+        report["errors"] = list(failure.errors)
         print(json.dumps(report, indent=2))
-        return 1
-
-    errors = validate_html(html)
-    report["staticValid"] = not errors
-    if errors:
-        report["errors"] = list(errors)
-        print(json.dumps(report, indent=2))
-        return 1
-
-    try:
-        browser = find_browser(args.browser)
-    except FileNotFoundError as error:
-        report["errors"] = [str(error)]
-        print(json.dumps(report, indent=2))
-        return 2
-    if browser is None:
-        report["errors"] = ["No supported browser executable was found. Use --browser or a provider rendering tool."]
-        print(json.dumps(report, indent=2))
-        return 2
-
-    report["browser"] = str(browser)
-    try:
-        screenshot_path, warnings = _render_page(
-            html_path,
-            browser,
-            args.width,
-            args.wait_ms,
-            args.timeout_seconds,
-        )
+        return failure.exit_code
     except RuntimeError as error:
         report["errors"] = [str(error)]
         print(json.dumps(report, indent=2))

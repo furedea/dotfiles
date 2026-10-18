@@ -48,12 +48,7 @@ def diagnostics(payload: dict, kind: str | None = None) -> tuple[str, ...]:
     """Normalize a provider payload before passing it to the shared lint engine."""
     if not isinstance(payload, dict):
         raise TypeError("hook payload must be an object")
-    return lint_engine.diagnostics(
-        target_paths(payload),
-        EXTENSIONS,
-        kind,
-        checker=check_file,
-    )
+    return lint_engine.diagnostics(lint_engine.supported_targets(target_paths(payload), EXTENSIONS, kind), check_file)
 
 
 def emit(messages: tuple[str, ...]) -> None:
@@ -86,16 +81,25 @@ def main(arguments: list[str]) -> int:
         payload = json.load(sys.stdin)
         if not isinstance(payload, dict):
             raise TypeError("hook payload must be an object")
-        values = payload.get("tool_input") or {}
-        if kind is not None and isinstance(values, dict) and isinstance(values.get("file_path"), str):
-            if not target_paths(payload) or not target_paths(payload)[0].is_file():
-                print(f"File not found: {values['file_path']}", file=sys.stderr)
-                return 1
+        if kind is not None and (missing := missing_file(payload)) is not None:
+            print(f"File not found: {missing}", file=sys.stderr)
+            return 1
         emit(diagnostics(payload, kind))
     except (ValueError, TypeError, OSError, RuntimeError) as error:
         print(error, file=sys.stderr)
         return 1
     return 0
+
+
+def missing_file(payload: dict) -> str | None:
+    """Return the named file_path when it does not resolve to an existing file."""
+    values = payload.get("tool_input") or {}
+    if not isinstance(values, dict) or not isinstance(values.get("file_path"), str):
+        return None
+    paths = target_paths(payload)
+    if paths and paths[0].is_file():
+        return None
+    return values["file_path"]
 
 
 if __name__ == "__main__":

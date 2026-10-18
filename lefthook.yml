@@ -51,3 +51,13 @@ pre-commit:
       run: oxlint {all_files}
     ls-lint:
       run: ls_lint
+    # Same 500-line budget as template-python, applied to hand-written code.
+    # Nix modules, data files, and docs are excluded.
+    file-length:
+      glob: "*.{py,sh,bash,bats,zsh,lua,js,ts}"
+      run: |
+        for f in {staged_files}; do
+          n=$(wc -l < "$f")
+          [ "$n" -le 500 ] || { echo "$f: $n lines (max 500)"; fail=1; }
+        done
+        exit ${fail:-0}

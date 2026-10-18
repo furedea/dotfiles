@@ -71,11 +71,11 @@ def since_time(value: str) -> datetime:
 
 def claude_commands(home: Path, since: datetime) -> Iterator[RecordedCommand]:
     """Bash tool calls the assistant made in each session transcript."""
-    for path in sorted(home.glob(".claude/projects/*/*.jsonl")):
-        for entry in log_entries(path, since):
-            if entry.get("type") == "assistant" and is_recent(entry, since):
-                cwd = text(entry.get("cwd"))
-                yield from (RecordedCommand(command, cwd) for command in bash_tool_uses(entry))
+    entries = (entry for path in sorted(home.glob(".claude/projects/*/*.jsonl")) for entry in log_entries(path, since))
+    for entry in entries:
+        if entry.get("type") == "assistant" and is_recent(entry, since):
+            cwd = text(entry.get("cwd"))
+            yield from (RecordedCommand(command, cwd) for command in bash_tool_uses(entry))
 
 
 def bash_tool_uses(entry: dict) -> list[str]:
@@ -88,15 +88,19 @@ def bash_tool_uses(entry: dict) -> list[str]:
 def codex_commands(home: Path, since: datetime) -> Iterator[RecordedCommand]:
     """Shell calls in Codex rollouts: exec_command calls in older logs, completed command items in newer ones."""
     for path in sorted(home.glob(".codex/sessions/**/*.jsonl*")):
-        if path.suffix not in {".jsonl", ".zst"}:
-            continue
-        session_cwd = ""
-        for entry in log_entries(path, since):
-            payload = mapping(entry.get("payload"))
-            if entry.get("type") in {"session_meta", "turn_context"}:
-                session_cwd = text(payload.get("cwd")) or session_cwd
-            if (recorded := codex_call(payload, session_cwd)) and is_recent(entry, since):
-                yield recorded
+        if path.suffix in {".jsonl", ".zst"}:
+            yield from codex_log_commands(path, since)
+
+
+def codex_log_commands(path: Path, since: datetime) -> Iterator[RecordedCommand]:
+    """One rollout's calls, each run in the latest working directory the session reported."""
+    session_cwd = ""
+    for entry in log_entries(path, since):
+        payload = mapping(entry.get("payload"))
+        if entry.get("type") in {"session_meta", "turn_context"}:
+            session_cwd = text(payload.get("cwd")) or session_cwd
+        if (recorded := codex_call(payload, session_cwd)) and is_recent(entry, since):
+            yield recorded
 
 
 def codex_call(payload: dict, session_cwd: str) -> RecordedCommand | None:
@@ -131,15 +135,16 @@ def log_entries(path: Path, since: datetime) -> Iterator[dict]:
         return
     try:
         with open_log(path) as stream:
-            for line in stream:
-                try:
-                    entry = json.loads(line)
-                except ValueError:
-                    continue
-                if isinstance(entry, dict):
-                    yield entry
+            yield from (entry for line in stream if isinstance(entry := json_object(line), dict))
     except (OSError, EOFError, zstd.ZstdError) as error:
         print(f"skipped the rest of {path}: {error}", file=sys.stderr)
+
+
+def json_object(line: str) -> object:
+    try:
+        return json.loads(line)
+    except ValueError:
+        return None
 
 
 def open_log(path: Path) -> TextIO:

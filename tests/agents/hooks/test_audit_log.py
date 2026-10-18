@@ -164,13 +164,13 @@ def test_escalation_records_the_governed_prefix_without_the_command(
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
     command = "git commit -m 'token=secret-value'"
     audit.escalated(
-        "Bash",
-        command,
-        f"command not in allowlist: {command}",
-        "guard_allowed_commands.sh",
-        "session-one",
-        payload={"tool_name": "Bash", "tool_input": {"command": command}, "session_id": "session-one"},
-        detail="git commit",
+        audit.Refusal(
+            "Bash",
+            "guard_allowed_commands.sh",
+            "session-one",
+            payload={"tool_name": "Bash", "tool_input": {"command": command}, "session_id": "session-one"},
+            detail="git commit",
+        )
     )
     [row] = [
         json.loads(line)

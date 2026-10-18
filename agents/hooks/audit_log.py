@@ -1,6 +1,8 @@
 #!/usr/bin/env -S python3 -IB
 """Record bounded hook metadata without retaining prompts, commands, or file bodies."""
 
+from collections.abc import Iterable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 import hashlib
 import json
@@ -132,34 +134,45 @@ def record(kind: str, payload: dict, provider: str | None = None) -> dict | None
         "targets": [],
     }
     if kind == "compaction":
-        source = payload.get("source") or ""
-        if event not in {"PreCompact", "PostCompaction"} and not (
-            event == "SessionStart" and source in {"compact", "resume"}
-        ):
-            return None
-        path = payload.get("transcript_path") or ""
-        result.update(
-            tool="Compaction",
-            counts=transcript_counts(path),
-            trigger=payload.get("trigger") if payload.get("trigger") in {"manual", "auto"} else "",
-            source=source if event == "SessionStart" else "",
-        )
-        return result
+        return _compaction_record(result, payload)
     tool = _label(payload.get("tool_name"), "")
-    if kind == "tool" and not tool:
-        return None
-    values = payload.get("tool_input") or {}
-    if not isinstance(values, dict):
-        if kind == "tool" and tool == "Bash":
-            return None
-        values = {}
-    if kind == "tool" and tool == "Bash" and not (values.get("command") or values.get("cmd")):
+    values = _tool_values(kind, tool, payload)
+    if values is None:
         return None
     result["tool"] = tool
     result["targets"] = _targets(tool, values, cwd)
     if (duration := _duration(payload)) is not None:
         result["duration_ms"] = duration
     return result
+
+
+def _compaction_record(result: dict, payload: dict) -> dict | None:
+    event = result["event"]
+    source = payload.get("source") or ""
+    if event not in {"PreCompact", "PostCompaction"} and not (
+        event == "SessionStart" and source in {"compact", "resume"}
+    ):
+        return None
+    path = payload.get("transcript_path") or ""
+    result.update(
+        tool="Compaction",
+        counts=transcript_counts(path),
+        trigger=payload.get("trigger") if payload.get("trigger") in {"manual", "auto"} else "",
+        source=source if event == "SessionStart" else "",
+    )
+    return result
+
+
+def _tool_values(kind: str, tool: str, payload: dict) -> dict | None:
+    """Return the tool input to audit, or None when a tool event carries nothing to record."""
+    if kind == "tool" and not tool:
+        return None
+    values = payload.get("tool_input") or {}
+    if not isinstance(values, dict):
+        values = {}
+    if kind == "tool" and tool == "Bash" and not (values.get("command") or values.get("cmd")):
+        return None
+    return values
 
 
 def transcript_counts(path: str) -> dict[str, int]:
@@ -169,18 +182,25 @@ def transcript_counts(path: str) -> dict[str, int]:
         return counts
     try:
         with Path(path).open() as stream:
-            for line in stream:
-                counts["messages"] += 1
-                try:
-                    content = (json.loads(line).get("message") or {}).get("content") or []
-                    counts["tool_uses"] += sum(
-                        isinstance(item, dict) and item.get("type") == "tool_use" for item in content
-                    )
-                except ValueError, AttributeError, TypeError:
-                    continue
+            _count_lines(stream, counts)
     except OSError, TypeError:
         pass
     return counts
+
+
+def _count_lines(lines: Iterable[str], counts: dict[str, int]) -> None:
+    """Add as it reads, so a read failure midway keeps the counts gathered so far."""
+    for line in lines:
+        counts["messages"] += 1
+        counts["tool_uses"] += _tool_use_count(line)
+
+
+def _tool_use_count(line: str) -> int:
+    try:
+        content = (json.loads(line).get("message") or {}).get("content") or []
+        return sum(isinstance(item, dict) and item.get("type") == "tool_use" for item in content)
+    except ValueError, AttributeError, TypeError:
+        return 0
 
 
 def _state_root(cwd: Path) -> Path | None:
@@ -236,19 +256,25 @@ def _cleanup(root: Path, now: float) -> None:
         descriptor = os.open(stamp, os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o600)
         os.close(descriptor)
         os.utime(stamp, (now, now))
-        files = _files(root)
-        for path in files:
-            if now - path.stat().st_mtime > RETENTION_SECONDS:
-                path.unlink(missing_ok=True)
-        files = _files(root)
-        total = sum(path.stat().st_size for path in files)
-        for path in sorted(files, key=lambda item: item.stat().st_mtime_ns):
-            if total <= TOTAL_LOG_LIMIT_BYTES:
-                break
-            total -= path.stat().st_size
-            path.unlink(missing_ok=True)
+        _remove_expired(_files(root), now)
+        _remove_oldest_over_limit(_files(root))
     except OSError, ValueError:
         return
+
+
+def _remove_expired(files: list[Path], now: float) -> None:
+    for path in files:
+        if now - path.stat().st_mtime > RETENTION_SECONDS:
+            path.unlink(missing_ok=True)
+
+
+def _remove_oldest_over_limit(files: list[Path]) -> None:
+    total = sum(path.stat().st_size for path in files)
+    for path in sorted(files, key=lambda item: item.stat().st_mtime_ns):
+        if total <= TOTAL_LOG_LIMIT_BYTES:
+            break
+        total -= path.stat().st_size
+        path.unlink(missing_ok=True)
 
 
 def prune(*, now: float | None = None) -> None:
@@ -267,18 +293,19 @@ def prune(*, now: float | None = None) -> None:
         return
 
 
-def _append_path(directory: Path, session: str, now: datetime, size: int) -> Path | None:
-    base = directory / f"{session}-{now:%Y%m%d}.jsonl"
+def _append_path(directory: Path, stem: str, size: int) -> Path | None:
     for sequence in range(10000):
-        path = base if sequence == 0 else directory / f"{session}-{now:%Y%m%d}.{sequence}.jsonl"
-        if path.is_symlink():
-            continue
-        try:
-            if path.stat().st_size + size <= LOG_LIMIT_BYTES:
-                return path
-        except FileNotFoundError:
+        path = directory / (f"{stem}.jsonl" if sequence == 0 else f"{stem}.{sequence}.jsonl")
+        if not path.is_symlink() and _has_room(path, size):
             return path
     return None
+
+
+def _has_room(path: Path, size: int) -> bool:
+    try:
+        return path.stat().st_size + size <= LOG_LIMIT_BYTES
+    except FileNotFoundError:
+        return True
 
 
 def _write_all(descriptor: int, data: bytes) -> None:
@@ -300,99 +327,89 @@ def append_record(entry: dict | None, *, cwd: Path | None = None) -> None:
         return
     record_value = dict(entry, ts=current.strftime("%Y-%m-%dT%H:%M:%SZ"))
     try:
-        encoded = (json.dumps(record_value, ensure_ascii=False, separators=(",", ":")) + "\n").encode()
-        if len(encoded) > LOG_LIMIT_BYTES:
-            return
-        private_directory(root)
-        with file_lock(root / ".lock"):
-            provider = _label(record_value.get("provider"))
-            session = _label(record_value.get("session"))
-            worktree = record_value.get("worktree")
-            if not isinstance(worktree, str) or not re.fullmatch(r"[0-9a-f]{32}", worktree):
-                worktree = "unknown"
-            record_value["worktree"] = worktree
-            directory = root / worktree / provider
-            if _contains_symlink(directory):
-                return
-            private_directory(directory)
-            path = _append_path(directory, session, current, len(encoded))
-            if path is None:
-                return
-            descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW, 0o600)
-            try:
-                _write_all(descriptor, encoded)
-            finally:
-                os.close(descriptor)
-            _cleanup(root, current.timestamp())
+        _append_locked(root, record_value, current)
     except OSError, ValueError, TypeError:
         return
 
 
-def blocked(
-    tool: str,
-    value: str = "",
-    reason: str = "",
-    hook: str = "",
-    session: str = "",
-    *,
-    payload: dict | None = None,
-    provider: str | None = None,
-    targets: tuple[str, ...] = (),
-    detail: str = "",
-) -> None:
-    """Record a denial without using the supplied command or reason as log content."""
-    _refusal(
-        "Blocked", "blocked", tool, hook, session, payload=payload, provider=provider, targets=targets, detail=detail
-    )
+def _append_locked(root: Path, record_value: dict, current: datetime) -> None:
+    encoded = (json.dumps(record_value, ensure_ascii=False, separators=(",", ":")) + "\n").encode()
+    if len(encoded) > LOG_LIMIT_BYTES:
+        return
+    private_directory(root)
+    with file_lock(root / ".lock"):
+        directory = _log_directory(root, record_value)
+        stem = f"{_label(record_value.get('session'))}-{current:%Y%m%d}"
+        path = None if directory is None else _append_path(directory, stem, len(encoded))
+        if path is None:
+            return
+        _append_bytes(path, encoded)
+        _cleanup(root, current.timestamp())
 
 
-def escalated(
-    tool: str,
-    value: str = "",
-    reason: str = "",
-    hook: str = "",
-    session: str = "",
-    *,
-    payload: dict | None = None,
-    provider: str | None = None,
-    targets: tuple[str, ...] = (),
-    detail: str = "",
-) -> None:
-    """Record that a call was handed to the user, keeping only a short label such as the governed prefix."""
-    _refusal(
-        "Escalated", "asked", tool, hook, session, payload=payload, provider=provider, targets=targets, detail=detail
-    )
+def _log_directory(root: Path, record_value: dict) -> Path | None:
+    provider = _label(record_value.get("provider"))
+    worktree = record_value.get("worktree")
+    if not isinstance(worktree, str) or not re.fullmatch(r"[0-9a-f]{32}", worktree):
+        worktree = "unknown"
+    directory = root / worktree / provider
+    if _contains_symlink(directory):
+        return None
+    private_directory(directory)
+    return directory
 
 
-def _refusal(
-    event: str,
-    status: str,
-    tool: str,
-    hook: str,
-    session: str,
-    *,
-    payload: dict | None,
-    provider: str | None,
-    targets: tuple[str, ...],
-    detail: str,
-) -> None:
-    context = dict(payload) if isinstance(payload, dict) else {}
-    context.setdefault("tool_name", tool)
-    context.setdefault("session_id", session)
+def _append_bytes(path: Path, data: bytes) -> None:
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW, 0o600)
     try:
-        entry = record("denied", context, provider)
+        _write_all(descriptor, data)
+    finally:
+        os.close(descriptor)
+
+
+@dataclass(frozen=True, slots=True)
+class Refusal:
+    """A guard's refusal, holding only what an audit row may keep or derive."""
+
+    tool: str
+    hook: str = ""
+    session: str = ""
+    payload: dict | None = None
+    provider: str | None = None
+    targets: tuple[str, ...] = ()
+    detail: str = ""
+
+
+def blocked(refusal: Refusal) -> None:
+    """Record a denial; the refusal carries no command or reason text to log."""
+    _refusal("Blocked", "blocked", refusal)
+
+
+def escalated(refusal: Refusal) -> None:
+    """Record that a call was handed to the user, keeping only a short label such as the governed prefix."""
+    _refusal("Escalated", "asked", refusal)
+
+
+def _refusal(event: str, status: str, refusal: Refusal) -> None:
+    context = dict(refusal.payload) if isinstance(refusal.payload, dict) else {}
+    context.setdefault("tool_name", refusal.tool)
+    context.setdefault("session_id", refusal.session)
+    try:
+        entry = record("denied", context, refusal.provider)
     except OSError, RuntimeError, TypeError, ValueError:
         return
     if entry is None:
         return
     entry["event"] = event
     entry["status"] = status
-    entry["rule"] = _label(hook)
-    if detail:
-        entry["detail"] = _label(detail)
-    if targets:
+    entry["rule"] = _label(refusal.hook)
+    if refusal.detail:
+        entry["detail"] = _label(refusal.detail)
+    if refusal.targets:
         cwd = _cwd(context)
-        entry["targets"] = [target for value in targets if (target := _target(value, cwd)) is not None][:MAX_TARGETS]
+        entry["targets"] = [target for value in refusal.targets if (target := _target(value, cwd)) is not None][
+            :MAX_TARGETS
+        ]
     append_record(entry, cwd=_cwd(context))
 
 

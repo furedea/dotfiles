@@ -123,13 +123,13 @@ def main() -> int:
     verdict = decide(payload)
     if verdict.decision != "allow":
         audit_log.escalated(
-            payload.get("tool_name") or "Edit",
-            hook_input.file_path(payload.get("tool_input") or {}),
-            verdict.reason,
-            RULE,
-            payload.get("session_id", ""),
-            payload=payload,
-            detail=verdict.detail,
+            audit_log.Refusal(
+                payload.get("tool_name") or "Edit",
+                RULE,
+                payload.get("session_id", ""),
+                payload=payload,
+                detail=verdict.detail,
+            )
         )
     return hook_decision.emit(verdict)
 

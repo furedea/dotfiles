@@ -153,8 +153,8 @@ def test_blocked_audit_rows_preserve_schema_and_append(tmp_path: Path, mocker: M
         "os.environ",
         {"CLAUDE_PROJECT_DIR": str(tmp_path / "worktree"), "XDG_STATE_HOME": str(tmp_path / "state")},
     )
-    audit.blocked("Bash", "first", "reason", "hook.sh", "session")
-    audit.blocked("Bash", "second", "reason", "hook.sh", "")
+    audit.blocked(audit.Refusal("Bash", "hook.sh", "session"))
+    audit.blocked(audit.Refusal("Bash", "hook.sh"))
     paths = list((tmp_path / "state/agent-harness/audit").glob("*/*/*.jsonl"))
     assert len(paths) == 2
     rows = [json.loads(line) for path in paths for line in path.read_text().splitlines()]
@@ -293,5 +293,5 @@ def test_malformed_guard_input_remains_auditable(
     monkeypatch.setattr(module.audit_log, "blocked", blocked)
     assert (module.main([mode]) if mode else module.main()) == 2
     blocked.assert_called_once()
-    assert blocked.call_args.args[1] == ""
-    assert blocked.call_args.args[3] == identifier
+    [refusal] = blocked.call_args.args
+    assert (refusal.hook, refusal.session, refusal.payload) == (identifier, "", None)

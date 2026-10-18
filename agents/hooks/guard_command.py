@@ -6,6 +6,7 @@ in a form the precise allowlist does not list, or a command that cannot be inspe
 is handed to the user instead of being refused outright.
 """
 
+from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
@@ -23,7 +24,24 @@ from hook_decision import Verdict
 import shell_syntax
 
 
-def policies(kind: str, directory: Path) -> tuple[list[dict], list[dict]]:
+@dataclass(frozen=True, slots=True)
+class Policy:
+    """Generated permission prefixes beside the regex rules of one guard kind."""
+
+    prefixes: list[dict]
+    rules: list[dict]
+
+
+@dataclass(frozen=True, slots=True)
+class Attempt:
+    """What an audit record names: the guard kind, the inspected command, and the raw payload."""
+
+    kind: str
+    command: str
+    payload: object
+
+
+def policies(kind: str, directory: Path) -> Policy:
     """Load required global rules and optional project additions exactly once."""
     permissions = Path(os.environ.get("AGENT_COMMAND_PERMISSIONS", str(directory / "rules/command_permissions.json")))
     name = "allowed_commands.json" if kind == "allowed" else "forbidden_commands.json"
@@ -44,12 +62,10 @@ def policies(kind: str, directory: Path) -> tuple[list[dict], list[dict]]:
             rules += command_policy.load_rules(project)
         except ValueError as error:
             raise ValueError(f"invalid project {kind} command rules: {project}") from error
-    return prefixes, rules
+    return Policy(prefixes, rules)
 
 
-def objection(
-    kind: str, item: shell_syntax.Command, candidate: shell_syntax.Command, prefixes: list[dict], rules: list[dict]
-) -> Verdict:
+def objection(kind: str, item: shell_syntax.Command, policy: Policy) -> Verdict:
     """Judge one segment by its own words and by its canonical program and subcommand.
 
     Rules see only the command's words: redirections stay inside the sandbox, and heredoc bodies
@@ -59,6 +75,8 @@ def objection(
     any form, since the sandbox confines it. A run-time word in a governed program counts as a plain
     placeholder, so it passes only where any value would.
     """
+    candidate = command_policy.canonical(item)
+    prefixes, rules = policy.prefixes, policy.rules
     preview = shell_syntax.command_preview(item.raw)
     if kind == "forbidden":
         matched = command_policy.regex_reason(item.command_words_text, rules) or command_policy.regex_reason(
@@ -86,7 +104,7 @@ def decide(kind: str, payload: dict, directory: Path = ROOT) -> Verdict:
     """Decide for an already decoded provider payload, recording every denial and escalation."""
     command = ""
     try:
-        prefixes, rules = policies(kind, directory)
+        policy = policies(kind, directory)
         if not isinstance(payload, dict):
             raise ValueError("failed to parse tool input JSON: expected an object")
         command = payload.get("tool_input", {}).get("command") or ""
@@ -96,23 +114,24 @@ def decide(kind: str, payload: dict, directory: Path = ROOT) -> Verdict:
             preview = shell_syntax.command_preview(command)
             verdict = hook_decision.ask(f"Needs review: {error}.\n\nCommand: {preview}", "syntax")
         else:
-            verdicts = (objection(kind, item, command_policy.canonical(item), prefixes, rules) for item in commands)
+            verdicts = (objection(kind, item, policy) for item in commands)
             verdict = next((item for item in verdicts if item.decision != "allow"), hook_decision.ALLOW)
     except (ValueError, TypeError, AttributeError, OSError) as error:
         prefix = "forbidden command: " if kind == "forbidden" else ""
         verdict = hook_decision.deny(f"BLOCKED: {prefix}{error}\n\n{hook_decision.REVIEW_HINT}")
-    record(kind, verdict, command, payload)
+    record(verdict, Attempt(kind, command, payload))
     return verdict
 
 
-def record(kind: str, verdict: Verdict, command: str, payload: object) -> None:
+def record(verdict: Verdict, attempt: Attempt) -> None:
     if verdict.decision == "allow":
         return
+    payload = attempt.payload
     context = payload if isinstance(payload, dict) else None
     session = payload.get("session_id", "") if isinstance(payload, dict) else ""
     writer = audit_log.blocked if verdict.decision == "deny" else audit_log.escalated
     writer(
-        "Bash", command, verdict.reason, f"guard_{kind}_commands.sh", session, payload=context, detail=verdict.detail
+        audit_log.Refusal("Bash", f"guard_{attempt.kind}_commands.sh", session, payload=context, detail=verdict.detail)
     )
 
 
@@ -128,7 +147,7 @@ def main(arguments: list[str]) -> int:
     try:
         payload = json.load(sys.stdin)
     except ValueError, OSError:
-        audit_log.blocked("Bash", "", "failed to parse tool input JSON", f"guard_{arguments[0]}_commands.sh", "")
+        audit_log.blocked(audit_log.Refusal("Bash", f"guard_{arguments[0]}_commands.sh"))
         print("BLOCKED: failed to parse tool input JSON", file=sys.stderr)
         return 2
     return check(arguments[0], payload)

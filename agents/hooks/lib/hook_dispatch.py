@@ -1,5 +1,6 @@
 """Fan a provider event payload out to the commands declared in a hook manifest."""
 
+from collections.abc import Iterator
 import json
 import os
 from pathlib import Path
@@ -21,20 +22,23 @@ def run(manifest: Path, event: str, payload: dict) -> int:
     """
     blocked = False
     decision = None
-    for group in _groups(manifest, event):
-        if not _matches(group.get("matcher"), payload):
-            continue
-        for hook in group.get("hooks") or []:
-            outcome = _run_hook(hook, payload)
-            if outcome == 2:
-                blocked = True
-            elif isinstance(outcome, str) and decision is None:
-                decision = outcome
+    for hook in _matching_hooks(manifest, event, payload):
+        outcome = _run_hook(hook, payload)
+        if outcome == 2:
+            blocked = True
+        elif isinstance(outcome, str) and decision is None:
+            decision = outcome
     if blocked:
         return 2
     if decision is not None:
         sys.stdout.write(decision + "\n")
     return 0
+
+
+def _matching_hooks(manifest: Path, event: str, payload: dict) -> Iterator[object]:
+    for group in _groups(manifest, event):
+        if _matches(group.get("matcher"), payload):
+            yield from group.get("hooks") or []
 
 
 def _groups(manifest: Path, event: str) -> list:

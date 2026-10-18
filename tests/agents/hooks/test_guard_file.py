@@ -178,3 +178,29 @@ def test_commit_policy_override(run_cli: CliRunner, git_project: Path, valid: bo
     )
     assert result.returncode == 2
     assert ("custom fixture rule" if valid else "invalid secret commit policy") in result.stderr
+
+
+@pytest.mark.parametrize(
+    "rules",
+    [
+        [{"pattern": "x"}],
+        [{"pattern": "", "reason": "empty"}],
+        [{"pattern": "x", "reason": 1}],
+        ["x"],
+        [{"pattern": "x", "reason": "ok"}, {"pattern": "[", "reason": "broken regex"}],
+    ],
+)
+def test_malformed_commit_filename_rules_fail_closed(
+    run_cli: CliRunner, git_project: Path, rules: list[object]
+) -> None:
+    stage(git_project, "custom-sensitive.txt")
+    policy = git_project / "commit-policy.json"
+    policy.write_text(json.dumps({"version": 1, "rules": rules}))
+    result = run_cli(
+        SCRIPT,
+        "commit",
+        payload={"tool_input": {"command": "git commit"}},
+        env={"AGENT_SECRET_COMMIT_POLICY": str(policy)},
+    )
+    assert result.returncode == 2
+    assert "invalid secret commit policy" in result.stderr

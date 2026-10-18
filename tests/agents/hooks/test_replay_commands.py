@@ -97,6 +97,18 @@ def test_codex_shell_calls_in_both_log_formats_are_replayed(home: Path, run_cli:
     assert "curl https://example.com/x" in result.stdout
 
 
+def test_unreadable_lines_and_other_codex_files_are_skipped(home: Path, run_cli: CliRunner) -> None:
+    rollout = home / ".codex/sessions/2026/10/17/rollout.jsonl"
+    rollout.parent.mkdir(parents=True)
+    rollout.write_text("not json\n[1, 2]\n" + json.dumps(codex_exec_command("git add -A")) + "\n")
+    write_lines(rollout.with_name("rollout.jsonl.bak"), [codex_exec_command("curl https://example.com/x")])
+
+    result = run_cli(SCRIPT, "--since", SINCE)
+
+    assert result.returncode == 0, result.stderr
+    assert totals(result.stdout) == {"allow": 0, "ask": 0, "deny": 1}
+
+
 def test_replay_leaves_the_audit_log_untouched(home: Path, isolated_project: Path, run_cli: CliRunner) -> None:
     write_lines(home / ".claude/projects/repo/session.jsonl", [claude_bash("git add -A")])
 

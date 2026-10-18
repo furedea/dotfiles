@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass, field
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import threading
@@ -65,8 +66,7 @@ def _drain(stream: BinaryIO, capture: _Capture) -> None:
 def _send_input(stream: BinaryIO, path: Path) -> None:
     try:
         with path.open("rb") as source:
-            while chunk := source.read(READ_CHUNK_BYTES):
-                stream.write(chunk)
+            shutil.copyfileobj(source, stream, READ_CHUNK_BYTES)
         stream.close()
     except BrokenPipeError, OSError:
         return

@@ -54,14 +54,18 @@ def commit_filename_rules(path: Path) -> list[dict]:
     try:
         rules = load_policy(path, "rules")
         for rule in rules:
-            if not isinstance(rule, dict) or not all(
-                isinstance(rule.get(key), str) and rule[key] for key in ("pattern", "reason")
-            ):
-                raise ValueError("invalid secret filename rule")
-            regex_matches(rule["pattern"], "")
+            validate_filename_rule(rule)
         return rules
     except ValueError as error:
         raise ValueError(f"invalid secret commit policy: {path}") from error
+
+
+def validate_filename_rule(rule: object) -> None:
+    if not isinstance(rule, dict) or not all(
+        isinstance(rule.get(key), str) and rule[key] for key in ("pattern", "reason")
+    ):
+        raise ValueError("invalid secret filename rule")
+    regex_matches(rule["pattern"], "")
 
 
 def staged_filename_matches(rules: list[dict]) -> list[tuple[str, str]]:
@@ -145,13 +149,13 @@ def scan_content(mode: str, payload: dict, directory: Path) -> None:
     )
     summary = "<prompt body elided>" if mode == "prompt" else hook_input.file_path(values)
     audit_log.blocked(
-        tool,
-        summary,
-        reason,
-        "guard_secret_content.sh",
-        payload.get("session_id") or "",
-        payload=payload,
-        targets=() if mode == "prompt" else ((summary,) if summary else ()),
+        audit_log.Refusal(
+            tool,
+            "guard_secret_content.sh",
+            payload.get("session_id") or "",
+            payload=payload,
+            targets=() if mode == "prompt" else ((summary,) if summary else ()),
+        )
     )
     if mode == "prompt":
         decision = {"decision": "block", "reason": f"BLOCKED: {reason}. Prompt contains sensitive information."}
@@ -192,13 +196,13 @@ def check(mode: str, payload: dict, directory: Path = ROOT) -> int:
     except (OSError, ValueError, TypeError, AttributeError, subprocess.CalledProcessError) as error:
         reason = str(error)
     audit_log.blocked(
-        tool,
-        value,
-        reason,
-        hook,
-        payload.get("session_id", "") if isinstance(payload, dict) else "",
-        payload=payload if isinstance(payload, dict) else None,
-        targets=() if mode == "commit" else ((value,) if value else ()),
+        audit_log.Refusal(
+            tool,
+            hook,
+            payload.get("session_id", "") if isinstance(payload, dict) else "",
+            payload=payload if isinstance(payload, dict) else None,
+            targets=() if mode == "commit" else ((value,) if value else ()),
+        )
     )
     print(f"BLOCKED: {reason}", file=sys.stderr)
     return 2
@@ -213,7 +217,7 @@ def main(arguments: list[str]) -> int:
     except (ValueError, OSError) as error:
         tool = "Bash" if arguments[0] == "commit" else "Edit"
         hook = "guard_secret_commit.sh" if arguments[0] == "commit" else "guard_harness_files.sh"
-        audit_log.blocked(tool, "", str(error), hook, "")
+        audit_log.blocked(audit_log.Refusal(tool, hook))
         print(f"BLOCKED: {error}", file=sys.stderr)
         return 2
     return check(arguments[0], payload)

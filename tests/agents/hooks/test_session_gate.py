@@ -205,3 +205,16 @@ def test_verbose_runner_output_does_not_inflate_reused_notifications(
         notification = gate.gate(record)
         assert "passed" in notification["systemMessage"]
         assert len(json.dumps(notification)) < 4096
+
+
+def test_invalid_test_configuration_blocks_once_then_only_notifies(record: session_store.SessionRecord) -> None:
+    mapping = record.root / ".agents/hooks/rules/related_test_extensions.json"
+    mapping.parent.mkdir(parents=True)
+    mapping.write_text("[]")
+    (record.root / "source.py").write_text("task edit")
+    first = gate.gate(record)
+    second = gate.gate(record)
+    assert first["decision"] == "block"
+    assert first["reason"].startswith("Verification unresolved · invalid test configuration\n")
+    assert second == {"systemMessage": first["reason"]}
+    assert calls() == []

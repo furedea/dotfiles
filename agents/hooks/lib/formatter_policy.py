@@ -90,13 +90,18 @@ def dependency_names(data: dict) -> set[str]:
     groups = data.get("dependency-groups")
     if isinstance(groups, dict):
         values.extend(groups.values())
-    names: set[str] = set()
-    for group in values:
-        if isinstance(group, list):
-            for requirement in group:
-                if isinstance(requirement, str):
-                    names.add(re.split(r"[<=>!~\[]", requirement, maxsplit=1)[0].strip().lower().replace("-", "_"))
-    return names
+    return {
+        requirement_name(requirement)
+        for group in values
+        if isinstance(group, list)
+        for requirement in group
+        if isinstance(requirement, str)
+    }
+
+
+def requirement_name(requirement: str) -> str:
+    """Normalize a requirement specifier to its comparable distribution name."""
+    return re.split(r"[<=>!~\[]", requirement, maxsplit=1)[0].strip().lower().replace("-", "_")
 
 
 def hook_command_text(root: Path) -> str:
@@ -275,72 +280,101 @@ def plan(kind: str, path: Path, *, readonly: bool = False) -> tuple[Step, ...]:
 
 
 def _plan(kind: str, path: Path) -> tuple[Step, ...]:
-    filename = str(path)
-    if kind == "py":
-        return python_plan(path)
-    if kind == "js":
-        return javascript_plan(path)
-    if kind == "json_toml":
-        declarations = project_files(path.parent, DPRINT_CONFIG_NAMES + OTHER_FORMATTER_CONFIG_NAMES)
-        dprint = tuple(item for item in declarations if item.name in DPRINT_CONFIG_NAMES)
-        alternatives = tuple(item for item in declarations if item.name in OTHER_FORMATTER_CONFIG_NAMES)
-        if alternatives:
-            names = ", ".join(item.name for item in alternatives)
-            reason = (
-                f"Project formatter declarations {names} conflict with dprint."
-                if dprint
-                else f"Project formatter declaration {names} takes precedence over dprint."
-            )
-            return (policy_step(path, reason),)
-        project_config = dprint[0] if dprint else None
-        config = project_config or Path.home() / "dprint.json"
-        root = project_config.parent if project_config else path.parent
-        relative = str(path.relative_to(root)) if project_config else path.name
-        arguments = (
-            "--config",
-            str(config),
-            "--includes-override",
-            relative,
-            "--allow-no-files",
-        )
-        return (
-            Step("dprint format", ("dprint", "fmt", *arguments), root, mutates=True),
-            Step("dprint lint", ("dprint", "check", *arguments), root),
-        )
-    if kind == "lua":
-        root = project_root(path.parent, ("selene.toml",)) or path.parent
-        return (
-            Step("stylua format", ("stylua", filename), mutates=True),
-            Step("selene lint", ("selene", filename), root),
-        )
-    if kind == "tex":
-        steps = (Step("tex-fmt format", ("tex-fmt", filename), mutates=True),)
-        if path.suffix != ".bib":
-            steps += (Step("chktex lint", ("chktex", "-q", "-n22", "-n30", filename), reports_warnings=True),)
-        return steps
-    if kind == "md":
-        return (
-            Step("autocorrect format", ("autocorrect", "--fix", filename), mutates=True),
-            Step("prettierd format", ("prettierd", filename), writes_stdout=True, mutates=True),
-        )
-    if kind == "gha":
-        if ".github/workflows/" not in filename or path.suffix not in {".yml", ".yaml"}:
-            return ()
-        return (Step("actionlint lint", ("actionlint", "-oneline", filename)),)
-    commands: dict[str, tuple[tuple, ...]] = {
-        "rs": (("rustfmt format", True, "rustfmt"),),
-        "txt": (("autocorrect format", True, "autocorrect", "--fix"),),
-        "sh": (
-            ("shfmt format", True, "shfmt", "-w"),
-            ("shellcheck lint", False, "shellcheck", "-x", "-P", "SCRIPTDIR"),
-        ),
-        "nix": (
-            ("nixfmt format", True, "nixfmt"),
-            ("statix fix", True, "statix", "fix"),
-            ("statix lint", False, "statix", "check"),
-            ("deadnix lint", False, "deadnix", "--fail"),
-        ),
-    }
-    if kind not in commands:
+    if planner := LANGUAGE_PLANS.get(kind):
+        return planner(path)
+    if kind not in FILE_COMMANDS:
         raise ValueError(f"Unknown quality language: {kind}")
-    return tuple(Step(label, (*arguments, filename), mutates=mutates) for label, mutates, *arguments in commands[kind])
+    return tuple(
+        Step(label, (*arguments, str(path)), mutates=mutates) for label, mutates, *arguments in FILE_COMMANDS[kind]
+    )
+
+
+def dprint_plan(path: Path) -> tuple[Step, ...]:
+    """Format JSON and TOML with dprint unless the project declares another formatter."""
+    declarations = project_files(path.parent, DPRINT_CONFIG_NAMES + OTHER_FORMATTER_CONFIG_NAMES)
+    dprint = tuple(item for item in declarations if item.name in DPRINT_CONFIG_NAMES)
+    alternatives = tuple(item for item in declarations if item.name in OTHER_FORMATTER_CONFIG_NAMES)
+    if alternatives:
+        names = ", ".join(item.name for item in alternatives)
+        reason = (
+            f"Project formatter declarations {names} conflict with dprint."
+            if dprint
+            else f"Project formatter declaration {names} takes precedence over dprint."
+        )
+        return (policy_step(path, reason),)
+    project_config = dprint[0] if dprint else None
+    config = project_config or Path.home() / "dprint.json"
+    root = project_config.parent if project_config else path.parent
+    relative = str(path.relative_to(root)) if project_config else path.name
+    arguments = (
+        "--config",
+        str(config),
+        "--includes-override",
+        relative,
+        "--allow-no-files",
+    )
+    return (
+        Step("dprint format", ("dprint", "fmt", *arguments), root, mutates=True),
+        Step("dprint lint", ("dprint", "check", *arguments), root),
+    )
+
+
+def lua_plan(path: Path) -> tuple[Step, ...]:
+    """Format with stylua and lint with selene from the nearest selene project."""
+    filename = str(path)
+    root = project_root(path.parent, ("selene.toml",)) or path.parent
+    return (
+        Step("stylua format", ("stylua", filename), mutates=True),
+        Step("selene lint", ("selene", filename), root),
+    )
+
+
+def tex_plan(path: Path) -> tuple[Step, ...]:
+    """Format TeX sources and lint them, skipping chktex for bibliographies."""
+    filename = str(path)
+    steps = (Step("tex-fmt format", ("tex-fmt", filename), mutates=True),)
+    if path.suffix != ".bib":
+        steps += (Step("chktex lint", ("chktex", "-q", "-n22", "-n30", filename), reports_warnings=True),)
+    return steps
+
+
+def markdown_plan(path: Path) -> tuple[Step, ...]:
+    """Fix spacing with autocorrect, then format with prettierd."""
+    filename = str(path)
+    return (
+        Step("autocorrect format", ("autocorrect", "--fix", filename), mutates=True),
+        Step("prettierd format", ("prettierd", filename), writes_stdout=True, mutates=True),
+    )
+
+
+def actionlint_plan(path: Path) -> tuple[Step, ...]:
+    """Lint only workflow files under .github/workflows/."""
+    filename = str(path)
+    if ".github/workflows/" not in filename or path.suffix not in {".yml", ".yaml"}:
+        return ()
+    return (Step("actionlint lint", ("actionlint", "-oneline", filename)),)
+
+
+LANGUAGE_PLANS = {
+    "py": python_plan,
+    "js": javascript_plan,
+    "json_toml": dprint_plan,
+    "lua": lua_plan,
+    "tex": tex_plan,
+    "md": markdown_plan,
+    "gha": actionlint_plan,
+}
+FILE_COMMANDS: dict[str, tuple[tuple, ...]] = {
+    "rs": (("rustfmt format", True, "rustfmt"),),
+    "txt": (("autocorrect format", True, "autocorrect", "--fix"),),
+    "sh": (
+        ("shfmt format", True, "shfmt", "-w"),
+        ("shellcheck lint", False, "shellcheck", "-x", "-P", "SCRIPTDIR"),
+    ),
+    "nix": (
+        ("nixfmt format", True, "nixfmt"),
+        ("statix fix", True, "statix", "fix"),
+        ("statix lint", False, "statix", "check"),
+        ("deadnix lint", False, "deadnix", "--fail"),
+    ),
+}

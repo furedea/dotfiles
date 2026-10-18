@@ -208,3 +208,29 @@ def test_wrapper_lookups_and_bare_invocations_are_not_unwrapped(command: str) ->
 def test_unknown_wrapper_options_are_not_silently_skipped() -> None:
     with pytest.raises(syntax.UnsupportedSyntax):
         syntax.parse("xargs --unknown-option git add .")
+
+
+@pytest.mark.parametrize(
+    "arguments,expected",
+    [
+        ((), ""),
+        (("gh", "pr", "merge", "42", "--admin"), "gh pr merge --admin bypasses branch protection"),
+        (("gh", "pr", "merge", "42"), ""),
+        (("/usr/bin/rm", "-rf", "x"), ""),
+        (("git",), ""),
+        (("git", "-C", "/tmp"), ""),
+        (("git", "commit", "-S", "-m", "x"), "agent commits and tags are unsigned"),
+        (("git", "tag", "--local-user=me", "v1"), "agent commits and tags are unsigned"),
+        (("git", "push", "-u", "origin", "topic"), "the sandbox cannot write .git/config"),
+        (("git", "push", "--force", "origin", "topic"), "force-push flag detected"),
+        (("git", "reset", "--hard"), "destructive git operation: reset"),
+        (("git", "worktree", "move", "a", "b"), "destructive git operation: worktree"),
+        (("git", "reflog", "expire"), "destructive git operation: reflog"),
+        (("git", "reflog", "show"), ""),
+        (("git", "restore", "--staged", "--source=HEAD", "f"), "destructive git operation: restore"),
+        (("/usr/local/bin/git", "-c", "a=b", "restore", "-S", "f"), ""),
+    ],
+)
+def test_each_reason_branch_keeps_its_verdict(arguments: tuple[str, ...], expected: str) -> None:
+    actual = git.reason(arguments)
+    assert actual.startswith(expected) if expected else actual == ""

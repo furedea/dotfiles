@@ -204,6 +204,109 @@ def test_main_does_not_accept_a_stale_screenshot_as_render_evidence(
     assert any("screenshot failed" in error.lower() for error in report["errors"])
 
 
+@pytest.mark.parametrize(
+    ("content", "expected_error"),
+    [
+        (None, "HTML file was not found"),
+        (b"\xff\xfe", "HTML file is not valid UTF-8"),
+    ],
+)
+def test_main_rejects_an_unreadable_page_before_validation(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    content: bytes | None,
+    expected_error: str,
+) -> None:
+    html_path = tmp_path / "page.html"
+    if content is not None:
+        html_path.write_bytes(content)
+
+    exit_code = verify_page.main([str(html_path)])
+    report = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 1
+    assert report["staticValid"] is False
+    assert expected_error in report["errors"][0]
+
+
+def test_main_reports_static_errors_without_rendering(
+    tmp_path: Path,
+    mocker: MockerFixture,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    html_path = tmp_path / "page.html"
+    html_path.write_text("<html>{{TITLE}}</html>", encoding="utf-8")
+    find_browser = mocker.patch.object(verify_page, "find_browser", autospec=True)
+
+    exit_code = verify_page.main([str(html_path)])
+    report = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 1
+    assert report["staticValid"] is False
+    assert report["errors"]
+    find_browser.assert_not_called()
+
+
+def test_main_reports_a_missing_explicit_browser(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    html_path = tmp_path / "page.html"
+    html_path.write_text(VALID_HTML, encoding="utf-8")
+
+    exit_code = verify_page.main([str(html_path), "--browser", str(tmp_path / "missing-browser")])
+    report = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert report["staticValid"] is True
+    assert "browser" not in report
+    assert "Browser executable was not found" in report["errors"][0]
+
+
+def test_main_reports_when_no_browser_is_available(
+    tmp_path: Path,
+    mocker: MockerFixture,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    html_path = tmp_path / "page.html"
+    html_path.write_text(VALID_HTML, encoding="utf-8")
+    mocker.patch.object(verify_page, "find_browser", autospec=True, return_value=None)
+
+    exit_code = verify_page.main([str(html_path)])
+    report = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert report["errors"] == [
+        "No supported browser executable was found. Use --browser or a provider rendering tool."
+    ]
+
+
+def test_main_passes_rendering_options_to_the_browser(
+    tmp_path: Path,
+    mocker: MockerFixture,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    html_path = tmp_path / "page.html"
+    html_path.write_text(VALID_HTML, encoding="utf-8")
+    browser = tmp_path / "browser"
+    calls: list[tuple[list[str], int]] = []
+
+    def run_browser(_browser: Path, arguments: list[str], timeout_seconds: int) -> object:
+        calls.append((arguments, timeout_seconds))
+        return verify_page._BrowserResult("", "dom failed", 1, False)
+
+    mocker.patch.object(verify_page, "find_browser", autospec=True, return_value=browser)
+    mocker.patch.object(verify_page, "_run_browser", autospec=True, side_effect=run_browser)
+
+    exit_code = verify_page.main([str(html_path), "--width", "900", "--wait-ms", "700", "--timeout-seconds", "3"])
+    report = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 1
+    assert report["browser"] == str(browser)
+    assert report["errors"] == ["Browser DOM rendering failed: dom failed"]
+    arguments, timeout_seconds = calls[0]
+    assert timeout_seconds == 3
+    assert "--window-size=900,1200" in arguments
+    assert "--virtual-time-budget=700" in arguments
+
+
 def test_viewport_height_uses_reported_page_height_within_bounds() -> None:
     assert verify_page.viewport_height('<body data-page-height="2400">') == (2440, None)
 

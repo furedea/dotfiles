@@ -188,7 +188,8 @@ class Adapter:
         candidates = edit_targets(context) if mode == "patch" else shell_words(command_text(context["tool_input"]))
         for value in candidates:
             if rule := secret_path_policy.blocked_rule(value, rules):
-                deny_secret_path(mode, value, rule, context)
+                audit_log.blocked(secret_path_refusal(mode, value, context))
+                raise ValueError(secret_path_reason(value, rule))
         return 0
 
     def content(self, mode: str, payload: dict) -> int:
@@ -292,20 +293,19 @@ def shell_words(command: str) -> list[str]:
     return words + [word.partition("=")[2] for word in words if "=" in word]
 
 
-def deny_secret_path(mode: str, value: str, rule: dict, context: dict) -> None:
+def secret_path_refusal(mode: str, value: str, context: dict) -> audit_log.Refusal:
     command = mode == "command"
-    audit_log.blocked(
+    return audit_log.Refusal(
         "Bash" if command else "apply_patch",
-        command_text(context["tool_input"]) if command else value,
-        f"{rule['reason']}: {value}",
         SECRET_PATH_RULE,
         context.get("session_id") or "",
         payload=context,
         targets=() if command else (value,),
     )
-    raise ValueError(
-        f"secret path policy matched.\n\nPath: {value}\nPattern: {rule['pattern']}\n\nWhy:\n  {rule['reason']}"
-    )
+
+
+def secret_path_reason(value: str, rule: dict) -> str:
+    return f"secret path policy matched.\n\nPath: {value}\nPattern: {rule['pattern']}\n\nWhy:\n  {rule['reason']}"
 
 
 def usage_entry(kind: str, choices: tuple[str, ...] | None) -> str:

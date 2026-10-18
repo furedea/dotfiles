@@ -106,8 +106,10 @@ def reason(arguments: tuple[str, ...]) -> str:
     executable = Path(arguments[0]).name
     if executable == "gh" and arguments[1:3] == ("pr", "merge") and "--admin" in arguments[3:]:
         return "gh pr merge --admin bypasses branch protection"
-    if executable != "git":
-        return ""
+    return git_reason(arguments) if executable == "git" else ""
+
+
+def git_reason(arguments: tuple[str, ...]) -> str:
     globals_, command = git_arguments(arguments)
     if not command:
         return ""

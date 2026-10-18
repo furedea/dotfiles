@@ -16,7 +16,7 @@ import hook_input
 import patch_input
 import session_gate
 from session_snapshot import repository_root
-from session_store import ScopeError, SessionRecord, StateError, load, prune, register, session_directory
+from session_store import ScopeError, SessionRecord, StateError, load, prune, register, resume, session_directory
 
 
 EVENTS = ("session-start", "pre-tool-use", "stop", "session-end")
@@ -34,7 +34,8 @@ def registered_record(provider: str, payload: dict, *, starting: bool = False) -
     directory = session_directory(root, provider, session)
     if starting:
         # New IDs after clear/fork have no reliable predecessor in native hook input.
-        return register(root, provider, session, resuming=payload.get("source") != "startup")
+        start = register if payload.get("source") == "startup" else resume
+        return start(root, provider, session)
     if not directory.exists():
         raise StateError("Missing verification registration; restart or resume to run SessionStart in this worktree")
     record = load(directory)
@@ -139,23 +140,31 @@ def main() -> int:
     payload: dict = {}
     try:
         if explicit:
-            record = load(Path(arguments[-1]))
-            if query:
-                result = session_gate.status(record)
-            else:
-                result = session_gate.gate(record, force="--force" in arguments)
-                status = int(result.get("decision") == "block" or session_gate.unresolved(record))
+            result, status = explicit_result(arguments)
         else:
-            payload = json.load(sys.stdin)
-            if not isinstance(payload, dict):
-                payload = {}
-                raise StateError("Hook input must be an object")
+            payload = hook_payload()
             result = dispatch(arguments[0], event, payload)
     except (OSError, ValueError, TypeError, KeyError) as error:
         result = failure(event, payload, error)
         status = int(explicit)
     print(json.dumps(result, ensure_ascii=True, separators=(",", ":")))
     return status
+
+
+def explicit_result(arguments: list[str]) -> tuple[dict, int]:
+    """Answer a status query or verify a session record, with the exit status the command reports."""
+    record = load(Path(arguments[-1]))
+    if arguments[0] == "status":
+        return session_gate.status(record), 0
+    result = session_gate.gate(record, force="--force" in arguments)
+    return result, int(result.get("decision") == "block" or session_gate.unresolved(record))
+
+
+def hook_payload() -> dict:
+    payload = json.load(sys.stdin)
+    if not isinstance(payload, dict):
+        raise StateError("Hook input must be an object")
+    return payload
 
 
 if __name__ == "__main__":
