@@ -64,12 +64,19 @@ build(deps): bump axios from 1.6.0 to 1.7.2
 
 ## Commit Command Form
 
-Pass the subject, each body paragraph, and each trailer as separate `-m` arguments. Single or
-double quotes both work, and a quoted argument may span lines. Do not read the message from a
-file, a heredoc, or a command substitution; those forms are handed to the user for review.
+Pass the whole message inline through a quoted heredoc. The quoted `'EOF'` keeps backticks, `$`,
+and apostrophes literal, so the message never needs escaping. Do not write the message to a file;
+reading it from standard input (`git commit -F - <<'EOF'`) is also fine.
 
 ```bash
-git commit -m "<type>(<scope>): <subject>" -m "<body paragraph>" -m "<trailer>: <value>"
+git commit -m "$(cat <<'EOF'
+<type>(<scope>): <subject>
+
+<body paragraph>
+
+<trailer>: <value>
+EOF
+)"
 ```
 
 Agent git runs inside the sandbox, so the call may chain other commands. Agent commits and tags

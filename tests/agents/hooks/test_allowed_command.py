@@ -40,6 +40,10 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
         pytest.param("/opt/homebrew/bin/gh pr list", id="listed GitHub forms invoked by path"),
         pytest.param("gh pr view $NUMBER --json state", id="run-time words in listed GitHub forms"),
         pytest.param('gh pr create --head topic --body-file "$D/pr.md"', id="run-time body files"),
+        pytest.param(
+            "gh pr create --head topic --title 'fix: x' --body \"$(cat <<'EOF'\nUse `git add -A` never.\n$HOME stays.\nEOF\n)\"",
+            id="PR bodies inline through a quoted heredoc",
+        ),
         pytest.param("gh pr review 42 --comment -b 'Looks good'", id="reviewable GitHub operations 1"),
         pytest.param("gh pr close 42", id="reviewable GitHub operations 2"),
         pytest.param("gh run rerun 123", id="reviewable GitHub operations 3"),
@@ -116,3 +120,9 @@ def test_unlisted_forms_of_commands_that_reach_github_or_the_network_ask(
     for fragment in fragments:
         assert fragment in verdict.reason
     assert capsys.readouterr() == ("", "")
+
+
+def test_commit_messages_inline_through_a_quoted_heredoc_pass() -> None:
+    command = "git commit -m \"$(cat <<'EOF'\nfix: don't run `rm -rf $HOME`\n\nBody.\nEOF\n)\""
+    for kind in ("allowed", "forbidden"):
+        assert guard.decide(kind, {"tool_input": {"command": command}}).decision == "allow"
