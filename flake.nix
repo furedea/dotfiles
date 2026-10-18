@@ -13,7 +13,10 @@
     # current API: brew 6.0.12 lacked the `symlink overwrite:` keyword and the
     # `bootstrap_cpython` install step, so post-install failed for openssl@3 and
     # python@3.11, and `brew install` then exited non-zero.
-    nix-homebrew.url = "github:zhaofengli/nix-homebrew";
+    # Pinned to Homebrew 6.0.22: Homebrew 7 removed `brew bundle --cleanup`, which
+    # nix-darwin-25.11 still passes for onActivation.cleanup. Unpin when moving to
+    # nix-darwin-26.05, which runs `brew bundle cleanup --force-cleanup` instead.
+    nix-homebrew.url = "github:zhaofengli/nix-homebrew/09a921d0181146cf6163ec2cc1db7b6fd539a885";
     llm-agents.url = "github:numtide/llm-agents.nix";
     # Pinned: nix/patches/hermes_gateway_service_resources.patch backports
     # NousResearch/hermes-agent#85365 and no longer applies to newer revisions, so
