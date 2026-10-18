@@ -103,6 +103,7 @@ def codex_policy(agent_harness: CliRunner, tmp_path_factory: pytest.TempPathFact
         ("allow", "awk '{print $1}' README.md"),
         ("allow", "cp a.md b.md"),
         ("prompt", "uvx ruff check"),
+        ("prompt", "nix flake update nixpkgs"),
         ("prompt", "npx cowsay hello"),
         ("prompt", "gh pr merge 42 --squash"),
         ("prompt", "gh stack merge"),
