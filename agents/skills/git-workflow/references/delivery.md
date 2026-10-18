@@ -54,9 +54,9 @@ Do not use `-f`/`--fill`; commit messages do not carry this content. The body mu
 - Verification evidence: what ran and its result, or what could not run.
 - Material departures from the plan, or none.
 
-Squash merges take the PR title as the commit subject and the commit messages as its body
-(`squash_merge_commit_message: COMMIT_MESSAGES` in `github/repo_settings.json`), so the default
-branch history stays in English while PR bodies are Japanese.
+Squash merges take the PR title as the commit subject and the PR body as its body
+(`squash_merge_commit_message: PR_BODY` in `github/repo_settings.json`), so the Japanese body
+becomes the default branch commit body.
 
 For what the PR body owns relative to the Issue and plan, follow
 [Information Placement](../../source-of-truth/SKILL.md#information-placement).

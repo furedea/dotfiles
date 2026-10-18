@@ -4,7 +4,7 @@
 - Use "，" and "．" in writing in Japanese, instead of "。" and "、"
 - Directory names: Use hyphens (-) as separators (ex: claude-scripts)
 - File names: Use underscores (\_) as separators (ex: lint_format.sh)
-- Write documentation, code comments, and commit messages in English for public repositories
+- Write documentation, code comments, and commit messages in English for public repositories; a squash-merge commit body is the Japanese PR body
 - When writing commit messages, follow Conventional Commits rules
 - Implement based on Test-Specification-Driven Development (TSDD)
 
