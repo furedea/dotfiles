@@ -15,6 +15,15 @@ verification level. The conventions below govern Rust test tooling and structure
 - Use table-driven tests for the same behavior across multiple inputs.
 - Use async tests only when the project already has an async runtime requirement.
 
+## Mutation Testing
+
+Use `cargo-mutants` (27.x) when `tsdd` calls for mutation testing; install it only when needed.
+
+- Scope a run to the changed file with `cargo mutants --file <path>`; repeat `--file` for more files.
+- Read survivors in `mutants.out/missed.txt`; `caught.txt`, `timeout.txt`, and `unviable.txt` list
+  the other outcomes.
+- Keep `mutants.out/` out of version control.
+
 ## Test Structure
 
 - **Unit test**: place next to the implementation in the same file or module.

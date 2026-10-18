@@ -20,13 +20,13 @@ Consult skills as needed and apply only the stages relevant to the request.
 
 Existing project style takes precedence over these rules.
 
-- Keep files focused: prefer 80-120 columns, roughly 200-500 lines, high-level code before lower-level details, and related concepts close together.
+- Keep files focused: high-level code before lower-level details, and related concepts close together.
 - Before writing new code, check whether related existing code, the standard library, platform features, or already-installed dependencies satisfy the requirement.
 - Separate object creation/configuration from execution logic.
 - Keep classes and modules single-purpose, cohesive, loosely coupled, and minimally public.
 - Name classes by responsibility; order methods public-to-private; use DTOs at component boundaries.
 - Keep domain-specific enums and exception classes near their owning class; use one exception class per domain failure concept unless it is shared across modules.
-- Keep functions single-purpose at one abstraction level: prefer 0-3 arguments, short variable lifetimes, and guard clauses over nested conditionals; keep nesting to about two levels.
+- Keep functions single-purpose at one abstraction level, with short variable lifetimes and guard clauses over nested conditionals.
 - Extract a function when its name states intent the inline code does not; do not split merely to shorten a function.
 - Split duplicated logic, control structures, mixed responsibilities, and command/query behavior into named functions or objects.
 - Name one concept with one word; name command functions for their side effects and query functions for the value they return.

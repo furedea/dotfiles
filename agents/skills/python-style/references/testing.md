@@ -12,6 +12,18 @@ verification level. The conventions below govern Python test tooling and structu
   naming the condition for removing the marker; `strict=True` fails the run when the test
   unexpectedly passes. Remove the marker in the change that fixes the defect.
 
+## Mutation Testing
+
+Use `mutmut` (3.x) when `tsdd` calls for mutation testing; add it to the test dependency group
+only when needed.
+
+- Configure `[tool.mutmut]` in `pyproject.toml` with `source_paths = ["src/"]`
+- Scope a run to the changed module with a mutant name pattern:
+  `uv run --frozen mutmut run "my_package.my_module*"`
+- List survivors with `mutmut results`, inspect one with `mutmut show <mutant>`, or use
+  `mutmut browse` to review and retest them
+- Mutants and results live in `mutants/`; keep it out of version control
+
 ## Test Structure
 
 - **Function-based by default**; class only for namespace grouping or `setup_method`/`teardown_method`
