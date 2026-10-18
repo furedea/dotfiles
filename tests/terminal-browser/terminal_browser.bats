@@ -11,7 +11,7 @@ function terminal_browser_attribute() {
   local _attribute="$1"
 
   nix eval --no-write-lock-file --raw \
-    "$REPO_ROOT#homeConfigurations.kaito.config.home.packages" \
+    "$REPO_ROOT#homeConfigurations.\"kaito@mbp\".config.home.packages" \
     --apply \
     "packages:
       (builtins.head

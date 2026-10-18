@@ -9,12 +9,12 @@ setup() {
 
 evaluate_ssh_identity_check() {
   nix eval --no-write-lock-file --raw \
-    "$REPO_ROOT#homeConfigurations.kaito.config.home.activation.sshIdentityCheck.data"
+    "$REPO_ROOT#homeConfigurations.\"kaito@mbp\".config.home.activation.sshIdentityCheck.data"
 }
 
 evaluate_ssh_directory_permissions() {
   nix eval --no-write-lock-file --raw \
-    "$REPO_ROOT#homeConfigurations.kaito.config.home.activation.sshDirectoryPermissions.data"
+    "$REPO_ROOT#homeConfigurations.\"kaito@mbp\".config.home.activation.sshDirectoryPermissions.data"
 }
 
 @test "home activation restricts the SSH directory to its owner" {

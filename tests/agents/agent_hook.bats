@@ -9,7 +9,7 @@ setup() {
 
 @test "rendered hooks use managed Herdr assets and the Nix Moshi runtime" {
   run --separate-stderr nix build --no-link --print-out-paths \
-    "$REPO_ROOT#homeConfigurations.kaito.activationPackage"
+    "$REPO_ROOT#homeConfigurations.\"kaito@mbp\".activationPackage"
 
   if [ "$status" -ne 0 ]; then
     printf '%s\n' "$stderr" >&2
@@ -62,7 +62,7 @@ setup() {
 
 @test "rendered hooks install the Hermes plugin and the pi bridge" {
   run --separate-stderr nix build --no-link --print-out-paths \
-    "$REPO_ROOT#homeConfigurations.kaito.activationPackage"
+    "$REPO_ROOT#homeConfigurations.\"kaito@mbp\".activationPackage"
 
   if [ "$status" -ne 0 ]; then
     printf '%s\n' "$stderr" >&2

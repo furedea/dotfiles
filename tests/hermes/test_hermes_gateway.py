@@ -20,7 +20,7 @@ PACKAGE_EXPRESSION = """
 { flakeRef, output }:
 let
   flake = builtins.getFlake flakeRef;
-  packages = flake.homeConfigurations.kaito.config.home.packages;
+  packages = flake.homeConfigurations."kaito@mbp".config.home.packages;
   hermes = builtins.head (
     builtins.filter (package: (package.pname or package.name) == "hermes-agent") packages
   );

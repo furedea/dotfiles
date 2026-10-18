@@ -112,8 +112,24 @@
           system
           ;
       };
+      hosts = {
+        mba = {
+          enableHisterService = false;
+          enableMoshiService = false;
+        };
+        mbp = {
+          enableHisterService = true;
+          enableMoshiService = true;
+        };
+      };
+      homeModules = [
+        agent-harness.homeManagerModules.default
+        ./nix/home/default.nix
+      ];
+      hostHomeSpecialArgs =
+        { enableMoshiService, ... }: homeSpecialArgs // { inherit enableMoshiService; };
       mkDarwinConfiguration =
-        {
+        host@{
           enableHisterService,
           enableMoshiService,
         }:
@@ -145,15 +161,8 @@
                 useGlobalPkgs = true;
                 useUserPackages = true;
                 backupFileExtension = "bak";
-                extraSpecialArgs = homeSpecialArgs // {
-                  inherit enableMoshiService;
-                };
-                users.${username} = {
-                  imports = [
-                    agent-harness.homeManagerModules.default
-                    ./nix/home/default.nix
-                  ];
-                };
+                extraSpecialArgs = hostHomeSpecialArgs host;
+                users.${username}.imports = homeModules;
               };
             }
           ];
@@ -163,31 +172,24 @@
       checks.${system} = import ./nix/checks.nix {
         inherit pkgs inputs;
         inherit (nixpkgs) lib;
-        home = self.homeConfigurations.${username}.config;
+        home = self.homeConfigurations."${username}@mbp".config;
+        inherit (self) homeConfigurations;
         darwin = self.darwinConfigurations;
       };
 
-      darwinConfigurations = {
-        mba = mkDarwinConfiguration {
-          enableHisterService = false;
-          enableMoshiService = false;
-        };
-        mbp = mkDarwinConfiguration {
-          enableHisterService = true;
-          enableMoshiService = true;
-        };
-      };
+      darwinConfigurations = builtins.mapAttrs (_: mkDarwinConfiguration) hosts;
 
-      homeConfigurations.${username} = home-manager.lib.homeManagerConfiguration {
-        inherit pkgs;
-        extraSpecialArgs = homeSpecialArgs // {
-          enableMoshiService = false;
-        };
-        modules = [
-          agent-harness.homeManagerModules.default
-          ./nix/home/default.nix
-        ];
-      };
+      # Home Manager picks `<user>@<hostname>` when `--flake` names no output.
+      homeConfigurations = nixpkgs.lib.mapAttrs' (
+        hostName: host:
+        nixpkgs.lib.nameValuePair "${username}@${hostName}" (
+          home-manager.lib.homeManagerConfiguration {
+            inherit pkgs;
+            extraSpecialArgs = hostHomeSpecialArgs host;
+            modules = homeModules;
+          }
+        )
+      ) hosts;
 
       # Re-export codex CLI per system so local users can `nix shell .#codex`
       # without hard-coding the upstream flake URL. Versions stay pinned via

@@ -20,7 +20,7 @@ and `nvim/` need this reference only when their Nix ownership or rebuild require
 ~/ghq/github.com/furedea/dotfiles/
 ├── flake.nix                        # entry point: inputs + outputs
 │   ├── darwinConfigurations         # host-specific full systems (mba / mbp)
-│   └── homeConfigurations."kaito"   # standalone home-manager (no sudo)
+│   └── homeConfigurations           # standalone home-manager per kaito@<host> (no sudo)
 ├── nix/darwin/default.nix           # system layer (nix-darwin)
 │   ├── system.defaults.*            # macOS settings
 │   ├── homebrew.*                   # GUI apps, taps, MAS
@@ -68,7 +68,7 @@ flags are defined in `flake.nix`; preserve the target host's selection.
 ### `home-manager switch` (user only, no sudo)
 
 ```bash
-home-manager switch --flake "$HOME/ghq/github.com/furedea/dotfiles/#kaito"
+home-manager switch --flake "$HOME/ghq/github.com/furedea/dotfiles/#kaito@<host>"
 ```
 
 Rebuilds **only** home-manager (packages, programs, dotfile symlinks, activation hooks). Does not touch nix-darwin or require `sudo`. Use this for:
@@ -77,9 +77,10 @@ Rebuilds **only** home-manager (packages, programs, dotfile symlinks, activation
 - Changes to the managed agent source under `agents/`
 - Faster iteration when the darwin layer is unchanged
 
-The `homeConfigurations."kaito"` output in `flake.nix` imports `nix/home/default.nix` directly.
-It has its own service flags. Use the matching full-system configuration when host-specific
-services must be preserved.
+Each `homeConfigurations."kaito@<host>"` output in `flake.nix` imports `nix/home/default.nix`
+directly with the same host-specific service flags as `darwinConfigurations.<host>`; the
+`standalone-home-services-match-host` check enforces that. Without an output name, Home Manager
+selects `kaito@$(hostname -s)`.
 
 ### When symlinked dotfiles change
 

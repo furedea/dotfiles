@@ -18,7 +18,8 @@ The primary outputs are:
 
 - `darwinConfigurations.mbp`: the complete MacBook Pro configuration
 - `darwinConfigurations.mba`: the complete MacBook Air configuration
-- `homeConfigurations.kaito`: the user environment for faster iteration
+- `homeConfigurations."kaito@mbp"` and `homeConfigurations."kaito@mba"`: each
+  host's user environment for faster iteration
 - `packages.<system>.codex`: the pinned Codex CLI exposed by this flake
 - `devShells.<system>.default`: commitlint and lefthook for repository work
 
@@ -104,8 +105,11 @@ standalone Home Manager output provides a faster, unprivileged feedback loop:
 
 ```sh
 home-manager switch --flake \
-  "$HOME/ghq/github.com/furedea/dotfiles/#kaito"
+  "$HOME/ghq/github.com/furedea/dotfiles/#kaito@mbp"
 ```
+
+Each `kaito@<host>` output enables the same host-specific services as the
+matching `darwinConfigurations` host. Use `kaito@mba` on the MacBook Air.
 
 Run `:Lazy update` in Neovim to update editor plugins and commit the resulting
 `nvim/lazy-lock.json` change.
@@ -482,6 +486,7 @@ Update a single input when only one tool needs to move:
 
 ```sh
 nix flake update llm-agents
+# Use #kaito@mba on the MacBook Air.
 home-manager switch --flake \
-  "$HOME/ghq/github.com/furedea/dotfiles/#kaito"
+  "$HOME/ghq/github.com/furedea/dotfiles/#kaito@mbp"
 ```
