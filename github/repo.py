@@ -3,7 +3,6 @@
 
 import contextlib
 import json
-import os
 from pathlib import Path
 import re
 import shutil
@@ -67,25 +66,30 @@ def create_options(arguments: list[str]) -> bool:
 def wait_for_default_branch(repository: str) -> None:
     """Wait until GitHub exposes the template's actual default branch reference."""
     for _ in range(30):
-        try:
-            with open(os.devnull, "w") as errors:
-                branch = subprocess.check_output(
-                    ["gh", "api", f"repos/{repository}", "--jq", ".default_branch // empty"],
-                    text=True,
-                    stderr=errors,
-                ).strip()
-                if branch:
-                    reference = subprocess.check_output(
-                        ["gh", "api", f"repos/{repository}/git/ref/heads/{branch}", "--jq", ".ref // empty"],
-                        text=True,
-                        stderr=errors,
-                    ).strip()
-                    if reference == f"refs/heads/{branch}":
-                        return
-        except subprocess.CalledProcessError:
-            pass
+        if default_branch_ready(repository):
+            return
         subprocess.run(["sleep", "2"], check=True)
     raise ValueError(f"repo create: remote default branch is not ready: {repository}")
+
+
+def default_branch_ready(repository: str) -> bool:
+    """Report whether GitHub resolves the default branch name to its reference yet."""
+    try:
+        branch = subprocess.check_output(
+            ["gh", "api", f"repos/{repository}", "--jq", ".default_branch // empty"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        if not branch:
+            return False
+        reference = subprocess.check_output(
+            ["gh", "api", f"repos/{repository}/git/ref/heads/{branch}", "--jq", ".ref // empty"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except subprocess.CalledProcessError:
+        return False
+    return reference == f"refs/heads/{branch}"
 
 
 def apply_template(destination: Path, name: str) -> None:
@@ -198,22 +202,27 @@ def sync(arguments: list[str]) -> int:
     return int(counts["failed"] != 0)
 
 
+def configure_command(arguments: list[str]) -> int:
+    """Configure exactly one named repository."""
+    if len(arguments) != 1 or arguments[0].startswith("-"):
+        return usage("configure")
+    configure(repository_name(arguments[0]))
+    return 0
+
+
+COMMANDS = {"create": create, "sync": sync, "configure": configure_command}
+
+
 def main(arguments: list[str]) -> int:
     """Dispatch the public repository commands."""
     if not arguments:
         return usage()
     command, *remaining = arguments
-    try:
-        if command == "create":
-            return create(remaining)
-        if command == "sync":
-            return sync(remaining)
-        if command == "configure":
-            if len(remaining) != 1 or remaining[0].startswith("-"):
-                return usage(command)
-            configure(repository_name(remaining[0]))
-            return 0
+    handler = COMMANDS.get(command)
+    if handler is None:
         return usage()
+    try:
+        return handler(remaining)
     except subprocess.CalledProcessError as error:
         return error.returncode if error.returncode > 0 else 1
     except (OSError, ValueError) as error:

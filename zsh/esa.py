@@ -68,17 +68,8 @@ def edit(number: str) -> str:
             raise ValueError("esa: invalid post body")
         path.write_text(body + "\n")
         synced.write_bytes(path.read_bytes())
-        editor = os.environ.get("EDITOR", "nvim")
-        print(f"editor: {editor}", flush=True)
-        environment = dict(
-            os.environ, ESA_EDIT_POST_NUMBER=number, ESA_EDIT_FILE=str(path), ESA_EDIT_SYNC_FILE=str(synced)
-        )
         try:
-            subprocess.run([editor, str(path)], env=environment, check=True)
-            if path.read_bytes() != synced.read_bytes():
-                subprocess.run(
-                    ["esa", "post", "update", number, "--body-file", str(path), "--wip", *QUIET], check=True
-                )
+            edit_and_save(number, path, synced)
         except OSError, subprocess.CalledProcessError:
             preserve = path.is_file() and path.read_bytes() != synced.read_bytes()
             raise
@@ -87,12 +78,27 @@ def edit(number: str) -> str:
         if preserve:
             print(f"esa: edits preserved at {path}", file=sys.stderr)
         else:
-            path.unlink(missing_ok=True)
-            synced.unlink(missing_ok=True)
-            try:
-                directory.rmdir()
-            except OSError:
-                print(f"esa: editor artifacts preserved at {directory}", file=sys.stderr)
+            remove_edit_files(directory, path, synced)
+
+
+def edit_and_save(number: str, path: Path, synced: Path) -> None:
+    editor = os.environ.get("EDITOR", "nvim")
+    print(f"editor: {editor}", flush=True)
+    environment = dict(
+        os.environ, ESA_EDIT_POST_NUMBER=number, ESA_EDIT_FILE=str(path), ESA_EDIT_SYNC_FILE=str(synced)
+    )
+    subprocess.run([editor, str(path)], env=environment, check=True)
+    if path.read_bytes() != synced.read_bytes():
+        subprocess.run(["esa", "post", "update", number, "--body-file", str(path), "--wip", *QUIET], check=True)
+
+
+def remove_edit_files(directory: Path, path: Path, synced: Path) -> None:
+    path.unlink(missing_ok=True)
+    synced.unlink(missing_ok=True)
+    try:
+        directory.rmdir()
+    except OSError:
+        print(f"esa: editor artifacts preserved at {directory}", file=sys.stderr)
 
 
 def usage(kind: str) -> str:
@@ -139,6 +145,18 @@ def execute(kind: str, arguments: list[str], previous: str) -> str | None:
 
 
 def main(arguments: list[str]) -> int:
+    try:
+        return run(arguments)
+    except subprocess.CalledProcessError as error:
+        return error.returncode
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        print(str(error), file=sys.stderr)
+        return 1
+    except KeyboardInterrupt:
+        return 130
+
+
+def run(arguments: list[str]) -> int:
     if len(arguments) < 3 or arguments[2] not in {"en", "ee", "eep", "es", "edit"}:
         print("Usage: esa.py RESULT_FILE PREVIOUS_POST <en|ee|eep|es|edit> [arguments]", file=sys.stderr)
         return 1
@@ -149,18 +167,10 @@ def main(arguments: list[str]) -> int:
     if not valid_arguments(kind, rest):
         print(usage(kind), file=sys.stderr)
         return 1
-    try:
-        result = execute(kind, rest, previous)
-        if result is not None:
-            Path(result_file).write_text(result + "\n")
-        return 0
-    except subprocess.CalledProcessError as error:
-        return error.returncode
-    except (OSError, ValueError, KeyError, TypeError) as error:
-        print(str(error), file=sys.stderr)
-        return 1
-    except KeyboardInterrupt:
-        return 130
+    result = execute(kind, rest, previous)
+    if result is not None:
+        Path(result_file).write_text(result + "\n")
+    return 0
 
 
 if __name__ == "__main__":

@@ -117,9 +117,12 @@ def _scalar(parts: list[str]) -> str:
 
 def _relative_links(skill_directory: Path) -> Iterator[tuple[Path, str]]:
     for path in sorted(skill_directory.rglob("*.md")):
-        for destination in LINK_PATTERN.findall(_prose(path.read_text())):
-            if not re.match(r"^[a-z][a-z0-9+.-]*:", destination, re.IGNORECASE):
-                yield path, destination
+        destinations = LINK_PATTERN.findall(_prose(path.read_text()))
+        yield from (
+            (path, destination)
+            for destination in destinations
+            if not re.match(r"^[a-z][a-z0-9+.-]*:", destination, re.IGNORECASE)
+        )
 
 
 def _link_resolves(source: Path, destination: str) -> bool:
