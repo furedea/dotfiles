@@ -3,6 +3,7 @@
 import json
 
 import pytest
+from pytest_mock import MockerFixture
 
 from tests.runtime import load_script_module
 
@@ -266,3 +267,43 @@ def test_escalations_report_an_ask_decision_instead_of_an_exit_status(capsys: py
     captured = capsys.readouterr()
     assert captured.err == ""
     assert json.loads(captured.out)["hookSpecificOutput"]["permissionDecision"] == "ask"
+
+
+@pytest.mark.parametrize(
+    "command,decision",
+    [
+        ("git reset --hard; git push origin $BRANCH", "deny"),
+        ("git push origin $BRANCH; git reset --hard", "ask"),
+    ],
+)
+def test_the_first_objectionable_segment_decides(command: str, decision: str) -> None:
+    assert guard.decide({"tool_input": {"command": command}}).decision == decision
+
+
+@pytest.mark.parametrize("command", ["echo $'\\x41'", 'git push origin "$BRANCH"'])
+def test_escalations_are_recorded_with_their_session_and_payload(mocker: MockerFixture, command: str) -> None:
+    escalated = mocker.patch.object(guard.audit_log, "escalated")
+    payload = {"tool_input": {"command": command}, "session_id": "s1"}
+    assert guard.decide(payload).decision == "ask"
+    escalated.assert_called_once_with(
+        guard.audit_log.Refusal("Bash", guard.RULE, "s1", payload=payload, detail="syntax")
+    )
+
+
+def test_wrapped_denials_name_the_wrapper_and_segment(mocker: MockerFixture) -> None:
+    blocked = mocker.patch.object(guard.audit_log, "blocked")
+    command = "env git push --force origin topic"
+    payload = {"tool_input": {"command": command}, "session_id": "s2"}
+    verdict = guard.decide(payload)
+    assert verdict.decision == "deny"
+    assert verdict.reason.startswith(
+        "BLOCKED: shell wrapper contains force-push flag detected.\n\nSegment: git push --force origin topic"
+    )
+    blocked.assert_called_once_with(guard.audit_log.Refusal("Bash", guard.RULE, "s2", payload=payload))
+
+
+def test_a_non_object_payload_is_denied_and_recorded_without_context(mocker: MockerFixture) -> None:
+    blocked = mocker.patch.object(guard.audit_log, "blocked")
+    verdict = guard.decide(["git", "status"])
+    assert verdict.decision == "deny"
+    blocked.assert_called_once_with(guard.audit_log.Refusal("Bash", guard.RULE, "", payload=None))

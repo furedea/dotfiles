@@ -50,24 +50,24 @@ def load_rules(path: Path, prefixes: bool = False) -> list[dict]:
         if not isinstance(rules, list) or (not prefixes and not rules):
             raise ValueError("invalid rules")
         for rule in rules:
-            if (
-                not isinstance(rule, dict)
-                or not isinstance(rule.get("justification"), str)
-                or not rule["justification"]
-            ):
-                raise ValueError("missing justification")
-            values = rule.get("prefix" if prefixes else "patterns")
-            if not is_name_list(values):
-                raise ValueError("invalid command rule")
-            if prefixes and rule.get("decision") not in {"allow", "ask", "deny"}:
-                raise ValueError("invalid decision")
-            if not prefixes and "programs" in rule and not is_name_list(rule["programs"]):
-                raise ValueError("invalid governed program list")
+            validate_rule(rule, prefixes)
         if not prefixes:
             any_regex_matches(all_patterns(rules), "")
         return rules
     except (OSError, ValueError, TypeError) as error:
         raise ValueError(f"invalid command policy: {path}") from error
+
+
+def validate_rule(rule: object, prefixes: bool) -> None:
+    if not isinstance(rule, dict) or not isinstance(rule.get("justification"), str) or not rule["justification"]:
+        raise ValueError("missing justification")
+    values = rule.get("prefix" if prefixes else "patterns")
+    if not is_name_list(values):
+        raise ValueError("invalid command rule")
+    if prefixes and rule.get("decision") not in {"allow", "ask", "deny"}:
+        raise ValueError("invalid decision")
+    if not prefixes and "programs" in rule and not is_name_list(rule["programs"]):
+        raise ValueError("invalid governed program list")
 
 
 def is_name_list(value: object) -> bool:

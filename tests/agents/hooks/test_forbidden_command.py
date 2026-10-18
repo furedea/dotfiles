@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
+from pytest_mock import MockerFixture
 
 from tests.runtime import load_script_module
 
@@ -220,3 +221,47 @@ def test_forbidden_patterns_still_reach_commands_that_run(command: str) -> None:
 def test_inline_pr_bodies_that_mention_forbidden_commands_pass() -> None:
     command = "gh pr create --head topic --body \"$(cat <<'EOF'\nNever run git add -A or --no-verify.\nEOF\n)\""
     assert guard.decide("forbidden", {"tool_input": {"command": command}}).decision == "allow"
+
+
+@pytest.mark.parametrize(
+    "payload,writer,session",
+    [
+        ({"tool_input": {"command": "rm -rf build"}, "session_id": "s1"}, "blocked", "s1"),
+        ({"tool_input": {"command": "echo $'date'"}, "session_id": "s2"}, "escalated", "s2"),
+        (["not", "an", "object"], "blocked", ""),
+    ],
+)
+def test_denials_and_escalations_are_recorded_with_their_session(
+    *, mocker: MockerFixture, payload: object, writer: str, session: str
+) -> None:
+    recorders = {name: mocker.patch.object(guard.audit_log, name) for name in ("blocked", "escalated")}
+    verdict = guard.decide("forbidden", payload)
+    recorders[writer].assert_called_once_with(
+        guard.audit_log.Refusal(
+            "Bash",
+            "guard_forbidden_commands.sh",
+            session,
+            payload=payload if isinstance(payload, dict) else None,
+            detail=verdict.detail,
+        )
+    )
+    assert all(not recorder.called for name, recorder in recorders.items() if name != writer)
+
+
+def test_allowed_commands_are_not_recorded(mocker: MockerFixture) -> None:
+    recorders = [mocker.patch.object(guard.audit_log, name) for name in ("blocked", "escalated")]
+    assert guard.decide("forbidden", {"tool_input": {"command": "git status"}}).decision == "allow"
+    assert all(not recorder.called for recorder in recorders)
+
+
+def test_a_configuration_failure_is_recorded_without_the_command(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
+) -> None:
+    blocked = mocker.patch.object(guard.audit_log, "blocked")
+    monkeypatch.setenv("AGENT_FORBIDDEN_COMMAND_RULES", str(tmp_path / "missing.json"))
+    payload = {"tool_input": {"command": "rm -rf build"}, "session_id": "s3"}
+    verdict = guard.decide("forbidden", payload)
+    assert verdict.decision == "deny"
+    blocked.assert_called_once_with(
+        guard.audit_log.Refusal("Bash", "guard_forbidden_commands.sh", "s3", payload=payload, detail=verdict.detail)
+    )

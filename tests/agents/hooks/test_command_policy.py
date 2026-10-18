@@ -106,3 +106,35 @@ def test_a_multi_line_command_is_judged_as_one_line_by_any_grep(
     assert policy.regex_matches("^gh api 'repos/x .*$", "gh api 'repos/x\n' --method DELETE") is True
     assert policy.regex_matches("^gh api 'repos/x$", "gh api 'repos/x\n' --method DELETE") is False
     assert policy.regex_matches("^--method DELETE$", "gh api 'repos/x\n' --method DELETE") is False
+
+
+@pytest.mark.parametrize(
+    "document,prefixes",
+    [
+        ({"version": True, "rules": [{"patterns": ["^ok$"], "justification": "x"}]}, False),
+        ({"version": 2, "rules": [{"patterns": ["^ok$"], "justification": "x"}]}, False),
+        ({"version": 1, "rules": []}, False),
+        ({"version": 1, "rules": {}}, True),
+        ({"version": 1, "rules": ["^ok$"]}, False),
+        ({"version": 1, "rules": [{"patterns": ["^ok$"]}]}, False),
+        ({"version": 1, "rules": [{"patterns": ["^ok$"], "justification": ""}]}, False),
+        ({"version": 1, "rules": [{"patterns": [], "justification": "x"}]}, False),
+        ({"version": 1, "rules": [{"prefix": ["rm"], "justification": "x"}]}, True),
+        ({"version": 1, "rules": [{"prefix": ["rm"], "decision": "maybe", "justification": "x"}]}, True),
+        ({"version": 1, "rules": [{"patterns": ["^ok$"], "justification": "x"}]}, True),
+    ],
+)
+def test_loading_rejects_malformed_rule_files(tmp_path: Path, document: dict, prefixes: bool) -> None:
+    path = tmp_path / "rules.json"
+    path.write_text(json.dumps(document))
+    with pytest.raises(ValueError, match="invalid command policy"):
+        policy.load_rules(path, prefixes=prefixes)
+
+
+def test_loading_accepts_an_empty_prefix_list_and_unchecked_prefix_fields(tmp_path: Path) -> None:
+    path = tmp_path / "rules.json"
+    rules = [{"prefix": ["rm"], "decision": "deny", "justification": "x", "programs": [""]}]
+    path.write_text(json.dumps({"version": 1, "rules": rules}))
+    assert policy.load_rules(path, prefixes=True) == rules
+    path.write_text(json.dumps({"version": 1, "rules": []}))
+    assert policy.load_rules(path, prefixes=True) == []

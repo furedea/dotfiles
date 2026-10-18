@@ -183,7 +183,7 @@ def parse(source: str, depth: int = 0) -> tuple[Command, ...]:
         if node.get("Type") != "CallExpr" or not node.get("Args"):
             continue
         owner = owners.get(id(node), node)
-        command = literal_command(node, owner, data, depth)
+        command = replace(literal_command(node, owner, data), wrapper_depth=depth)
         commands.append(command)
         commands.extend(unwrapped(command))
         innermost = commands[-1]
@@ -229,7 +229,7 @@ def nodes(value: object) -> Iterator[dict]:
             yield from nodes(child)
 
 
-def literal_command(node: dict, owner: dict, data: bytes, depth: int) -> Command:
+def literal_command(node: dict, owner: dict, data: bytes) -> Command:
     """Decode one call expression together with the statement text that owns it."""
     raw = source_text(owner, data).strip()
     if owner.get("Semicolon") and raw.endswith(";"):
@@ -242,12 +242,11 @@ def literal_command(node: dict, owner: dict, data: bytes, depth: int) -> Command
     return Command(
         raw,
         tuple(value for value, _ in decoded),
-        depth,
-        tuple(targets),
-        tuple(source_text(word, data) for word in node["Args"]),
-        " ".join(source_text(redirect, data) for redirect in redirects),
-        tuple(flag for _, flag in decoded),
-        tuple(
+        redirections=tuple(targets),
+        words=tuple(source_text(word, data) for word in node["Args"]),
+        trailer=" ".join(source_text(redirect, data) for redirect in redirects),
+        dynamic=tuple(flag for _, flag in decoded),
+        writes=tuple(
             target for redirect, target in zip(redirects, targets, strict=True) if writes_file(redirect, target, data)
         ),
     )
@@ -372,7 +371,7 @@ def wrapped_index(arguments: tuple[str, ...]) -> int | None:
     name = Path(arguments[0]).name
     if name not in WRAPPERS:
         return None
-    flags, valued = WRAPPERS[name]
+    _, valued = WRAPPERS[name]
     index = 1
     while index < len(arguments):
         token = arguments[index]
@@ -383,7 +382,7 @@ def wrapped_index(arguments: tuple[str, ...]) -> int | None:
             return None
         if token in valued:
             index += 2
-        elif (name == "env" and ASSIGNMENT.match(token)) or is_flag(name, token, flags, valued):
+        elif (name == "env" and ASSIGNMENT.match(token)) or is_flag(name, token):
             index += 1
         elif token.startswith("-"):
             raise UnsupportedSyntax(f"{name} option requires explicit review: {token}")
@@ -394,8 +393,9 @@ def wrapped_index(arguments: tuple[str, ...]) -> int | None:
     return index if index < len(arguments) else None
 
 
-def is_flag(name: str, token: str, flags: frozenset[str], valued: frozenset[str]) -> bool:
-    """Recognize options that carry no separate operand, including attached-value short forms."""
+def is_flag(name: str, token: str) -> bool:
+    """Recognize a wrapper's options that carry no separate operand, including attached-value short forms."""
+    flags, valued = WRAPPERS[name]
     if token in flags:
         return True
     if token.startswith("--"):

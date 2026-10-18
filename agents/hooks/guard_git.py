@@ -27,42 +27,44 @@ def decide(payload: dict) -> Verdict:
         if not isinstance(payload, dict):
             raise ValueError("invalid hook input: expected an object")
         command = payload.get("tool_input", {}).get("command") or ""
-        try:
-            commands = shell_syntax.parse(command)
-        except shell_syntax.UnsupportedSyntax as error:
-            preview = shell_syntax.command_preview(command)
-            verdict = hook_decision.ask(f"Needs review: {error}.\n\nCommand: {preview}", "syntax")
-            audit_log.escalated(
-                "Bash", command, verdict.reason, RULE, session(payload), payload=payload, detail="syntax"
-            )
-            return verdict
-        for item in commands:
-            if hides_verdict(item):
-                preview = shell_syntax.command_preview(item.raw)
-                verdict = hook_decision.ask(
-                    f"Needs review: a shell expansion decides what this Git command does.\n\nSegment: {preview}",
-                    "syntax",
-                )
-                audit_log.escalated(
-                    "Bash", command, verdict.reason, RULE, session(payload), payload=payload, detail="syntax"
-                )
-                return verdict
-            if reason := git_safety.reason(item.arguments):
-                if item.wrapper_depth:
-                    reason = f"shell wrapper contains {reason}"
-                raise ValueError(f"{reason}.\n\nSegment: {shell_syntax.command_preview(item.raw)}")
+        verdict = inspect(command)
+        if verdict.decision == "ask":
+            audit_log.escalated(audit_log.Refusal("Bash", RULE, session(payload), payload=payload, detail="syntax"))
+        return verdict
     except (ValueError, TypeError, AttributeError) as error:
         message = f"BLOCKED: {error}\n\nUse a non-destructive command or ask the user to review this operation."
         audit_log.blocked(
-            "Bash",
-            command,
-            message.splitlines()[0],
-            RULE,
-            session(payload),
-            payload=payload if isinstance(payload, dict) else None,
+            audit_log.Refusal("Bash", RULE, session(payload), payload=payload if isinstance(payload, dict) else None)
         )
         return hook_decision.deny(message)
+
+
+def inspect(command: str) -> Verdict:
+    """Ask about the first segment a run-time word could hide, and raise for the first destructive one."""
+    try:
+        commands = shell_syntax.parse(command)
+    except shell_syntax.UnsupportedSyntax as error:
+        preview = shell_syntax.command_preview(command)
+        return hook_decision.ask(f"Needs review: {error}.\n\nCommand: {preview}", "syntax")
+    for item in commands:
+        if hides_verdict(item):
+            preview = shell_syntax.command_preview(item.raw)
+            return hook_decision.ask(
+                f"Needs review: a shell expansion decides what this Git command does.\n\nSegment: {preview}",
+                "syntax",
+            )
+        if reason := segment_reason(item):
+            raise ValueError(reason)
     return hook_decision.ALLOW
+
+
+def segment_reason(item: shell_syntax.Command) -> str:
+    reason = git_safety.reason(item.arguments)
+    if not reason:
+        return ""
+    if item.wrapper_depth:
+        reason = f"shell wrapper contains {reason}"
+    return f"{reason}.\n\nSegment: {shell_syntax.command_preview(item.raw)}"
 
 
 def hides_verdict(item: shell_syntax.Command) -> bool:
@@ -78,10 +80,16 @@ def hides_verdict(item: shell_syntax.Command) -> bool:
         return True
     name = Path(item.arguments[0]).name
     if name == "gh":
-        subcommand_end = 2 if item.arguments[1:2] == ("api",) else 3
-        return any(item.dynamic[1:subcommand_end]) or item.arguments[1:3] == ("pr", "merge")
-    if name != "git":
-        return False
+        return gh_hides_verdict(item)
+    return name == "git" and git_hides_verdict(item)
+
+
+def gh_hides_verdict(item: shell_syntax.Command) -> bool:
+    subcommand_end = 2 if item.arguments[1:2] == ("api",) else 3
+    return any(item.dynamic[1:subcommand_end]) or item.arguments[1:3] == ("pr", "merge")
+
+
+def git_hides_verdict(item: shell_syntax.Command) -> bool:
     try:
         globals_, command = git_safety.git_arguments(item.arguments)
     except ValueError:
@@ -93,9 +101,9 @@ def hides_verdict(item: shell_syntax.Command) -> bool:
     if verb == "push" and any(item.dynamic[1:start]) and git_safety.pushes_current_branch(command[1:]):
         return True
     if verb in git_safety.SUBCOMMAND_VERBS and len(command) > 1:
-        if item.dynamic[start + 1]:
-            return True
-        return command[1] in git_safety.SUBCOMMAND_VERBS[verb] and any(item.dynamic[start + 2 :])
+        return item.dynamic[start + 1] or (
+            command[1] in git_safety.SUBCOMMAND_VERBS[verb] and any(item.dynamic[start + 2 :])
+        )
     return verb in git_safety.OPTION_VERBS and any(item.dynamic[start + 1 :])
 
 
@@ -115,7 +123,7 @@ def main() -> int:
     try:
         payload = json.load(sys.stdin)
     except (ValueError, OSError) as error:
-        audit_log.blocked("Bash", "", f"BLOCKED: {error}", RULE, "")
+        audit_log.blocked(audit_log.Refusal("Bash", RULE))
         print(f"BLOCKED: {error}", file=sys.stderr)
         return 2
     return check(payload)
