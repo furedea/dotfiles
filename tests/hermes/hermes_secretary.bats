@@ -6,7 +6,7 @@ bats_require_minimum_version 1.5.0
 setup() {
   REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
   PRIMARY_DOTFILES="$(dirname "$(git -C "$REPO_ROOT" rev-parse --path-format=absolute --git-common-dir)")"
-  HOME_CONFIG="homeConfigurations.kaito.config"
+  HOME_CONFIG='homeConfigurations."kaito@mbp".config'
 }
 
 function build_secretary_package() {
@@ -14,7 +14,7 @@ function build_secretary_package() {
     '{ flakeRef }:
     let
       flake = builtins.getFlake flakeRef;
-      packages = flake.homeConfigurations.kaito.config.home.packages;
+      packages = flake.homeConfigurations."kaito@mbp".config.home.packages;
     in builtins.head (
       builtins.filter (package: (package.pname or package.name) == "secretary") packages
     )' \

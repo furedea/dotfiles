@@ -7,7 +7,7 @@ setup_file() {
   local _repo_root _derivation _package
   _repo_root="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd)"
   _derivation=$(nix eval --raw \
-    "$_repo_root#homeConfigurations.kaito.config.home.packages" \
+    "$_repo_root#homeConfigurations.\"kaito@mbp\".config.home.packages" \
     --apply 'packages: (builtins.head (builtins.filter (p: p.name == "codex") packages)).drvPath')
   _package=$(nix build --no-link --print-out-paths "$_derivation^*")
   export CODEX_WRAPPER="$_package/bin/codex"

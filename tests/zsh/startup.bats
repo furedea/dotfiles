@@ -93,7 +93,7 @@ EOF
 
 @test "Home Manager activation invokes the packaged Zsh cache builder" {
   run --separate-stderr nix build --no-link --print-out-paths \
-    "$TEST_FLAKE#homeConfigurations.kaito.activationPackage"
+    "$TEST_FLAKE#homeConfigurations.\"kaito@mbp\".activationPackage"
 
   if [ "$status" -ne 0 ]; then
     printf '%s\n' "$stderr" >&2

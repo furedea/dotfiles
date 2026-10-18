@@ -3,6 +3,7 @@
   pkgs,
   lib,
   home,
+  homeConfigurations,
   darwin,
   inputs,
 }:
@@ -23,6 +24,7 @@ let
   lspSettings =
     builtins.fromTOML
       home.home.file."Library/Application Support/lspmux/config.toml".text;
+  serviceNames = config: builtins.attrNames config.launchd.agents;
   hasAll = expected: actual: builtins.all (value: builtins.elem value actual) expected;
   shellEditorDefinitions = [
     "export EDITOR="
@@ -198,6 +200,17 @@ in
     moshi-no-migration-hooks =
       builtins.filter (name: lib.hasPrefix "moshi" name) (builtins.attrNames mbpHome.home.activation)
       == [ ];
+    standalone-home-services-match-host =
+      builtins.all
+        (
+          host:
+          serviceNames homeConfigurations."kaito@${host}".config
+          == serviceNames darwin.${host}.config.home-manager.users.kaito
+        )
+        [
+          "mbp"
+          "mba"
+        ];
     hister-login-launcher =
       hister.RunAtLoad
       && lib.hasSuffix "/bin/run_hister_server" (builtins.elemAt hister.ProgramArguments 0)
