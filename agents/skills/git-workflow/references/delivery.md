@@ -21,15 +21,15 @@ For explicit PR requests:
 4. Create a normal PR with `gh pr create --base <base> --head <branch> --title "<title>"` and a
    [pull request body](#pull-request-body) passed inline through a quoted heredoc:
 
-   ```bash
-   gh pr create --base main --head <branch> --title "<title>" --body "$(cat <<'EOF'
-   <body>
-   EOF
-   )"
-   ```
+    ```bash
+    gh pr create --base main --head <branch> --title "<title>" --body "$(cat <<'EOF'
+    <body>
+    EOF
+    )"
+    ```
 
-   Do not write the body to a file; `--body-file -` reading the same heredoc is also fine. The
-   quoted `'EOF'` keeps backticks and `$` literal, so code spans in the body are never run.
+    Do not write the body to a file; `--body-file -` reading the same heredoc is also fine. The
+    quoted `'EOF'` keeps backticks and `$` literal, so code spans in the body are never run.
 
 Do not pass `-u` or `--set-upstream` to `git push`: setting the upstream writes `.git/config`,
 which the sandbox protects, so the push succeeds but the command exits with an error. Name the
@@ -44,14 +44,19 @@ For rebase and force-push:
 
 ## Pull Request Body
 
-Write the title as a Conventional Commits subject stating the primary intent, and keep the body
-short. Do not use `-f`/`--fill`; commit messages do not carry this content. The body must include:
+Write the title in English as a Conventional Commits subject stating the primary intent, and the
+body in the [Issue, Plan, and PR Format](../../issue-workflow/SKILL.md#issue-plan-and-pr-format).
+Do not use `-f`/`--fill`; commit messages do not carry this content. The body must include:
 
-- A few lines on what actually changed.
+- A summary of what actually changed.
 - `Closes #N` only when the PR fully resolves the Issue; otherwise `Refs #N`.
 - A link to the plan comment, when one exists.
 - Verification evidence: what ran and its result, or what could not run.
 - Material departures from the plan, or none.
+
+Squash merges take the PR title as the commit subject and the commit messages as its body
+(`squash_merge_commit_message: COMMIT_MESSAGES` in `github/repo_settings.json`), so the default
+branch history stays in English while PR bodies are Japanese.
 
 For what the PR body owns relative to the Issue and plan, follow
 [Information Placement](../../source-of-truth/SKILL.md#information-placement).

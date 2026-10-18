@@ -32,22 +32,23 @@ Delegate other responsibilities:
 5. Confirm the number and URL of the created or retrieved Issue.
 
 Include purpose, scope, necessary exclusions, acceptance criteria, and related sources in the
-Issue body, in the [Issue and Plan Format](#issue-and-plan-format). Do not turn assumptions into
+Issue body, in the [Issue, Plan, and PR Format](#issue-plan-and-pr-format). Do not turn assumptions into
 established requirements. Reuse the same Issue for continuation, PR revisions, and individual
 commits within one task.
 
 If a posting result is uncertain, check whether creation succeeded before retrying. Never post
 the conversation verbatim or include secrets.
 
-## Issue and Plan Format
+## Issue, Plan, and PR Format
 
-The user reads Issues and plans to decide, not to study. Write them in Japanese, keeping
-identifiers, commands, and paths verbatim, and order them by what the decision needs:
+The user reads Issues, plans, and PR bodies to decide, not to study. Write them in Japanese,
+keeping identifiers, commands, and paths verbatim, and order them by what the decision needs:
 
 1. A summary of at most three lines: what changes, why, and what the user decides.
 2. A Mermaid diagram when the work has a flow, a sequence, or more than two interacting parts.
 3. A before/after table when behavior changes.
-4. Acceptance criteria as a `- [ ]` checklist of observable outcomes.
+4. A checklist of observable outcomes: acceptance criteria in an Issue, steps in a plan, and
+   verification results in a PR.
 5. Scope, exclusions, sources, and assumptions last, inside `<details>`.
 
 Prefer bullets and tables to paragraphs. Draw with Mermaid rather than images: GitHub renders it
