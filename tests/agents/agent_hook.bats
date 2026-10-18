@@ -50,9 +50,9 @@ setup() {
     .hooks.Stop
       | any(.[]; any(.hooks[]; .command == "\"$HOME/.claude/hooks/verification_session.py\" codex stop"))
   ' "$_codex_hooks" >/dev/null
-  grep -Eq -- "'/nix/store/[a-z0-9]+-moshi-hook-0\\.3\\.21/bin/moshi-hook' codex-hook" \
+  grep -Eq -- "'/nix/store/[a-z0-9]+-moshi-hook-0\\.4\\.31/bin/moshi-hook' codex-hook" \
     "$_codex_hooks"
-  grep -Eq -- "'/nix/store/[a-z0-9]+-moshi-hook-0\\.3\\.21/bin/moshi-hook' claude-hook" \
+  grep -Eq -- "'/nix/store/[a-z0-9]+-moshi-hook-0\\.4\\.31/bin/moshi-hook' claude-hook" \
     "$_claude_settings"
   run ! grep -Fq -- '/opt/homebrew/bin/moshi-hook' "$_codex_hooks"
   run ! grep -Fq -- '/opt/homebrew/bin/moshi-hook' "$_claude_settings"

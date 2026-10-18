@@ -177,7 +177,7 @@ in
       && !(lib.hasInfix "rjyo/moshi" mba.homebrew.brewfile);
     noninteractive-homebrew-cleanup = mbp.homebrew.onActivation.extraFlags == [ "--force" ];
     moshi-pinned =
-      versions "moshi-hook" mbpHome.home.packages == [ "0.3.21" ]
+      versions "moshi-hook" mbpHome.home.packages == [ "0.4.31" ]
       && lib.hasPrefix "/nix/store/" (toString mbpHome.home.file.".local/bin/moshi-hook".source)
       && lib.hasSuffix "/bin/moshi-hook" (toString mbpHome.home.file.".local/bin/moshi-hook".source);
     moshi-aqua = moshi.LimitLoadToSessionType == "Aqua";
@@ -187,7 +187,7 @@ in
     moshi-keep-alive = moshi.KeepAlive;
     moshi-managed-runtime =
       lib.hasPrefix "/nix/store/" moshi.EnvironmentVariables.MOSHI_HOOK_BIN
-      && lib.hasInfix "moshi-hook-0.3.21" moshi.EnvironmentVariables.MOSHI_HOOK_BIN
+      && lib.hasInfix "moshi-hook-0.4.31" moshi.EnvironmentVariables.MOSHI_HOOK_BIN
       && lib.hasSuffix "/bin/moshi-hook" moshi.EnvironmentVariables.MOSHI_HOOK_BIN;
     moshi-no-updater = !(mbpHome.launchd.agents ? moshi-hook-updater);
     moshi-no-environment-credentials = noSecrets moshi.EnvironmentVariables;
