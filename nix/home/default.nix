@@ -223,7 +223,7 @@ in
     deadnix
     home-manager
     nixd
-    nixfmt-rfc-style
+    nixfmt
     statix
     vulnix
 
@@ -245,7 +245,7 @@ in
     rustfmt
 
     # TypeScript tooling
-    nodePackages."@antfu/ni"
+    ni
     unstable.nodejs_24
     unstable.oxfmt
     unstable.oxlint
@@ -279,6 +279,8 @@ in
   programs = {
     neovim = {
       enable = true;
+      withPython3 = false;
+      withRuby = false;
       plugins = [ pkgs.vimPlugins.lazy-nvim ];
     };
 
