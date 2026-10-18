@@ -99,10 +99,11 @@ def cleanup(primary: Path, current: Path | None, *, dry_run: bool) -> list[str]:
             remove_worktree(primary, worktree, workspaces.get(worktree.path))
             run("git", "branch", "-D", worktree.branch, cwd=primary)
     for branch in local_branches(primary) - checked_out:
-        if is_merged(primary, branch, merged):
-            report.append(f"remove branch {branch}")
-            if not dry_run:
-                run("git", "branch", "-D", branch, cwd=primary)
+        if not is_merged(primary, branch, merged):
+            continue
+        report.append(f"remove branch {branch}")
+        if not dry_run:
+            run("git", "branch", "-D", branch, cwd=primary)
     if report:
         report += fast_forward_default_branch(primary, dry_run=dry_run)
     return report
@@ -120,12 +121,11 @@ def fast_forward_default_branch(primary: Path, *, dry_run: bool) -> list[str]:
     checked_out = current_branch(primary) == branch
     if checked_out and run("git", "status", "--porcelain", cwd=primary):
         return []
+    pull = ("git", "pull", "--quiet", "--ff-only")
+    fetch = ("git", "fetch", "--quiet", "origin", f"{branch}:{branch}")
     if not dry_run:
         try:
-            if checked_out:
-                run("git", "pull", "--quiet", "--ff-only", cwd=primary)
-            else:
-                run("git", "fetch", "--quiet", "origin", f"{branch}:{branch}", cwd=primary)
+            run(*(pull if checked_out else fetch), cwd=primary)
         except subprocess.CalledProcessError:
             return []
     return [f"fast-forward {branch}"]
