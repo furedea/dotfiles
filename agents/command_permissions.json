@@ -2056,13 +2056,13 @@
       "justification": "Ask before changing dependencies or lock files; the request should name the change."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": [
         "nix",
         "flake",
         "update"
       ],
-      "justification": "Ask before changing dependencies or lock files; the request should name the change."
+      "justification": "Allow moving flake inputs; it only rewrites flake.lock, which Git restores and the pull request shows."
     },
     {
       "decision": "allow",
@@ -2071,7 +2071,7 @@
         "flake",
         "lock"
       ],
-      "justification": "Allow recording missing flake inputs; nix flake update, which moves existing inputs, still asks."
+      "justification": "Allow recording missing flake inputs."
     },
     {
       "decision": "ask",

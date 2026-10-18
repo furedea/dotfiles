@@ -62,6 +62,7 @@ def codex_policy(agent_harness: CliRunner, tmp_path_factory: pytest.TempPathFact
         ("allow", "gh pr close 42"),
         ("allow", "rg -n pattern agents"),
         ("allow", "nix flake check"),
+        ("allow", "nix flake update nixpkgs"),
         ("allow", "lefthook run pre-commit"),
         ("allow", "uv run --frozen --group audit deptry ."),
         ("allow", "curl -fsS http://localhost:3000/health"),
