@@ -142,6 +142,20 @@ the current tests.
   implementation. This section defines the evaluation questions; the repository or runtime review
   mechanism owns how the review is executed.
 
+## Mutation Testing
+
+Mutation testing checks whether the tests catch plausible faults: a tool changes the code
+(flipped operators, altered constants, replaced return values) and reruns the tests. A
+surviving mutant marks behavior that no test observes.
+
+- Run it when changing logic where an undetected fault is costly, such as safety or permission
+  decisions, parsers, and policy evaluation, especially when the same agent wrote both the tests
+  and the implementation. Do not run it for every change or in CI.
+- Scope it to the changed module. The language style skill names the tool and its invocation.
+- For each surviving mutant, add a test that kills it, or record in the PR why it is equivalent.
+- Report the score and the survivors as verification evidence. A high score does not replace
+  oracles derived from the requirements.
+
 ## Automatic Verification
 
 Prefer repository-defined hooks, pre-commit, and shared verification for format, lint, and final
