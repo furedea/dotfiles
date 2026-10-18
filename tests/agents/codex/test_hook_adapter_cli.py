@@ -244,3 +244,12 @@ def test_content_translation(run_cli: CliRunner, harness: Path, mode: str, text:
             assert decision["hookSpecificOutput"]["permissionDecision"] == "deny"
     else:
         assert result.stdout == ""
+
+
+def test_a_new_suppression_is_denied_in_codex_since_its_hooks_cannot_ask(run_cli: CliRunner, harness: Path) -> None:
+    body = "*** Begin Patch\n*** Update File: src/app.py\n@@\n-x = 1\n+x = 1  # noqa: E501\n*** End Patch\n"
+    result = run_cli(
+        SCRIPT, "content", "suppression", payload={"tool_name": "apply_patch", "tool_input": {"input": body}}
+    )
+    assert result.returncode == 2
+    assert "suppression" in result.stderr

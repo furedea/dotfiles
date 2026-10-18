@@ -74,6 +74,10 @@
           {
             "command": "\"$HOME/.claude/hooks/guard_file.py\" write",
             "type": "command"
+          },
+          {
+            "command": "\"$HOME/.claude/hooks/guard_suppression.py\"",
+            "type": "command"
           }
         ]
       }
@@ -287,6 +291,10 @@
               "command": "\"$HOME/.codex/hooks/hook_adapter.py\" content apply-patch",
               "statusMessage": "Scanning patch for sensitive information",
               "timeout": 30,
+              "type": "command"
+            },
+            {
+              "command": "\"$HOME/.codex/hooks/hook_adapter.py\" content suppression",
               "type": "command"
             }
           ]

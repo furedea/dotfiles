@@ -14,6 +14,7 @@ import sys
 import audit_log
 import guard_command
 import guard_file
+import guard_suppression
 import guard_git
 import hook_decision
 import hook_dispatch
@@ -29,7 +30,7 @@ SECRET_PATH_RULE = "guard_secret_paths.sh"
 SHELL_MODES = ("allowed", "forbidden", "git", "commit")
 PATH_MODES = ("command", "patch")
 AUDIT_KINDS = ("tool", "compaction")
-CONTENT_MODES = ("prompt", "read", "write", "apply-patch")
+CONTENT_MODES = ("prompt", "read", "write", "apply-patch", "suppression")
 NO_ARGUMENT: tuple[str, ...] = ()
 ANY_ARGUMENT = None
 Formatter = Callable[[str, dict], dict]
@@ -192,6 +193,8 @@ class Adapter:
 
     def content(self, mode: str, payload: dict) -> int:
         context = self.normalized(payload)
+        if mode == "suppression":
+            return hook_decision.emit(guard_suppression.decide(context).hardened())
         if mode != "apply-patch":
             return guard_file.check(mode, context, shared_directory())
         body = hook_input.patch_body(context["tool_input"], context.get("tool_name") or "apply_patch")
