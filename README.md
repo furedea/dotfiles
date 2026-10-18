@@ -486,6 +486,7 @@ Update a single input when only one tool needs to move:
 
 ```sh
 nix flake update llm-agents
+# Use #kaito@mba on the MacBook Air.
 home-manager switch --flake \
-  "$HOME/ghq/github.com/furedea/dotfiles/#kaito"
+  "$HOME/ghq/github.com/furedea/dotfiles/#kaito@mbp"
 ```
