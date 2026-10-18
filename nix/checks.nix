@@ -90,9 +90,9 @@ in
       "rustfmt"
     ] homeNames;
     pnpm-shared-virtual-store =
-      home.xdg.configFile."pnpm/rc".text == ''
-        store-dir=${home.xdg.dataHome}/pnpm/store
-        enable-global-virtual-store=true
+      home.xdg.configFile."pnpm/config.yaml".text == ''
+        storeDir: ${home.xdg.dataHome}/pnpm/store
+        enableGlobalVirtualStore: true
       '';
     no-mutable-language-installers =
       !(builtins.elem "rustup" homeNames)

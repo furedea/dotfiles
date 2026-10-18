@@ -626,9 +626,10 @@ in
     "dotfiles/bin/python3".source = lib.getExe pkgs.python314;
     # Packages unpack into the shared virtual store outside the project, where the agent sandbox
     # allows the .idea and .vscode directories some packages ship; node_modules holds only links.
-    "pnpm/rc".text = ''
-      store-dir=${config.xdg.dataHome}/pnpm/store
-      enable-global-virtual-store=true
+    # pnpm 11 reads its own settings only from this YAML file, no longer from rc.
+    "pnpm/config.yaml".text = ''
+      storeDir: ${config.xdg.dataHome}/pnpm/store
+      enableGlobalVirtualStore: true
     '';
   };
 
