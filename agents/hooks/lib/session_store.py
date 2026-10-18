@@ -107,41 +107,65 @@ def session_directory(root: Path, provider: str, session_id: str) -> Path:
     return state_directory() / worktree_id(root) / f"{provider}-{identity}"
 
 
-def register(root: Path, provider: str, session_id: str, *, resuming: bool = False) -> SessionRecord:
+def register(root: Path, provider: str, session_id: str) -> SessionRecord:
     """Register once from SessionStart; repeated delivery preserves pending work."""
-    root = root.resolve()
+    return _register(SessionKey(root.resolve(), provider, session_id), resuming=False)
+
+
+def resume(root: Path, provider: str, session_id: str) -> SessionRecord:
+    """Register a resumed session, revalidating everything when its registration expired."""
+    return _register(SessionKey(root.resolve(), provider, session_id), resuming=True)
+
+
+@dataclass(frozen=True, slots=True)
+class SessionKey:
+    """The resolved worktree and provider session one registration belongs to."""
+
+    root: Path
+    provider: str
+    session_id: str
+
+
+def _register(key: SessionKey, *, resuming: bool) -> SessionRecord:
     base = state_directory()
-    if base.resolve().is_relative_to(root):
+    if base.resolve().is_relative_to(key.root):
         raise StateError("Verification state must be outside the worktree")
-    directory = session_directory(root, provider, session_id)
+    directory = session_directory(key.root, key.provider, key.session_id)
     private_directory(base)
     private_directory(directory.parent)
     with file_lock(directory.parent / ".register.lock", blocking=False):
         if directory.exists() or directory.is_symlink():
-            record = load(directory)
-            with record.lock(blocking=False):
-                results = record.results()
-                results.pop("ended_at", None)
-                record.save_results(results)
-                record.touch()
-            return record
-        baseline = capture(root)
+            return reopen(directory)
+        baseline = capture(key.root)
         with tempfile.TemporaryDirectory(prefix=".register-", dir=directory.parent) as temporary:
             staging = Path(temporary)
             atomic_json(
                 staging / "baseline.json",
                 {
                     "schema": SCHEMA,
-                    "root": str(root),
-                    "provider": provider,
+                    "root": str(key.root),
+                    "provider": key.provider,
                     "created_at": time.time(),
                     "files": baseline.to_json(),
                 },
             )
-            atomic_json(staging / "results.json", {"checks": {}, "session_id": session_id, "revalidate_all": resuming})
+            atomic_json(
+                staging / "results.json", {"checks": {}, "session_id": key.session_id, "revalidate_all": resuming}
+            )
             atomic_bytes(staging / ".lock", b"")
             os.rename(staging, directory)
-        return SessionRecord(directory, root, provider)
+        return SessionRecord(directory, key.root, key.provider)
+
+
+def reopen(directory: Path) -> SessionRecord:
+    """Reactivate an existing registration without discarding its pending results."""
+    record = load(directory)
+    with record.lock(blocking=False):
+        results = record.results()
+        results.pop("ended_at", None)
+        record.save_results(results)
+        record.touch()
+    return record
 
 
 def load(directory: Path) -> SessionRecord:
@@ -215,26 +239,31 @@ def prune(*, now: float | None = None) -> None:
     private_directory(base)
     current = time.time() if now is None else now
     with file_lock(base / ".gc.lock"):
-        for directory in tuple(base.glob("*/*")):
-            if not directory.is_dir() or directory.is_symlink() or directory.parent.is_symlink():
-                continue
+        candidates = tuple(base.glob("*/*"))
+        for directory in (path for path in candidates if trusted_record_directory(path)):
             prune_record(directory, current)
-        logs = [path for directory in record_directories(base) for path in log_files(directory)]
-        total = sum(path.stat().st_size for path in logs)
-        for path in sorted(logs, key=lambda value: value.stat().st_mtime_ns):
-            if total <= TOTAL_LOG_LIMIT_BYTES:
-                break
-            total -= path.stat().st_size
-            path.unlink(missing_ok=True)
+        bound_logs(base)
+
+
+def trusted_record_directory(path: Path) -> bool:
+    return path.is_dir() and not path.is_symlink() and not path.parent.is_symlink()
+
+
+def bound_logs(base: Path) -> None:
+    """Delete the oldest logs until all sessions fit the shared log budget."""
+    logs = [path for directory in record_directories(base) for path in log_files(directory)]
+    total = sum(path.stat().st_size for path in logs)
+    for path in sorted(logs, key=lambda value: value.stat().st_mtime_ns):
+        if total <= TOTAL_LOG_LIMIT_BYTES:
+            break
+        total -= path.stat().st_size
+        path.unlink(missing_ok=True)
 
 
 def record_directories(base: Path) -> Iterator[Path]:
-    for worktree in base.iterdir():
-        if worktree.is_symlink() or not worktree.is_dir():
-            continue
-        for directory in worktree.iterdir():
-            if not directory.is_symlink() and directory.is_dir():
-                yield directory
+    worktrees = (worktree for worktree in base.iterdir() if not worktree.is_symlink() and worktree.is_dir())
+    for worktree in worktrees:
+        yield from (directory for directory in worktree.iterdir() if not directory.is_symlink() and directory.is_dir())
 
 
 def log_files(directory: Path) -> tuple[Path, ...]:
@@ -246,11 +275,14 @@ def log_files(directory: Path) -> tuple[Path, ...]:
 
 def prune_record(directory: Path, now: float) -> None:
     try:
-        with file_lock(directory / ".lock", blocking=False):
-            record = load(directory)
-            results = record.results()
-            last_seen = results.get("ended_at", directory.stat().st_mtime)
-            if now - last_seen > RETENTION_SECONDS:
-                shutil.rmtree(directory)
+        remove_if_expired(directory, now)
     except OSError, StateError, KeyError, TypeError:
         return
+
+
+def remove_if_expired(directory: Path, now: float) -> None:
+    with file_lock(directory / ".lock", blocking=False):
+        results = load(directory).results()
+        last_seen = results.get("ended_at", directory.stat().st_mtime)
+        if now - last_seen > RETENTION_SECONDS:
+            shutil.rmtree(directory)

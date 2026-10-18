@@ -48,7 +48,7 @@ def test_resume_retains_original_baseline_and_failure(repository: Path) -> None:
     original.save_results({**original.results(), "checks": {"pytest": {"status": "failed"}}})
     (repository / "source.py").write_text("changed during original session")
     original.end()
-    resumed = store.register(repository, "codex", "session-1", resuming=True)
+    resumed = store.resume(repository, "codex", "session-1")
     assert resumed.directory == original.directory
     assert "ended_at" not in resumed.results()
     assert resumed.baseline.changed_paths(store.capture(repository)) == ("source.py",)
@@ -56,7 +56,7 @@ def test_resume_retains_original_baseline_and_failure(repository: Path) -> None:
 
 
 def test_missing_resume_record_requires_full_revalidation(repository: Path) -> None:
-    resumed = store.register(repository, "codex", "expired-session", resuming=True)
+    resumed = store.resume(repository, "codex", "expired-session")
     assert resumed.results()["revalidate_all"] is True
     assert resumed.results()["checks"] == {}
 
@@ -105,10 +105,12 @@ def test_state_symlink_is_not_followed(repository: Path, tmp_path: Path) -> None
 
 def test_another_hook_cannot_enter_the_same_run_lock(repository: Path) -> None:
     record = store.register(repository, "codex", "session")
-    with record.lock():
-        with (record.directory / ".lock").open("r+") as competing:
-            with pytest.raises(BlockingIOError):
-                fcntl.flock(competing, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    with (
+        record.lock(),
+        (record.directory / ".lock").open("r+") as competing,
+        pytest.raises(BlockingIOError),
+    ):
+        fcntl.flock(competing, fcntl.LOCK_EX | fcntl.LOCK_NB)
 
 
 def test_corrupt_evidence_is_an_error_not_an_empty_success(repository: Path) -> None:

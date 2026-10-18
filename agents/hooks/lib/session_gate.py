@@ -1,5 +1,6 @@
 """Verify session changes and replace each check's latest receipt atomically."""
 
+from dataclasses import dataclass
 import hashlib
 import json
 import os
@@ -18,6 +19,16 @@ HOOK_ROOT = Path(__file__).resolve().parent.parent
 GATE_BUDGET_SECONDS = 540
 
 
+@dataclass(frozen=True, slots=True)
+class VerificationRun:
+    """One gate pass: the session, its saved results, and when the pass started."""
+
+    record: SessionRecord
+    state: dict
+    force: bool
+    started: float
+
+
 def gate(record: SessionRecord, *, force: bool = False) -> dict[str, str]:
     """Serialize Stop and verify calls so concurrent delivery cannot run a check twice."""
     with record.lock():
@@ -31,10 +42,11 @@ def verify(record: SessionRecord, *, force: bool) -> dict[str, str]:
     started = time.monotonic()
     current = capture(record.root)
     state = record.results()
+    run = VerificationRun(record, state, force, started)
     try:
         invocations, skip_reason = selected_checks(record, current, state)
     except (OSError, ValueError, TypeError) as error:
-        return configuration_failure(record, state, current.digest, str(error))
+        return configuration_failure(run, current.digest, str(error))
     if not invocations:
         return save_skip(record, state, skip_reason)
     receipts: dict[str, dict] = {}
@@ -42,23 +54,10 @@ def verify(record: SessionRecord, *, force: bool) -> dict[str, str]:
     failed = new_failure = executed = passed = False
     inputs = verification_inputs(current)
     for invocation in invocations:
-        check_id, identity, previous, reusable = receipt_state(state, inputs, invocation)
-        if not force and reusable:
-            receipt = previous
-        else:
-            budget = min(check_budget(), max(0.01, GATE_BUDGET_SECONDS - (time.monotonic() - started)))
-            result = execute(invocation, record.root, budget)
-            receipt = {
-                "input": identity,
-                "status": str(result.status),
-                "summary": bounded_summary(result.summary),
-                "scope": invocation.scope,
-            }
-            if result.failed:
-                log = f"cwd: {record.root}\ncommand: {shlex.join(invocation.arguments)}\n\n{result.output}"
-                receipt["log"] = str(record.write_log(check_id, log))
+        check_id, receipt, failed_now = current_receipt(run, inputs, invocation)
+        if failed_now is not None:
             executed = True
-            new_failure |= result.failed
+            new_failure |= failed_now
         receipts[check_id] = receipt
         passed |= receipt["status"] == Status.PASSED
         failed |= receipt["status"] not in {Status.PASSED, Status.SKIPPED}
@@ -100,6 +99,27 @@ def selected_checks(
     if errors:
         raise StateError("\n".join(errors))
     return invocations, "no related test runner matched changed paths" if not invocations else ""
+
+
+def current_receipt(
+    run: VerificationRun, inputs: str, invocation: check_selection.Invocation
+) -> tuple[str, dict, bool | None]:
+    """Reuse a valid receipt or execute the check; the flag is None when nothing ran."""
+    check_id, identity, previous, reusable = receipt_state(run.state, inputs, invocation)
+    if not run.force and reusable:
+        return check_id, previous, None
+    budget = min(check_budget(), max(0.01, GATE_BUDGET_SECONDS - (time.monotonic() - run.started)))
+    result = execute(invocation, run.record.root, budget)
+    receipt = {
+        "input": identity,
+        "status": str(result.status),
+        "summary": bounded_summary(result.summary),
+        "scope": invocation.scope,
+    }
+    if result.failed:
+        log = f"cwd: {run.record.root}\ncommand: {shlex.join(invocation.arguments)}\n\n{result.output}"
+        receipt["log"] = str(run.record.write_log(check_id, log))
+    return check_id, receipt, result.failed
 
 
 def receipt_state(state: dict, inputs: str, invocation: check_selection.Invocation) -> tuple[str, str, dict, bool]:
@@ -246,11 +266,11 @@ def check_budget() -> float:
     return value
 
 
-def configuration_failure(record: SessionRecord, state: dict, identity: str, error: str) -> dict[str, str]:
+def configuration_failure(run: VerificationRun, identity: str, error: str) -> dict[str, str]:
     failure = hashlib.sha256((identity + error).encode()).hexdigest()
-    repeated = state.get("configuration_failure") == failure
-    state["configuration_failure"] = failure
-    record.save_results(state)
+    repeated = run.state.get("configuration_failure") == failure
+    run.state["configuration_failure"] = failure
+    run.record.save_results(run.state)
     return notification(f"Verification unresolved · invalid test configuration\n{error}", block=not repeated)
 
 
