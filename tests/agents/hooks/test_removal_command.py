@@ -50,6 +50,7 @@ def decide(kind: str, command: str, cwd: Path | None = None) -> str:
         pytest.param("rm -fR {tmp}/a/../b", id="a normalized path that stays inside"),
         pytest.param("ls {tmp} && rm -f {tmp}/a.txt; echo done", id="beside commands that only read"),
         pytest.param("command rm {tmp}/a.txt", id="behind a wrapper"),
+        pytest.param("rm '{tmp}/{{a,b}}' \"{tmp}/[c]\" {tmp}/\\*", id="quoted or escaped special characters"),
     ],
 )
 @pytest.mark.parametrize("kind", ["allowed", "forbidden"])
@@ -97,6 +98,9 @@ def test_removals_inside_a_temporary_root_pass(project: Path, kind: str, command
         pytest.param("rg --pre ./mk x {tmp}; rm {tmp}/a.txt", id="a search that runs a preprocessor"),
         pytest.param("/usr/bin/time -o {tmp}/a.txt ls; rm {tmp}/a.txt", id="a wrapper that writes a file"),
         pytest.param("rm ~/a.txt $HOME/b.txt", id="home directory paths"),
+        pytest.param("rm -f {tmp}/{{a,../../../x}}", id="brace expansion that leaves the temporary directory"),
+        pytest.param("rm {tmp}/a{{1..3}}.txt", id="a brace sequence"),
+        pytest.param("rm {tmp}/{{a}}.txt", id="unquoted braces"),
     ],
 )
 def test_removals_outside_a_temporary_root_ask(project: Path, git_project: Path, command: str) -> None:
@@ -116,8 +120,8 @@ def test_removals_outside_a_temporary_root_ask(project: Path, git_project: Path,
         pytest.param("rm -rf {tmp}/../..", id="a path that climbs out"),
         pytest.param("rm build -rf", id="options after the operands"),
         pytest.param("rm --recursive build", id="the long option"),
+        pytest.param("rm -rf {tmp}/{{a,../../../x}}", id="a tree named through brace expansion"),
         pytest.param("echo {tmp}/a | xargs rm -rf {tmp}/b", id="trees read from input"),
-        pytest.param("f(){{ rm -rf build; }}", id="inside a function body"),
     ],
 )
 def test_recursive_removals_outside_the_temporary_roots_stay_denied(project: Path, command: str) -> None:

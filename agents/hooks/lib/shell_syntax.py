@@ -18,7 +18,7 @@ ALLOWED_NODES = frozenset(
     {
         None,
         *(
-            "File CallExpr BinaryCmd Subshell Block TimeClause DeclClause FuncDecl "
+            "File CallExpr BinaryCmd Subshell Block TimeClause DeclClause "
             "Word Lit SglQuoted DblQuoted ParamExp CmdSubst ProcSubst "
             "ArithmExp ArithmCmd BinaryArithm UnaryArithm ParenArithm "
             "ForClause WordIter CStyleLoop WhileClause IfClause CaseClause CaseItem "
@@ -39,8 +39,13 @@ SHELLS = frozenset({"bash", "sh", "zsh"})
 COMMAND_LOOKUP = frozenset({"-v", "-V"})
 ASSIGNMENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=")
 # All positional parameters, any single one (a digit), and every array element ([@] or [*]) can
-# become any number of words, options included.
+# become any number of words, options included, even inside double quotes.
 SPREADING = frozenset({"@", "*"})
+# Parts that the shell splits into words, or expands into several, when they stand outside quotes.
+SPLIT_PARTS = frozenset({"ParamExp", "CmdSubst", "ProcSubst", "ArithmExp"})
+# A bracket opens a glob only when a closing bracket follows, so the test command `[` stays literal.
+GLOB = re.compile(r"(?<!\\)[*?]|(?<!\\)\[.+\]")
+BRACE_EXPANSION = re.compile(r"(?<!\\)\{[^{}]*(,|\.\.)[^{}]*(?<!\\)\}")
 # Process wrappers run their trailing arguments as a command. Each entry lists the flags without an
 # operand and the options whose operand is the next token; unknown options are refused, not skipped.
 WRAPPERS: dict[str, tuple[frozenset[str], frozenset[str]]] = {
@@ -75,9 +80,8 @@ class Command:
     `dynamic` flags arguments whose value is only known at run time (a glob or a parameter other
     than the home directory); such arguments carry their source text. `writes` lists the files
     that output redirections would create or overwrite. `appends_input` marks a command that xargs
-    runs with further arguments read from its input. `spreading` flags arguments holding a positional
-    parameter or array expansion outside any substitution. `in_function` marks a command that a
-    function defined in the same input runs.
+    runs with further arguments read from its input. `spreading` flags arguments that may become
+    several words at run time, options included.
     """
 
     raw: str
@@ -90,7 +94,6 @@ class Command:
     writes: tuple[str, ...] = ()
     appends_input: bool = False
     spreading: tuple[bool, ...] = ()
-    in_function: bool = False
 
     def __post_init__(self) -> None:
         if not self.words:
@@ -187,13 +190,6 @@ def parse(source: str, depth: int = 0) -> tuple[Command, ...]:
         raise UnsupportedSyntax("dynamic or unsupported shell syntax requires explicit review")
     data = source.encode()
     enclosing = enclosing_writes(records, data)
-    function_calls = {
-        id(node)
-        for declaration in records
-        if declaration.get("Type") == "FuncDecl"
-        for node in nodes(declaration.get("Body"))
-        if node.get("Type") == "CallExpr"
-    }
     commands: list[Command] = []
     for node in records:
         if node.get("Type") != "CallExpr" or not node.get("Args"):
@@ -204,7 +200,6 @@ def parse(source: str, depth: int = 0) -> tuple[Command, ...]:
             command,
             wrapper_depth=depth,
             writes=command.writes + enclosing.get(id(node), ()),
-            in_function=id(node) in function_calls,
         )
         commands.append(command)
         commands.extend(unwrapped(command))
@@ -338,7 +333,14 @@ def literal_word(word: dict, source: bytes) -> tuple[str, bool]:
 
 
 def spreads(word: dict) -> bool:
-    """Whether a word expands positional parameters or array elements outside any substitution."""
+    """Whether a word may become several words: an unquoted expansion, substitution, glob, or brace
+    expansion, or a positional parameter or array expansion even in quotes."""
+    for part in word.get("Parts", []):
+        if part.get("Type") in SPLIT_PARTS:
+            return True
+        value = part.get("Value", "") if part.get("Type") == "Lit" else ""
+        if GLOB.search(value) or BRACE_EXPANSION.search(value):
+            return True
     for part in word_nodes(word):
         if part.get("Type") != "ParamExp":
             continue
@@ -369,11 +371,8 @@ def is_home_parameter(part: dict) -> bool:
 
 
 def is_literal_text(value: str, *, first: bool) -> bool:
-    """Unquoted globs expand at run time, and so does a leading tilde unless it names the home directory.
-
-    A bracket opens a glob only when a closing bracket follows, so the test command `[` stays literal.
-    """
-    if re.search(r"(?<!\\)[*?]|(?<!\\)\[.+\]", value):
+    """Unquoted globs expand at run time, and so does a leading tilde unless it names the home directory."""
+    if GLOB.search(value):
         return False
     if value.startswith("~"):
         return first and (value == "~" or value.startswith("~/"))

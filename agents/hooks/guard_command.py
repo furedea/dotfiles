@@ -10,6 +10,7 @@ from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
+import re
 import sys
 
 
@@ -22,8 +23,16 @@ import command_policy
 import hook_decision
 from hook_decision import Verdict
 import removal_policy
-import request_policy
 import shell_syntax
+
+
+REQUEST_PROGRAMS = frozenset({"curl", "wget"})
+REMOTE_REASON = (
+    "Needs review: remote curl/wget can send local data. Read web pages with the web-fetch tool, "
+    "or use gh api / nix store prefetch-file for exact values and files."
+)
+# Settings that can send a request to a local server somewhere else: a proxy, or another configuration file.
+REQUEST_SETTINGS = re.compile(r"proxy|curlrc|wgetrc|curl_home|(^|[^a-z0-9_])(home|xdg_config_home)=", re.IGNORECASE)
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,14 +86,6 @@ def objection(kind: str, item: shell_syntax.Command, policy: Policy) -> Verdict:
     preview = shell_syntax.command_preview(item.raw)
     if kind == "forbidden":
         return forbidden_objection(item, candidate, policy)
-    if item.in_function and (item.program_is_dynamic or runs_sensitive_program(candidate, policy)):
-        return hook_decision.ask(
-            f"Needs review: a function body runs {candidate.arguments[0]}, whose calls cannot be judged form by form."
-            f"\n\nCommand: {preview}",
-            "function",
-        )
-    if not candidate.program_is_dynamic and candidate.arguments[0] in request_policy.PROGRAMS:
-        return request_objection(candidate, preview)
     return governed_objection(candidate, policy, preview)
 
 
@@ -107,7 +108,8 @@ def governed_objection(candidate: shell_syntax.Command, policy: Policy, preview:
     """Review only programs whose effects reach past the sandbox; the sandbox confines every other form.
 
     A run-time word counts as a plain placeholder, so it passes only where any value would, and a
-    command that can hide an option from the rules, or takes more arguments from xargs, asks.
+    command that can hide an option from the rules, or takes more arguments from xargs, asks: a
+    quoted option, or a word that may split into several, such as an unquoted expansion.
     """
     prefixes, rules = policy.prefixes, policy.rules
     if candidate.program_is_dynamic or candidate.arguments[0] not in command_policy.governed_programs(rules):
@@ -120,26 +122,20 @@ def governed_objection(candidate: shell_syntax.Command, policy: Policy, preview:
     ):
         return hook_decision.ALLOW
     prefix = " ".join(governed["prefix"])
+    if candidate.arguments[0] in REQUEST_PROGRAMS:
+        return hook_decision.ask(f"{REMOTE_REASON}\n\nCommand: {preview}", prefix)
     return hook_decision.ask(
         f"Needs review: command not in allowlist. '{prefix}' is approved, but not in this form.\n\nCommand: {preview}",
         prefix,
     )
 
 
-def runs_sensitive_program(candidate: shell_syntax.Command, policy: Policy) -> bool:
-    sensitive = command_policy.sensitive_programs(policy.prefixes, policy.rules) | request_policy.PROGRAMS.keys()
-    return candidate.arguments[0] in sensitive
-
-
-def request_objection(candidate: shell_syntax.Command, preview: str) -> Verdict:
-    """Pass a curl or wget call whose decoded, literal arguments stay on this machine; ask for any other."""
-    if (
-        not candidate.appends_input
-        and not candidate.has_dynamic_words
-        and request_policy.is_local(candidate.arguments)
-    ):
+def settings_objection(command: str, commands: tuple[shell_syntax.Command, ...]) -> Verdict:
+    """Ask when a curl or wget call shares its command with settings that could send it elsewhere."""
+    requests = any(command_policy.canonical(item).arguments[0] in REQUEST_PROGRAMS for item in commands)
+    if not requests or not REQUEST_SETTINGS.search(command):
         return hook_decision.ALLOW
-    return hook_decision.ask(f"{request_policy.REMOTE_REASON}\n\nCommand: {preview}", candidate.arguments[0])
+    return hook_decision.ask(f"{REMOTE_REASON}\n\nCommand: {shell_syntax.command_preview(command)}", "settings")
 
 
 def removal_objection(kind: str, item: shell_syntax.Command, workspace: removal_policy.Workspace) -> Verdict:
@@ -165,23 +161,31 @@ def decide(kind: str, payload: dict, directory: Path = ROOT) -> Verdict:
         if not isinstance(payload, dict):
             raise ValueError("failed to parse tool input JSON: expected an object")
         command = payload.get("tool_input", {}).get("command") or ""
-        try:
-            commands = shell_syntax.parse(command)
-        except shell_syntax.UnsupportedSyntax as error:
-            preview = shell_syntax.command_preview(command)
-            verdict = hook_decision.ask(f"Needs review: {error}.\n\nCommand: {preview}", "syntax")
-        else:
-            workspace = removal_policy.workspace(payload, commands)
-            verdicts = (
-                verdict
-                for item in commands
-                for verdict in (objection(kind, item, policy), removal_objection(kind, item, workspace))
-            )
-            verdict = next((item for item in verdicts if item.decision != "allow"), hook_decision.ALLOW)
+        verdict = command_verdict(kind, payload, policy)
     except (ValueError, TypeError, AttributeError, OSError) as error:
         prefix = "forbidden command: " if kind == "forbidden" else ""
         verdict = hook_decision.deny(f"BLOCKED: {prefix}{error}\n\n{hook_decision.REVIEW_HINT}")
     record(verdict, Attempt(kind, command, payload))
+    return verdict
+
+
+def command_verdict(kind: str, payload: dict, policy: Policy) -> Verdict:
+    """The first objection any segment raises, then whether the command's settings could redirect a request."""
+    command = payload.get("tool_input", {}).get("command") or ""
+    try:
+        commands = shell_syntax.parse(command)
+    except shell_syntax.UnsupportedSyntax as error:
+        preview = shell_syntax.command_preview(command)
+        return hook_decision.ask(f"Needs review: {error}.\n\nCommand: {preview}", "syntax")
+    workspace = removal_policy.workspace(payload, commands)
+    verdicts = (
+        verdict
+        for item in commands
+        for verdict in (objection(kind, item, policy), removal_objection(kind, item, workspace))
+    )
+    verdict = next((item for item in verdicts if item.decision != "allow"), hook_decision.ALLOW)
+    if kind == "allowed" and verdict.decision == "allow":
+        return settings_objection(command, commands)
     return verdict
 
 

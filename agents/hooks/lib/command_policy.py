@@ -11,10 +11,6 @@ import git_safety
 import shell_syntax
 
 
-# Programs the forbidden patterns, the Git guard, or rm's own policy judge beyond the prefix rules.
-GUARDED_PROGRAMS = frozenset({"eval", "find", "git", "python", "python3", "rm", "xargs", *shell_syntax.SHELLS})
-
-
 def regex_matches(pattern: str, value: str, insensitive: bool = False) -> bool:
     """Use the existing system regex engine instead of silently changing regex dialects."""
     return any_regex_matches((pattern,), value, insensitive)
@@ -81,12 +77,6 @@ def is_name_list(value: object) -> bool:
 def governed_programs(rules: list[dict]) -> frozenset[str]:
     """Programs whose effects reach past the sandbox, so only their listed forms pass unreviewed."""
     return frozenset(program for rule in rules for program in rule.get("programs", ()))
-
-
-def sensitive_programs(prefixes: list[dict], rules: list[dict]) -> frozenset[str]:
-    """Programs a function body may not run unreviewed: governed or guarded ones, or any an ask or deny prefix names."""
-    named = {rule["prefix"][0] for rule in prefixes if rule["decision"] != "allow"}
-    return governed_programs(rules) | GUARDED_PROGRAMS | named
 
 
 def project_file(name: str) -> Path | None:

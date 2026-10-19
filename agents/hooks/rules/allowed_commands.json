@@ -49,6 +49,17 @@
     },
     {
       "programs": [
+        "curl",
+        "wget"
+      ],
+      "patterns": [
+        "^curl( -[A-Za-z]+)*( -X (GET|POST|PUT|PATCH|DELETE))?( -H '[^']*')*( -d '[^']*')?( -o [A-Za-z0-9._/-]+)? https?://(localhost|127\\.0\\.0\\.1)(:[0-9]+)?[A-Za-z0-9._/?&=%-]*$",
+        "^wget( -[A-Za-z]+)*( -O [A-Za-z0-9._/-]+)? https?://(localhost|127\\.0\\.0\\.1)(:[0-9]+)?[A-Za-z0-9._/?&=%-]*$"
+      ],
+      "justification": "Allow requests to local servers; remote fetches leave the machine."
+    },
+    {
+      "programs": [
         "herdr"
       ],
       "patterns": [

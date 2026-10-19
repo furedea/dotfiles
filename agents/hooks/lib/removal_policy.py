@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 import os
 from pathlib import Path
+import re
 
 import shell_syntax
 
@@ -19,6 +20,9 @@ LONG_FLAGS = frozenset(
     {"--dir", "--force", "--interactive", "--one-file-system", "--preserve-root", "--recursive", "--verbose"}
 )
 DIRECTORY_CHANGES = frozenset({"cd", "pushd", "popd"})
+# Characters that glob or brace expansion reads when unquoted, so the shell may choose another path.
+EXPANDING_CHARACTERS = frozenset("{}*?[]")
+QUOTED_TEXT = re.compile(r"'[^']*'|\"(?:[^\"\\]|\\.)*\"|\\.")
 # Commands that only read, so beside them an rm target stays as the hook sees it. rg is absent since
 # its --pre runs a program, and time since its -o writes a file.
 READERS = frozenset({"[", "cat", "echo", "false", "grep", "head", "ls", "printf", "pwd", "tail", "test", "true", "wc"})
@@ -66,7 +70,7 @@ def removal(command: shell_syntax.Command, workspace: Workspace) -> Removal | No
     hidden = command.appends_input
     options_ended = False
     for word, source, dynamic in zip(command.arguments[1:], command.words[1:], command.dynamic[1:], strict=True):
-        if dynamic or source.startswith("~") or "$" in source:
+        if dynamic or source.startswith("~") or "$" in source or expands(source):
             hidden = True
         elif options_ended or word == "-" or not word.startswith("-"):
             operands.append(word)
@@ -119,6 +123,11 @@ def is_inert(command: shell_syntax.Command) -> bool:
     if name == "env":
         return not changes_directory(command)
     return name == "rm" or name in INERT_WRAPPERS or name in READERS
+
+
+def expands(source: str) -> bool:
+    """Whether a word's unquoted text holds a glob or brace character."""
+    return bool(EXPANDING_CHARACTERS & set(QUOTED_TEXT.sub("", source)))
 
 
 def is_option(word: str) -> bool:

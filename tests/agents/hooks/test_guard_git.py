@@ -224,6 +224,7 @@ def test_dangerous_git_contract(
         "$GIT push --force origin main",
         "d=$TMPDIR/x; $d/tool --version",
         "f(){ git reset $MODE HEAD~1; }; f",
+        "f(){ git reset --hard; }",
     ],
 )
 def test_run_time_words_that_can_change_the_verdict_are_left_to_the_user(command: str) -> None:
@@ -258,7 +259,6 @@ def test_run_time_words_that_cannot_change_the_verdict_pass(command: str) -> Non
         'echo "$(git reset --hard)"',
         "for b in a; do git push --force origin topic; done",
         "if x; then git clean -fd; fi",
-        "f(){ git reset --hard; }",
     ],
 )
 def test_destructive_git_inside_substitutions_and_clauses_is_denied(command: str) -> None:
