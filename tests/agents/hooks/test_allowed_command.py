@@ -67,17 +67,13 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
             id="apostrophe in a single-quoted body",
         ),
         pytest.param("gh api graphql -f query='query { viewer { login } }'", id="GitHub GraphQL queries"),
-        pytest.param(
-            'gh api graphql -f "query=query { repository(owner: \\"o\\", name: \\"r\\") { id } }"',
-            id="GitHub GraphQL queries in double quotes",
-        ),
         pytest.param("gh stack submit --auto", id="non-interactive stack commands"),
         pytest.param("gh pr list 2>&1 | head -5", id="GitHub forms in pipelines"),
         pytest.param("curl -fsS http://localhost:3000/health", id="local server requests"),
         pytest.param("curl -s -H 'Accept: x' -o out.json http://127.0.0.1:8080/api", id="local server downloads"),
         pytest.param("curl -X POST -d '{\"a\": 1}' http://127.0.0.1:8080/api", id="local server writes"),
         pytest.param(
-            'gh api -H "Accept: application/vnd.github.raw" "repos/o/r/contents/a.nix?ref=v1" | sed -n 1,20p',
+            "gh api -H \"Accept: application/vnd.github.raw\" 'repos/o/r/contents/a.nix?ref=v1' | sed -n 1,20p",
             id="GitHub reads with a header before the endpoint",
         ),
         pytest.param(
@@ -220,6 +216,17 @@ def test_commands_whose_effects_the_checks_can_see_pass(capsys: pytest.CaptureFi
         pytest.param("curl --data-urlencode q=x https://example.com/", [], id="options outside the read-only list"),
         pytest.param("curl --max-time=5 https://example.com/", [], id="attached long option values"),
         pytest.param("gh api graphql -f query='mutation { x }'", [], id="GitHub GraphQL mutations"),
+        pytest.param(
+            'gh api graphql -f "query=query { repository(owner: \\"o\\", name: \\"r\\") { id } }"',
+            [],
+            id="GitHub GraphQL queries in double quotes, which main asks for",
+        ),
+        pytest.param("gh api repos/o/r/pulls/1/comments/99/replies -f body=hello", [], id="unquoted reply bodies"),
+        pytest.param(
+            "gh api -H 'X-HTTP-Method-Override: DELETE' repos/o/r/issues/1",
+            [],
+            id="other headers before the endpoint",
+        ),
         pytest.param("curl -d{} https://example.com/", [], id="send options that need quoting"),
         pytest.param("curl -sd'a b' https://example.com/", [], id="send options with spaces in a cluster"),
         pytest.param("curl --data 'a b' https://example.com/", [], id="long send options with spaces"),

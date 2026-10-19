@@ -118,7 +118,7 @@ def governed_objection(candidate: shell_syntax.Command, policy: Policy, preview:
     if governed is None or (
         not candidate.appends_input
         and not candidate.hides_options
-        and command_policy.regex_reason(command_policy.judged_text(candidate), rules)
+        and command_policy.regex_reason(candidate.static_words_text, rules)
     ):
         return hook_decision.ALLOW
     prefix = " ".join(governed["prefix"])

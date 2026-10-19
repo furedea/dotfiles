@@ -49,7 +49,7 @@ def decide(kind: str, command: str, cwd: Path | None = None) -> str:
         pytest.param("rm -fR {tmp}/a/../b", id="a normalized path that stays inside"),
         pytest.param("ls {tmp} && rm -f {tmp}/a.txt; echo done", id="beside commands that only read"),
         pytest.param("command rm {tmp}/a.txt", id="behind a wrapper"),
-        pytest.param("rm '{tmp}/{{a,b}}' \"{tmp}/[c]\" {tmp}/\\*", id="quoted or escaped special characters"),
+        pytest.param("rm -f -- {tmp}/a_b-c.d/@x+y,z:1%2", id="every plain character"),
     ],
 )
 @pytest.mark.parametrize("kind", ["allowed", "forbidden"])
@@ -161,13 +161,49 @@ def test_a_recursive_zsh_command_path_expansion_stays_denied(project: Path) -> N
     "command",
     [
         pytest.param("rm {tmp}/tool", id="the same file as an absolute temporary path"),
-        pytest.param("rm {tmp}/'=tool'", id="a quoted equals sign inside an absolute temporary path"),
-        pytest.param("rm {tmp}/=tool", id="an equals sign that does not start the word"),
+        pytest.param("rm '{tmp}/tool'", id="a quoted absolute temporary path"),
     ],
 )
 def test_absolute_temporary_paths_pass_from_any_directory(project: Path, git_project: Path, command: str) -> None:
     command = command.format(tmp=project / "tmp")
     assert decide("allowed", command, cwd=git_project) == "allow"
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        pytest.param('rm -f "{tmp}/link\\/sub"', id="a backslash the shell may drop"),
+        pytest.param("rm -f {tmp}/a\\b", id="an escaped character"),
+        pytest.param("rm {tmp}/'=tool'", id="a quoted equals sign"),
+        pytest.param("rm {tmp}/=tool", id="an equals sign"),
+        pytest.param("rm '{tmp}/a b'", id="a space"),
+        pytest.param("rm '{tmp}/a;b'", id="a separator character"),
+        pytest.param('rm "{tmp}/a\'b"', id="a quote character"),
+        pytest.param("rm '{tmp}/{{a,b}}' \"{tmp}/[c]\" {tmp}/\\*", id="quoted or escaped glob and brace characters"),
+    ],
+)
+def test_temporary_paths_with_characters_outside_the_plain_set_ask(project: Path, command: str) -> None:
+    command = command.format(tmp=project / "tmp")
+    assert decide("allowed", command) == "ask"
+    assert decide("forbidden", command) == "allow"
+
+
+def test_a_recursive_removal_through_a_dropped_backslash_stays_denied(project: Path) -> None:
+    assert decide("forbidden", f'rm -rf "{project / "tmp"}/link\\/sub"') == "deny"
+
+
+@pytest.mark.parametrize("root", ["scratch", "tmp"])
+def test_a_temporary_root_that_links_outside_the_system_temp_areas_is_not_a_root(
+    project: Path, monkeypatch: pytest.MonkeyPatch, root: str
+) -> None:
+    link = project / f"{root}-link"
+    link.symlink_to("/usr")
+    if root == "scratch":
+        monkeypatch.setattr(guard.removal_policy, "SCRATCH_ROOT", link)
+    else:
+        monkeypatch.setenv("TMPDIR", str(link))
+    assert decide("allowed", f"rm {link}/never-created.txt") == "ask"
+    assert decide("forbidden", f"rm -rf {link}/never-created") == "deny"
 
 
 def test_a_reassigned_home_cannot_vouch_for_a_target(

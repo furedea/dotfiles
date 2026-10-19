@@ -23,9 +23,10 @@ SHORT_FLAGS = frozenset("dfiIPRrvWx")
 LONG_FLAGS = frozenset(
     {"--dir", "--force", "--interactive", "--one-file-system", "--preserve-root", "--recursive", "--verbose"}
 )
-# Characters that glob or brace expansion reads when unquoted, so the shell may choose another path.
-EXPANDING_CHARACTERS = frozenset("{}*?[]")
-QUOTED_TEXT = re.compile(r"'[^']*'|\"(?:[^\"\\]|\\.)*\"|\\.")
+# A target passes only in characters every shell reads alike, so the hook and the shell see one path.
+PLAIN_PATH = re.compile(r"[A-Za-z0-9._/@+,:%-]+")
+# A root counts only when it really lies in a system temporary area, not when it links elsewhere.
+SYSTEM_TEMPORARY_AREAS = (Path("/private/tmp"), Path("/private/var/folders"), Path("/tmp"))
 # Commands that only read, so beside them an rm target stays as the hook sees it. rg is absent since
 # its --pre runs a program, and time since its -o writes a file.
 READERS = frozenset({"[", "cat", "echo", "false", "grep", "head", "ls", "printf", "pwd", "tail", "test", "true", "wc"})
@@ -65,16 +66,11 @@ def removal(command: shell_syntax.Command, settled: bool) -> Removal | None:
     hidden = command.appends_input
     options_ended = False
     for word, source, dynamic in zip(command.arguments[1:], command.words[1:], command.dynamic[1:], strict=True):
-        if (
-            dynamic
-            or source.startswith("~")
-            or "$" in source
-            or shell_syntax.LINE_CONTINUATION in source
-            or expands(source)
-        ):
+        if dynamic or source.startswith("~") or "$" in source or "\\" in source:
             hidden = True
         elif options_ended or word == "-" or not word.startswith("-"):
             operands.append(word)
+            hidden |= not PLAIN_PATH.fullmatch(word)
         elif word == "--":
             options_ended = True
         elif is_option(word):
@@ -100,11 +96,6 @@ def is_inert(command: shell_syntax.Command) -> bool:
     return name == "rm" or name in INERT_WRAPPERS or name in READERS
 
 
-def expands(source: str) -> bool:
-    """Whether a word's unquoted text holds a glob or brace character."""
-    return bool(EXPANDING_CHARACTERS & set(QUOTED_TEXT.sub("", source)))
-
-
 def is_option(word: str) -> bool:
     if word.startswith("--"):
         return word in LONG_FLAGS or word.startswith("--interactive=")
@@ -112,14 +103,25 @@ def is_option(word: str) -> bool:
 
 
 def is_temporary(target: Path) -> bool:
-    """Whether the resolved target lies strictly inside a temporary root, so symlinks cannot lead out."""
+    """Whether the target lies strictly inside a trusted root, both as written and once symlinks resolve."""
+    written = Path(os.path.normpath(target))
     resolved = Path(os.path.realpath(target))
-    return any(resolved != root and resolved.is_relative_to(root) for root in temporary_roots())
+    roots = trusted_roots()
+    return any(is_inside(written, root) for pair in roots for root in pair) and any(
+        is_inside(resolved, resolved_root) for _, resolved_root in roots
+    )
 
 
-def temporary_roots() -> tuple[Path, ...]:
-    """The scratchpad root and TMPDIR, ignoring a TMPDIR that contains the home directory."""
-    candidates = [SCRATCH_ROOT, Path(os.environ.get("TMPDIR", ""))]
-    roots = (Path(os.path.realpath(candidate)) for candidate in candidates if candidate.is_absolute())
-    home = Path(os.path.realpath(Path.home()))
-    return tuple(root for root in roots if not home.is_relative_to(root))
+def trusted_roots() -> tuple[tuple[Path, Path], ...]:
+    """The scratchpad root and TMPDIR, as written and resolved, when they resolve into a system temporary area."""
+    candidates = (SCRATCH_ROOT, Path(os.environ.get("TMPDIR", "")))
+    pairs = ((Path(os.path.normpath(root)), Path(os.path.realpath(root))) for root in candidates if root.is_absolute())
+    return tuple(
+        (written, resolved)
+        for written, resolved in pairs
+        if any(is_inside(resolved, area) for area in SYSTEM_TEMPORARY_AREAS)
+    )
+
+
+def is_inside(path: Path, root: Path) -> bool:
+    return path != root and path.is_relative_to(root)

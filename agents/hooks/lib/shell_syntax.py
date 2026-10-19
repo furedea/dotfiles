@@ -130,14 +130,6 @@ class Command:
         )
 
     @property
-    def decoded_words_text(self) -> str:
-        """The arguments as the program receives them, requoted, with each run-time word as a placeholder."""
-        return " ".join(
-            RUN_TIME_PLACEHOLDER if dynamic else shlex.quote(argument)
-            for argument, dynamic in zip(self.arguments, self.dynamic, strict=True)
-        )
-
-    @property
     def hides_options(self) -> bool:
         """Whether an option can reach the program unseen: quoted or escaped, or inside a spreading expansion."""
         quoted_option = any(

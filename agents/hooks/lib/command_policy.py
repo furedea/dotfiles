@@ -101,13 +101,6 @@ def canonical(command: shell_syntax.Command) -> shell_syntax.Command:
     return command.rebased(1 + len(globals_), ("git",))
 
 
-def judged_text(command: shell_syntax.Command) -> str:
-    """The text the precise rules read: gh api is judged on its decoded options, others on their source."""
-    if command.arguments[:2] == ("gh", "api"):
-        return command.decoded_words_text
-    return command.static_words_text
-
-
 def prefix_rule(arguments: tuple[str, ...], rules: list[dict], decision: str) -> dict | None:
     """Match complete parsed arguments rather than flattening away token boundaries."""
     return next(
