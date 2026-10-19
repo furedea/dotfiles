@@ -189,6 +189,19 @@ def test_commands_whose_effects_the_checks_can_see_pass(capsys: pytest.CaptureFi
             id="a zsh array expansion in a new Herdr form",
         ),
         pytest.param('herdr agent read "$LANE"', [], id="a quoted expansion in a new Herdr form"),
+        pytest.param(
+            "idx='pipestatus[1$(rm -rf /tmp/review-target)]'; gh api -H 'Accept: x' \"$HOME[idx]\"",
+            [],
+            id="a zsh subscript on HOME beside an allowed header",
+        ),
+        pytest.param(
+            "idx='pipestatus[1$(rm -rf /tmp/review-target)]'; herdr agent read \"$HOME[idx]\"",
+            [],
+            id="a zsh subscript on HOME in a new Herdr form",
+        ),
+        pytest.param("gh api -H 'Accept: x' 'repos/o/r' --jq \"$HOME\"", [], id="HOME beside an allowed header"),
+        pytest.param('herdr worktree list --cwd "$HOME"', [], id="HOME in a new Herdr form"),
+        pytest.param("herdr worktree open --cwd ~/repo --branch x", [], id="a tilde in a new Herdr form"),
         pytest.param('herdr worktree list --cwd "$(pwd)"', [], id="a substitution in a new Herdr form"),
         pytest.param("herdr pane split --pane w1:p2 --cwd $W --no-focus", [], id="unquoted words in Herdr panes"),
         pytest.param(

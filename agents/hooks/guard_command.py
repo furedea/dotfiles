@@ -92,7 +92,7 @@ def is_listed(candidate: shell_syntax.Command, rules: list[dict]) -> bool:
     text = candidate.static_words_text
     if command_policy.regex_reason(text, command_policy.literal_rules(rules, literal=False)):
         return True
-    literal = not candidate.has_dynamic_words and not any(candidate.spreading)
+    literal = all(candidate.literal)
     return literal and bool(command_policy.regex_reason(text, command_policy.literal_rules(rules, literal=True)))
 
 
