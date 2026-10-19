@@ -31,8 +31,9 @@ REMOTE_REASON = (
     "or use gh api / nix store prefetch-file for exact values and files."
 )
 # Settings that can send a request to a local server somewhere else: a proxy, or another configuration file.
-# Characters through which any shell may expand or run something; a command holding one anywhere,
-# in the program name, an assignment, or a redirect included, gets no literal_words rule.
+# Characters through which any shell may expand or run something; a command holding one anywhere
+# outside single quotes, in the program name, an assignment, or a redirect included, gets no
+# literal_words rule.
 EXPANDING_TEXT = re.compile(r"[$`~*?\[\]{}]|\\\n")
 REQUEST_SETTINGS = re.compile(r"proxy|curlrc|wgetrc|curl_home|(^|[^a-z0-9_])(home|xdg_config_home)=", re.IGNORECASE)
 
@@ -159,7 +160,8 @@ def decide(kind: str, payload: dict, directory: Path = ROOT) -> Verdict:
 def command_verdict(kind: str, payload: dict, policy: Policy) -> Verdict:
     """The first objection any segment raises, then whether the command's settings could redirect a request.
 
-    Rules marked literal_words apply only when the whole command text expands nothing anywhere.
+    Rules marked literal_words apply only when the whole command text, outside single quotes, holds
+    nothing a shell expands.
     """
     command = payload.get("tool_input", {}).get("command") or ""
     try:
@@ -167,13 +169,23 @@ def command_verdict(kind: str, payload: dict, policy: Policy) -> Verdict:
     except shell_syntax.UnsupportedSyntax as error:
         preview = shell_syntax.command_preview(command)
         return hook_decision.ask(f"Needs review: {error}.\n\nCommand: {preview}", "syntax")
-    if EXPANDING_TEXT.search(command):
+    if expands_outside_single_quotes(command):
         policy = Policy(policy.prefixes, command_policy.literal_rules(policy.rules, literal=False))
     verdicts = (objection(kind, item, policy) for item in commands)
     verdict = next((item for item in verdicts if item.decision != "allow"), hook_decision.ALLOW)
     if kind == "allowed" and verdict.decision == "allow":
         return settings_objection(command, commands)
     return verdict
+
+
+def expands_outside_single_quotes(command: str) -> bool:
+    """Whether the command holds an expanding character outside single quotes; when unsure, it does."""
+    if not EXPANDING_TEXT.search(command):
+        return False
+    try:
+        return bool(EXPANDING_TEXT.search(shell_syntax.text_outside_single_quotes(command)))
+    except shell_syntax.UnsupportedSyntax:
+        return True
 
 
 def record(verdict: Verdict, attempt: Attempt) -> None:

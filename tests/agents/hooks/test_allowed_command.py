@@ -85,6 +85,22 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
             "gh api -H 'Accept: application/vnd.github.raw' repos/o/r/contents/README.md", id="a plain header read"
         ),
         pytest.param("herdr agent read lane-name", id="a plain Herdr agent read"),
+        pytest.param(
+            "gh api -H 'Accept: application/vnd.github.raw' 'repos/o/r/contents/README.md?ref=v1'",
+            id="a header read with a single-quoted query",
+        ),
+        pytest.param(
+            "gh api -H \"Accept: x\" 'repos/o/r/contents/a.nix?ref=v1'",
+            id="a double-quoted header with a single-quoted query",
+        ),
+        pytest.param(
+            "gh api -H 'Accept: x' repos/o/r/pulls --jq '.[0].number'",
+            id="a header read with a single-quoted jq filter",
+        ),
+        pytest.param(
+            "herdr worktree open --cwd /r --label 'a*b {x} $y ~z'",
+            id="a Herdr form with special characters in single quotes",
+        ),
         pytest.param("herdr agent wait lane-a --until done --until blocked --timeout 600000", id="Herdr agent waits"),
         pytest.param("herdr worktree list --cwd /repo", id="Herdr worktree lists"),
         pytest.param("herdr agent read --help", id="Herdr help for the lane commands"),
@@ -221,9 +237,30 @@ def test_commands_whose_effects_the_checks_can_see_pass(capsys: pytest.CaptureFi
             )
         ),
         pytest.param(
-            "gh api -H \"Accept: x\" 'repos/o/r/contents/a.nix?ref=v1'",
+            "gh api -H 'Accept: x' repos/o/r/contents/README.md?ref=v1",
             [],
-            id="a question mark beside an allowed header",
+            id="an unquoted question mark beside a header",
+        ),
+        pytest.param(
+            "gh api -H 'Accept: x' \"repos/o/r/contents/README.md?ref=v1\"",
+            [],
+            id="a double-quoted question mark beside a header",
+        ),
+        pytest.param(
+            "gh api -H 'Accept: x' repos/o/r/pulls --jq \".[0].number\"",
+            [],
+            id="a double-quoted jq filter beside a header",
+        ),
+        pytest.param(
+            "gh api -H 'Accept: x' 'repos/o/r'\"$HOME[idx]\"", [], id="an expansion adjacent to a single quote"
+        ),
+        pytest.param("gh api -H 'Accept: x' 'a'$HOME'b'", [], id="an expansion between single quotes"),
+        pytest.param("gh api -H 'Accept: x' \\'repos/$HOME\\'", [], id="escaped quotes around an expansion"),
+        pytest.param("gh api -H 'Accept: x' 'repos/o/r", [], id="an unterminated single quote"),
+        pytest.param("gh api -H 'Accept: x' $'repos/o/r?x'", [], id="ANSI-C quoting"),
+        pytest.param("gh api -H 'Accept: x' \"it's $HOME\"", [], id="a single quote inside double quotes"),
+        pytest.param(
+            'herdr worktree open --cwd /r --label "a*b"', [], id="a Herdr form with a double-quoted glob character"
         ),
         pytest.param("herdr worktree open --cwd ~/repo --branch x", [], id="a tilde in a new Herdr form"),
         pytest.param('herdr worktree list --cwd "$(pwd)"', [], id="a substitution in a new Herdr form"),

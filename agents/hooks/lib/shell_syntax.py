@@ -207,6 +207,26 @@ def statement_writes(statement: dict, data: bytes) -> tuple[str, ...]:
     )
 
 
+def text_outside_single_quotes(source: str) -> str:
+    """The source with every single-quoted string removed, located by the parser rather than by a scan.
+
+    Neither bash nor zsh expands anything inside single quotes. A dollar-quoted $'...' string stays,
+    since the shell decodes escapes in it.
+    """
+    data = source.encode()
+    spans = sorted(
+        (node["Pos"]["Offset"], node["End"]["Offset"])
+        for node in nodes(syntax_tree(source))
+        if node.get("Type") == "SglQuoted" and not node.get("Dollar")
+    )
+    kept, start = [], 0
+    for begin, end in spans:
+        kept.append(data[start:begin])
+        start = max(start, end)
+    kept.append(data[start:])
+    return b"".join(kept).decode()
+
+
 def heredoc_script(owner: dict) -> str:
     """Return the static script a shell reads from a heredoc, refusing one the shell computes."""
     bodies = [redirect["Hdoc"] for redirect in owner.get("Redirs", []) if redirect.get("Hdoc")]
