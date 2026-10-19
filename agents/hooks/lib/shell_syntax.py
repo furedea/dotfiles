@@ -208,8 +208,7 @@ def statement_writes(statement: dict, data: bytes) -> tuple[str, ...]:
 
 
 def is_one_simple_command(source: str) -> bool:
-    """Whether the source is a single plain call: no list, pipe, background, negation, compound,
-    leading assignment, or redirect, since zsh can run code while assigning to an integer variable."""
+    """Whether the source is one plain call: no list, pipe, background, negation, compound, assignment, or redirect."""
     statements = syntax_tree(source).get("Stmts", [])
     if len(statements) != 1:
         return False
@@ -408,7 +407,8 @@ def literal_part(index: int, part: dict, source: bytes) -> str:
 
 
 def unquoted(text: str) -> str:
-    values = shlex.split(text, posix=True)
+    """Decode an unquoted or double-quoted part as the shell does, dropping each line continuation."""
+    values = shlex.split(text.replace(LINE_CONTINUATION, ""), posix=True)
     if len(values) != 1:
         raise UnsupportedSyntax("a shell word could not be decoded unambiguously")
     return values[0]

@@ -62,11 +62,12 @@
         "curl",
         "wget"
       ],
+      "literal_words": true,
       "patterns": [
         "^curl( -[A-JM-Za-wyz]+)*( -X (GET|POST|PUT|PATCH|DELETE))?( -H '[^']*')*( -d '[^']*')?( -o [A-Za-z0-9._/-]+)? (https?://(localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)?(/[A-Za-z0-9._/?&=%-]*)?|'https?://(localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)?(/[A-Za-z0-9._/?&=%-]*)?')$",
-        "^wget( -[qvdcNSnHk]+)*( -O [A-Za-z0-9._/-]+)? (https?://(localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)?(/[A-Za-z0-9._/?&=%-]*)?|'https?://(localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)?(/[A-Za-z0-9._/?&=%-]*)?')$"
+        "^wget (--help|--version)$"
       ],
-      "justification": "Allow requests to local servers named exactly localhost, 127.0.0.1, or [::1]; options that follow redirects, read a config file, set a proxy, or read URLs from a file ask, since they can reach other hosts."
+      "justification": "Allow a single plain curl call to a local server named exactly localhost, 127.0.0.1, or [::1]; any assignment, redirect, wrapper, list, or option that follows redirects, reads a config file, or sets a proxy asks, and wget, which follows redirects by default, asks except for its help and version."
     },
     {
       "programs": [
