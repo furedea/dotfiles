@@ -7,6 +7,7 @@
 - Write documentation, code comments, and commit messages in English for public repositories; a squash-merge commit body is the Japanese PR body
 - When writing commit messages, follow Conventional Commits rules
 - Implement based on Test-Specification-Driven Development (TSDD)
+- Read web pages with the agent's web-fetch tool instead of `curl` or `wget`; get exact values or files with `gh api` or `nix store prefetch-file`
 
 # Development Workflow
 
