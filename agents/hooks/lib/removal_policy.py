@@ -55,7 +55,8 @@ class Removal:
 
     @property
     def removes_unaccounted_tree(self) -> bool:
-        return self.recursive and not self.is_temporary
+        """Whether a recursive removal reaches past settled temporary paths; such a removal is denied."""
+        return self.recursive and not self.is_accounted_for
 
 
 def removal(command: shell_syntax.Command, settled: bool) -> Removal | None:
@@ -65,18 +66,18 @@ def removal(command: shell_syntax.Command, settled: bool) -> Removal | None:
     recursive, operands = False, []
     hidden = command.appends_input
     options_ended = False
+    # Options are read from the decoded words, so quoting or escaping cannot hide a recursive flag.
     for word, source, dynamic in zip(command.arguments[1:], command.words[1:], command.dynamic[1:], strict=True):
-        if dynamic or source.startswith("~") or "$" in source or "\\" in source:
+        if dynamic:
             hidden = True
-        elif options_ended or word == "-" or not word.startswith("-"):
-            operands.append(word)
-            hidden |= not PLAIN_PATH.fullmatch(word)
-        elif word == "--":
+        elif not options_ended and word == "--":
             options_ended = True
-        elif is_option(word):
-            recursive |= word == "--recursive" or (not word.startswith("--") and bool(set(word) & {"r", "R"}))
+        elif not options_ended and word.startswith("-") and word != "-":
+            recursive |= is_recursive(word)
+            hidden |= not is_option(word)
         else:
-            hidden = True
+            operands.append(word)
+            hidden |= source.startswith("~") or "$" in source or "\\" in source or not PLAIN_PATH.fullmatch(word)
     if hidden or not operands or not all(Path(word).is_absolute() for word in operands):
         return Removal(recursive, None, settled)
     return Removal(recursive, tuple(Path(word) for word in operands), settled)
@@ -94,6 +95,12 @@ def is_inert(command: shell_syntax.Command) -> bool:
         return False
     name = Path(command.arguments[0]).name
     return name == "rm" or name in INERT_WRAPPERS or name in READERS
+
+
+def is_recursive(option: str) -> bool:
+    if option.startswith("--"):
+        return option == "--recursive"
+    return bool(set(option[1:]) & {"r", "R"})
 
 
 def is_option(word: str) -> bool:

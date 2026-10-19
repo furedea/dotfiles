@@ -68,10 +68,17 @@ def validate_rule(rule: object, prefixes: bool) -> None:
         raise ValueError("invalid decision")
     if not prefixes and "programs" in rule and not is_name_list(rule["programs"]):
         raise ValueError("invalid governed program list")
+    if not prefixes and not isinstance(rule.get("literal_words", False), bool):
+        raise ValueError("invalid literal word flag")
 
 
 def is_name_list(value: object) -> bool:
     return isinstance(value, list) and bool(value) and all(isinstance(item, str) and item for item in value)
+
+
+def literal_rules(rules: list[dict], *, literal: bool) -> list[dict]:
+    """The rules that apply only when every word of the command is literal, or the others."""
+    return [rule for rule in rules if rule.get("literal_words", False) is literal]
 
 
 def governed_programs(rules: list[dict]) -> frozenset[str]:

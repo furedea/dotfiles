@@ -79,7 +79,7 @@ def test_removals_inside_a_temporary_root_pass(project: Path, kind: str, command
         pytest.param("rm", id="no targets"),
         pytest.param("printf x >> tracked.txt; rm tracked.txt", id="a write to the target first"),
         pytest.param("mv untracked.txt tracked.txt && rm tracked.txt", id="a move onto the target first"),
-        pytest.param("ln -s {project} {tmp}/link; rm -r {tmp}/link/sub", id="a symlink created first"),
+        pytest.param("ln -s {project} {tmp}/link; rm {tmp}/link/sub", id="a symlink created first"),
         pytest.param("rm tracked.txt; git checkout -- tracked.txt", id="any command that can write"),
         pytest.param("builtin cd sub && rm tracked.txt", id="a builtin directory change"),
         pytest.param("env --chdir=sub rm tracked.txt", id="env with a long directory option"),
@@ -124,10 +124,18 @@ def test_removals_outside_a_temporary_root_ask(project: Path, git_project: Path,
         pytest.param("rm -rf {tmp}/{{a,../../../x}}", id="a tree named through brace expansion"),
         pytest.param("rm -rf {tmp}/a/.\\\n./../..", id="a tree named across a line continuation"),
         pytest.param("echo {tmp}/a | xargs rm -rf {tmp}/b", id="trees read from input"),
+        pytest.param("rm \\-rf {project}", id="an escaped recursive flag"),
+        pytest.param("rm -\\rf build", id="an escape inside a recursive flag"),
+        pytest.param("rm '-r' build", id="a quoted recursive flag"),
+        pytest.param("rm {project} \\--recursive", id="an escaped long flag after the operand"),
+        pytest.param("ln -s {project} {tmp}/link; rm -r {tmp}/link/sub", id="a tree under a symlink created first"),
+        pytest.param("printf x > {tmp}/out.txt; rm -rf {tmp}/build", id="a temporary tree beside a write"),
     ],
 )
-def test_recursive_removals_outside_the_temporary_roots_stay_denied(project: Path, command: str) -> None:
-    command = command.format(tmp=project / "tmp")
+def test_recursive_removals_outside_the_temporary_roots_stay_denied(
+    project: Path, git_project: Path, command: str
+) -> None:
+    command = command.format(tmp=project / "tmp", project=git_project)
     verdict = guard.decide("forbidden", {"tool_input": {"command": command}})
     assert verdict.decision == "deny"
     assert "directory trees" in verdict.reason

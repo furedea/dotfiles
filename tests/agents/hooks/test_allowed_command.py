@@ -162,6 +162,19 @@ def test_commands_whose_effects_the_checks_can_see_pass(capsys: pytest.CaptureFi
         pytest.param("gh pr view $(cat number.txt)", [], id="unquoted command substitutions"),
         pytest.param("gh api repos/o/r/contents/*", [], id="unquoted globs"),
         pytest.param(
+            "printf '%s\\n' 'repos/o/r/issues/comments/123 -X DELETE' | read -rA a; gh api -H 'Accept: x' \"$a[@]\"",
+            [],
+            id="a zsh array expansion beside an allowed header",
+        ),
+        pytest.param(
+            "gh api -H 'Accept: x' \"repos/o/$r/pulls\"", [], id="a quoted expansion beside an allowed header"
+        ),
+        pytest.param(
+            'gh api --header "X-GitHub-Api-Version: 1" \'repos/o/r\' --jq "$(cat q)"',
+            [],
+            id="a substitution beside an allowed header",
+        ),
+        pytest.param(
             "gh api -H 'Accept: x' {repos/o/r/issues/comments/123,-\"X\"DELETE}",
             [],
             id="brace expansion split by quotes",

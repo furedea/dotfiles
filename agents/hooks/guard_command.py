@@ -89,6 +89,14 @@ def objection(kind: str, item: shell_syntax.Command, policy: Policy) -> Verdict:
     return governed_objection(candidate, policy, preview)
 
 
+def is_listed(candidate: shell_syntax.Command, rules: list[dict]) -> bool:
+    text = candidate.static_words_text
+    if command_policy.regex_reason(text, command_policy.literal_rules(rules, literal=False)):
+        return True
+    literal = not candidate.has_dynamic_words and not any(candidate.spreading)
+    return literal and bool(command_policy.regex_reason(text, command_policy.literal_rules(rules, literal=True)))
+
+
 def forbidden_objection(item: shell_syntax.Command, candidate: shell_syntax.Command, policy: Policy) -> Verdict:
     """Deny only: a literal deny prefix or pattern wins even beside a run-time argument."""
     rules = policy.rules
@@ -109,16 +117,16 @@ def governed_objection(candidate: shell_syntax.Command, policy: Policy, preview:
 
     A run-time word counts as a plain placeholder, so it passes only where any value would, and a
     command that can hide an option from the rules, or takes more arguments from xargs, asks: a
-    quoted option, or a word that may split into several, such as an unquoted expansion.
+    quoted option, or a word that may split into several, such as an unquoted expansion. Rules
+    marked literal_words apply only when no word expands at all, since a shell such as zsh may
+    split even a quoted expansion.
     """
     prefixes, rules = policy.prefixes, policy.rules
     if candidate.program_is_dynamic or candidate.arguments[0] not in command_policy.governed_programs(rules):
         return hook_decision.ALLOW
     governed = command_policy.prefix_rule(candidate.arguments, prefixes, "allow")
     if governed is None or (
-        not candidate.appends_input
-        and not candidate.hides_options
-        and command_policy.regex_reason(candidate.static_words_text, rules)
+        not candidate.appends_input and not candidate.hides_options and is_listed(candidate, rules)
     ):
         return hook_decision.ALLOW
     prefix = " ".join(governed["prefix"])

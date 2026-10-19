@@ -18,7 +18,6 @@
         "^gh api repos/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+ --method POST -f parent_issue_id=[a-zA-Z0-9_=]+ /issues/[0-9]+/sub_issues$",
         "^gh api graphql -f query='(query([[:space:]({{])|[{])[^']*('\\\\''[^']*)*'$",
         "^gh api ('[^']*'|[^ '-][^ ']*)( --paginate| --slurp| -i| --include| --jq ('[^']*'|[^' ]+)| -q ('[^']*'|[^' ]+)| -H '[^']*'| --cache [0-9]+[smh])*$",
-        "^gh api( (-H|--header) ('(Accept|X-GitHub-Api-Version): [^']*'|\"(Accept|X-GitHub-Api-Version): [^\"$`\\\\]*\"))* ('[^']*'|[^ '-][^ ']*)( --paginate| --slurp| -i| --include| --jq ('[^']*'|[^' ]+)| -q ('[^']*'|[^' ]+)| -H '[^']*'| --cache [0-9]+[smh]| (-H|--header) ('(Accept|X-GitHub-Api-Version): [^']*'|\"(Accept|X-GitHub-Api-Version): [^\"$`\\\\]*\"))*$",
         "^gh issue (list|status|view)( |$)",
         "^gh issue (create|comment|develop|edit|reopen|close)( |$)",
         "^gh label (list|create)( |$)",
@@ -47,6 +46,16 @@
         "^gh stack rebase( --continue| --abort)?$"
       ],
       "justification": "Allow GitHub reads and the reviewable writes the delivery workflow uses; other forms of an approved gh prefix change GitHub in ways the sandbox cannot undo."
+    },
+    {
+      "programs": [
+        "gh"
+      ],
+      "literal_words": true,
+      "patterns": [
+        "^gh api( (-H|--header) ('(Accept|X-GitHub-Api-Version): [^']*'|\"(Accept|X-GitHub-Api-Version): [^\"$`\\\\]*\"))* ('[^']*'|[^ '-][^ ']*)( --paginate| --slurp| -i| --include| --jq ('[^']*'|[^' ]+)| -q ('[^']*'|[^' ]+)| -H '[^']*'| --cache [0-9]+[smh]| (-H|--header) ('(Accept|X-GitHub-Api-Version): [^']*'|\"(Accept|X-GitHub-Api-Version): [^\"$`\\\\]*\"))*$"
+      ],
+      "justification": "Allow GitHub reads that ask for a media type or API version by header; every other word must be literal, so no expansion can add an option beside the header."
     },
     {
       "programs": [
