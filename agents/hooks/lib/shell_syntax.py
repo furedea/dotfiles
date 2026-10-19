@@ -45,7 +45,9 @@ SPREADING = frozenset({"@", "*"})
 SPLIT_PARTS = frozenset({"ParamExp", "CmdSubst", "ProcSubst", "ArithmExp"})
 # A bracket opens a glob only when a closing bracket follows, so the test command `[` stays literal.
 GLOB = re.compile(r"(?<!\\)[*?]|(?<!\\)\[.+\]")
-BRACE_EXPANSION = re.compile(r"(?<!\\)\{[^{}]*(,|\.\.)[^{}]*(?<!\\)\}")
+# Brace expansion can pair braces across quoted parts, so any unquoted brace counts.
+BRACES = frozenset("{}")
+LINE_CONTINUATION = "\\\n"
 # Process wrappers run their trailing arguments as a command. Each entry lists the flags without an
 # operand and the options whose operand is the next token; unknown options are refused, not skipped.
 WRAPPERS: dict[str, tuple[frozenset[str], frozenset[str]]] = {
@@ -285,7 +287,7 @@ def literal_command(node: dict, owner: dict, data: bytes) -> Command:
         words=tuple(source_text(word, data) for word in node["Args"]),
         trailer=" ".join(source_text(redirect, data) for redirect in redirects),
         dynamic=tuple(flag for _, flag in decoded),
-        spreading=tuple(spreads(word) for word in node["Args"]),
+        spreading=tuple(spreads(word, data) for word in node["Args"]),
         writes=statement_writes(owner, data),
     )
 
@@ -332,15 +334,18 @@ def literal_word(word: dict, source: bytes) -> tuple[str, bool]:
     return "".join(literal_part(index, part, source) for index, part in enumerate(parts)), False
 
 
-def spreads(word: dict) -> bool:
-    """Whether a word may become several words: an unquoted expansion, substitution, glob, or brace
-    expansion, or a positional parameter or array expansion even in quotes."""
-    for part in word.get("Parts", []):
-        if part.get("Type") in SPLIT_PARTS:
-            return True
-        value = part.get("Value", "") if part.get("Type") == "Lit" else ""
-        if GLOB.search(value) or BRACE_EXPANSION.search(value):
-            return True
+def spreads(word: dict, source: bytes) -> bool:
+    """Whether a word may become several words, or other words than the decoder sees.
+
+    That is an unquoted expansion, substitution, glob, or brace, a line continuation, which the
+    shell removes, or a positional parameter or array expansion even in quotes.
+    """
+    parts = word.get("Parts", [])
+    unquoted = "".join(part.get("Value", "") for part in parts if part.get("Type") == "Lit")
+    if any(part.get("Type") in SPLIT_PARTS for part in parts) or GLOB.search(unquoted) or BRACES & set(unquoted):
+        return True
+    if LINE_CONTINUATION in source_text(word, source):
+        return True
     for part in word_nodes(word):
         if part.get("Type") != "ParamExp":
             continue

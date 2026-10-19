@@ -165,6 +165,14 @@ def test_commands_whose_effects_the_checks_can_see_pass(capsys: pytest.CaptureFi
         pytest.param("gh api repos/furedea/$r/alerts", [], id="unquoted expansions inside an endpoint"),
         pytest.param("gh pr view $(cat number.txt)", [], id="unquoted command substitutions"),
         pytest.param("gh api repos/o/r/contents/*", [], id="unquoted globs"),
+        pytest.param(
+            "gh api -H 'Accept: x' {repos/o/r/issues/comments/123,-\"X\"DELETE}",
+            [],
+            id="brace expansion split by quotes",
+        ),
+        pytest.param("gh api repos/o/r/issues/comments/{1}", [], id="any unquoted brace"),
+        pytest.param("gh api repos/o/r/issues/1 -\\\nXDELETE", [], id="a line continuation inside an option"),
+        pytest.param("herdr worktree open --cwd /r --trust\\\n-repository", [], id="a line continuation in Herdr"),
         pytest.param("herdr worktree open --cwd $W", [], id="unquoted words in Herdr options"),
         pytest.param("herdr pane split --pane w1:p2 --cwd $W --no-focus", [], id="unquoted words in Herdr panes"),
         pytest.param(

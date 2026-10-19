@@ -101,6 +101,8 @@ def test_removals_inside_a_temporary_root_pass(project: Path, kind: str, command
         pytest.param("rm -f {tmp}/{{a,../../../x}}", id="brace expansion that leaves the temporary directory"),
         pytest.param("rm {tmp}/a{{1..3}}.txt", id="a brace sequence"),
         pytest.param("rm {tmp}/{{a}}.txt", id="unquoted braces"),
+        pytest.param("rm -f {tmp}/a/.\\\n./../../outside.txt", id="a line continuation that builds a parent step"),
+        pytest.param("rm -f {tmp}/{{a,'b'}}", id="braces around a quoted part"),
     ],
 )
 def test_removals_outside_a_temporary_root_ask(project: Path, git_project: Path, command: str) -> None:
@@ -121,6 +123,7 @@ def test_removals_outside_a_temporary_root_ask(project: Path, git_project: Path,
         pytest.param("rm build -rf", id="options after the operands"),
         pytest.param("rm --recursive build", id="the long option"),
         pytest.param("rm -rf {tmp}/{{a,../../../x}}", id="a tree named through brace expansion"),
+        pytest.param("rm -rf {tmp}/a/.\\\n./../..", id="a tree named across a line continuation"),
         pytest.param("echo {tmp}/a | xargs rm -rf {tmp}/b", id="trees read from input"),
     ],
 )

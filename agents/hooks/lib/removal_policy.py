@@ -70,7 +70,13 @@ def removal(command: shell_syntax.Command, workspace: Workspace) -> Removal | No
     hidden = command.appends_input
     options_ended = False
     for word, source, dynamic in zip(command.arguments[1:], command.words[1:], command.dynamic[1:], strict=True):
-        if dynamic or source.startswith("~") or "$" in source or expands(source):
+        if (
+            dynamic
+            or source.startswith("~")
+            or "$" in source
+            or shell_syntax.LINE_CONTINUATION in source
+            or expands(source)
+        ):
             hidden = True
         elif options_ended or word == "-" or not word.startswith("-"):
             operands.append(word)
