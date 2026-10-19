@@ -71,28 +71,45 @@ def objection(kind: str, item: shell_syntax.Command, policy: Policy) -> Verdict:
     """Judge one segment by its own words and by its canonical program and subcommand.
 
     Rules see only the command's words: redirections stay inside the sandbox, and heredoc bodies
-    are data, not commands, and so is an argument containing whitespace. The forbidden kind only denies: a literal deny prefix or pattern wins
-    even beside a run-time argument. The allowed kind reviews only programs whose effects reach
-    past the sandbox, such as GitHub writes and remote fetches, and lets every other program take
-    any form, since the sandbox confines it. A run-time word in a governed program counts as a plain
-    placeholder, so it passes only where any value would, and a governed command that can hide an
-    option from the rules, or takes more arguments from xargs, asks.
+    are data, not commands, and so is an argument containing whitespace.
     """
     candidate = command_policy.canonical(item)
-    prefixes, rules = policy.prefixes, policy.rules
     preview = shell_syntax.command_preview(item.raw)
     if kind == "forbidden":
-        matched = command_policy.regex_reason(item.command_words_text, rules) or command_policy.regex_reason(
-            candidate.command_words_text, rules
-        )
-        reason = command_policy.prefix_reason(candidate.arguments, prefixes, "deny") or matched
-        if not reason:
-            return hook_decision.ALLOW
-        return hook_decision.deny(
-            f"BLOCKED: forbidden command: {reason}.\n\nCommand: {preview}\n\n{hook_decision.REVIEW_HINT}"
+        return forbidden_objection(item, candidate, policy)
+    if item.in_function and (item.program_is_dynamic or runs_sensitive_program(candidate, policy)):
+        return hook_decision.ask(
+            f"Needs review: a function body runs {candidate.arguments[0]}, whose calls cannot be judged form by form."
+            f"\n\nCommand: {preview}",
+            "function",
         )
     if not candidate.program_is_dynamic and candidate.arguments[0] in request_policy.PROGRAMS:
         return request_objection(candidate, preview)
+    return governed_objection(candidate, policy, preview)
+
+
+def forbidden_objection(item: shell_syntax.Command, candidate: shell_syntax.Command, policy: Policy) -> Verdict:
+    """Deny only: a literal deny prefix or pattern wins even beside a run-time argument."""
+    rules = policy.rules
+    matched = command_policy.regex_reason(item.command_words_text, rules) or command_policy.regex_reason(
+        candidate.command_words_text, rules
+    )
+    reason = command_policy.prefix_reason(candidate.arguments, policy.prefixes, "deny") or matched
+    if not reason:
+        return hook_decision.ALLOW
+    preview = shell_syntax.command_preview(item.raw)
+    return hook_decision.deny(
+        f"BLOCKED: forbidden command: {reason}.\n\nCommand: {preview}\n\n{hook_decision.REVIEW_HINT}"
+    )
+
+
+def governed_objection(candidate: shell_syntax.Command, policy: Policy, preview: str) -> Verdict:
+    """Review only programs whose effects reach past the sandbox; the sandbox confines every other form.
+
+    A run-time word counts as a plain placeholder, so it passes only where any value would, and a
+    command that can hide an option from the rules, or takes more arguments from xargs, asks.
+    """
+    prefixes, rules = policy.prefixes, policy.rules
     if candidate.program_is_dynamic or candidate.arguments[0] not in command_policy.governed_programs(rules):
         return hook_decision.ALLOW
     governed = command_policy.prefix_rule(candidate.arguments, prefixes, "allow")
@@ -107,6 +124,11 @@ def objection(kind: str, item: shell_syntax.Command, policy: Policy) -> Verdict:
         f"Needs review: command not in allowlist. '{prefix}' is approved, but not in this form.\n\nCommand: {preview}",
         prefix,
     )
+
+
+def runs_sensitive_program(candidate: shell_syntax.Command, policy: Policy) -> bool:
+    sensitive = command_policy.sensitive_programs(policy.prefixes, policy.rules) | request_policy.PROGRAMS.keys()
+    return candidate.arguments[0] in sensitive
 
 
 def request_objection(candidate: shell_syntax.Command, preview: str) -> Verdict:

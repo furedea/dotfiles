@@ -13,40 +13,17 @@ from typing import Self
 
 COMMAND_PREVIEW_LIMIT = 200
 RUN_TIME_PLACEHOLDER = "_"
+# Statements, words, arithmetic, loops and branches, and tests that the inspection understands.
 ALLOWED_NODES = frozenset(
     {
         None,
-        "File",
-        "CallExpr",
-        "BinaryCmd",
-        "Subshell",
-        "Block",
-        "Lit",
-        "SglQuoted",
-        "DblQuoted",
-        "ParamExp",
-        "TimeClause",
-        "CmdSubst",
-        "ProcSubst",
-        "ArithmExp",
-        "ArithmCmd",
-        "BinaryArithm",
-        "UnaryArithm",
-        "ParenArithm",
-        "ForClause",
-        "WordIter",
-        "CStyleLoop",
-        "WhileClause",
-        "IfClause",
-        "CaseClause",
-        "CaseItem",
-        "TestClause",
-        "BinaryTest",
-        "UnaryTest",
-        "ParenTest",
-        "DeclClause",
-        "FuncDecl",
-        "Word",
+        *(
+            "File CallExpr BinaryCmd Subshell Block TimeClause DeclClause FuncDecl "
+            "Word Lit SglQuoted DblQuoted ParamExp CmdSubst ProcSubst "
+            "ArithmExp ArithmCmd BinaryArithm UnaryArithm ParenArithm "
+            "ForClause WordIter CStyleLoop WhileClause IfClause CaseClause CaseItem "
+            "TestClause BinaryTest UnaryTest ParenTest"
+        ).split(),
     }
 )
 # Every command inside a substitution, clause, or function body is a CallExpr that parse judges on
@@ -99,7 +76,8 @@ class Command:
     than the home directory); such arguments carry their source text. `writes` lists the files
     that output redirections would create or overwrite. `appends_input` marks a command that xargs
     runs with further arguments read from its input. `spreading` flags arguments holding a positional
-    parameter or array expansion outside any substitution.
+    parameter or array expansion outside any substitution. `in_function` marks a command that a
+    function defined in the same input runs.
     """
 
     raw: str
@@ -112,6 +90,7 @@ class Command:
     writes: tuple[str, ...] = ()
     appends_input: bool = False
     spreading: tuple[bool, ...] = ()
+    in_function: bool = False
 
     def __post_init__(self) -> None:
         if not self.words:
@@ -208,13 +187,25 @@ def parse(source: str, depth: int = 0) -> tuple[Command, ...]:
         raise UnsupportedSyntax("dynamic or unsupported shell syntax requires explicit review")
     data = source.encode()
     enclosing = enclosing_writes(records, data)
+    function_calls = {
+        id(node)
+        for declaration in records
+        if declaration.get("Type") == "FuncDecl"
+        for node in nodes(declaration.get("Body"))
+        if node.get("Type") == "CallExpr"
+    }
     commands: list[Command] = []
     for node in records:
         if node.get("Type") != "CallExpr" or not node.get("Args"):
             continue
         owner = owners.get(id(node), node)
         command = literal_command(node, owner, data)
-        command = replace(command, wrapper_depth=depth, writes=command.writes + enclosing.get(id(node), ()))
+        command = replace(
+            command,
+            wrapper_depth=depth,
+            writes=command.writes + enclosing.get(id(node), ()),
+            in_function=id(node) in function_calls,
+        )
         commands.append(command)
         commands.extend(unwrapped(command))
         innermost = commands[-1]

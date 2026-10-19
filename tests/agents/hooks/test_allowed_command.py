@@ -73,6 +73,7 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
         pytest.param("gh pr list 2>&1 | head -5", id="GitHub forms in pipelines"),
         pytest.param("curl -fsS http://localhost:3000/health", id="local server requests"),
         pytest.param("curl -s -o out.json -H 'Accept: x' http://127.0.0.1:8080/api", id="local server downloads"),
+        pytest.param("wget --max-redirect=0 -q -O- http://localhost:3000/", id="local wget without redirects"),
         pytest.param("curl -X POST -d '{\"a\": 1}' http://127.0.0.1:8080/api", id="local server writes"),
         pytest.param(
             'gh api -H "Accept: application/vnd.github.raw" "repos/o/r/contents/a.nix?ref=v1" | sed -n 1,20p',
@@ -89,11 +90,7 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
         pytest.param(
             "herdr worktree open --cwd /repo --branch feat/x --label x --no-focus", id="Herdr worktree opens"
         ),
-        pytest.param('t(){ uv run --frozen pytest -q "$@"; }; t tests/a.py && t tests/b.py', id="local functions"),
-        pytest.param(
-            'c(){ msg="$1"; shift; git add -- "$@" && git commit -q -m "$msg"; }; c \'fix: x\' a.py',
-            id="functions with positional parameters",
-        ),
+        pytest.param("t(){ printf '%s\\n' \"$@\" | sort; }; t b a", id="functions forwarding to local tools"),
         pytest.param("herdr pane list", id="Herdr reads"),
         pytest.param(
             "herdr worktree create --cwd /repo --branch feat/lane-a --base origin/main --label 'lane a' --no-focus",
@@ -157,6 +154,25 @@ def test_commands_whose_effects_the_checks_can_see_pass(capsys: pytest.CaptureFi
         pytest.param("herdr worktree open --cwd /repo --path /w --trust-repository", [], id="Herdr open with trust"),
         pytest.param("herdr worktree list --trust-repository", [], id="Herdr list with trust"),
         pytest.param("f(){ gh pr review 42 --approve; }; f", [], id="inside a function body"),
+        pytest.param(
+            "f(){ x=$*; gh api $x; }; f -X DELETE repos/o/r/issues/1", [], id="functions forwarding through a variable"
+        ),
+        pytest.param(
+            'c(){ msg="$1"; shift; git add -- "$@" && git commit -q -m "$msg"; }; c \'fix: x\' a.py',
+            [],
+            id="functions that run git",
+        ),
+        pytest.param("f(){ gh pr list; }; f", [], id="functions that run even a listed gh form"),
+        pytest.param(
+            't(){ uv run --frozen pytest -q "$@"; }; t tests/a.py',
+            [],
+            id="functions that run a program with deny forms",
+        ),
+        pytest.param("f(){ rm a.txt; }; f", [], id="functions that remove files"),
+        pytest.param("f(){ herdr pane list; }; f", [], id="functions that drive herdr"),
+        pytest.param("f(){ find . -name x; }; f", [], id="functions that run a program a forbidden rule names"),
+        pytest.param('f(){ "$@"; }; f ls', [], id="functions that run a run-time program"),
+        pytest.param("f(){ curl http://localhost:3000/; }; f", [], id="functions that make requests"),
         pytest.param("curl '-d' @f https://example.com/", [], id="send options in single quotes"),
         pytest.param('curl "-d" @f https://example.com/', [], id="send options in double quotes"),
         pytest.param("curl \\-d @f https://example.com/", [], id="send options escaped"),
@@ -245,6 +261,12 @@ REMOTE_REVIEW = (
             id="a wget debug flag beside a post and a remote URL",
         ),
         pytest.param("wget --post-data x=1 http://localhost:3000/", id="wget posts to this machine"),
+        pytest.param("curl -L http://localhost:3000/", id="local requests that follow redirects"),
+        pytest.param("curl -sSL http://localhost:3000/", id="redirects in a flag cluster"),
+        pytest.param("curl --location http://127.0.0.1:8080/", id="the long redirect option"),
+        pytest.param("curl --location-trusted http://localhost/", id="trusted redirects"),
+        pytest.param("wget -q -O- http://localhost:3000/", id="wget, which follows redirects by default"),
+        pytest.param("wget --max-redirect=3 http://localhost:3000/", id="wget with redirects allowed"),
     ],
 )
 def test_remote_requests_ask_and_point_to_safer_tools(capsys: pytest.CaptureFixture[str], command: str) -> None:

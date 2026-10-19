@@ -1,4 +1,4 @@
-"""rm passes only where a temporary directory or Git can account for what it removes."""
+"""rm passes only where every target is a literal path inside a temporary directory."""
 
 import os
 from pathlib import Path
@@ -44,18 +44,16 @@ def decide(kind: str, command: str, cwd: Path | None = None) -> str:
     [
         pytest.param("rm {tmp}/a.txt", id="a file in the temporary directory"),
         pytest.param("rm -f {scratch}/session/a.txt {tmp}/b.txt", id="files in the scratchpad"),
-        pytest.param("rm tracked.txt", id="a tracked file without changes"),
-        pytest.param("rm -f -- tracked.txt sub/nested.txt", id="several tracked files without changes"),
-        pytest.param("/bin/rm tracked.txt", id="rm invoked by path"),
+        pytest.param("/bin/rm -- {tmp}/a.txt", id="rm invoked by path"),
         pytest.param("rm -rf {tmp}/build", id="a tree in the temporary directory"),
         pytest.param("rm -r -- {scratch}/a {tmp}/b", id="trees in both temporary roots"),
         pytest.param("rm -fR {tmp}/a/../b", id="a normalized path that stays inside"),
         pytest.param("ls {tmp} && rm -f {tmp}/a.txt; echo done", id="beside commands that only read"),
-        pytest.param("command rm tracked.txt", id="behind a wrapper"),
+        pytest.param("command rm {tmp}/a.txt", id="behind a wrapper"),
     ],
 )
 @pytest.mark.parametrize("kind", ["allowed", "forbidden"])
-def test_removals_a_temporary_root_or_git_can_account_for_pass(project: Path, kind: str, command: str) -> None:
+def test_removals_inside_a_temporary_root_pass(project: Path, kind: str, command: str) -> None:
     command = command.format(tmp=project / "tmp", scratch=project / "scratch")
     assert decide(kind, command) == "allow"
 
@@ -63,6 +61,10 @@ def test_removals_a_temporary_root_or_git_can_account_for_pass(project: Path, ki
 @pytest.mark.parametrize(
     "command",
     [
+        pytest.param("rm tracked.txt", id="a tracked file without changes, which git rm handles"),
+        pytest.param("rm -f -- tracked.txt sub/nested.txt", id="several tracked files without changes"),
+        pytest.param("/bin/rm tracked.txt", id="a tracked file by path"),
+        pytest.param("command rm tracked.txt", id="a tracked file behind a wrapper"),
         pytest.param("rm modified.txt", id="a tracked file with unstaged changes"),
         pytest.param("rm staged.txt", id="a tracked file with staged changes"),
         pytest.param("rm untracked.txt", id="an untracked file"),
@@ -92,9 +94,12 @@ def test_removals_a_temporary_root_or_git_can_account_for_pass(project: Path, ki
         pytest.param("rm '[t]racked.txt'", id="a quoted glob that Git would match against a tracked file"),
         pytest.param("rm ':(top)tracked.txt'", id="pathspec magic"),
         pytest.param("rm 'tracked*.txt'", id="a quoted wildcard"),
+        pytest.param("rg --pre ./mk x {tmp}; rm {tmp}/a.txt", id="a search that runs a preprocessor"),
+        pytest.param("/usr/bin/time -o {tmp}/a.txt ls; rm {tmp}/a.txt", id="a wrapper that writes a file"),
+        pytest.param("rm ~/a.txt $HOME/b.txt", id="home directory paths"),
     ],
 )
-def test_removals_neither_can_account_for_ask(project: Path, git_project: Path, command: str) -> None:
+def test_removals_outside_a_temporary_root_ask(project: Path, git_project: Path, command: str) -> None:
     command = command.format(tmp=project / "tmp", project=git_project)
     assert decide("allowed", command) == "ask"
     assert decide("forbidden", command) == "allow"
@@ -123,8 +128,15 @@ def test_recursive_removals_outside_the_temporary_roots_stay_denied(project: Pat
 
 
 def test_relative_targets_resolve_against_the_session_directory(project: Path, git_project: Path) -> None:
-    assert decide("allowed", "rm nested.txt", cwd=git_project / "sub") == "allow"
-    assert decide("allowed", "rm nested.txt", cwd=git_project) == "ask"
+    assert decide("allowed", "rm nested.txt", cwd=project / "tmp/sub") == "allow"
+    assert decide("allowed", "rm nested.txt", cwd=git_project / "sub") == "ask"
+
+
+def test_a_reassigned_home_cannot_vouch_for_a_target(
+    project: Path, git_project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("HOME", str(git_project))
+    assert decide("allowed", f"HOME={git_project.parent}; rm ~/tracked.txt") == "ask"
 
 
 def test_a_symlink_out_of_the_temporary_directory_does_not_count_as_temporary(
@@ -160,24 +172,14 @@ def test_a_clean_filter_cannot_hide_uncommitted_content(project: Path, git_proje
     assert decide("allowed", "rm tracked.txt") == "ask"
 
 
-@pytest.fixture
-def other_project(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """A second repository whose same.txt is untracked, beside the session project where it is tracked."""
-    other = tmp_path_factory.mktemp("other-project")
-    git(other, "init", "--quiet", "-b", "main")
-    (other / "same.txt").write_text("unsaved")
-    return other
-
-
 @pytest.mark.parametrize("relative", [False, True], ids=["absolute workdir", "relative workdir"])
-def test_relative_targets_resolve_against_the_tool_workdir(
-    project: Path, git_project: Path, other_project: Path, relative: bool
-) -> None:
-    (git_project / "same.txt").write_text("before")
-    git(git_project, "add", "same.txt")
-    git(git_project, "commit", "--quiet", "-m", "same")
-    workdir = os.path.relpath(other_project, git_project) if relative else str(other_project)
-    payload = {"tool_input": {"command": "rm same.txt", "workdir": workdir}, "cwd": str(git_project)}
+def test_relative_targets_resolve_against_the_tool_workdir(project: Path, git_project: Path, relative: bool) -> None:
+    temporary = project / "tmp"
+    for directory in (temporary, git_project):
+        (directory / "same.txt").write_text("same name")
+    workdir = os.path.relpath(git_project, temporary) if relative else str(git_project)
+    payload = {"tool_input": {"command": "rm same.txt", "workdir": workdir}, "cwd": str(temporary)}
     assert guard.decide("allowed", payload).decision == "ask"
-    swapped = {"tool_input": {"command": "rm same.txt", "workdir": str(git_project)}, "cwd": str(other_project)}
+    workdir = os.path.relpath(temporary, git_project) if relative else str(temporary)
+    swapped = {"tool_input": {"command": "rm same.txt", "workdir": workdir}, "cwd": str(git_project)}
     assert guard.decide("allowed", swapped).decision == "allow"

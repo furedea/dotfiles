@@ -43,7 +43,8 @@ class Options:
 CURL = Options(
     flags=frozenset(
         {
-            *(f"-{letter}" for letter in "#0146IJLNORSZfgiklsv"),
+            # -L and --location are absent: a local server could redirect the request elsewhere.
+            *(f"-{letter}" for letter in "#0146IJNORSZfgiklsv"),
             "--compressed",
             "--create-dirs",
             "--fail",
@@ -57,7 +58,6 @@ CURL = Options(
             "--insecure",
             "--ipv4",
             "--ipv6",
-            "--location",
             "--no-buffer",
             "--no-progress-meter",
             "--progress-bar",
@@ -132,6 +132,7 @@ WGET = Options(
                 "-U",
                 "-t",
                 "--directory-prefix",
+                "--max-redirect",
                 "--output-document",
                 "--timeout",
                 "--tries",
@@ -146,9 +147,19 @@ PROGRAMS: dict[str, Options] = {"curl": CURL, "wget": WGET}
 
 
 def is_local(arguments: tuple[str, ...]) -> bool:
-    """Whether a literal curl or wget call talks only to an HTTP server on this machine, with listed options."""
+    """Whether a literal curl or wget call talks only to an HTTP server on this machine, with listed options.
+
+    wget follows redirects unless told not to, so it must say --max-redirect=0.
+    """
+    if arguments[0] == "wget" and not disables_redirects(arguments[1:]):
+        return False
     urls = operands(arguments[1:], PROGRAMS[arguments[0]])
     return bool(urls) and all(LOCAL_URL.fullmatch(url) for url in urls)
+
+
+def disables_redirects(arguments: tuple[str, ...]) -> bool:
+    pairs = zip(arguments, (*arguments[1:], ""), strict=True)
+    return any(word == "--max-redirect=0" or (word, value) == ("--max-redirect", "0") for word, value in pairs)
 
 
 def operands(arguments: tuple[str, ...], options: Options) -> tuple[str, ...] | None:
