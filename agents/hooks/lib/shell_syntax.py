@@ -83,9 +83,7 @@ class Command:
     than the home directory); such arguments carry their source text. `writes` lists the files
     that output redirections would create or overwrite. `appends_input` marks a command that xargs
     runs with further arguments read from its input. `spreading` flags arguments that may become
-    several words at run time, options included. `literal` flags arguments with no expansion of any
-    kind, quoted or not: no parameter (the home directory included), substitution, arithmetic, or
-    leading tilde, and nothing that spreads; zsh can run code while expanding even a quoted word.
+    several words at run time, options included.
     """
 
     raw: str
@@ -98,7 +96,6 @@ class Command:
     writes: tuple[str, ...] = ()
     appends_input: bool = False
     spreading: tuple[bool, ...] = ()
-    literal: tuple[bool, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.words:
@@ -107,8 +104,6 @@ class Command:
             object.__setattr__(self, "dynamic", (False,) * len(self.arguments))
         if not self.spreading:
             object.__setattr__(self, "spreading", (False,) * len(self.arguments))
-        if not self.literal:
-            object.__setattr__(self, "literal", (True,) * len(self.arguments))
 
     @property
     def words_text(self) -> str:
@@ -164,7 +159,6 @@ class Command:
             words=words,
             dynamic=((False,) * len(head)) + self.dynamic[index:],
             spreading=((False,) * len(head)) + self.spreading[index:],
-            literal=((True,) * len(head)) + self.literal[index:],
         )
 
 
@@ -266,7 +260,6 @@ def literal_command(node: dict, owner: dict, data: bytes) -> Command:
         trailer=" ".join(source_text(redirect, data) for redirect in redirects),
         dynamic=tuple(flag for _, flag in decoded),
         spreading=tuple(spreads(word, data) for word in node["Args"]),
-        literal=tuple(is_literal_word(word, data) for word in node["Args"]),
         writes=statement_writes(owner, data),
     )
 
@@ -333,15 +326,6 @@ def spreads(word: dict, source: bytes) -> bool:
         if name in SPREADING or name.isdigit() or index in SPREADING:
             return True
     return False
-
-
-def is_literal_word(word: dict, source: bytes) -> bool:
-    """Whether a word expands nothing at all, even inside quotes or as the home directory."""
-    parts = word.get("Parts", [])
-    if parts and parts[0].get("Type") == "Lit" and parts[0].get("Value", "").startswith("~"):
-        return False
-    expanding = SPLIT_PARTS | {"ParamExp"}
-    return not spreads(word, source) and not any(part.get("Type") in expanding for part in word_nodes(word))
 
 
 def word_nodes(value: object) -> Iterator[dict]:

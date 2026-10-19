@@ -31,6 +31,9 @@ REMOTE_REASON = (
     "or use gh api / nix store prefetch-file for exact values and files."
 )
 # Settings that can send a request to a local server somewhere else: a proxy, or another configuration file.
+# Characters through which any shell may expand or run something; a command holding one anywhere,
+# in the program name, an assignment, or a redirect included, gets no literal_words rule.
+EXPANDING_TEXT = re.compile(r"[$`~*?\[\]{}]|\\\n")
 REQUEST_SETTINGS = re.compile(r"proxy|curlrc|wgetrc|curl_home|(^|[^a-z0-9_])(home|xdg_config_home)=", re.IGNORECASE)
 
 
@@ -88,14 +91,6 @@ def objection(kind: str, item: shell_syntax.Command, policy: Policy) -> Verdict:
     return governed_objection(candidate, policy, preview)
 
 
-def is_listed(candidate: shell_syntax.Command, rules: list[dict]) -> bool:
-    text = candidate.static_words_text
-    if command_policy.regex_reason(text, command_policy.literal_rules(rules, literal=False)):
-        return True
-    literal = all(candidate.literal)
-    return literal and bool(command_policy.regex_reason(text, command_policy.literal_rules(rules, literal=True)))
-
-
 def forbidden_objection(item: shell_syntax.Command, candidate: shell_syntax.Command, policy: Policy) -> Verdict:
     """Deny only: a literal deny prefix or pattern wins even beside a run-time argument."""
     rules = policy.rules
@@ -116,16 +111,16 @@ def governed_objection(candidate: shell_syntax.Command, policy: Policy, preview:
 
     A run-time word counts as a plain placeholder, so it passes only where any value would, and a
     command that can hide an option from the rules, or takes more arguments from xargs, asks: a
-    quoted option, or a word that may split into several, such as an unquoted expansion. Rules
-    marked literal_words apply only when no word expands at all, since a shell such as zsh may
-    split even a quoted expansion.
+    quoted option, or a word that may split into several, such as an unquoted expansion.
     """
     prefixes, rules = policy.prefixes, policy.rules
     if candidate.program_is_dynamic or candidate.arguments[0] not in command_policy.governed_programs(rules):
         return hook_decision.ALLOW
     governed = command_policy.prefix_rule(candidate.arguments, prefixes, "allow")
     if governed is None or (
-        not candidate.appends_input and not candidate.hides_options and is_listed(candidate, rules)
+        not candidate.appends_input
+        and not candidate.hides_options
+        and command_policy.regex_reason(candidate.static_words_text, rules)
     ):
         return hook_decision.ALLOW
     prefix = " ".join(governed["prefix"])
@@ -162,13 +157,18 @@ def decide(kind: str, payload: dict, directory: Path = ROOT) -> Verdict:
 
 
 def command_verdict(kind: str, payload: dict, policy: Policy) -> Verdict:
-    """The first objection any segment raises, then whether the command's settings could redirect a request."""
+    """The first objection any segment raises, then whether the command's settings could redirect a request.
+
+    Rules marked literal_words apply only when the whole command text expands nothing anywhere.
+    """
     command = payload.get("tool_input", {}).get("command") or ""
     try:
         commands = shell_syntax.parse(command)
     except shell_syntax.UnsupportedSyntax as error:
         preview = shell_syntax.command_preview(command)
         return hook_decision.ask(f"Needs review: {error}.\n\nCommand: {preview}", "syntax")
+    if EXPANDING_TEXT.search(command):
+        policy = Policy(policy.prefixes, command_policy.literal_rules(policy.rules, literal=False))
     verdicts = (objection(kind, item, policy) for item in commands)
     verdict = next((item for item in verdicts if item.decision != "allow"), hook_decision.ALLOW)
     if kind == "allowed" and verdict.decision == "allow":

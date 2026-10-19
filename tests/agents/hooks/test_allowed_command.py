@@ -73,14 +73,18 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
         pytest.param("curl -s -H 'Accept: x' -o out.json http://127.0.0.1:8080/api", id="local server downloads"),
         pytest.param("curl -X POST -d '{\"a\": 1}' http://127.0.0.1:8080/api", id="local server writes"),
         pytest.param(
-            "gh api -H \"Accept: application/vnd.github.raw\" 'repos/o/r/contents/a.nix?ref=v1' | sed -n 1,20p",
+            'gh api -H "Accept: application/vnd.github.raw" repos/o/r/contents/README.md | sed -n 1,20p',
             id="GitHub reads with a header before the endpoint",
         ),
         pytest.param(
-            "gh api --header 'X-GitHub-Api-Version: 2022-11-28' repos/o/r/releases --jq '.[].tag_name'",
+            "gh api --header 'X-GitHub-Api-Version: 2022-11-28' repos/o/r/releases --jq .name",
             id="GitHub reads with a version header",
         ),
         pytest.param("herdr agent read lane-a --source recent --lines 80", id="Herdr agent reads"),
+        pytest.param(
+            "gh api -H 'Accept: application/vnd.github.raw' repos/o/r/contents/README.md", id="a plain header read"
+        ),
+        pytest.param("herdr agent read lane-name", id="a plain Herdr agent read"),
         pytest.param("herdr agent wait lane-a --until done --until blocked --timeout 600000", id="Herdr agent waits"),
         pytest.param("herdr worktree list --cwd /repo", id="Herdr worktree lists"),
         pytest.param("herdr agent read --help", id="Herdr help for the lane commands"),
@@ -201,6 +205,26 @@ def test_commands_whose_effects_the_checks_can_see_pass(capsys: pytest.CaptureFi
         ),
         pytest.param("gh api -H 'Accept: x' 'repos/o/r' --jq \"$HOME\"", [], id="HOME beside an allowed header"),
         pytest.param('herdr worktree list --cwd "$HOME"', [], id="HOME in a new Herdr form"),
+        *(
+            pytest.param(command, [], id=f"{name} for {program}")
+            for program, plain in (
+                ("gh api", "gh api -H 'Accept: x' repos/o/r"),
+                ("herdr", "herdr agent read lane-a"),
+            )
+            for name, command in (
+                ("an expansion in the program name", f'"$HOME[idx]"/__missing__/{plain}'),
+                ("an expansion in a leading assignment", f'Z="$HOME[idx]" {plain}'),
+                ("an expansion in a redirect target", f'{plain} > "$HOME[idx]"/out'),
+                ("an expansion in a compound redirect", f'{{ {plain}; }} > "$HOME[idx]"/out'),
+                ("a backtick anywhere", f"{plain}; echo `date`"),
+                ("a glob character anywhere", f"{plain} > out?"),
+            )
+        ),
+        pytest.param(
+            "gh api -H \"Accept: x\" 'repos/o/r/contents/a.nix?ref=v1'",
+            [],
+            id="a question mark beside an allowed header",
+        ),
         pytest.param("herdr worktree open --cwd ~/repo --branch x", [], id="a tilde in a new Herdr form"),
         pytest.param('herdr worktree list --cwd "$(pwd)"', [], id="a substitution in a new Herdr form"),
         pytest.param("herdr pane split --pane w1:p2 --cwd $W --no-focus", [], id="unquoted words in Herdr panes"),
