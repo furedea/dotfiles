@@ -61,6 +61,8 @@ PARAMETER_MODIFIERS = ("Excl", "Length", "Width", "Index", "Slice", "Repl", "Exp
 SHELLS = frozenset({"bash", "sh", "zsh"})
 COMMAND_LOOKUP = frozenset({"-v", "-V"})
 ASSIGNMENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=")
+# Positional parameters and array elements, which expand to any number of words, options included.
+SPREADING_EXPANSION = re.compile(r"\$\{?([@*]|[0-9])|\[[@*]\]")
 # Process wrappers run their trailing arguments as a command. Each entry lists the flags without an
 # operand and the options whose operand is the next token; unknown options are refused, not skipped.
 WRAPPERS: dict[str, tuple[frozenset[str], frozenset[str]]] = {
@@ -136,6 +138,18 @@ class Command:
         """The command's words with each run-time word as a plain placeholder, for judging the static form."""
         return " ".join(
             RUN_TIME_PLACEHOLDER if dynamic else word for word, dynamic in zip(self.words, self.dynamic, strict=True)
+        )
+
+    @property
+    def hides_options(self) -> bool:
+        """Whether an option can reach the program in a form its source text does not show.
+
+        A quoted or escaped word still becomes an option once the shell removes the quotes, and a
+        positional or array expansion can become any number of words.
+        """
+        return any(
+            (argument.startswith("-") and word != argument) or (dynamic and SPREADING_EXPANSION.search(word))
+            for word, argument, dynamic in zip(self.words, self.arguments, self.dynamic, strict=True)
         )
 
     @property

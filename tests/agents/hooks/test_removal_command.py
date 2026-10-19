@@ -49,6 +49,8 @@ def decide(kind: str, command: str, cwd: Path | None = None) -> str:
         pytest.param("rm -rf {tmp}/build", id="a tree in the temporary directory"),
         pytest.param("rm -r -- {scratch}/a {tmp}/b", id="trees in both temporary roots"),
         pytest.param("rm -fR {tmp}/a/../b", id="a normalized path that stays inside"),
+        pytest.param("ls {tmp} && rm -f {tmp}/a.txt; echo done", id="beside commands that only read"),
+        pytest.param("command rm tracked.txt", id="behind a wrapper"),
     ],
 )
 @pytest.mark.parametrize("kind", ["allowed", "forbidden"])
@@ -72,10 +74,18 @@ def test_removals_a_temporary_root_or_git_can_account_for_pass(project: Path, ki
         pytest.param("rm {tmp}/../outside.txt", id="a path that leaves the temporary directory"),
         pytest.param("rm --unknown tracked.txt", id="an unknown option"),
         pytest.param("rm", id="no targets"),
+        pytest.param("printf x >> tracked.txt; rm tracked.txt", id="a write to the target first"),
+        pytest.param("mv untracked.txt tracked.txt && rm tracked.txt", id="a move onto the target first"),
+        pytest.param("ln -s {project} {tmp}/link; rm -r {tmp}/link/sub", id="a symlink created first"),
+        pytest.param("rm tracked.txt; git checkout -- tracked.txt", id="any command that can write"),
+        pytest.param("builtin cd sub && rm tracked.txt", id="a builtin directory change"),
+        pytest.param("env --chdir=sub rm tracked.txt", id="env with a long directory option"),
+        pytest.param("env -Csub rm tracked.txt", id="env with an attached directory option"),
+        pytest.param("$GO sub; rm tracked.txt", id="a run-time program first"),
     ],
 )
-def test_removals_neither_can_account_for_ask(project: Path, command: str) -> None:
-    command = command.format(tmp=project / "tmp")
+def test_removals_neither_can_account_for_ask(project: Path, git_project: Path, command: str) -> None:
+    command = command.format(tmp=project / "tmp", project=git_project)
     assert decide("allowed", command) == "ask"
     assert decide("forbidden", command) == "allow"
 

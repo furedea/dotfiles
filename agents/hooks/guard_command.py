@@ -74,7 +74,8 @@ def objection(kind: str, item: shell_syntax.Command, policy: Policy) -> Verdict:
     even beside a run-time argument. The allowed kind reviews only programs whose effects reach
     past the sandbox, such as GitHub writes and remote fetches, and lets every other program take
     any form, since the sandbox confines it. A run-time word in a governed program counts as a plain
-    placeholder, so it passes only where any value would.
+    placeholder, so it passes only where any value would, and a governed command that can hide an
+    option from the rules asks.
     """
     candidate = command_policy.canonical(item)
     prefixes, rules = policy.prefixes, policy.rules
@@ -92,7 +93,9 @@ def objection(kind: str, item: shell_syntax.Command, policy: Policy) -> Verdict:
     if candidate.program_is_dynamic or candidate.arguments[0] not in command_policy.governed_programs(rules):
         return hook_decision.ALLOW
     governed = command_policy.prefix_rule(candidate.arguments, prefixes, "allow")
-    if governed is None or command_policy.regex_reason(candidate.static_words_text, rules):
+    if governed is None or (
+        not candidate.hides_options and command_policy.regex_reason(candidate.static_words_text, rules)
+    ):
         return hook_decision.ALLOW
     prefix = " ".join(governed["prefix"])
     return hook_decision.ask(
@@ -101,9 +104,9 @@ def objection(kind: str, item: shell_syntax.Command, policy: Policy) -> Verdict:
     )
 
 
-def removal_objection(kind: str, item: shell_syntax.Command, working_directory: Path | None) -> Verdict:
+def removal_objection(kind: str, item: shell_syntax.Command, workspace: removal_policy.Workspace) -> Verdict:
     """Pass rm where a temporary directory or Git accounts for its targets; else deny a tree and ask for files."""
-    removal = removal_policy.removal(command_policy.canonical(item), working_directory)
+    removal = removal_policy.removal(command_policy.canonical(item), workspace)
     if removal is None or removal.is_accounted_for:
         return hook_decision.ALLOW
     preview = shell_syntax.command_preview(item.raw)
@@ -130,11 +133,11 @@ def decide(kind: str, payload: dict, directory: Path = ROOT) -> Verdict:
             preview = shell_syntax.command_preview(command)
             verdict = hook_decision.ask(f"Needs review: {error}.\n\nCommand: {preview}", "syntax")
         else:
-            working_directory = removal_policy.working_directory(payload.get("cwd"), commands)
+            workspace = removal_policy.workspace(payload.get("cwd"), commands)
             verdicts = (
                 verdict
                 for item in commands
-                for verdict in (objection(kind, item, policy), removal_objection(kind, item, working_directory))
+                for verdict in (objection(kind, item, policy), removal_objection(kind, item, workspace))
             )
             verdict = next((item for item in verdicts if item.decision != "allow"), hook_decision.ALLOW)
     except (ValueError, TypeError, AttributeError, OSError) as error:

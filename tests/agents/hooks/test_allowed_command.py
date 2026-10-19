@@ -155,6 +155,24 @@ def test_commands_whose_effects_the_checks_can_see_pass(capsys: pytest.CaptureFi
         pytest.param("herdr worktree open --cwd /repo --path /w --trust-repository", [], id="Herdr open with trust"),
         pytest.param("herdr worktree list --trust-repository", [], id="Herdr list with trust"),
         pytest.param("f(){ gh pr review 42 --approve; }; f", [], id="inside a function body"),
+        pytest.param("curl '-d' @f https://example.com/", [], id="send options in single quotes"),
+        pytest.param('curl "-d" @f https://example.com/', [], id="send options in double quotes"),
+        pytest.param("curl \\-d @f https://example.com/", [], id="send options escaped"),
+        pytest.param("wget '--post-file=f' https://example.com/", [], id="wget send options in quotes"),
+        pytest.param("gh api '-XDELETE' repos/o/r/issues/1", [], id="GitHub methods in quotes"),
+        pytest.param(
+            'f(){ gh api "$@"; }; f -X DELETE repos/o/r/issues/1', [], id="functions forwarding all arguments"
+        ),
+        pytest.param(
+            "f(){ curl $*; }; f -d @a https://example.com/", [], id="functions forwarding unquoted arguments"
+        ),
+        pytest.param(
+            'f(){ gh api "$1" "$2"; }; f -XDELETE repos/o/r', [], id="functions forwarding positional arguments"
+        ),
+        pytest.param('gh api "${args[@]}"', [], id="array expansions"),
+        pytest.param("curl -H @headers.txt https://example.com/", [], id="headers read from a file"),
+        pytest.param("curl --header @- https://example.com/", [], id="headers read from input"),
+        pytest.param("curl -sH '@h' https://example.com/", [], id="quoted headers read from a file"),
         pytest.param("f(){ curl -d @a https://example.com/; }", [], id="inside a function that is never called"),
         pytest.param("herdr worktree create --cwd /repo --trust-repository", [], id="Herdr repository trust"),
         pytest.param("herdr pane split --pane w1:p2 --env CLAUDE_CONFIG_DIR=/tmp/x", [], id="Herdr pane environments"),
