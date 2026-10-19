@@ -61,10 +61,9 @@ PARAMETER_MODIFIERS = ("Excl", "Length", "Width", "Index", "Slice", "Repl", "Exp
 SHELLS = frozenset({"bash", "sh", "zsh"})
 COMMAND_LOOKUP = frozenset({"-v", "-V"})
 ASSIGNMENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=")
-# Expansions that a function call fills with its caller's words, options included: all positional
-# parameters, any single one, and every element of an array.
-SPREADING_PARAMETERS = frozenset({"@", "*"})
-SPREADING_INDEXES = frozenset({"@", "*"})
+# All positional parameters, any single one (a digit), and every array element ([@] or [*]) can
+# become any number of words, options included.
+SPREADING = frozenset({"@", "*"})
 # Process wrappers run their trailing arguments as a command. Each entry lists the flags without an
 # operand and the options whose operand is the next token; unknown options are refused, not skipped.
 WRAPPERS: dict[str, tuple[frozenset[str], frozenset[str]]] = {
@@ -148,10 +147,7 @@ class Command:
 
     @property
     def decoded_words_text(self) -> str:
-        """The arguments as the program receives them, requoted, with each run-time word as a placeholder.
-
-        Rules that judge options read this text, so quoting or escaping in the source cannot hide one.
-        """
+        """The arguments as the program receives them, requoted, with each run-time word as a placeholder."""
         return " ".join(
             RUN_TIME_PLACEHOLDER if dynamic else shlex.quote(argument)
             for argument, dynamic in zip(self.arguments, self.dynamic, strict=True)
@@ -159,11 +155,7 @@ class Command:
 
     @property
     def hides_options(self) -> bool:
-        """Whether an option can reach the program in a form its source text does not show.
-
-        A quoted or escaped word still becomes an option once the shell removes the quotes, and a
-        positional or array expansion can become any number of words.
-        """
+        """Whether an option can reach the program unseen: quoted or escaped, or inside a spreading expansion."""
         quoted_option = any(
             argument.startswith("-") and word != argument
             for word, argument in zip(self.words, self.arguments, strict=True)
@@ -215,12 +207,14 @@ def parse(source: str, depth: int = 0) -> tuple[Command, ...]:
     if any(node.get("Type") not in ALLOWED_NODES for node in records):
         raise UnsupportedSyntax("dynamic or unsupported shell syntax requires explicit review")
     data = source.encode()
+    enclosing = enclosing_writes(records, data)
     commands: list[Command] = []
     for node in records:
         if node.get("Type") != "CallExpr" or not node.get("Args"):
             continue
         owner = owners.get(id(node), node)
-        command = replace(literal_command(node, owner, data), wrapper_depth=depth)
+        command = literal_command(node, owner, data)
+        command = replace(command, wrapper_depth=depth, writes=command.writes + enclosing.get(id(node), ()))
         commands.append(command)
         commands.extend(unwrapped(command))
         innermost = commands[-1]
@@ -229,6 +223,28 @@ def parse(source: str, depth: int = 0) -> tuple[Command, ...]:
         elif Path(innermost.arguments[0]).name in SHELLS and (stdin := heredoc_script(owner)):
             commands.extend(parse(stdin, innermost.wrapper_depth + 1))
     return tuple(commands)
+
+
+def enclosing_writes(records: tuple[dict, ...], data: bytes) -> dict[int, tuple[str, ...]]:
+    """Files a compound statement's redirections write, such as `{ ...; } > f`, keyed by each call inside it."""
+    found: dict[int, tuple[str, ...]] = {}
+    for statement in records:
+        compound = statement.get("Cmd")
+        if not isinstance(compound, dict) or compound.get("Type") == "CallExpr":
+            continue
+        targets = statement_writes(statement, data)
+        calls = (node for node in nodes(compound) if node.get("Type") == "CallExpr") if targets else ()
+        for call in calls:
+            found[id(call)] = found.get(id(call), ()) + targets
+    return found
+
+
+def statement_writes(statement: dict, data: bytes) -> tuple[str, ...]:
+    redirects = [redirect for redirect in statement.get("Redirs", []) if redirect.get("Word")]
+    targets = [literal_word(redirect["Word"], data)[0] for redirect in redirects]
+    return tuple(
+        target for redirect, target in zip(redirects, targets, strict=True) if writes_file(redirect, target, data)
+    )
 
 
 def heredoc_script(owner: dict) -> str:
@@ -284,9 +300,7 @@ def literal_command(node: dict, owner: dict, data: bytes) -> Command:
         trailer=" ".join(source_text(redirect, data) for redirect in redirects),
         dynamic=tuple(flag for _, flag in decoded),
         spreading=tuple(spreads(word) for word in node["Args"]),
-        writes=tuple(
-            target for redirect, target in zip(redirects, targets, strict=True) if writes_file(redirect, target, data)
-        ),
+        writes=statement_writes(owner, data),
     )
 
 
@@ -339,7 +353,7 @@ def spreads(word: dict) -> bool:
             continue
         name = part.get("Param", {}).get("Value", "")
         index = "".join(inner.get("Value", "") for inner in (part.get("Index") or {}).get("Parts", []))
-        if name in SPREADING_PARAMETERS or name.isdigit() or index in SPREADING_INDEXES:
+        if name in SPREADING or name.isdigit() or index in SPREADING:
             return True
     return False
 
