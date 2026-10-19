@@ -26,6 +26,7 @@ known_first_party = [
   "guard_file",
   "guard_git",
   "guard_suppression",
+  "herdr_grammar",
   "herdr_ownership",
   "hook_decision",
   "hook_dispatch",

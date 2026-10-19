@@ -86,6 +86,10 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
         ),
         pytest.param("herdr agent read lane-name", id="a plain Herdr agent read"),
         pytest.param(
+            "herdr worktree open --cwd /repo --path /repo/worktree --no-focus", id="a Herdr worktree open by path"
+        ),
+        pytest.param("curl -s 'http://[::1]:8080/health'", id="local server requests over IPv6"),
+        pytest.param(
             "gh api -H 'Accept: application/vnd.github.raw' 'repos/o/r/contents/README.md?ref=v1'",
             id="a header read with a single-quoted query",
         ),
@@ -203,6 +207,28 @@ def test_commands_whose_effects_the_checks_can_see_pass(capsys: pytest.CaptureFi
         pytest.param("gh api repos/o/r/issues/1 -\\\nXDELETE", [], id="a line continuation inside an option"),
         pytest.param("herdr worktree open --cwd /r --trust\\\n-repository", [], id="a line continuation in Herdr"),
         pytest.param("herdr worktree open --cwd $W", [], id="unquoted words in Herdr options"),
+        *(
+            pytest.param(command, [], id=name)
+            for name, command in (
+                (
+                    "a Herdr session option that shifts values",
+                    "herdr worktree open --label --session=default --cwd --trust-repository --path /repo/worktree",
+                ),
+                (
+                    "a Herdr session option with a separate value",
+                    "herdr worktree open --label --session default --cwd --trust-repository --path /repo/worktree",
+                ),
+                ("a Herdr session option before the subcommand", "herdr --session default worktree open --path /r/w"),
+                ("a Herdr session option after the values", "herdr worktree open --cwd /r --path /r/w --session=x"),
+                ("a Herdr machine option", "herdr worktree open --label --machine m --path /r/w"),
+                ("a Herdr remote option", "herdr agent read lane-a --remote host"),
+                ("a Herdr value slot holding an option", "herdr agent read lane-a --lines --ansi"),
+                ("an attached Herdr option value", "herdr worktree open --cwd=/r --path /r/w"),
+                ("an unknown Herdr option", "herdr agent read lane-a --verbose"),
+                ("a second Herdr target", "herdr agent wait lane-a lane-b"),
+                ("Herdr repository trust anywhere", "herdr worktree open --path /r/w --label x --trust-repository"),
+            )
+        ),
         pytest.param(
             "printf '%s\\n' '--cwd /r --trust-repository' | read -rA a; herdr worktree open \"$a[@]\"",
             [],
@@ -435,6 +461,20 @@ REMOTE_REVIEW = (
             "wget -O --max-redirect=0 http://localhost/", id="a redirect limit taken as another option's value"
         ),
         pytest.param("wget --max-redirect=0 --max-redirect=5 http://localhost/", id="an overridden redirect limit"),
+        pytest.param("curl -L http://localhost:3000/", id="local requests that follow redirects"),
+        pytest.param("curl -sSL http://localhost:3000/", id="redirects in a flag cluster"),
+        pytest.param("curl -L -d '@README.md' http://localhost:3000/", id="a local post that may follow a redirect"),
+        pytest.param("curl https://localhost.example.com/", id="a host that only starts with localhost"),
+        pytest.param("curl http://127.0.0.1.evil.example/", id="a host that only starts with the loopback address"),
+        pytest.param("curl http://localhost:3000.evil.example/", id="a host after a port-like suffix"),
+        pytest.param("wget https://localhost.example.com/", id="wget to a host that only starts with localhost"),
+        pytest.param("wget --post-file README.md http://localhost:3000/", id="wget posting a file to this machine"),
+        pytest.param("curl -Kcfg http://localhost:3000/", id="curl options from an attached config file"),
+        pytest.param("curl --config cfg http://localhost:3000/", id="curl options from a long config option"),
+        pytest.param("curl -xevil http://localhost:3000/", id="an attached curl proxy"),
+        pytest.param("wget --config cfg http://localhost:3000/", id="wget options from a config file"),
+        pytest.param("wget -e use_proxy=on http://localhost:3000/", id="wget commands toward this machine"),
+        pytest.param("wget -iurls http://localhost:3000/", id="wget reading URLs from a file"),
         pytest.param("curl --location http://127.0.0.1:8080/", id="the long redirect option"),
         pytest.param("curl --location-trusted http://localhost/", id="trusted redirects"),
         pytest.param("wget -q -O- http://localhost:3000/", id="wget, which follows redirects by default"),

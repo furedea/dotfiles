@@ -20,6 +20,7 @@ sys.path.insert(0, str(ROOT / "lib"))
 
 import audit_log
 import command_policy
+import herdr_grammar
 import hook_decision
 from hook_decision import Verdict
 import shell_syntax
@@ -94,6 +95,13 @@ def objection(kind: str, item: shell_syntax.Command, policy: Policy) -> Verdict:
     return governed_objection(candidate, policy, preview)
 
 
+def is_listed(candidate: shell_syntax.Command, rules: list[dict]) -> bool:
+    """Whether a rule lists the form; Herdr's watching commands must also keep to their documented options."""
+    if not command_policy.regex_reason(candidate.static_words_text, rules):
+        return False
+    return not herdr_grammar.is_watch_command(candidate.arguments) or herdr_grammar.is_documented(candidate.arguments)
+
+
 def forbidden_objection(item: shell_syntax.Command, candidate: shell_syntax.Command, policy: Policy) -> Verdict:
     """Deny only: a literal deny prefix or pattern wins even beside a run-time argument."""
     rules = policy.rules
@@ -119,11 +127,14 @@ def governed_objection(candidate: shell_syntax.Command, policy: Policy, preview:
     prefixes, rules = policy.prefixes, policy.rules
     if candidate.program_is_dynamic or candidate.arguments[0] not in command_policy.governed_programs(rules):
         return hook_decision.ALLOW
+    if candidate.arguments[0] == "herdr" and herdr_grammar.has_global_option(candidate.arguments):
+        return hook_decision.ask(
+            f"Needs review: a Herdr global option such as --session shifts the words after it.\n\nCommand: {preview}",
+            "herdr",
+        )
     governed = command_policy.prefix_rule(candidate.arguments, prefixes, "allow")
     if governed is None or (
-        not candidate.appends_input
-        and not candidate.hides_options
-        and command_policy.regex_reason(candidate.static_words_text, rules)
+        not candidate.appends_input and not candidate.hides_options and is_listed(candidate, rules)
     ):
         return hook_decision.ALLOW
     prefix = " ".join(governed["prefix"])
