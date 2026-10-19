@@ -110,18 +110,14 @@ def objection(kind: str, item: shell_syntax.Command, policy: Policy) -> Verdict:
 
 
 def request_objection(candidate: shell_syntax.Command, preview: str) -> Verdict:
-    """Pass a curl or wget call whose decoded, literal arguments only fetch or stay on this machine."""
+    """Pass a curl or wget call whose decoded, literal arguments stay on this machine; ask for any other."""
     if (
         not candidate.appends_input
         and not candidate.has_dynamic_words
-        and request_policy.is_fetch(candidate.arguments)
+        and request_policy.is_local(candidate.arguments)
     ):
         return hook_decision.ALLOW
-    program = candidate.arguments[0]
-    return hook_decision.ask(
-        f"Needs review: this {program} call may send data or reach past its read-only options.\n\nCommand: {preview}",
-        program,
-    )
+    return hook_decision.ask(f"{request_policy.REMOTE_REASON}\n\nCommand: {preview}", candidate.arguments[0])
 
 
 def removal_objection(kind: str, item: shell_syntax.Command, workspace: removal_policy.Workspace) -> Verdict:

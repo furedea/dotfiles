@@ -1,10 +1,18 @@
-"""Judge curl and wget on their decoded arguments: fetches pass, anything that may send data asks."""
+"""Judge curl and wget on their decoded arguments: only requests that stay on this machine pass.
+
+A remote request can send local data however its options read, through another scheme, a default
+configuration file, or input the guard cannot see, so every remote request asks.
+"""
 
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 import re
 
 
+REMOTE_REASON = (
+    "Needs review: remote curl/wget can send local data. Read web pages with the web-fetch tool, "
+    "or use gh api / nix store prefetch-file for exact values and files."
+)
 LOCAL_URL = re.compile(r"https?://(localhost|127\.0\.0\.1)(:[0-9]+)?([/?#].*)?")
 READ_METHODS = frozenset({"GET", "HEAD"})
 ValueRule = Callable[[str], bool]
@@ -137,17 +145,15 @@ WGET = Options(
     attached_long=True,
 )
 PROGRAMS: dict[str, Options] = {"curl": CURL, "wget": WGET}
-# A request to a local server stays on this machine, so it may also choose any method and send data.
+# A request to a local server stays on this machine, so it may also choose a method and send data.
 LOCAL_VALUED: dict[str, ValueRule] = dict.fromkeys(
     ("-X", "--request", "-d", "--data", "--data-raw", "--data-binary", "--json"), any_value
 )
 
 
-def is_fetch(arguments: tuple[str, ...]) -> bool:
-    """Whether a literal curl or wget call only fetches, or talks only to a local server."""
+def is_local(arguments: tuple[str, ...]) -> bool:
+    """Whether a literal curl or wget call talks only to an HTTP server on this machine, with listed options."""
     options = PROGRAMS[arguments[0]]
-    if operands(arguments[1:], options) is not None:
-        return True
     local = Options(options.flags, options.valued | LOCAL_VALUED, options.attached_long)
     urls = operands(arguments[1:], local)
     return bool(urls) and all(LOCAL_URL.fullmatch(url) for url in urls)

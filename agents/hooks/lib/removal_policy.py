@@ -144,8 +144,9 @@ def temporary_roots() -> tuple[Path, ...]:
 def is_restorable(target: Path) -> bool:
     """A regular tracked file whose working, staged, and HEAD contents are one blob comes back with git restore.
 
-    The contents are hashed rather than diffed, since Git skips its change check for files flagged
-    assume-unchanged or skip-worktree; such flagged files never count as restorable.
+    The raw bytes are hashed rather than diffed: Git skips its change check for files flagged
+    assume-unchanged or skip-worktree, which never count as restorable, and a clean filter could
+    drop uncommitted content before hashing.
     """
     if target.is_symlink() or not target.is_file():
         return False
@@ -156,7 +157,7 @@ def is_restorable(target: Path) -> bool:
     if tag != "H" or mode not in {"100644", "100755"}:
         return False
     committed = git(target.parent, "rev-parse", "--verify", "--quiet", f"HEAD:./{target.name}")
-    working = git(target.parent, "hash-object", "--", target.name)
+    working = git(target.parent, "hash-object", "--no-filters", "--", target.name)
     return staged == committed == working
 
 
