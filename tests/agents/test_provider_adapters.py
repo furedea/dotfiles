@@ -3,10 +3,8 @@
 import json
 from pathlib import Path
 import shutil
-import sys
 
 import pytest
-from pytest_mock import MockerFixture
 
 from tests.runtime import CliRunner, REPO_ROOT, load_script_module
 
@@ -120,18 +118,6 @@ def test_normalization_leaves_the_provider_payload_untouched(provider: str) -> N
     original = json.loads(json.dumps(payload))
     adapter.normalized(payload)
     assert payload == original
-
-
-@pytest.mark.parametrize("mode", ["allowed", "forbidden"])
-def test_codex_shell_workdir_reaches_the_command_guard(mocker: MockerFixture, mode: str) -> None:
-    adapter = load_script_module(script("codex"), "codex_hook_adapter_workdir").ADAPTER
-    lib = sys.modules["provider_adapter"]
-    decide = mocker.patch.object(lib.guard_command, "decide", return_value=lib.hook_decision.ALLOW)
-    payload = {"cwd": "/session", "tool_input": {"cmd": "rm same.txt", "workdir": "/elsewhere"}}
-    assert adapter.shell(mode, payload) == 0
-    forwarded = decide.call_args.args[1]
-    assert forwarded["tool_input"] == {"command": "rm same.txt", "workdir": "/elsewhere"}
-    assert forwarded["cwd"] == "/session"
 
 
 @pytest.mark.parametrize("provider", PROVIDERS)

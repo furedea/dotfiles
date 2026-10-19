@@ -138,9 +138,9 @@ def settings_objection(command: str, commands: tuple[shell_syntax.Command, ...])
     return hook_decision.ask(f"{REMOTE_REASON}\n\nCommand: {shell_syntax.command_preview(command)}", "settings")
 
 
-def removal_objection(kind: str, item: shell_syntax.Command, workspace: removal_policy.Workspace) -> Verdict:
+def removal_objection(kind: str, item: shell_syntax.Command, settled: bool) -> Verdict:
     """Pass rm where a temporary directory or Git accounts for its targets; else deny a tree and ask for files."""
-    removal = removal_policy.removal(command_policy.canonical(item), workspace)
+    removal = removal_policy.removal(command_policy.canonical(item), settled)
     if removal is None or removal.is_accounted_for:
         return hook_decision.ALLOW
     preview = shell_syntax.command_preview(item.raw)
@@ -177,11 +177,11 @@ def command_verdict(kind: str, payload: dict, policy: Policy) -> Verdict:
     except shell_syntax.UnsupportedSyntax as error:
         preview = shell_syntax.command_preview(command)
         return hook_decision.ask(f"Needs review: {error}.\n\nCommand: {preview}", "syntax")
-    workspace = removal_policy.workspace(payload, commands)
+    settled = removal_policy.is_settled(commands)
     verdicts = (
         verdict
         for item in commands
-        for verdict in (objection(kind, item, policy), removal_objection(kind, item, workspace))
+        for verdict in (objection(kind, item, policy), removal_objection(kind, item, settled))
     )
     verdict = next((item for item in verdicts if item.decision != "allow"), hook_decision.ALLOW)
     if kind == "allowed" and verdict.decision == "allow":

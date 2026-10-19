@@ -1,4 +1,8 @@
-"""Judge rm by whether every target is a literal path inside a temporary directory; git rm covers tracked files."""
+"""Judge rm by whether every target is an absolute literal path inside a temporary directory.
+
+A relative path depends on a working directory the command may change, and a word that the shell
+expands, such as zsh's =name, names a path the hook cannot see; git rm covers tracked files.
+"""
 
 from dataclasses import dataclass
 import os
@@ -19,7 +23,6 @@ SHORT_FLAGS = frozenset("dfiIPRrvWx")
 LONG_FLAGS = frozenset(
     {"--dir", "--force", "--interactive", "--one-file-system", "--preserve-root", "--recursive", "--verbose"}
 )
-DIRECTORY_CHANGES = frozenset({"cd", "pushd", "popd"})
 # Characters that glob or brace expansion reads when unquoted, so the shell may choose another path.
 EXPANDING_CHARACTERS = frozenset("{}*?[]")
 QUOTED_TEXT = re.compile(r"'[^']*'|\"(?:[^\"\\]|\\.)*\"|\\.")
@@ -30,19 +33,11 @@ INERT_WRAPPERS = frozenset(shell_syntax.WRAPPERS) - {"time"}
 
 
 @dataclass(frozen=True, slots=True)
-class Workspace:
-    """What the rest of one command leaves fixed: the working directory, if known, and the file system.
-
-    `settled` is False when another command could write, move, or relink an rm target first.
-    """
-
-    directory: Path | None
-    settled: bool
-
-
-@dataclass(frozen=True, slots=True)
 class Removal:
-    """One rm invocation; `targets` is None unless every target is a literal path the hook can resolve."""
+    """One rm invocation; `targets` is None unless every target is an absolute literal path.
+
+    `settled` is False when another command could write, move, or relink a target first.
+    """
 
     recursive: bool
     targets: tuple[Path, ...] | None
@@ -62,8 +57,8 @@ class Removal:
         return self.recursive and not self.is_temporary
 
 
-def removal(command: shell_syntax.Command, workspace: Workspace) -> Removal | None:
-    """Read a canonical rm command, resolving relative targets against the known working directory."""
+def removal(command: shell_syntax.Command, settled: bool) -> Removal | None:
+    """Read a canonical rm command whose targets count only as absolute literal paths."""
     if command.arguments[0] != "rm":
         return None
     recursive, operands = False, []
@@ -86,38 +81,14 @@ def removal(command: shell_syntax.Command, workspace: Workspace) -> Removal | No
             recursive |= word == "--recursive" or (not word.startswith("--") and bool(set(word) & {"r", "R"}))
         else:
             hidden = True
-    directory = workspace.directory
-    if hidden or not operands or (directory is None and not all(Path(word).is_absolute() for word in operands)):
-        return Removal(recursive, None, workspace.settled)
-    targets = tuple(Path(os.path.join(directory or "/", word)) for word in operands)
-    return Removal(recursive, targets, workspace.settled)
+    if hidden or not operands or not all(Path(word).is_absolute() for word in operands):
+        return Removal(recursive, None, settled)
+    return Removal(recursive, tuple(Path(word) for word in operands), settled)
 
 
-def workspace(payload: dict, commands: tuple[shell_syntax.Command, ...]) -> Workspace:
-    """Judge the whole command once: whether the working directory and the file system stay put."""
-    known = not any(changes_directory(command) for command in commands)
-    return Workspace(starting_directory(payload) if known else None, all(is_inert(command) for command in commands))
-
-
-def starting_directory(payload: dict) -> Path:
-    """Where the command starts: the tool's own workdir, if it names one, resolved against the session cwd."""
-    cwd = payload.get("cwd")
-    session = Path(cwd) if isinstance(cwd, str) and cwd else Path.cwd()
-    values = payload.get("tool_input")
-    workdir = values.get("workdir") if isinstance(values, dict) else None
-    return session / workdir if isinstance(workdir, str) and workdir else session
-
-
-def changes_directory(command: shell_syntax.Command) -> bool:
-    """Whether a segment may run rm, or anything after it, from another directory."""
-    if command.program_is_dynamic:
-        return True
-    name, rest = Path(command.arguments[0]).name, command.arguments[1:]
-    if name == "builtin":
-        return bool(rest) and rest[0] in DIRECTORY_CHANGES
-    if name == "env":
-        return any(word.startswith(("-C", "--chdir")) for word in rest)
-    return name in DIRECTORY_CHANGES or name in {"source", "."}
+def is_settled(commands: tuple[shell_syntax.Command, ...]) -> bool:
+    """Whether every segment of the command leaves rm targets as the hook sees them."""
+    return all(is_inert(command) for command in commands)
 
 
 def is_inert(command: shell_syntax.Command) -> bool:
@@ -126,8 +97,6 @@ def is_inert(command: shell_syntax.Command) -> bool:
     if command.program_is_dynamic or command.writes:
         return False
     name = Path(command.arguments[0]).name
-    if name == "env":
-        return not changes_directory(command)
     return name == "rm" or name in INERT_WRAPPERS or name in READERS
 
 

@@ -1,6 +1,5 @@
 """rm passes only where every target is a literal path inside a temporary directory."""
 
-import os
 from pathlib import Path
 import subprocess
 
@@ -134,9 +133,41 @@ def test_recursive_removals_outside_the_temporary_roots_stay_denied(project: Pat
     assert "directory trees" in verdict.reason
 
 
-def test_relative_targets_resolve_against_the_session_directory(project: Path, git_project: Path) -> None:
-    assert decide("allowed", "rm nested.txt", cwd=project / "tmp/sub") == "allow"
-    assert decide("allowed", "rm nested.txt", cwd=git_project / "sub") == "ask"
+@pytest.mark.parametrize(
+    "command",
+    [
+        pytest.param("rm =tool", id="a zsh command-path expansion"),
+        pytest.param("PATH=/repo/bin:$PATH; rm =tool", id="a zsh command-path expansion after PATH changes"),
+        pytest.param("rm ~/x", id="a home directory path"),
+        pytest.param("rm a.txt", id="a relative path"),
+        pytest.param("rm ./sub/a.txt", id="a dot-relative path"),
+    ],
+)
+def test_targets_that_are_not_absolute_literal_paths_ask_even_in_a_temporary_directory(
+    project: Path, command: str
+) -> None:
+    temporary = project / "tmp"
+    assert decide("allowed", command, cwd=temporary) == "ask"
+    workdir = {"tool_input": {"command": command, "workdir": str(temporary)}, "cwd": str(temporary)}
+    assert guard.decide("allowed", workdir).decision == "ask"
+
+
+def test_a_recursive_zsh_command_path_expansion_stays_denied(project: Path) -> None:
+    command = "PATH=/repo/bin:$PATH; rm -rf =tool"
+    assert decide("forbidden", command, cwd=project / "tmp") == "deny"
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        pytest.param("rm {tmp}/tool", id="the same file as an absolute temporary path"),
+        pytest.param("rm {tmp}/'=tool'", id="a quoted equals sign inside an absolute temporary path"),
+        pytest.param("rm {tmp}/=tool", id="an equals sign that does not start the word"),
+    ],
+)
+def test_absolute_temporary_paths_pass_from_any_directory(project: Path, git_project: Path, command: str) -> None:
+    command = command.format(tmp=project / "tmp")
+    assert decide("allowed", command, cwd=git_project) == "allow"
 
 
 def test_a_reassigned_home_cannot_vouch_for_a_target(
@@ -177,16 +208,3 @@ def test_a_clean_filter_cannot_hide_uncommitted_content(project: Path, git_proje
     (git_project / ".git/info/attributes").write_text("tracked.txt filter=keep-head\n")
     (git_project / "tracked.txt").write_text("before and uncommitted notes")
     assert decide("allowed", "rm tracked.txt") == "ask"
-
-
-@pytest.mark.parametrize("relative", [False, True], ids=["absolute workdir", "relative workdir"])
-def test_relative_targets_resolve_against_the_tool_workdir(project: Path, git_project: Path, relative: bool) -> None:
-    temporary = project / "tmp"
-    for directory in (temporary, git_project):
-        (directory / "same.txt").write_text("same name")
-    workdir = os.path.relpath(git_project, temporary) if relative else str(git_project)
-    payload = {"tool_input": {"command": "rm same.txt", "workdir": workdir}, "cwd": str(temporary)}
-    assert guard.decide("allowed", payload).decision == "ask"
-    workdir = os.path.relpath(temporary, git_project) if relative else str(temporary)
-    swapped = {"tool_input": {"command": "rm same.txt", "workdir": workdir}, "cwd": str(git_project)}
-    assert guard.decide("allowed", swapped).decision == "allow"
