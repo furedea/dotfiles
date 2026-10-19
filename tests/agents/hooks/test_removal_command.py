@@ -82,6 +82,9 @@ def test_removals_a_temporary_root_or_git_can_account_for_pass(project: Path, ki
         pytest.param("env --chdir=sub rm tracked.txt", id="env with a long directory option"),
         pytest.param("env -Csub rm tracked.txt", id="env with an attached directory option"),
         pytest.param("$GO sub; rm tracked.txt", id="a run-time program first"),
+        pytest.param("rm '[t]racked.txt'", id="a quoted glob that Git would match against a tracked file"),
+        pytest.param("rm ':(top)tracked.txt'", id="pathspec magic"),
+        pytest.param("rm 'tracked*.txt'", id="a quoted wildcard"),
     ],
 )
 def test_removals_neither_can_account_for_ask(project: Path, git_project: Path, command: str) -> None:
@@ -123,3 +126,9 @@ def test_a_symlink_out_of_the_temporary_directory_does_not_count_as_temporary(
     link = project / "tmp/link"
     link.symlink_to(git_project)
     assert decide("forbidden", f"rm -rf {link}/") == "deny"
+
+
+@pytest.mark.parametrize("name", ["[t]racked.txt", "tracked*.txt", ":(top)tracked.txt"])
+def test_untracked_names_that_git_would_read_as_patterns_ask(project: Path, git_project: Path, name: str) -> None:
+    (git_project / name).write_text("untracked")
+    assert decide("allowed", f"rm '{name}'") == "ask"

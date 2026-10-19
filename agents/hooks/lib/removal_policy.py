@@ -20,6 +20,8 @@ LONG_FLAGS = frozenset(
     {"--dir", "--force", "--interactive", "--one-file-system", "--preserve-root", "--recursive", "--verbose"}
 )
 DIRECTORY_CHANGES = frozenset({"cd", "pushd", "popd"})
+# Characters Git reads as a wildcard or pathspec magic, so a name holding one may match another file.
+PATHSPEC_SPECIALS = frozenset("*?[]\\:!")
 # Commands that only read, so beside them an rm target stays as the hook sees it.
 READERS = frozenset(
     {"[", "cat", "echo", "false", "grep", "head", "ls", "printf", "pwd", "rg", "tail", "test", "true", "wc"}
@@ -82,6 +84,7 @@ def removal(command: shell_syntax.Command, workspace: Workspace) -> Removal | No
         else:
             hidden = True
     directory = workspace.directory
+    hidden |= any(PATHSPEC_SPECIALS & set(word) for word in operands)
     if hidden or not operands or (directory is None and not all(Path(word).is_absolute() for word in operands)):
         return Removal(recursive, None, workspace.settled)
     targets = tuple(Path(os.path.join(directory or "/", word)) for word in operands)
@@ -150,7 +153,7 @@ def is_restorable(target: Path) -> bool:
 def git(directory: Path, *arguments: str) -> bool:
     try:
         result = subprocess.run(
-            ["git", "-C", str(directory), *arguments],
+            ["git", "--literal-pathspecs", "-C", str(directory), *arguments],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             check=False,

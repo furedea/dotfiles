@@ -141,6 +141,17 @@ class Command:
         )
 
     @property
+    def decoded_words_text(self) -> str:
+        """The arguments as the program receives them, requoted, with each run-time word as a placeholder.
+
+        Rules that judge options read this text, so quoting or escaping in the source cannot hide one.
+        """
+        return " ".join(
+            RUN_TIME_PLACEHOLDER if dynamic else shlex.quote(argument)
+            for argument, dynamic in zip(self.arguments, self.dynamic, strict=True)
+        )
+
+    @property
     def hides_options(self) -> bool:
         """Whether an option can reach the program in a form its source text does not show.
 

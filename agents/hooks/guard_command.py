@@ -75,7 +75,7 @@ def objection(kind: str, item: shell_syntax.Command, policy: Policy) -> Verdict:
     past the sandbox, such as GitHub writes and remote fetches, and lets every other program take
     any form, since the sandbox confines it. A run-time word in a governed program counts as a plain
     placeholder, so it passes only where any value would, and a governed command that can hide an
-    option from the rules asks.
+    option from the rules, or takes more arguments from xargs, asks.
     """
     candidate = command_policy.canonical(item)
     prefixes, rules = policy.prefixes, policy.rules
@@ -94,7 +94,9 @@ def objection(kind: str, item: shell_syntax.Command, policy: Policy) -> Verdict:
         return hook_decision.ALLOW
     governed = command_policy.prefix_rule(candidate.arguments, prefixes, "allow")
     if governed is None or (
-        not candidate.hides_options and command_policy.regex_reason(candidate.static_words_text, rules)
+        not candidate.appends_input
+        and not candidate.hides_options
+        and command_policy.regex_reason(command_policy.judged_text(candidate), rules)
     ):
         return hook_decision.ALLOW
     prefix = " ".join(governed["prefix"])
