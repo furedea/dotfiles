@@ -25,5 +25,13 @@
   },
   "nix": {
     "enabled": true
-  }
+  },
+  "packageRules": [
+    {
+      "description": "hermes-agent stays pinned while nix/patches/hermes_gateway_service_resources.patch backports NousResearch/hermes-agent#85365; remove this rule with the pin.",
+      "matchManagers": ["nix"],
+      "matchDepNames": ["hermes-agent"],
+      "enabled": false
+    }
+  ]
 }

@@ -17,7 +17,8 @@
     llm-agents.url = "github:numtide/llm-agents.nix";
     # Pinned: nix/patches/hermes_gateway_service_resources.patch backports
     # NousResearch/hermes-agent#85365 and no longer applies to newer revisions, so
-    # lock file maintenance must not move this input. Unpin once #85365 is merged.
+    # neither lock file maintenance nor Renovate's digest updates may move this input
+    # (renovate.json disables it). Unpin, and drop that rule, once #85365 is merged.
     hermes-agent.url = "github:NousResearch/hermes-agent/56a41715dc3b8bf6f50a740ff9416c4036ef4259";
     google-workspace-cli = {
       url = "github:googleworkspace/cli";
