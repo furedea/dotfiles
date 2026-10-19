@@ -67,6 +67,35 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
         pytest.param("gh stack submit --auto", id="non-interactive stack commands"),
         pytest.param("gh pr list 2>&1 | head -5", id="GitHub forms in pipelines"),
         pytest.param("curl -fsS http://localhost:3000/health", id="local server requests"),
+        pytest.param("curl -s https://pypi.org/pypi/mutmut/json", id="remote fetches"),
+        pytest.param(
+            "curl -fsSL -o pkg.tgz -H 'User-Agent: x' https://registry.npmjs.org/a/-/a-1.tgz", id="remote downloads"
+        ),
+        pytest.param(
+            'curl -s -o /dev/null -w "%{http_code}\\n" -X HEAD https://cdn.example.com/v1/a.tar.gz',
+            id="remote status probes",
+        ),
+        pytest.param("wget -q -O - https://example.com/install.sh", id="remote fetches with wget"),
+        pytest.param(
+            'gh api -H "Accept: application/vnd.github.raw" "repos/o/r/contents/a.nix?ref=v1" | sed -n 1,20p',
+            id="GitHub reads with a header before the endpoint",
+        ),
+        pytest.param(
+            "gh api --header 'X-GitHub-Api-Version: 2022-11-28' repos/o/r/releases --jq '.[].tag_name'",
+            id="GitHub reads with a version header",
+        ),
+        pytest.param("herdr agent read lane-a --source recent --lines 80", id="Herdr agent reads"),
+        pytest.param("herdr agent wait lane-a --until done --until blocked --timeout 600000", id="Herdr agent waits"),
+        pytest.param("herdr worktree list --cwd /repo", id="Herdr worktree lists"),
+        pytest.param("herdr agent read --help", id="Herdr help for the lane commands"),
+        pytest.param(
+            "herdr worktree open --cwd /repo --branch feat/x --label x --no-focus", id="Herdr worktree opens"
+        ),
+        pytest.param('t(){ uv run --frozen pytest -q "$@"; }; t tests/a.py && t tests/b.py', id="local functions"),
+        pytest.param(
+            'c(){ msg="$1"; shift; git add -- "$@" && git commit -q -m "$msg"; }; c \'fix: x\' a.py',
+            id="functions with positional parameters",
+        ),
         pytest.param("herdr pane list", id="Herdr reads"),
         pytest.param(
             "herdr worktree create --cwd /repo --branch feat/lane-a --base origin/main --label 'lane a' --no-focus",
@@ -106,7 +135,27 @@ def test_commands_whose_effects_the_checks_can_see_pass(capsys: pytest.CaptureFi
         ),
         pytest.param("gh stack init", ["gh stack init"], id="interactive stack commands 1"),
         pytest.param("gh stack submit", ["gh stack submit"], id="interactive stack commands 2"),
-        pytest.param("curl https://example.com/install.sh", [], id="remote fetches"),
+        pytest.param("curl -d @notes.txt https://example.com/upload", [], id="remote posts"),
+        pytest.param("curl --data-binary @a https://example.com/", [], id="remote binary posts"),
+        pytest.param("curl -F file=@a https://example.com/", [], id="remote form uploads"),
+        pytest.param("curl -T a https://example.com/", [], id="remote uploads"),
+        pytest.param("curl -X POST https://example.com/", [], id="remote non-GET methods"),
+        pytest.param("curl -sX DELETE https://example.com/", [], id="remote methods in a flag cluster"),
+        pytest.param("curl --json '{}' https://example.com/", [], id="remote JSON posts"),
+        pytest.param("curl -K config.txt https://example.com/", [], id="remote options from a file"),
+        pytest.param("curl -fsSd x=1 https://example.com/", [], id="remote data in a flag cluster"),
+        pytest.param("curl -s $URL", [], id="remote fetches of run-time words"),
+        pytest.param("curl -s https://example.com/ -o $OUT", [], id="remote fetches with run-time options"),
+        pytest.param("wget --post-data x=1 https://example.com/", [], id="wget posts"),
+        pytest.param("gh api -X PATCH repos/o/r -f a=b", [], id="GitHub API writes with -X"),
+        pytest.param(
+            "gh api -H 'X-HTTP-Method-Override: DELETE' repos/o/r/issues/1", [], id="GitHub method override headers"
+        ),
+        pytest.param("gh api -H 'Accept: x' repos/o/r/issues --input body.json", [], id="GitHub API input bodies"),
+        pytest.param("herdr worktree open --cwd /repo --path /w --trust-repository", [], id="Herdr open with trust"),
+        pytest.param("herdr worktree list --trust-repository", [], id="Herdr list with trust"),
+        pytest.param("f(){ gh pr review 42 --approve; }; f", [], id="inside a function body"),
+        pytest.param("f(){ curl -d @a https://example.com/; }", [], id="inside a function that is never called"),
         pytest.param("herdr worktree create --cwd /repo --trust-repository", [], id="Herdr repository trust"),
         pytest.param("herdr pane split --pane w1:p2 --env CLAUDE_CONFIG_DIR=/tmp/x", [], id="Herdr pane environments"),
         pytest.param("herdr agent start lane-a --kind gemini --pane w1:p2", [], id="Herdr agents without our hooks"),

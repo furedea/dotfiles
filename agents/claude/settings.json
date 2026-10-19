@@ -73,6 +73,8 @@
       "allowedDomains": [
         "api.day.app",
         "channels.nixos.org",
+        "files.pythonhosted.org",
+        "pypi.org",
         "registry.npmjs.org"
       ],
       "allowUnixSockets": [

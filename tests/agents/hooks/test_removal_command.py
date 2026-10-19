@@ -1,0 +1,115 @@
+"""rm passes only where a temporary directory or Git can account for what it removes."""
+
+from pathlib import Path
+import subprocess
+
+import pytest
+
+from tests.runtime import load_script_module
+
+
+guard = load_script_module("agents/hooks/guard_command.py", "guard_command")
+
+
+@pytest.fixture
+def project(git_project: Path, temporary_roots: Path) -> Path:
+    """A repository with clean, modified, staged, and untracked files outside the temporary roots."""
+    for name in ("tracked.txt", "modified.txt", "staged.txt"):
+        (git_project / name).write_text("before")
+    (git_project / "sub").mkdir()
+    (git_project / "sub/nested.txt").write_text("before")
+    git(git_project, "add", "tracked.txt", "modified.txt", "staged.txt", "sub/nested.txt")
+    git(git_project, "commit", "--quiet", "-m", "files")
+    (git_project / "modified.txt").write_text("after")
+    (git_project / "staged.txt").write_text("after")
+    git(git_project, "add", "staged.txt")
+    (git_project / "untracked.txt").write_text("new")
+    return temporary_roots
+
+
+def git(directory: Path, *arguments: str) -> None:
+    subprocess.run(["git", *arguments], cwd=directory, check=True, capture_output=True)
+
+
+def decide(kind: str, command: str, cwd: Path | None = None) -> str:
+    payload: dict = {"tool_input": {"command": command}}
+    if cwd:
+        payload["cwd"] = str(cwd)
+    return guard.decide(kind, payload).decision
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        pytest.param("rm {tmp}/a.txt", id="a file in the temporary directory"),
+        pytest.param("rm -f {scratch}/session/a.txt {tmp}/b.txt", id="files in the scratchpad"),
+        pytest.param("rm tracked.txt", id="a tracked file without changes"),
+        pytest.param("rm -f -- tracked.txt sub/nested.txt", id="several tracked files without changes"),
+        pytest.param("/bin/rm tracked.txt", id="rm invoked by path"),
+        pytest.param("rm -rf {tmp}/build", id="a tree in the temporary directory"),
+        pytest.param("rm -r -- {scratch}/a {tmp}/b", id="trees in both temporary roots"),
+        pytest.param("rm -fR {tmp}/a/../b", id="a normalized path that stays inside"),
+    ],
+)
+@pytest.mark.parametrize("kind", ["allowed", "forbidden"])
+def test_removals_a_temporary_root_or_git_can_account_for_pass(project: Path, kind: str, command: str) -> None:
+    command = command.format(tmp=project / "tmp", scratch=project / "scratch")
+    assert decide(kind, command) == "allow"
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        pytest.param("rm modified.txt", id="a tracked file with unstaged changes"),
+        pytest.param("rm staged.txt", id="a tracked file with staged changes"),
+        pytest.param("rm untracked.txt", id="an untracked file"),
+        pytest.param("rm tracked.txt untracked.txt", id="one unrestorable target among several"),
+        pytest.param("rm $FILE", id="a run-time target"),
+        pytest.param("rm *.txt", id="a glob"),
+        pytest.param("rm $FLAGS tracked.txt", id="run-time options"),
+        pytest.param("cd sub && rm tracked.txt", id="a relative target after the directory changes"),
+        pytest.param("echo tracked.txt | xargs rm", id="targets read from input"),
+        pytest.param("rm {tmp}/../outside.txt", id="a path that leaves the temporary directory"),
+        pytest.param("rm --unknown tracked.txt", id="an unknown option"),
+        pytest.param("rm", id="no targets"),
+    ],
+)
+def test_removals_neither_can_account_for_ask(project: Path, command: str) -> None:
+    command = command.format(tmp=project / "tmp")
+    assert decide("allowed", command) == "ask"
+    assert decide("forbidden", command) == "allow"
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        pytest.param("rm -rf build", id="a tree in the project"),
+        pytest.param("rm -r tracked.txt", id="a tracked file removed recursively"),
+        pytest.param("rm -r {tmp}/a build", id="one tree outside the temporary roots"),
+        pytest.param("rm -rf $TARGET", id="a run-time tree"),
+        pytest.param("rm -rf {tmp}", id="the temporary directory itself"),
+        pytest.param("rm -rf {tmp}/../..", id="a path that climbs out"),
+        pytest.param("rm build -rf", id="options after the operands"),
+        pytest.param("rm --recursive build", id="the long option"),
+        pytest.param("echo {tmp}/a | xargs rm -rf {tmp}/b", id="trees read from input"),
+        pytest.param("f(){{ rm -rf build; }}", id="inside a function body"),
+    ],
+)
+def test_recursive_removals_outside_the_temporary_roots_stay_denied(project: Path, command: str) -> None:
+    command = command.format(tmp=project / "tmp")
+    verdict = guard.decide("forbidden", {"tool_input": {"command": command}})
+    assert verdict.decision == "deny"
+    assert "directory trees" in verdict.reason
+
+
+def test_relative_targets_resolve_against_the_session_directory(project: Path, git_project: Path) -> None:
+    assert decide("allowed", "rm nested.txt", cwd=git_project / "sub") == "allow"
+    assert decide("allowed", "rm nested.txt", cwd=git_project) == "ask"
+
+
+def test_a_symlink_out_of_the_temporary_directory_does_not_count_as_temporary(
+    project: Path, git_project: Path
+) -> None:
+    link = project / "tmp/link"
+    link.symlink_to(git_project)
+    assert decide("forbidden", f"rm -rf {link}/") == "deny"

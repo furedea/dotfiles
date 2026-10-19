@@ -1713,14 +1713,14 @@
       "prefix": [
         "curl"
       ],
-      "justification": "Allow requests to local servers only; the sandbox and the precise rules keep remote fetches out."
+      "justification": "Allow fetches; the precise rules ask before a remote request sends data, and the sandbox limits where requests go."
     },
     {
       "decision": "allow",
       "prefix": [
         "wget"
       ],
-      "justification": "Allow requests to local servers only; the sandbox and the precise rules keep remote fetches out."
+      "justification": "Allow fetches; the precise rules ask before a remote request sends data, and the sandbox limits where requests go."
     },
     {
       "decision": "allow",
@@ -2120,13 +2120,6 @@
       "justification": "Ask before running scripts or fetched packages that policy cannot inspect."
     },
     {
-      "decision": "ask",
-      "prefix": [
-        "rm"
-      ],
-      "justification": "Ask before removing files that Git cannot restore; recursive removal stays denied."
-    },
-    {
       "decision": "allow",
       "prefix": [
         "ln",
@@ -2404,6 +2397,42 @@
       "justification": "Allow read-only Herdr inspection; controlling other panes asks first."
     },
     {
+      "decision": "allow",
+      "prefix": [
+        "herdr",
+        "agent",
+        "read"
+      ],
+      "justification": "Allow read-only Herdr inspection; controlling other panes asks first."
+    },
+    {
+      "decision": "allow",
+      "prefix": [
+        "herdr",
+        "agent",
+        "wait"
+      ],
+      "justification": "Allow read-only Herdr inspection; controlling other panes asks first."
+    },
+    {
+      "decision": "allow",
+      "prefix": [
+        "herdr",
+        "worktree",
+        "list"
+      ],
+      "justification": "Allow read-only Herdr inspection; controlling other panes asks first."
+    },
+    {
+      "decision": "allow",
+      "prefix": [
+        "herdr",
+        "worktree",
+        "open"
+      ],
+      "justification": "Allow handing work to a new Herdr session; the hooks limit prompts to agents this session started."
+    },
+    {
       "decision": "ask",
       "prefix": [
         "herdr",
@@ -2535,54 +2564,6 @@
         "-lc"
       ],
       "justification": "Do not hide shell commands inside a shell wrapper; policy inspects the literal command."
-    },
-    {
-      "decision": "deny",
-      "prefix": [
-        "rm",
-        "-r"
-      ],
-      "justification": "Do not remove directory trees from an agent session; Git cannot restore untracked files."
-    },
-    {
-      "decision": "deny",
-      "prefix": [
-        "rm",
-        "-rf"
-      ],
-      "justification": "Do not remove directory trees from an agent session; Git cannot restore untracked files."
-    },
-    {
-      "decision": "deny",
-      "prefix": [
-        "rm",
-        "-fr"
-      ],
-      "justification": "Do not remove directory trees from an agent session; Git cannot restore untracked files."
-    },
-    {
-      "decision": "deny",
-      "prefix": [
-        "rm",
-        "-R"
-      ],
-      "justification": "Do not remove directory trees from an agent session; Git cannot restore untracked files."
-    },
-    {
-      "decision": "deny",
-      "prefix": [
-        "rm",
-        "-Rf"
-      ],
-      "justification": "Do not remove directory trees from an agent session; Git cannot restore untracked files."
-    },
-    {
-      "decision": "deny",
-      "prefix": [
-        "rm",
-        "--recursive"
-      ],
-      "justification": "Do not remove directory trees from an agent session; Git cannot restore untracked files."
     },
     {
       "decision": "deny",

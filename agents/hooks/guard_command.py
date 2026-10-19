@@ -21,6 +21,7 @@ import audit_log
 import command_policy
 import hook_decision
 from hook_decision import Verdict
+import removal_policy
 import shell_syntax
 
 
@@ -100,6 +101,21 @@ def objection(kind: str, item: shell_syntax.Command, policy: Policy) -> Verdict:
     )
 
 
+def removal_objection(kind: str, item: shell_syntax.Command, working_directory: Path | None) -> Verdict:
+    """Pass rm where a temporary directory or Git accounts for its targets; else deny a tree and ask for files."""
+    removal = removal_policy.removal(command_policy.canonical(item), working_directory)
+    if removal is None or removal.is_accounted_for:
+        return hook_decision.ALLOW
+    preview = shell_syntax.command_preview(item.raw)
+    if kind == "allowed":
+        return hook_decision.ask(f"Needs review: {removal_policy.FILE_REASON}.\n\nCommand: {preview}", "rm")
+    if not removal.removes_unaccounted_tree:
+        return hook_decision.ALLOW
+    return hook_decision.deny(
+        f"BLOCKED: forbidden command: {removal_policy.TREE_REASON}\n\nCommand: {preview}\n\n{hook_decision.REVIEW_HINT}"
+    )
+
+
 def decide(kind: str, payload: dict, directory: Path = ROOT) -> Verdict:
     """Decide for an already decoded provider payload, recording every denial and escalation."""
     command = ""
@@ -114,7 +130,12 @@ def decide(kind: str, payload: dict, directory: Path = ROOT) -> Verdict:
             preview = shell_syntax.command_preview(command)
             verdict = hook_decision.ask(f"Needs review: {error}.\n\nCommand: {preview}", "syntax")
         else:
-            verdicts = (objection(kind, item, policy) for item in commands)
+            working_directory = removal_policy.working_directory(payload.get("cwd"), commands)
+            verdicts = (
+                verdict
+                for item in commands
+                for verdict in (objection(kind, item, policy), removal_objection(kind, item, working_directory))
+            )
             verdict = next((item for item in verdicts if item.decision != "allow"), hook_decision.ALLOW)
     except (ValueError, TypeError, AttributeError, OSError) as error:
         prefix = "forbidden command: " if kind == "forbidden" else ""

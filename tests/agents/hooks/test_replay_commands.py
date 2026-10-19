@@ -59,7 +59,7 @@ def test_claude_bash_commands_since_the_date_are_counted_by_verdict_and_reason(h
         home / ".claude/projects/repo/session.jsonl",
         [
             claude_bash("ls -la"),
-            claude_bash("curl https://example.com/install.sh"),
+            claude_bash("curl -d x=1 https://example.com/install.sh"),
             claude_bash("git add -A"),
             claude_bash("git commit -S -m feat"),
             claude_bash("rm -rf /old", timestamp=OLD),
@@ -74,7 +74,7 @@ def test_claude_bash_commands_since_the_date_are_counted_by_verdict_and_reason(h
     assert "allowed: curl" in result.stdout
     assert "forbidden: " in result.stdout
     assert "git: " in result.stdout
-    for shown in ("curl https://example.com/install.sh", "git add -A", "git commit -S -m feat"):
+    for shown in ("curl -d x=1 https://example.com/install.sh", "git add -A", "git commit -S -m feat"):
         assert shown in result.stdout
     for hidden in ("ls -la", "rm -rf"):
         assert hidden not in result.stdout
@@ -87,14 +87,14 @@ def test_codex_shell_calls_in_both_log_formats_are_replayed(home: Path, run_cli:
     )
     write_lines(
         home / ".codex/sessions/2026/10/17/rollout-new-format.jsonl.zst",
-        [codex_command_execution("ls"), codex_command_execution("curl https://example.com/x")],
+        [codex_command_execution("ls"), codex_command_execution("curl -d x=1 https://example.com/x")],
     )
 
     result = run_cli(SCRIPT, "--since", SINCE)
 
     assert result.returncode == 0, result.stderr
     assert totals(result.stdout) == {"allow": 1, "ask": 1, "deny": 1}
-    assert "curl https://example.com/x" in result.stdout
+    assert "curl -d x=1 https://example.com/x" in result.stdout
 
 
 def test_unreadable_lines_and_other_codex_files_are_skipped(home: Path, run_cli: CliRunner) -> None:

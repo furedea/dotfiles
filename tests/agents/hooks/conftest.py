@@ -10,7 +10,19 @@ from tests.runtime import REPO_ROOT, StubWriter
 
 sys.path.insert(0, str(REPO_ROOT / "agents/hooks"))
 sys.path.insert(0, str(REPO_ROOT / "agents/hooks/lib"))
+import removal_policy
 import session_store
+
+
+@pytest.fixture(autouse=True)
+def temporary_roots(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Keep each test's project outside the roots rm may clear, wherever pytest puts its directories."""
+    roots = tmp_path_factory.mktemp("temporary-roots")
+    for name in ("tmp", "scratch"):
+        (roots / name).mkdir()
+    monkeypatch.setenv("TMPDIR", str(roots / "tmp"))
+    monkeypatch.setattr(removal_policy, "SCRATCH_ROOT", roots / "scratch")
+    return roots
 
 
 @pytest.fixture

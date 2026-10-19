@@ -165,3 +165,20 @@ def test_a_locked_development_shell_runs_while_arbitrary_packages_ask() -> None:
 )
 def test_handing_work_to_a_new_herdr_session_runs_without_approval(prefix: tuple[str, ...]) -> None:
     assert prefix in ALLOW
+
+
+@pytest.mark.parametrize(
+    "prefix",
+    [
+        ("herdr", "agent", "read"),
+        ("herdr", "agent", "wait"),
+        ("herdr", "worktree", "open"),
+        ("herdr", "worktree", "list"),
+    ],
+)
+def test_watching_lanes_and_their_worktrees_runs_without_approval(prefix: tuple[str, ...]) -> None:
+    assert prefix in ALLOW
+
+
+def test_the_command_hook_alone_judges_rm() -> None:
+    assert [rule for rule in POLICY["rules"] if rule["prefix"][0] == "rm"] == []

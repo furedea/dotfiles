@@ -45,11 +45,13 @@ ALLOWED_NODES = frozenset(
         "UnaryTest",
         "ParenTest",
         "DeclClause",
+        "FuncDecl",
         "Word",
     }
 )
-# Every command inside a substitution or clause is a CallExpr that parse judges on its own; the
-# substituted word itself is only known at run time.
+# Every command inside a substitution, clause, or function body is a CallExpr that parse judges on
+# its own, so a body is judged where it is defined and a call by its own name; the substituted word
+# itself is only known at run time.
 SUBSTITUTIONS = frozenset({"CmdSubst", "ProcSubst", "ArithmExp"})
 # A ParamExp other than the home directory makes its word a run-time word; Word is an operand inside it.
 WORD_PARTS = frozenset({None, "Lit", "SglQuoted", "DblQuoted", "ParamExp", "Word"}) | SUBSTITUTIONS
@@ -92,7 +94,8 @@ class Command:
 
     `dynamic` flags arguments whose value is only known at run time (a glob or a parameter other
     than the home directory); such arguments carry their source text. `writes` lists the files
-    that output redirections would create or overwrite.
+    that output redirections would create or overwrite. `appends_input` marks a command that xargs
+    runs with further arguments read from its input.
     """
 
     raw: str
@@ -103,6 +106,7 @@ class Command:
     trailer: str = ""
     dynamic: tuple[bool, ...] = ()
     writes: tuple[str, ...] = ()
+    appends_input: bool = False
 
     def __post_init__(self) -> None:
         if not self.words:
@@ -361,7 +365,8 @@ def unwrapped(command: Command) -> list[Command]:
     """Peel process wrappers so policy sees the program they eventually run."""
     exposed: list[Command] = []
     while (index := wrapped_index(command.arguments)) is not None:
-        command = command.rebased(index, depth=command.wrapper_depth + 1)
+        appends_input = command.appends_input or Path(command.arguments[0]).name == "xargs"
+        command = replace(command.rebased(index, depth=command.wrapper_depth + 1), appends_input=appends_input)
         exposed.append(command)
     return exposed
 
