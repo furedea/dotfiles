@@ -119,6 +119,10 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
             id="Herdr prompts",
         ),
         pytest.param('herdr agent prompt lane-a "$(cat $D/brief.md)"', id="Herdr prompts built at run time"),
+        pytest.param(
+            "gh pr edit 242 --body \"$(printf '%s' 'pass ${a[@]} or \"$@\" or $1 through')\"",
+            id="expansion text inside a substituted body",
+        ),
         pytest.param("", id="empty command"),
     ],
 )

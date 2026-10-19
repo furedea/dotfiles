@@ -61,8 +61,10 @@ PARAMETER_MODIFIERS = ("Excl", "Length", "Width", "Index", "Slice", "Repl", "Exp
 SHELLS = frozenset({"bash", "sh", "zsh"})
 COMMAND_LOOKUP = frozenset({"-v", "-V"})
 ASSIGNMENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=")
-# Positional parameters and array elements, which expand to any number of words, options included.
-SPREADING_EXPANSION = re.compile(r"\$\{?([@*]|[0-9])|\[[@*]\]")
+# Expansions that a function call fills with its caller's words, options included: all positional
+# parameters, any single one, and every element of an array.
+SPREADING_PARAMETERS = frozenset({"@", "*"})
+SPREADING_INDEXES = frozenset({"@", "*"})
 # Process wrappers run their trailing arguments as a command. Each entry lists the flags without an
 # operand and the options whose operand is the next token; unknown options are refused, not skipped.
 WRAPPERS: dict[str, tuple[frozenset[str], frozenset[str]]] = {
@@ -97,7 +99,8 @@ class Command:
     `dynamic` flags arguments whose value is only known at run time (a glob or a parameter other
     than the home directory); such arguments carry their source text. `writes` lists the files
     that output redirections would create or overwrite. `appends_input` marks a command that xargs
-    runs with further arguments read from its input.
+    runs with further arguments read from its input. `spreading` flags arguments holding a positional
+    parameter or array expansion outside any substitution.
     """
 
     raw: str
@@ -109,12 +112,15 @@ class Command:
     dynamic: tuple[bool, ...] = ()
     writes: tuple[str, ...] = ()
     appends_input: bool = False
+    spreading: tuple[bool, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.words:
             object.__setattr__(self, "words", self.arguments)
         if not self.dynamic:
             object.__setattr__(self, "dynamic", (False,) * len(self.arguments))
+        if not self.spreading:
+            object.__setattr__(self, "spreading", (False,) * len(self.arguments))
 
     @property
     def words_text(self) -> str:
@@ -158,10 +164,11 @@ class Command:
         A quoted or escaped word still becomes an option once the shell removes the quotes, and a
         positional or array expansion can become any number of words.
         """
-        return any(
-            (argument.startswith("-") and word != argument) or (dynamic and SPREADING_EXPANSION.search(word))
-            for word, argument, dynamic in zip(self.words, self.arguments, self.dynamic, strict=True)
+        quoted_option = any(
+            argument.startswith("-") and word != argument
+            for word, argument in zip(self.words, self.arguments, strict=True)
         )
+        return quoted_option or any(self.spreading)
 
     @property
     def has_dynamic_words(self) -> bool:
@@ -183,6 +190,7 @@ class Command:
             wrapper_depth=wrapper_depth,
             words=words,
             dynamic=((False,) * len(head)) + self.dynamic[index:],
+            spreading=((False,) * len(head)) + self.spreading[index:],
         )
 
 
@@ -275,6 +283,7 @@ def literal_command(node: dict, owner: dict, data: bytes) -> Command:
         words=tuple(source_text(word, data) for word in node["Args"]),
         trailer=" ".join(source_text(redirect, data) for redirect in redirects),
         dynamic=tuple(flag for _, flag in decoded),
+        spreading=tuple(spreads(word) for word in node["Args"]),
         writes=tuple(
             target for redirect, target in zip(redirects, targets, strict=True) if writes_file(redirect, target, data)
         ),
@@ -321,6 +330,18 @@ def literal_word(word: dict, source: bytes) -> tuple[str, bool]:
     if dynamic:
         return source_text(word, source), True
     return "".join(literal_part(index, part, source) for index, part in enumerate(parts)), False
+
+
+def spreads(word: dict) -> bool:
+    """Whether a word expands positional parameters or array elements outside any substitution."""
+    for part in word_nodes(word):
+        if part.get("Type") != "ParamExp":
+            continue
+        name = part.get("Param", {}).get("Value", "")
+        index = "".join(inner.get("Value", "") for inner in (part.get("Index") or {}).get("Parts", []))
+        if name in SPREADING_PARAMETERS or name.isdigit() or index in SPREADING_INDEXES:
+            return True
+    return False
 
 
 def word_nodes(value: object) -> Iterator[dict]:
