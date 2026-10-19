@@ -149,7 +149,7 @@ def decide(kind: str, payload: dict, directory: Path = ROOT) -> Verdict:
             preview = shell_syntax.command_preview(command)
             verdict = hook_decision.ask(f"Needs review: {error}.\n\nCommand: {preview}", "syntax")
         else:
-            workspace = removal_policy.workspace(payload.get("cwd"), commands)
+            workspace = removal_policy.workspace(payload, commands)
             verdicts = (
                 verdict
                 for item in commands

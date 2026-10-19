@@ -91,11 +91,19 @@ def removal(command: shell_syntax.Command, workspace: Workspace) -> Removal | No
     return Removal(recursive, targets, workspace.settled)
 
 
-def workspace(payload_directory: object, commands: tuple[shell_syntax.Command, ...]) -> Workspace:
+def workspace(payload: dict, commands: tuple[shell_syntax.Command, ...]) -> Workspace:
     """Judge the whole command once: whether the working directory and the file system stay put."""
     known = not any(changes_directory(command) for command in commands)
-    directory = Path(payload_directory) if isinstance(payload_directory, str) and payload_directory else Path.cwd()
-    return Workspace(directory if known else None, all(is_inert(command) for command in commands))
+    return Workspace(starting_directory(payload) if known else None, all(is_inert(command) for command in commands))
+
+
+def starting_directory(payload: dict) -> Path:
+    """Where the command starts: the tool's own workdir, if it names one, resolved against the session cwd."""
+    cwd = payload.get("cwd")
+    session = Path(cwd) if isinstance(cwd, str) and cwd else Path.cwd()
+    values = payload.get("tool_input")
+    workdir = values.get("workdir") if isinstance(values, dict) else None
+    return session / workdir if isinstance(workdir, str) and workdir else session
 
 
 def changes_directory(command: shell_syntax.Command) -> bool:

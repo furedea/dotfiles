@@ -1,5 +1,6 @@
 """rm passes only where a temporary directory or Git can account for what it removes."""
 
+import os
 from pathlib import Path
 import subprocess
 
@@ -157,3 +158,26 @@ def test_a_clean_filter_cannot_hide_uncommitted_content(project: Path, git_proje
     (git_project / ".git/info/attributes").write_text("tracked.txt filter=keep-head\n")
     (git_project / "tracked.txt").write_text("before and uncommitted notes")
     assert decide("allowed", "rm tracked.txt") == "ask"
+
+
+@pytest.fixture
+def other_project(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """A second repository whose same.txt is untracked, beside the session project where it is tracked."""
+    other = tmp_path_factory.mktemp("other-project")
+    git(other, "init", "--quiet", "-b", "main")
+    (other / "same.txt").write_text("unsaved")
+    return other
+
+
+@pytest.mark.parametrize("relative", [False, True], ids=["absolute workdir", "relative workdir"])
+def test_relative_targets_resolve_against_the_tool_workdir(
+    project: Path, git_project: Path, other_project: Path, relative: bool
+) -> None:
+    (git_project / "same.txt").write_text("before")
+    git(git_project, "add", "same.txt")
+    git(git_project, "commit", "--quiet", "-m", "same")
+    workdir = os.path.relpath(other_project, git_project) if relative else str(other_project)
+    payload = {"tool_input": {"command": "rm same.txt", "workdir": workdir}, "cwd": str(git_project)}
+    assert guard.decide("allowed", payload).decision == "ask"
+    swapped = {"tool_input": {"command": "rm same.txt", "workdir": str(git_project)}, "cwd": str(other_project)}
+    assert guard.decide("allowed", swapped).decision == "allow"

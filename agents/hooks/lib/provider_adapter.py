@@ -158,7 +158,10 @@ class Adapter:
         return hook_dispatch.run(self._manifest(), event, payload)
 
     def shell(self, mode: str, payload: dict) -> int:
-        values = {"command": command_text(self.normalized(payload)["tool_input"])}
+        tool_input = self.normalized(payload)["tool_input"]
+        values = {"command": command_text(tool_input)}
+        if isinstance(workdir := tool_input.get("workdir"), str) and workdir:
+            values["workdir"] = workdir
         command = self.translated(payload, "Bash", values)
         if mode == "commit":
             return guard_file.check("commit", command, shared_directory())
