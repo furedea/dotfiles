@@ -91,14 +91,23 @@
         "^herdr workspace close [^ -][^ ]*$",
         "^herdr worktree remove --workspace [^ -][^ ]*$",
         "^herdr workspace list( |$)",
-        "^herdr workspace get( |$)",
+        "^herdr workspace get( |$)"
+      ],
+      "justification": "Allow Herdr reads and handing work to a new Claude or Codex session; repository trust, pane environments, other agent kinds, and driving existing panes run outside the sandbox and ask."
+    },
+    {
+      "programs": [
+        "herdr"
+      ],
+      "literal_words": true,
+      "patterns": [
         "^herdr (agent (read|wait)|worktree (list|open)) --help$",
         "^herdr agent read [^ -][^ ]*( --(source|lines|format) [^ ]+| --ansi)*$",
         "^herdr agent wait [^ -][^ ]*( --until [a-z]+| --timeout [0-9]+)*$",
         "^herdr worktree list( --(workspace|cwd) ('[^']*'|\"([^\"\\\\]|\\\\.)*\"|[^ '\"]+))*$",
         "^herdr worktree open( --(workspace|cwd|path|branch|label) ('[^']*'|\"([^\"\\\\]|\\\\.)*\"|[^ '\"]+)| --(no-)?focus)*$"
       ],
-      "justification": "Allow Herdr reads and handing work to a new Claude or Codex session; repository trust, pane environments, other agent kinds, and driving existing panes run outside the sandbox and ask."
+      "justification": "Allow watching lanes and their worktrees; every word must be literal, so no expansion can add an option such as --trust-repository."
     }
   ]
 }

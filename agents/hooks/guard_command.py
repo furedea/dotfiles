@@ -22,7 +22,6 @@ import audit_log
 import command_policy
 import hook_decision
 from hook_decision import Verdict
-import removal_policy
 import shell_syntax
 
 
@@ -146,21 +145,6 @@ def settings_objection(command: str, commands: tuple[shell_syntax.Command, ...])
     return hook_decision.ask(f"{REMOTE_REASON}\n\nCommand: {shell_syntax.command_preview(command)}", "settings")
 
 
-def removal_objection(kind: str, item: shell_syntax.Command, settled: bool) -> Verdict:
-    """Pass rm where a temporary directory or Git accounts for its targets; else deny a tree and ask for files."""
-    removal = removal_policy.removal(command_policy.canonical(item), settled)
-    if removal is None or removal.is_accounted_for:
-        return hook_decision.ALLOW
-    preview = shell_syntax.command_preview(item.raw)
-    if kind == "allowed":
-        return hook_decision.ask(f"Needs review: {removal_policy.FILE_REASON}.\n\nCommand: {preview}", "rm")
-    if not removal.removes_unaccounted_tree:
-        return hook_decision.ALLOW
-    return hook_decision.deny(
-        f"BLOCKED: forbidden command: {removal_policy.TREE_REASON}\n\nCommand: {preview}\n\n{hook_decision.REVIEW_HINT}"
-    )
-
-
 def decide(kind: str, payload: dict, directory: Path = ROOT) -> Verdict:
     """Decide for an already decoded provider payload, recording every denial and escalation."""
     command = ""
@@ -185,12 +169,7 @@ def command_verdict(kind: str, payload: dict, policy: Policy) -> Verdict:
     except shell_syntax.UnsupportedSyntax as error:
         preview = shell_syntax.command_preview(command)
         return hook_decision.ask(f"Needs review: {error}.\n\nCommand: {preview}", "syntax")
-    settled = removal_policy.is_settled(commands)
-    verdicts = (
-        verdict
-        for item in commands
-        for verdict in (objection(kind, item, policy), removal_objection(kind, item, settled))
-    )
+    verdicts = (objection(kind, item, policy) for item in commands)
     verdict = next((item for item in verdicts if item.decision != "allow"), hook_decision.ALLOW)
     if kind == "allowed" and verdict.decision == "allow":
         return settings_objection(command, commands)

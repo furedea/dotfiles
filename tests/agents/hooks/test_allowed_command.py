@@ -183,6 +183,13 @@ def test_commands_whose_effects_the_checks_can_see_pass(capsys: pytest.CaptureFi
         pytest.param("gh api repos/o/r/issues/1 -\\\nXDELETE", [], id="a line continuation inside an option"),
         pytest.param("herdr worktree open --cwd /r --trust\\\n-repository", [], id="a line continuation in Herdr"),
         pytest.param("herdr worktree open --cwd $W", [], id="unquoted words in Herdr options"),
+        pytest.param(
+            "printf '%s\\n' '--cwd /r --trust-repository' | read -rA a; herdr worktree open \"$a[@]\"",
+            [],
+            id="a zsh array expansion in a new Herdr form",
+        ),
+        pytest.param('herdr agent read "$LANE"', [], id="a quoted expansion in a new Herdr form"),
+        pytest.param('herdr worktree list --cwd "$(pwd)"', [], id="a substitution in a new Herdr form"),
         pytest.param("herdr pane split --pane w1:p2 --cwd $W --no-focus", [], id="unquoted words in Herdr panes"),
         pytest.param(
             "f(){ x=$*; gh api $x; }; f -X DELETE repos/o/r/issues/1", [], id="functions forwarding through a variable"

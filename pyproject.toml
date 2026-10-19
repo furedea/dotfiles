@@ -34,7 +34,6 @@ known_first_party = [
   "lint_format",
   "patch_input",
   "provider_adapter",
-  "removal_policy",
   "replay_commands",
   "secret_path_policy",
   "shell_syntax",

@@ -180,5 +180,8 @@ def test_watching_lanes_and_their_worktrees_runs_without_approval(prefix: tuple[
     assert prefix in ALLOW
 
 
-def test_the_command_hook_alone_judges_rm() -> None:
-    assert [rule for rule in POLICY["rules"] if rule["prefix"][0] == "rm"] == []
+def test_rm_asks_and_recursive_rm_is_denied_by_the_shared_prefixes() -> None:
+    assert ("rm",) in ASK
+    deny = {tuple(rule["prefix"]) for rule in POLICY["rules"] if rule["decision"] == "deny"}
+    recursive = {("rm", flag) for flag in ("-r", "-rf", "-fr", "-R", "-Rf", "--recursive")}
+    assert recursive <= deny

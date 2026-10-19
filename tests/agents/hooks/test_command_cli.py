@@ -80,7 +80,7 @@ def test_invalid_command_json_remains_a_cli_error(run_cli: CliRunner) -> None:
 @pytest.mark.parametrize(
     "script,arguments,command,reason",
     [
-        ("guard_command.py", ("forbidden",), "rm -rf /" + "x" * 1000, "forbidden command"),
+        ("guard_command.py", ("forbidden",), "rm -rf " + "x" * 1000, "forbidden command"),
         ("guard_git.py", (), "git reset --hard " + "x" * 1000, "BLOCKED:"),
     ],
     ids=["forbidden", "dangerous-git"],

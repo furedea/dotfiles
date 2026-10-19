@@ -183,18 +183,12 @@ def parse(source: str, depth: int = 0) -> tuple[Command, ...]:
     if any(node.get("Type") not in ALLOWED_NODES for node in records):
         raise UnsupportedSyntax("dynamic or unsupported shell syntax requires explicit review")
     data = source.encode()
-    enclosing = enclosing_writes(records, data)
     commands: list[Command] = []
     for node in records:
         if node.get("Type") != "CallExpr" or not node.get("Args"):
             continue
         owner = owners.get(id(node), node)
-        command = literal_command(node, owner, data)
-        command = replace(
-            command,
-            wrapper_depth=depth,
-            writes=command.writes + enclosing.get(id(node), ()),
-        )
+        command = replace(literal_command(node, owner, data), wrapper_depth=depth)
         commands.append(command)
         commands.extend(unwrapped(command))
         innermost = commands[-1]
@@ -203,20 +197,6 @@ def parse(source: str, depth: int = 0) -> tuple[Command, ...]:
         elif Path(innermost.arguments[0]).name in SHELLS and (stdin := heredoc_script(owner)):
             commands.extend(parse(stdin, innermost.wrapper_depth + 1))
     return tuple(commands)
-
-
-def enclosing_writes(records: tuple[dict, ...], data: bytes) -> dict[int, tuple[str, ...]]:
-    """Files a compound statement's redirections write, such as `{ ...; } > f`, keyed by each call inside it."""
-    found: dict[int, tuple[str, ...]] = {}
-    for statement in records:
-        compound = statement.get("Cmd")
-        if not isinstance(compound, dict) or compound.get("Type") == "CallExpr":
-            continue
-        targets = statement_writes(statement, data)
-        calls = (node for node in nodes(compound) if node.get("Type") == "CallExpr") if targets else ()
-        for call in calls:
-            found[id(call)] = found.get(id(call), ()) + targets
-    return found
 
 
 def statement_writes(statement: dict, data: bytes) -> tuple[str, ...]:
