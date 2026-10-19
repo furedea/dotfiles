@@ -31,6 +31,8 @@ REMOTE_REASON = (
     "or use gh api / nix store prefetch-file for exact values and files."
 )
 # Settings that can send a request to a local server somewhere else: a proxy, or another configuration file.
+# The only programs the literal_words rules govern; through any wrapper they get main's rules.
+LITERAL_PROGRAMS = frozenset({"gh", "herdr"})
 # Characters through which any shell may expand or run something; a command holding one anywhere
 # outside single quotes, in the program name, an assignment, or a redirect included, gets no
 # literal_words rule.
@@ -160,8 +162,8 @@ def decide(kind: str, payload: dict, directory: Path = ROOT) -> Verdict:
 def command_verdict(kind: str, payload: dict, policy: Policy) -> Verdict:
     """The first objection any segment raises, then whether the command's settings could redirect a request.
 
-    Rules marked literal_words apply only when the whole command text, outside single quotes, holds
-    nothing a shell expands.
+    Rules marked literal_words apply only when the whole command is one plain gh or herdr call whose
+    text, outside single quotes, holds nothing a shell expands.
     """
     command = payload.get("tool_input", {}).get("command") or ""
     try:
@@ -169,7 +171,7 @@ def command_verdict(kind: str, payload: dict, policy: Policy) -> Verdict:
     except shell_syntax.UnsupportedSyntax as error:
         preview = shell_syntax.command_preview(command)
         return hook_decision.ask(f"Needs review: {error}.\n\nCommand: {preview}", "syntax")
-    if expands_outside_single_quotes(command):
+    if not allows_literal_rules(command, commands):
         policy = Policy(policy.prefixes, command_policy.literal_rules(policy.rules, literal=False))
     verdicts = (objection(kind, item, policy) for item in commands)
     verdict = next((item for item in verdicts if item.decision != "allow"), hook_decision.ALLOW)
@@ -178,14 +180,19 @@ def command_verdict(kind: str, payload: dict, policy: Policy) -> Verdict:
     return verdict
 
 
-def expands_outside_single_quotes(command: str) -> bool:
-    """Whether the command holds an expanding character outside single quotes; when unsure, it does."""
-    if not EXPANDING_TEXT.search(command):
+def allows_literal_rules(command: str, commands: tuple[shell_syntax.Command, ...]) -> bool:
+    """Whether the command is exactly one plain gh or herdr call with nothing expanding outside single
+    quotes: no list, pipe, compound, wrapper, eval, or nested script; when unsure, it is not."""
+    if len(commands) != 1 or Path(commands[0].arguments[0]).name not in LITERAL_PROGRAMS:
         return False
     try:
-        return bool(EXPANDING_TEXT.search(shell_syntax.text_outside_single_quotes(command)))
+        if not shell_syntax.is_one_simple_command(command):
+            return False
+        return not EXPANDING_TEXT.search(command) or not EXPANDING_TEXT.search(
+            shell_syntax.text_outside_single_quotes(command)
+        )
     except shell_syntax.UnsupportedSyntax:
-        return True
+        return False
 
 
 def record(verdict: Verdict, attempt: Attempt) -> None:

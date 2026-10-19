@@ -207,12 +207,23 @@ def statement_writes(statement: dict, data: bytes) -> tuple[str, ...]:
     )
 
 
-def text_outside_single_quotes(source: str) -> str:
-    """The source with every single-quoted string removed, located by the parser rather than by a scan.
+def is_one_simple_command(source: str) -> bool:
+    """Whether the source is a single plain call: no list, pipe, background, negation, or compound."""
+    statements = syntax_tree(source).get("Stmts", [])
+    if len(statements) != 1:
+        return False
+    statement = statements[0]
+    flags = ("Background", "Coprocess", "Negated", "Disown")
+    command = statement.get("Cmd")
+    return (
+        not any(statement.get(flag) for flag in flags)
+        and isinstance(command, dict)
+        and command.get("Type") == "CallExpr"
+    )
 
-    Neither bash nor zsh expands anything inside single quotes. A dollar-quoted $'...' string stays,
-    since the shell decodes escapes in it.
-    """
+
+def text_outside_single_quotes(source: str) -> str:
+    """The source without its single-quoted strings, which no shell expands; $'...' stays, as it decodes escapes."""
     data = source.encode()
     spans = sorted(
         (node["Pos"]["Offset"], node["End"]["Offset"])

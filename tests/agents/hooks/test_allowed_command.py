@@ -73,7 +73,7 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
         pytest.param("curl -s -H 'Accept: x' -o out.json http://127.0.0.1:8080/api", id="local server downloads"),
         pytest.param("curl -X POST -d '{\"a\": 1}' http://127.0.0.1:8080/api", id="local server writes"),
         pytest.param(
-            'gh api -H "Accept: application/vnd.github.raw" repos/o/r/contents/README.md | sed -n 1,20p',
+            'gh api -H "Accept: application/vnd.github.raw" repos/o/r/contents/README.md',
             id="GitHub reads with a header before the endpoint",
         ),
         pytest.param(
@@ -234,6 +234,40 @@ def test_commands_whose_effects_the_checks_can_see_pass(capsys: pytest.CaptureFi
                 ("an expansion in a compound redirect", f'{{ {plain}; }} > "$HOME[idx]"/out'),
                 ("a backtick anywhere", f"{plain}; echo `date`"),
                 ("a glob character anywhere", f"{plain} > out?"),
+                ("eval of a single-quoted script", "eval '" + plain.replace("'", '"') + "'"),
+                (
+                    "eval re-expanding a zsh array",
+                    "printf '%s\\n' 'x' | read -rA a; eval '" + plain.replace("'", '"') + ' "$a[@]"\'',
+                ),
+            )
+        ),
+        *(
+            pytest.param(command, [], id=f"an allowed header read {name}")
+            for name, command in (
+                ("after a semicolon", "true; gh api -H 'Accept: x' repos/o/r"),
+                ("before a semicolon", "gh api -H 'Accept: x' repos/o/r; true"),
+                ("after &&", "true && gh api -H 'Accept: x' repos/o/r"),
+                ("after ||", "false || gh api -H 'Accept: x' repos/o/r"),
+                ("in a pipeline", "gh api -H 'Accept: x' repos/o/r | cat"),
+                ("in the background", "gh api -H 'Accept: x' repos/o/r &"),
+                ("negated", "! gh api -H 'Accept: x' repos/o/r"),
+                ("in a subshell", "( gh api -H 'Accept: x' repos/o/r )"),
+                ("in a block", "{ gh api -H 'Accept: x' repos/o/r; }"),
+                ("in a function", "f(){ gh api -H 'Accept: x' repos/o/r; }; f"),
+                ("through eval", "eval 'gh api -H \"Accept: x\" repos/o/r'"),
+                ("through source", "source ./env.sh && gh api -H 'Accept: x' repos/o/r"),
+                ("through a dot", ". ./env.sh; gh api -H 'Accept: x' repos/o/r"),
+                ("through exec", "exec gh api -H 'Accept: x' repos/o/r"),
+                ("through command", "command gh api -H 'Accept: x' repos/o/r"),
+                ("through env", "env gh api -H 'Accept: x' repos/o/r"),
+                ("through xargs", "echo x | xargs gh api -H 'Accept: x' repos/o/r"),
+                ("through sh -c", "sh -c 'gh api -H \"Accept: x\" repos/o/r'"),
+                ("through bash -c", "bash -c 'gh api -H \"Accept: x\" repos/o/r'"),
+                ("through zsh -c", "zsh -c 'gh api -H \"Accept: x\" repos/o/r'"),
+                ("through nohup", "nohup gh api -H 'Accept: x' repos/o/r"),
+                ("through time", "time gh api -H 'Accept: x' repos/o/r"),
+                ("through timeout", "timeout 5 gh api -H 'Accept: x' repos/o/r"),
+                ("through nice", "nice gh api -H 'Accept: x' repos/o/r"),
             )
         ),
         pytest.param(
