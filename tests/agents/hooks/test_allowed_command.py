@@ -234,6 +234,13 @@ def test_commands_whose_effects_the_checks_can_see_pass(capsys: pytest.CaptureFi
                 ("an expansion in a compound redirect", f'{{ {plain}; }} > "$HOME[idx]"/out'),
                 ("a backtick anywhere", f"{plain}; echo `date`"),
                 ("a glob character anywhere", f"{plain} > out?"),
+                ("a zsh integer assignment prefix", f"RANDOM='pipestatus[1$(printf REVIEW_MARKER >&2)]' {plain}"),
+                ("a plain assignment prefix", f"X=1 {plain}"),
+                ("a redirect to a file", f"{plain} > out.txt"),
+                (
+                    "a redirect into a process substitution",
+                    f"{plain} > >(RANDOM='pipestatus[1$(printf REVIEW_MARKER >&2)]' cat)",
+                ),
                 ("eval of a single-quoted script", "eval '" + plain.replace("'", '"') + "'"),
                 (
                     "eval re-expanding a zsh array",

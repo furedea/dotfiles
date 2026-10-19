@@ -208,17 +208,19 @@ def statement_writes(statement: dict, data: bytes) -> tuple[str, ...]:
 
 
 def is_one_simple_command(source: str) -> bool:
-    """Whether the source is a single plain call: no list, pipe, background, negation, or compound."""
+    """Whether the source is a single plain call: no list, pipe, background, negation, compound,
+    leading assignment, or redirect, since zsh can run code while assigning to an integer variable."""
     statements = syntax_tree(source).get("Stmts", [])
     if len(statements) != 1:
         return False
     statement = statements[0]
-    flags = ("Background", "Coprocess", "Negated", "Disown")
+    flags = ("Background", "Coprocess", "Negated", "Disown", "Redirs")
     command = statement.get("Cmd")
     return (
         not any(statement.get(flag) for flag in flags)
         and isinstance(command, dict)
         and command.get("Type") == "CallExpr"
+        and not command.get("Assigns")
     )
 
 
