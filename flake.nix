@@ -18,7 +18,7 @@
     # Pinned: nix/patches/hermes_gateway_service_resources.patch backports
     # NousResearch/hermes-agent#85365 and no longer applies to newer revisions, so
     # lock file maintenance must not move this input. Unpin once #85365 is merged.
-    hermes-agent.url = "github:NousResearch/hermes-agent/56a41715dc3b8bf6f50a740ff9416c4036ef4259";
+    hermes-agent.url = "github:NousResearch/hermes-agent/5fc490e2b34123212d73ef316086f939567a725a";
     google-workspace-cli = {
       url = "github:googleworkspace/cli";
       inputs.nixpkgs.follows = "nixpkgs";
