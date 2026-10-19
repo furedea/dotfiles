@@ -22,6 +22,7 @@ import command_policy
 import hook_decision
 from hook_decision import Verdict
 import removal_policy
+import request_policy
 import shell_syntax
 
 
@@ -90,6 +91,8 @@ def objection(kind: str, item: shell_syntax.Command, policy: Policy) -> Verdict:
         return hook_decision.deny(
             f"BLOCKED: forbidden command: {reason}.\n\nCommand: {preview}\n\n{hook_decision.REVIEW_HINT}"
         )
+    if not candidate.program_is_dynamic and candidate.arguments[0] in request_policy.PROGRAMS:
+        return request_objection(candidate, preview)
     if candidate.program_is_dynamic or candidate.arguments[0] not in command_policy.governed_programs(rules):
         return hook_decision.ALLOW
     governed = command_policy.prefix_rule(candidate.arguments, prefixes, "allow")
@@ -103,6 +106,21 @@ def objection(kind: str, item: shell_syntax.Command, policy: Policy) -> Verdict:
     return hook_decision.ask(
         f"Needs review: command not in allowlist. '{prefix}' is approved, but not in this form.\n\nCommand: {preview}",
         prefix,
+    )
+
+
+def request_objection(candidate: shell_syntax.Command, preview: str) -> Verdict:
+    """Pass a curl or wget call whose decoded, literal arguments only fetch or stay on this machine."""
+    if (
+        not candidate.appends_input
+        and not candidate.has_dynamic_words
+        and request_policy.is_fetch(candidate.arguments)
+    ):
+        return hook_decision.ALLOW
+    program = candidate.arguments[0]
+    return hook_decision.ask(
+        f"Needs review: this {program} call may send data or reach past its read-only options.\n\nCommand: {preview}",
+        program,
     )
 
 

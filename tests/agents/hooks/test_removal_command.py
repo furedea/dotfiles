@@ -132,3 +132,15 @@ def test_a_symlink_out_of_the_temporary_directory_does_not_count_as_temporary(
 def test_untracked_names_that_git_would_read_as_patterns_ask(project: Path, git_project: Path, name: str) -> None:
     (git_project / name).write_text("untracked")
     assert decide("allowed", f"rm '{name}'") == "ask"
+
+
+@pytest.mark.parametrize("flag", ["--assume-unchanged", "--skip-worktree"])
+def test_tracked_files_whose_changes_git_skips_ask(project: Path, git_project: Path, flag: str) -> None:
+    git(git_project, "update-index", flag, "tracked.txt")
+    (git_project / "tracked.txt").write_text("uncommitted")
+    assert decide("allowed", "rm tracked.txt") == "ask"
+
+
+def test_a_flagged_file_without_changes_still_asks(project: Path, git_project: Path) -> None:
+    git(git_project, "update-index", "--assume-unchanged", "tracked.txt")
+    assert decide("allowed", "rm tracked.txt") == "ask"

@@ -49,19 +49,6 @@
     },
     {
       "programs": [
-        "curl",
-        "wget"
-      ],
-      "patterns": [
-        "^curl( -[A-Za-z]+)*( -X (GET|POST|PUT|PATCH|DELETE))?( -H '[^']*')*( -d '[^']*')?( -o [A-Za-z0-9._/-]+)? https?://(localhost|127\\.0\\.0\\.1)(:[0-9]+)?[A-Za-z0-9._/?&=%-]*$",
-        "^wget( -[A-Za-z]+)*( -O [A-Za-z0-9._/-]+)? https?://(localhost|127\\.0\\.0\\.1)(:[0-9]+)?[A-Za-z0-9._/?&=%-]*$",
-        "^curl( -[#0-9IJLNORSZfgiklsv]+| --(silent|show-error|fail|fail-with-body|location|include|head|remote-name|remote-name-all|remote-header-name|create-dirs|compressed|insecure|http1\\.1|http2|progress-bar|no-progress-meter|verbose|get|globoff|no-buffer|ipv4|ipv6|retry-all-errors|retry-connrefused)| (-[#0-9IJLNORSZfgiklsv]*H|--header) ('[^'@][^']*'|\"[^\"@]([^\"\\\\]|\\\\.)*\"|[^ '\"_@-][^ '\"]*|_[^ '\"]+)| (-[#0-9IJLNORSZfgiklsv]*[ADemorwz]|--(output|output-dir|write-out|max-time|connect-timeout|retry|retry-delay|retry-max-time|user-agent|referer|range|dump-header|max-filesize|limit-rate)) (('[^']*'|\"([^\"\\\\]|\\\\.)*\"|[^ '\"_-][^ '\"]*|_[^ '\"]+)|-)| (-X|--request) (GET|HEAD)| ('[^']*'|\"([^\"\\\\]|\\\\.)*\"|[^ '\"_-][^ '\"]*|_[^ '\"]+))*$",
-        "^wget( -[qSNcvk]+| -n[cdvH]| --(quiet|spider|server-response|no-verbose|no-check-certificate|continue|timestamping)| (-[OPTtU]|--(output-document|directory-prefix|user-agent|header|timeout|tries)) (('[^']*'|\"([^\"\\\\]|\\\\.)*\"|[^ '\"_-][^ '\"]*|_[^ '\"]+)|-)| ('[^']*'|\"([^\"\\\\]|\\\\.)*\"|[^ '\"_-][^ '\"]*|_[^ '\"]+))*$"
-      ],
-      "justification": "Allow any request to local servers and only fetches elsewhere; options that send data, pick another method, or read options from a file ask, and the sandbox limits where requests go."
-    },
-    {
-      "programs": [
         "herdr"
       ],
       "patterns": [

@@ -142,22 +142,33 @@ def temporary_roots() -> tuple[Path, ...]:
 
 
 def is_restorable(target: Path) -> bool:
-    """A tracked file whose staged and working contents match HEAD comes back with git restore."""
-    if target.is_dir() or not (target.is_file() or target.is_symlink()):
+    """A regular tracked file whose working, staged, and HEAD contents are one blob comes back with git restore.
+
+    The contents are hashed rather than diffed, since Git skips its change check for files flagged
+    assume-unchanged or skip-worktree; such flagged files never count as restorable.
+    """
+    if target.is_symlink() or not target.is_file():
         return False
-    return git(target.parent, "ls-files", "--error-unmatch", "--", target.name) and git(
-        target.parent, "diff", "--quiet", "HEAD", "--", target.name
-    )
+    entries = git(target.parent, "ls-files", "-v", "-s", "--", target.name).splitlines()
+    if len(entries) != 1:
+        return False
+    tag, mode, staged, _ = entries[0].split(" ", 3)
+    if tag != "H" or mode not in {"100644", "100755"}:
+        return False
+    committed = git(target.parent, "rev-parse", "--verify", "--quiet", f"HEAD:./{target.name}")
+    working = git(target.parent, "hash-object", "--", target.name)
+    return staged == committed == working
 
 
-def git(directory: Path, *arguments: str) -> bool:
+def git(directory: Path, *arguments: str) -> str:
+    """Run a Git query and return its trimmed output, or an empty string when it fails."""
     try:
         result = subprocess.run(
             ["git", "--literal-pathspecs", "-C", str(directory), *arguments],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
             check=False,
         )
     except OSError:
-        return False
-    return result.returncode == 0
+        return ""
+    return result.stdout.strip() if result.returncode == 0 else ""

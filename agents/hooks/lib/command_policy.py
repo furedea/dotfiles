@@ -11,10 +11,6 @@ import git_safety
 import shell_syntax
 
 
-# Programs whose every option the precise rules judge after the shell has decoded it.
-DECODED_PROGRAMS = frozenset({"curl", "wget"})
-
-
 def regex_matches(pattern: str, value: str, insensitive: bool = False) -> bool:
     """Use the existing system regex engine instead of silently changing regex dialects."""
     return any_regex_matches((pattern,), value, insensitive)
@@ -106,8 +102,8 @@ def canonical(command: shell_syntax.Command) -> shell_syntax.Command:
 
 
 def judged_text(command: shell_syntax.Command) -> str:
-    """The text the precise rules read: requests are judged on their decoded options, others on their source."""
-    if command.arguments[0] in DECODED_PROGRAMS or command.arguments[:2] == ("gh", "api"):
+    """The text the precise rules read: gh api is judged on its decoded options, others on their source."""
+    if command.arguments[:2] == ("gh", "api"):
         return command.decoded_words_text
     return command.static_words_text
 
