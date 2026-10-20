@@ -1713,14 +1713,14 @@
       "prefix": [
         "curl"
       ],
-      "justification": "Allow requests to local servers only; the sandbox and the precise rules keep remote fetches out."
+      "justification": "Allow requests to local servers; the command hook asks before any remote request, which can send local data."
     },
     {
       "decision": "allow",
       "prefix": [
         "wget"
       ],
-      "justification": "Allow requests to local servers only; the sandbox and the precise rules keep remote fetches out."
+      "justification": "Allow requests to local servers; the command hook asks before any remote request, which can send local data."
     },
     {
       "decision": "allow",
@@ -2402,6 +2402,42 @@
         "get"
       ],
       "justification": "Allow read-only Herdr inspection; controlling other panes asks first."
+    },
+    {
+      "decision": "allow",
+      "prefix": [
+        "herdr",
+        "agent",
+        "read"
+      ],
+      "justification": "Allow read-only Herdr inspection; controlling other panes asks first."
+    },
+    {
+      "decision": "allow",
+      "prefix": [
+        "herdr",
+        "agent",
+        "wait"
+      ],
+      "justification": "Allow read-only Herdr inspection; controlling other panes asks first."
+    },
+    {
+      "decision": "allow",
+      "prefix": [
+        "herdr",
+        "worktree",
+        "list"
+      ],
+      "justification": "Allow read-only Herdr inspection; controlling other panes asks first."
+    },
+    {
+      "decision": "allow",
+      "prefix": [
+        "herdr",
+        "worktree",
+        "open"
+      ],
+      "justification": "Allow handing work to a new Herdr session; the hooks limit prompts to agents this session started."
     },
     {
       "decision": "ask",

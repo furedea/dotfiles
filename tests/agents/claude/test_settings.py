@@ -80,6 +80,11 @@ def test_pnpm_fetches_packages_from_the_npm_registry_inside_the_sandbox() -> Non
     assert {"registry.npmjs.org"} <= set(sandbox["network"]["allowedDomains"])
 
 
+def test_uv_fetches_packages_from_pypi_inside_the_sandbox() -> None:
+    sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
+    assert {"pypi.org", "files.pythonhosted.org"} <= set(sandbox["network"]["allowedDomains"])
+
+
 def test_pnpm_installs_into_its_shared_store_from_inside_the_sandbox() -> None:
     sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
     assert {"~/.local/share/pnpm"} <= set(sandbox["filesystem"]["allowWrite"])

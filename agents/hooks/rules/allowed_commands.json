@@ -49,14 +49,25 @@
     },
     {
       "programs": [
+        "gh"
+      ],
+      "literal_words": true,
+      "patterns": [
+        "^gh api( (-H|--header) ('(Accept|X-GitHub-Api-Version): [^']*'|\"(Accept|X-GitHub-Api-Version): [^\"$`\\\\]*\"))* ('[^']*'|[^ '-][^ ']*)( --paginate| --slurp| -i| --include| --jq ('[^']*'|[^' ]+)| -q ('[^']*'|[^' ]+)| -H '[^']*'| --cache [0-9]+[smh]| (-H|--header) ('(Accept|X-GitHub-Api-Version): [^']*'|\"(Accept|X-GitHub-Api-Version): [^\"$`\\\\]*\"))*$"
+      ],
+      "justification": "Allow GitHub reads that ask for a media type or API version by header; every other word must be literal, so no expansion can add an option beside the header."
+    },
+    {
+      "programs": [
         "curl",
         "wget"
       ],
+      "literal_words": true,
       "patterns": [
-        "^curl( -[A-Za-z]+)*( -X (GET|POST|PUT|PATCH|DELETE))?( -H '[^']*')*( -d '[^']*')?( -o [A-Za-z0-9._/-]+)? https?://(localhost|127\\.0\\.0\\.1)(:[0-9]+)?[A-Za-z0-9._/?&=%-]*$",
-        "^wget( -[A-Za-z]+)*( -O [A-Za-z0-9._/-]+)? https?://(localhost|127\\.0\\.0\\.1)(:[0-9]+)?[A-Za-z0-9._/?&=%-]*$"
+        "^curl( -[sSfiIv]+)*( -X (GET|POST|PUT|PATCH|DELETE))?( -H '[^']*')*( -d '[^']*')?( -o [A-Za-z0-9._/-]+)? (https?://(localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)?(/[A-Za-z0-9._/?&=%-]*)?|'https?://(localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)?(/[A-Za-z0-9._/?&=%-]*)?')$",
+        "^wget (--help|--version)$"
       ],
-      "justification": "Allow requests to local servers; remote fetches leave the machine."
+      "justification": "Allow a single plain curl call, with value-less flags (-s -S -f -i -I -v) and the fixed -X, -H, -d, and -o slots, to a local server named exactly localhost, 127.0.0.1, or [::1]; any assignment, redirect, wrapper, list, or option that follows redirects, reads a config file, or sets a proxy asks, and wget, which follows redirects by default, asks except for its help and version."
     },
     {
       "programs": [
@@ -84,6 +95,20 @@
         "^herdr workspace get( |$)"
       ],
       "justification": "Allow Herdr reads and handing work to a new Claude or Codex session; repository trust, pane environments, other agent kinds, and driving existing panes run outside the sandbox and ask."
+    },
+    {
+      "programs": [
+        "herdr"
+      ],
+      "literal_words": true,
+      "patterns": [
+        "^herdr (agent (read|wait)|worktree (list|open)) --help$",
+        "^herdr agent read [^ -][^ ]*( --(source|lines|format) [^ ]+| --ansi)*$",
+        "^herdr agent wait [^ -][^ ]*( --until [a-z]+| --timeout [0-9]+)*$",
+        "^herdr worktree list( --(workspace|cwd) ('[^']*'|\"([^\"\\\\]|\\\\.)*\"|[^ '\"]+))*$",
+        "^herdr worktree open( --(workspace|cwd|path|branch|label) ('[^']*'|\"([^\"\\\\]|\\\\.)*\"|[^ '\"]+)| --(no-)?focus)*$"
+      ],
+      "justification": "Allow watching lanes and their worktrees; every word must be literal, so no expansion can add an option such as --trust-repository."
     }
   ]
 }

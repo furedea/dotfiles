@@ -13,43 +13,22 @@ from typing import Self
 
 COMMAND_PREVIEW_LIMIT = 200
 RUN_TIME_PLACEHOLDER = "_"
+# Statements, words, arithmetic, loops and branches, and tests that the inspection understands.
 ALLOWED_NODES = frozenset(
     {
         None,
-        "File",
-        "CallExpr",
-        "BinaryCmd",
-        "Subshell",
-        "Block",
-        "Lit",
-        "SglQuoted",
-        "DblQuoted",
-        "ParamExp",
-        "TimeClause",
-        "CmdSubst",
-        "ProcSubst",
-        "ArithmExp",
-        "ArithmCmd",
-        "BinaryArithm",
-        "UnaryArithm",
-        "ParenArithm",
-        "ForClause",
-        "WordIter",
-        "CStyleLoop",
-        "WhileClause",
-        "IfClause",
-        "CaseClause",
-        "CaseItem",
-        "TestClause",
-        "BinaryTest",
-        "UnaryTest",
-        "ParenTest",
-        "DeclClause",
-        "Word",
+        *(
+            "File CallExpr BinaryCmd Subshell Block TimeClause DeclClause "
+            "Word Lit SglQuoted DblQuoted ParamExp CmdSubst ProcSubst "
+            "ArithmExp ArithmCmd BinaryArithm UnaryArithm ParenArithm "
+            "ForClause WordIter CStyleLoop WhileClause IfClause CaseClause CaseItem "
+            "TestClause BinaryTest UnaryTest ParenTest"
+        ).split(),
     }
 )
-# Every command inside a substitution or clause is a CallExpr that parse judges on its own; the
-# substituted word itself is only known at run time.
+# Every command inside a substitution, clause, or function body is a CallExpr that parse judges on
+# its own, so a body is judged where it is defined and a call by its own name; the substituted word
+# itself is only known at run time.
 SUBSTITUTIONS = frozenset({"CmdSubst", "ProcSubst", "ArithmExp"})
 # A ParamExp other than the home directory makes its word a run-time word; Word is an operand inside it.
 WORD_PARTS = frozenset({None, "Lit", "SglQuoted", "DblQuoted", "ParamExp", "Word"}) | SUBSTITUTIONS
@@ -59,6 +38,16 @@ PARAMETER_MODIFIERS = ("Excl", "Length", "Width", "Index", "Slice", "Repl", "Exp
 SHELLS = frozenset({"bash", "sh", "zsh"})
 COMMAND_LOOKUP = frozenset({"-v", "-V"})
 ASSIGNMENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=")
+# All positional parameters, any single one (a digit), and every array element ([@] or [*]) can
+# become any number of words, options included, even inside double quotes.
+SPREADING = frozenset({"@", "*"})
+# Parts that the shell splits into words, or expands into several, when they stand outside quotes.
+SPLIT_PARTS = frozenset({"ParamExp", "CmdSubst", "ProcSubst", "ArithmExp"})
+# A bracket opens a glob only when a closing bracket follows, so the test command `[` stays literal.
+GLOB = re.compile(r"(?<!\\)[*?]|(?<!\\)\[.+\]")
+# Brace expansion can pair braces across quoted parts, so any unquoted brace counts.
+BRACES = frozenset("{}")
+LINE_CONTINUATION = "\\\n"
 # Process wrappers run their trailing arguments as a command. Each entry lists the flags without an
 # operand and the options whose operand is the next token; unknown options are refused, not skipped.
 WRAPPERS: dict[str, tuple[frozenset[str], frozenset[str]]] = {
@@ -92,7 +81,9 @@ class Command:
 
     `dynamic` flags arguments whose value is only known at run time (a glob or a parameter other
     than the home directory); such arguments carry their source text. `writes` lists the files
-    that output redirections would create or overwrite.
+    that output redirections would create or overwrite. `appends_input` marks a command that xargs
+    runs with further arguments read from its input. `spreading` flags arguments that may become
+    several words at run time, options included.
     """
 
     raw: str
@@ -103,12 +94,16 @@ class Command:
     trailer: str = ""
     dynamic: tuple[bool, ...] = ()
     writes: tuple[str, ...] = ()
+    appends_input: bool = False
+    spreading: tuple[bool, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.words:
             object.__setattr__(self, "words", self.arguments)
         if not self.dynamic:
             object.__setattr__(self, "dynamic", (False,) * len(self.arguments))
+        if not self.spreading:
+            object.__setattr__(self, "spreading", (False,) * len(self.arguments))
 
     @property
     def words_text(self) -> str:
@@ -135,6 +130,15 @@ class Command:
         )
 
     @property
+    def hides_options(self) -> bool:
+        """Whether an option can reach the program unseen: quoted or escaped, or inside a spreading expansion."""
+        quoted_option = any(
+            argument.startswith("-") and word != argument
+            for word, argument in zip(self.words, self.arguments, strict=True)
+        )
+        return quoted_option or any(self.spreading)
+
+    @property
     def has_dynamic_words(self) -> bool:
         return any(self.dynamic)
 
@@ -154,6 +158,7 @@ class Command:
             wrapper_depth=wrapper_depth,
             words=words,
             dynamic=((False,) * len(head)) + self.dynamic[index:],
+            spreading=((False,) * len(head)) + self.spreading[index:],
         )
 
 
@@ -192,6 +197,46 @@ def parse(source: str, depth: int = 0) -> tuple[Command, ...]:
         elif Path(innermost.arguments[0]).name in SHELLS and (stdin := heredoc_script(owner)):
             commands.extend(parse(stdin, innermost.wrapper_depth + 1))
     return tuple(commands)
+
+
+def statement_writes(statement: dict, data: bytes) -> tuple[str, ...]:
+    redirects = [redirect for redirect in statement.get("Redirs", []) if redirect.get("Word")]
+    targets = [literal_word(redirect["Word"], data)[0] for redirect in redirects]
+    return tuple(
+        target for redirect, target in zip(redirects, targets, strict=True) if writes_file(redirect, target, data)
+    )
+
+
+def is_one_simple_command(source: str) -> bool:
+    """Whether the source is one plain call: no list, pipe, background, negation, compound, assignment, or redirect."""
+    statements = syntax_tree(source).get("Stmts", [])
+    if len(statements) != 1:
+        return False
+    statement = statements[0]
+    flags = ("Background", "Coprocess", "Negated", "Disown", "Redirs")
+    command = statement.get("Cmd")
+    return (
+        not any(statement.get(flag) for flag in flags)
+        and isinstance(command, dict)
+        and command.get("Type") == "CallExpr"
+        and not command.get("Assigns")
+    )
+
+
+def text_outside_single_quotes(source: str) -> str:
+    """The source without its single-quoted strings, which no shell expands; $'...' stays, as it decodes escapes."""
+    data = source.encode()
+    spans = sorted(
+        (node["Pos"]["Offset"], node["End"]["Offset"])
+        for node in nodes(syntax_tree(source))
+        if node.get("Type") == "SglQuoted" and not node.get("Dollar")
+    )
+    kept, start = [], 0
+    for begin, end in spans:
+        kept.append(data[start:begin])
+        start = max(start, end)
+    kept.append(data[start:])
+    return b"".join(kept).decode()
 
 
 def heredoc_script(owner: dict) -> str:
@@ -246,9 +291,8 @@ def literal_command(node: dict, owner: dict, data: bytes) -> Command:
         words=tuple(source_text(word, data) for word in node["Args"]),
         trailer=" ".join(source_text(redirect, data) for redirect in redirects),
         dynamic=tuple(flag for _, flag in decoded),
-        writes=tuple(
-            target for redirect, target in zip(redirects, targets, strict=True) if writes_file(redirect, target, data)
-        ),
+        spreading=tuple(spreads(word, data) for word in node["Args"]),
+        writes=statement_writes(owner, data),
     )
 
 
@@ -294,6 +338,28 @@ def literal_word(word: dict, source: bytes) -> tuple[str, bool]:
     return "".join(literal_part(index, part, source) for index, part in enumerate(parts)), False
 
 
+def spreads(word: dict, source: bytes) -> bool:
+    """Whether a word may become several words, or other words than the decoder sees.
+
+    That is an unquoted expansion, substitution, glob, or brace, a line continuation, which the
+    shell removes, or a positional parameter or array expansion even in quotes.
+    """
+    parts = word.get("Parts", [])
+    unquoted = "".join(part.get("Value", "") for part in parts if part.get("Type") == "Lit")
+    if any(part.get("Type") in SPLIT_PARTS for part in parts) or GLOB.search(unquoted) or BRACES & set(unquoted):
+        return True
+    if LINE_CONTINUATION in source_text(word, source):
+        return True
+    for part in word_nodes(word):
+        if part.get("Type") != "ParamExp":
+            continue
+        name = part.get("Param", {}).get("Value", "")
+        index = "".join(inner.get("Value", "") for inner in (part.get("Index") or {}).get("Parts", []))
+        if name in SPREADING or name.isdigit() or index in SPREADING:
+            return True
+    return False
+
+
 def word_nodes(value: object) -> Iterator[dict]:
     """Walk a word's parts without entering substitutions, whose commands parse judges separately."""
     if isinstance(value, dict):
@@ -314,11 +380,8 @@ def is_home_parameter(part: dict) -> bool:
 
 
 def is_literal_text(value: str, *, first: bool) -> bool:
-    """Unquoted globs expand at run time, and so does a leading tilde unless it names the home directory.
-
-    A bracket opens a glob only when a closing bracket follows, so the test command `[` stays literal.
-    """
-    if re.search(r"(?<!\\)[*?]|(?<!\\)\[.+\]", value):
+    """Unquoted globs expand at run time, and so does a leading tilde unless it names the home directory."""
+    if GLOB.search(value):
         return False
     if value.startswith("~"):
         return first and (value == "~" or value.startswith("~/"))
@@ -344,7 +407,8 @@ def literal_part(index: int, part: dict, source: bytes) -> str:
 
 
 def unquoted(text: str) -> str:
-    values = shlex.split(text, posix=True)
+    """Decode an unquoted or double-quoted part as the shell does, dropping each line continuation."""
+    values = shlex.split(text.replace(LINE_CONTINUATION, ""), posix=True)
     if len(values) != 1:
         raise UnsupportedSyntax("a shell word could not be decoded unambiguously")
     return values[0]
@@ -361,7 +425,8 @@ def unwrapped(command: Command) -> list[Command]:
     """Peel process wrappers so policy sees the program they eventually run."""
     exposed: list[Command] = []
     while (index := wrapped_index(command.arguments)) is not None:
-        command = command.rebased(index, depth=command.wrapper_depth + 1)
+        appends_input = command.appends_input or Path(command.arguments[0]).name == "xargs"
+        command = replace(command.rebased(index, depth=command.wrapper_depth + 1), appends_input=appends_input)
         exposed.append(command)
     return exposed
 

@@ -136,7 +136,16 @@ def test_global_prefix_rejects_home_manager_activation(capsys: pytest.CaptureFix
 
 
 @pytest.mark.parametrize("kind", ["allowed", "forbidden"])
-@pytest.mark.parametrize("command", ["bash <<EOF\necho $X\nEOF", "echo $'\\x41'"])
+@pytest.mark.parametrize(
+    "command",
+    [
+        "bash <<EOF\necho $X\nEOF",
+        "echo $'\\x41'",
+        "f(){ git add -A; }",
+        "f() { git commit --no-verify -m x; }; f",
+        "function f { bash -c 'echo hi'; }",
+    ],
+)
 def test_uninspectable_commands_are_left_to_the_user(kind: str, command: str) -> None:
     verdict = guard.decide(kind, {"tool_input": {"command": command}})
     assert verdict.decision == "ask"
@@ -151,6 +160,8 @@ def test_uninspectable_commands_are_left_to_the_user(kind: str, command: str) ->
         "bash <<'EOF'\nrm -rf build\nEOF",
         "if true; then git add -A; fi",
         'echo "${TARGET:-$(rm -rf build)}"',
+        "{ rm -rf /Users/kaito/project/build; } > $'out'",
+        '( rm -rf build ) >> "$LOG"',
     ],
 )
 def test_denials_apply_to_commands_inside_substitutions_clauses_and_shell_heredocs(command: str) -> None:
