@@ -17,7 +17,7 @@
         "^gh api repos/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+/pulls/[0-9]+/reviews/[0-9]+/comments( --paginate)? --jq '[^']*'$",
         "^gh api repos/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+ --method POST -f parent_issue_id=[a-zA-Z0-9_=]+ /issues/[0-9]+/sub_issues$",
         "^gh api graphql -f query='(query([[:space:]({{])|[{])[^']*('\\\\''[^']*)*'$",
-        "^gh api ('[^']*'|[^ '-][^ ']*)( --paginate| --slurp| -i| --include| --jq ('[^']*'|[^' ]+)| -q ('[^']*'|[^' ]+)| -H '[^']*'| --cache [0-9]+[smh])*$",
+        "^gh api( --allow-escape-sequences)? ('[^']*'|[^ '-][^ ']*)( --paginate| --slurp| --allow-escape-sequences| -i| --include| --jq ('[^']*'|[^' ]+)| -q ('[^']*'|[^' ]+)| -H '[^']*'| --cache [0-9]+[smh])*$",
         "^gh issue (list|status|view)( |$)",
         "^gh issue (create|comment|develop|edit|reopen|close)( |$)",
         "^gh label (list|create)( |$)",
