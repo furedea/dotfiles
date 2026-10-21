@@ -220,6 +220,42 @@ def test_a_group_close_always_asks(repository: Path, herdr: Path, tmp_path: Path
     assert decision(run(repository, command)) == "ask"
 
 
+@pytest.mark.parametrize("workspace", ["lane", "primary"])
+@pytest.mark.parametrize(
+    "command",
+    [
+        f"HERDR_SOCKET_PATH=/tmp/other.sock {CLOSE}",
+        f"X=1 {CLOSE}",
+        f"env HERDR_SOCKET_PATH=/tmp/other.sock {CLOSE}",
+        f"env {CLOSE}",
+        f"command {CLOSE}",
+        f"sh -c '{CLOSE}'",
+        f"/usr/local/bin/{CLOSE}",
+        f"{CLOSE} --session other",
+        f"{CLOSE} --session=other",
+        f"{CLOSE} --socket /tmp/other.sock",
+        f"{CLOSE} --socket-path=/tmp/other.sock",
+        f"{CLOSE}; echo done",
+        f"true && {CLOSE}",
+        f"({CLOSE})",
+        f"{{ {CLOSE}; }}",
+        f"{CLOSE} | cat",
+        f"{CLOSE} > /dev/null",
+        f"{CLOSE} < /dev/null",
+    ],
+)
+def test_a_close_that_is_not_one_plain_call_asks(
+    repository: Path, herdr: Path, tmp_path: Path, workspace: str, command: str
+) -> None:
+    if workspace == "primary":
+        open_primary(repository, tmp_path)
+    else:
+        run(repository, "herdr agent start lane-a --kind claude --pane w5:p1")
+        herdr.write_text("lane-a w5\n")
+    assert decision(run(repository, command)) == "ask"
+    assert decision(run(repository, CLOSE)) == "allow"
+
+
 def test_closing_a_primary_the_user_already_had_asks(repository: Path, herdr: Path, tmp_path: Path) -> None:
     workspace_list(tmp_path, ("w5", PRIMARY, "site"))
     assert decision(run(repository, CLOSE)) == "ask"
