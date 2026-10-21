@@ -181,6 +181,8 @@ def command_verdict(kind: str, payload: dict, policy: Policy) -> Verdict:
     except shell_syntax.UnsupportedSyntax as error:
         preview = shell_syntax.command_preview(command)
         return hook_decision.ask(f"Needs review: {error}.\n\nCommand: {preview}", "syntax")
+    if kind == "forbidden" and (verdict := companion_objection(command, commands)).decision != "allow":
+        return verdict
     if not allows_literal_rules(command, commands):
         policy = replace(policy, literal_words=False)
     verdicts = (objection(kind, item, policy) for item in commands)
@@ -188,6 +190,31 @@ def command_verdict(kind: str, payload: dict, policy: Policy) -> Verdict:
     if kind == "allowed" and verdict.decision == "allow":
         return settings_objection(command, commands)
     return verdict
+
+
+def companion_objection(command: str, commands: tuple[shell_syntax.Command, ...]) -> Verdict:
+    """Keep companion execution in the single-call form matched by its sandbox exclusion."""
+    companion = any(
+        Path(item.arguments[0]).name == "codex-companion.mjs"
+        or (
+            Path(item.arguments[0]).name == "node"
+            and any(Path(argument).name == "codex-companion.mjs" for argument in item.arguments[1:])
+        )
+        for item in commands
+    )
+    if not companion:
+        return hook_decision.ALLOW
+    try:
+        simple = len(commands) == 1 and shell_syntax.is_one_simple_command(command)
+    except shell_syntax.UnsupportedSyntax:
+        simple = False
+    if simple:
+        return hook_decision.ALLOW
+    return hook_decision.deny(
+        'BLOCKED: forbidden command: run it as one command starting with node "<plugin path>/codex-companion.mjs", '
+        "pass --cwd <dir> instead of cd, and no pipes, redirects, &&, or assignments, "
+        "because the sandbox exclusion matches only that form."
+    )
 
 
 def allows_literal_rules(command: str, commands: tuple[shell_syntax.Command, ...]) -> bool:
