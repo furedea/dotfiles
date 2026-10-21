@@ -48,7 +48,18 @@ in
     # Devin CLI has no config key for the default permission mode; the
     # documented mechanisms are --permission-mode and this env var.
     DEVIN_PERMISSION_MODE = "smart";
+    # Tools that ship no CA bundle of their own (uv-managed Python, for one)
+    # read this, the store filtered below, instead.
+    SSL_CERT_FILE = "/etc/ssl/certs/ca-certificates.crt";
   };
+
+  # eMudhra intermediates under these roots have recoverable private keys
+  # (https://emudhra.we-have-a-problem.com/); drop once nixpkgs' cacert
+  # distrusts them.
+  security.pki.caCertificateBlacklist = [
+    "Comodo AAA Services root"
+    "emSign ECC Root CA - G3"
+  ];
 
   services.hister = {
     enable = enableHisterService;
