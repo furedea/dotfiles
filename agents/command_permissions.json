@@ -2374,7 +2374,7 @@
         "workspace",
         "close"
       ],
-      "justification": "Allow closing a workspace this session's lanes ran in or a group whose primary it created; the hooks ask for any other workspace."
+      "justification": "Allow closing a workspace this session's lanes ran in or a primary it created once its lanes are closed; the hooks ask for any other workspace."
     },
     {
       "decision": "allow",
@@ -2383,7 +2383,7 @@
         "worktree",
         "remove"
       ],
-      "justification": "Allow closing a workspace this session's lanes ran in or a group whose primary it created; the hooks ask for any other workspace."
+      "justification": "Allow closing a workspace this session's lanes ran in or a primary it created once its lanes are closed; the hooks ask for any other workspace."
     },
     {
       "decision": "allow",

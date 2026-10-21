@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import time
 
 import pytest
 
@@ -45,15 +46,18 @@ def herdr(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         'printf \'{"result":{"agents":[%s]}}\\n\' "$agents"\n'
     )
     script.chmod(0o755)
+    socket = tmp_path / "herdr.sock"
+    socket.write_text("")
+    monkeypatch.setenv("HERDR_SOCKET_PATH", str(socket))
     monkeypatch.setenv("PATH", f"{directory}{os.pathsep}{os.environ['PATH']}")
     return names
 
 
-def run(repository: Path, command: str) -> dict:
+def run(repository: Path, command: str, session: str = "session") -> dict:
     result = subprocess.run(
         [sys.executable, "-I", "-B", str(hook), "codex", "pre-tool-use"],
         input=json.dumps(
-            {"cwd": str(repository), "session_id": "session", "tool_name": "Bash", "tool_input": {"command": command}}
+            {"cwd": str(repository), "session_id": session, "tool_name": "Bash", "tool_input": {"command": command}}
         ),
         capture_output=True,
         text=True,
@@ -146,6 +150,7 @@ def test_closing_a_workspace_with_other_or_no_agents_asks(repository: Path, herd
 
 PRIMARY = "/repos/site"
 CREATE = f"herdr workspace create --cwd {PRIMARY} --label site --no-focus"
+CLOSE = "herdr workspace close w5"
 
 
 def workspace_list(tmp_path: Path, *entries: tuple[str, str, str], linked: tuple[str, ...] = ()) -> None:
@@ -158,8 +163,6 @@ def workspace_list(tmp_path: Path, *entries: tuple[str, str, str], linked: tuple
         for ws in linked
     ]
     (tmp_path / "workspaces.json").write_text(json.dumps({"result": {"workspaces": rows}}))
-    group = [{"path": f"/lanes/{ws}", "open_workspace_id": ws} for ws in linked]
-    (tmp_path / "worktrees.json").write_text(json.dumps({"result": {"worktrees": group}}))
 
 
 def created(workspace: str = "w5", label: str = "site", cwd: str = PRIMARY) -> str:
@@ -168,13 +171,13 @@ def created(workspace: str = "w5", label: str = "site", cwd: str = PRIMARY) -> s
     return json.dumps({"result": result})
 
 
-def after(repository: Path, command: str, response: object) -> None:
+def after(repository: Path, command: str, response: object, session: str = "session") -> None:
     subprocess.run(
         [sys.executable, "-I", "-B", str(hook), "codex", "post-tool-use"],
         input=json.dumps(
             {
                 "cwd": str(repository),
-                "session_id": "session",
+                "session_id": session,
                 "tool_name": "Bash",
                 "tool_input": {"command": command},
                 "tool_response": response,
@@ -193,31 +196,48 @@ def open_primary(repository: Path, tmp_path: Path, *, linked: tuple[str, ...] = 
     after(repository, CREATE, {"stdout": created()})
 
 
-GROUP_CLOSE = "herdr workspace close w5 --group"
+def restart_server(tmp_path: Path) -> None:
+    """A restarted server recreates its socket, so the file is a new one."""
+    socket = tmp_path / "herdr.sock"
+    socket.unlink()
+    time.sleep(0.02)
+    socket.write_text("")
 
 
-def test_the_primary_this_session_created_closes_with_its_group(repository: Path, herdr: Path, tmp_path: Path) -> None:
+def test_the_primary_this_session_created_closes_after_its_lane(repository: Path, herdr: Path, tmp_path: Path) -> None:
     open_primary(repository, tmp_path, linked=("w6",))
     run(repository, "herdr agent start lane-a --kind claude --pane w6:p1")
     herdr.write_text("lane-a w6\n")
-    assert decision(run(repository, GROUP_CLOSE)) == "allow"
-    assert decision(run(repository, "herdr workspace close --group w5")) == "ask"
+    assert decision(run(repository, "herdr workspace close w6")) == "allow"
+    herdr.write_text("")
+    assert decision(run(repository, CLOSE)) == "allow"
+    assert decision(run(repository, CLOSE)) == "ask"
 
 
-def test_the_group_close_accepts_the_group_option_first(repository: Path, herdr: Path, tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "command",
+    [f"{CLOSE} --group", "herdr workspace close --group w5", "herdr workspace close w5 --group --force"],
+)
+def test_a_group_close_always_asks(repository: Path, herdr: Path, tmp_path: Path, command: str) -> None:
     open_primary(repository, tmp_path)
-    assert decision(run(repository, "herdr workspace close --group w5")) == "allow"
+    assert decision(run(repository, command)) == "ask"
 
 
-def test_a_group_close_of_a_primary_the_user_already_had_asks(repository: Path, herdr: Path, tmp_path: Path) -> None:
+def test_closing_a_primary_the_user_already_had_asks(repository: Path, herdr: Path, tmp_path: Path) -> None:
     workspace_list(tmp_path, ("w5", PRIMARY, "site"))
-    assert decision(run(repository, GROUP_CLOSE)) == "ask"
+    assert decision(run(repository, CLOSE)) == "ask"
 
 
-def test_a_group_with_another_agent_asks(repository: Path, herdr: Path, tmp_path: Path) -> None:
-    open_primary(repository, tmp_path, linked=("w6",))
-    herdr.write_text("reviewer w6\n")
-    assert decision(run(repository, GROUP_CLOSE)) == "ask"
+def test_an_agent_running_in_the_primary_asks(repository: Path, herdr: Path, tmp_path: Path) -> None:
+    open_primary(repository, tmp_path)
+    run(repository, "herdr agent start lane-a --kind claude --pane w5:p1")
+    herdr.write_text("lane-a w5\n")
+    assert decision(run(repository, CLOSE)) == "ask"
+
+
+def test_the_primary_cannot_be_removed_as_a_worktree(repository: Path, herdr: Path, tmp_path: Path) -> None:
+    open_primary(repository, tmp_path)
+    assert decision(run(repository, "herdr worktree remove --workspace w5")) == "ask"
 
 
 @pytest.mark.parametrize(
@@ -227,16 +247,79 @@ def test_a_failed_create_owns_nothing(repository: Path, herdr: Path, tmp_path: P
     workspace_list(tmp_path, ("w5", PRIMARY, "site"))
     run(repository, CREATE)
     after(repository, CREATE, response)
-    assert decision(run(repository, GROUP_CLOSE)) == "ask"
+    assert decision(run(repository, CLOSE)) == "ask"
 
 
-def test_a_workspace_the_result_does_not_name_is_not_claimed_by_a_concurrent_open(
+@pytest.mark.parametrize(
+    "command",
+    [
+        f"{CREATE}; echo done",
+        f"{CREATE} | cat",
+        f"{CREATE} > /dev/null",
+        f"echo '{created()}' && {CREATE}",
+        f"env {CREATE}",
+        f"sh -c '{CREATE}'",
+        f"X=1 {CREATE}",
+        f"{CREATE} --env A=b",
+    ],
+    ids=[
+        "a list",
+        "a pipe",
+        "a redirect",
+        "a printed result",
+        "an env wrapper",
+        "a shell wrapper",
+        "an assignment",
+        "an extra option",
+    ],
+)
+def test_a_create_that_is_not_one_plain_call_owns_nothing(
+    repository: Path, herdr: Path, tmp_path: Path, command: str
+) -> None:
+    workspace_list(tmp_path, ("w5", PRIMARY, "site"))
+    run(repository, command)
+    after(repository, command, {"stdout": created()})
+    assert decision(run(repository, CLOSE)) == "ask"
+
+
+def test_a_record_from_another_session_is_not_honored(repository: Path, herdr: Path, tmp_path: Path) -> None:
+    store.register(repository, "codex", "other")
+    open_primary(repository, tmp_path)
+    assert decision(run(repository, CLOSE, session="other")) == "ask"
+
+
+def test_a_primary_workspace_from_another_session_post_step_is_not_recorded_here(
     repository: Path, herdr: Path, tmp_path: Path
 ) -> None:
-    workspace_list(tmp_path, ("w5", PRIMARY, "site"), ("w9", PRIMARY, "site"))
-    run(repository, CREATE)
-    after(repository, CREATE, {"stdout": created("w5")})
-    assert decision(run(repository, "herdr workspace close w9 --group")) == "ask"
+    store.register(repository, "codex", "other")
+    workspace_list(tmp_path, ("w5", PRIMARY, "site"))
+    after(repository, CREATE, {"stdout": created()}, session="other")
+    assert decision(run(repository, CLOSE)) == "ask"
+
+
+def test_another_server_identity_asks(
+    repository: Path, herdr: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    open_primary(repository, tmp_path)
+    other = tmp_path / "other.sock"
+    other.write_text("")
+    monkeypatch.setenv("HERDR_SOCKET_PATH", str(other))
+    assert decision(run(repository, CLOSE)) == "ask"
+
+
+def test_the_same_id_label_and_path_after_a_server_restart_asks(repository: Path, herdr: Path, tmp_path: Path) -> None:
+    open_primary(repository, tmp_path)
+    restart_server(tmp_path)
+    workspace_list(tmp_path, ("w5", PRIMARY, "site"))
+    assert decision(run(repository, CLOSE)) == "ask"
+
+
+def test_no_server_socket_means_no_record(
+    repository: Path, herdr: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("HERDR_SOCKET_PATH")
+    open_primary(repository, tmp_path)
+    assert decision(run(repository, CLOSE)) == "ask"
 
 
 @pytest.mark.parametrize(("path", "label"), [("/repos/other", "site"), (PRIMARY, "renamed")])
@@ -245,13 +328,14 @@ def test_a_reused_id_with_another_path_or_label_asks(
 ) -> None:
     open_primary(repository, tmp_path)
     workspace_list(tmp_path, ("w5", path, label))
-    assert decision(run(repository, GROUP_CLOSE)) == "ask"
+    assert decision(run(repository, CLOSE)) == "ask"
 
 
-def test_a_closed_primary_expires_from_the_record(repository: Path, herdr: Path, tmp_path: Path) -> None:
-    open_primary(repository, tmp_path)
-    run(repository, GROUP_CLOSE)
-    assert decision(run(repository, GROUP_CLOSE)) == "ask"
+def test_a_workspace_the_result_does_not_name_is_not_claimed(repository: Path, herdr: Path, tmp_path: Path) -> None:
+    workspace_list(tmp_path, ("w5", PRIMARY, "site"), ("w9", PRIMARY, "site"))
+    run(repository, CREATE)
+    after(repository, CREATE, {"stdout": created("w5")})
+    assert decision(run(repository, "herdr workspace close w9")) == "ask"
 
 
 def test_the_path_falls_back_to_the_root_panes_foreground_directory(
@@ -261,7 +345,7 @@ def test_the_path_falls_back_to_the_root_panes_foreground_directory(
     run(repository, CREATE)
     result = {"workspace": {"workspace_id": "w5", "label": "site"}, "root_pane": {"foreground_cwd": PRIMARY}}
     after(repository, CREATE, {"stdout": json.dumps({"result": result})})
-    assert decision(run(repository, GROUP_CLOSE)) == "allow"
+    assert decision(run(repository, CLOSE)) == "allow"
 
 
 def test_a_result_without_a_root_pane_directory_is_not_owned(repository: Path, herdr: Path, tmp_path: Path) -> None:
@@ -269,7 +353,7 @@ def test_a_result_without_a_root_pane_directory_is_not_owned(repository: Path, h
     run(repository, CREATE)
     result = {"workspace": {"workspace_id": "w5", "label": "site"}, "root_pane": {"pane_id": "p1"}}
     after(repository, CREATE, {"stdout": json.dumps({"result": result})})
-    assert decision(run(repository, GROUP_CLOSE)) == "ask"
+    assert decision(run(repository, CLOSE)) == "ask"
 
 
 def test_a_created_label_that_differs_from_the_asked_one_is_not_owned(
@@ -278,15 +362,12 @@ def test_a_created_label_that_differs_from_the_asked_one_is_not_owned(
     workspace_list(tmp_path, ("w5", PRIMARY, "site"))
     run(repository, CREATE)
     after(repository, CREATE, {"stdout": created(label="other")})
-    assert decision(run(repository, GROUP_CLOSE)) == "ask"
+    assert decision(run(repository, CLOSE)) == "ask"
 
 
-def test_worktree_commands_no_longer_hand_over_a_parent_workspace(
-    repository: Path, herdr: Path, tmp_path: Path
-) -> None:
+def test_worktree_commands_do_not_hand_over_a_parent_workspace(repository: Path, herdr: Path, tmp_path: Path) -> None:
     workspace_list(tmp_path, ("w5", PRIMARY, "site"))
     command = f"herdr worktree create --cwd {PRIMARY} --branch feat/x --no-focus"
     run(repository, command)
     after(repository, command, {"stdout": created()})
-    assert decision(run(repository, "herdr workspace close w5")) == "ask"
-    assert decision(run(repository, GROUP_CLOSE)) == "ask"
+    assert decision(run(repository, CLOSE)) == "ask"

@@ -20,12 +20,6 @@ import subprocess
 import sys
 
 
-sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
-
-import herdr_ownership
-from session_store import record_directories, state_directory
-
-
 PROTECTED_BRANCHES = frozenset({"main", "master"})
 MERGED_PULL_REQUEST_LIMIT = "200"
 TIMEOUT_SECONDS = 30
@@ -112,32 +106,6 @@ def cleanup(primary: Path, current: Path | None, *, dry_run: bool) -> list[str]:
             run("git", "branch", "-D", branch, cwd=primary)
     if report:
         report += fast_forward_default_branch(primary, dry_run=dry_run)
-    if not dry_run:
-        report += close_idle_primaries(primary)
-    return report
-
-
-def close_idle_primaries(primary: Path) -> list[str]:
-    """Close the primary workspaces a session recorded for this repository once nothing runs in their group."""
-    try:
-        records = list(record_directories(state_directory()))
-    except OSError, ValueError:
-        return []
-    report = []
-    for directory in records:
-        try:
-            report += close_recorded_primaries(directory, primary)
-        except OSError, ValueError, subprocess.SubprocessError:
-            continue
-    return report
-
-
-def close_recorded_primaries(directory: Path, primary: Path) -> list[str]:
-    report = []
-    for workspace in herdr_ownership.idle_primaries(directory, primary):
-        run("herdr", "workspace", "close", workspace, cwd=primary)
-        herdr_ownership.forget_primary(directory, workspace)
-        report.append(f"close workspace {workspace}")
     return report
 
 

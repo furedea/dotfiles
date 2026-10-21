@@ -35,22 +35,44 @@ def check(record: SessionRecord, command: str) -> None:
         elif action == ("workspace", "close"):
             require_closable(record, parsed)
         elif action == ("worktree", "remove"):
-            require_owned_workspace(record, option_value(parsed, "--workspace"))
+            require_removable(record, option_value(parsed, "--workspace"))
         elif action == ("agent", "rename"):
             raise ScopeError("Renaming a Herdr agent could hand one of this session's names to another pane")
 
 
 def confirm(record: SessionRecord, command: str, response: object) -> None:
-    """After `workspace create` succeeded, own the primary workspace its result names."""
+    """After a plain `workspace create` succeeded, own the primary workspace its result names.
+
+    Only one simple call counts, so the output is Herdr's own and not something a list, pipe,
+    redirection, or wrapper could have printed.
+    """
     try:
+        if not shell_syntax.is_one_simple_command(command):
+            return
         commands = shell_syntax.parse(command)
     except shell_syntax.UnsupportedSyntax:
         return
-    for parsed in commands:
-        if parsed.program_is_dynamic or Path(parsed.arguments[0]).name != "herdr":
-            continue
-        if parsed.arguments[1:3] == ("workspace", "create"):
-            record_primary(record, parsed, response)
+    if len(commands) == 1 and is_plain_create(commands[0]):
+        record_primary(record, commands[0], response)
+
+
+def is_plain_create(parsed: shell_syntax.Command) -> bool:
+    """`herdr workspace create --cwd <path> --label <label> --no-focus`, options in any order, all literal."""
+    arguments = parsed.arguments
+    if (
+        parsed.program_is_dynamic
+        or any(parsed.dynamic)
+        or arguments[0] != "herdr"
+        or arguments[1:3] != ("workspace", "create")
+    ):
+        return False
+    rest = arguments[3:]
+    options = [word for word in rest if word.startswith("--")]
+    return (
+        len(rest) == 5
+        and sorted(options) == ["--cwd", "--label", "--no-focus"]
+        and bool(option_value(parsed, "--cwd") and option_value(parsed, "--label"))
+    )
 
 
 def target(parsed: shell_syntax.Command) -> str:
@@ -80,7 +102,11 @@ def record_primary(record: SessionRecord, parsed: shell_syntax.Command, response
         return
     if label != option_value(parsed, "--label"):
         return
-    save(record, primaries={**primaries(record.directory), identifier: {"path": normpath(path), "label": label}})
+    server = server_identity()
+    if not server:
+        return
+    entry = {"path": normpath(path), "label": label, "server": server}
+    save(record, primaries={**primaries(record.directory), identifier: entry})
 
 
 def created_result(response: object) -> dict:
@@ -99,20 +125,20 @@ def created_result(response: object) -> dict:
 
 
 def require_closable(record: SessionRecord, parsed: shell_syntax.Command) -> None:
+    """Plain closes only: Herdr itself refuses a primary's close while a linked workspace is open."""
     words = list(zip(parsed.arguments[3:], parsed.dynamic[3:], strict=True))
     options = {word for word, _ in words if word.startswith("-")}
     ids = [word if not dynamic else "" for word, dynamic in words if not word.startswith("-")]
-    workspace = ids[0] if len(ids) == 1 else ""
-    if options == {"--group"}:
-        require_owned_group(record, workspace)
-    elif options:
+    if options:
         raise ScopeError(f"Herdr workspace close option {min(options)} needs the user's judgment")
-    else:
-        require_owned_workspace(record, workspace)
+    require_owned_workspace(record, ids[0] if len(ids) == 1 else "")
 
 
 def require_owned_workspace(record: SessionRecord, workspace: str) -> None:
-    """A workspace may close when it holds agents and every one of them is this session's."""
+    """A workspace may close when it is an idle primary this session created, or every agent in it is its own."""
+    if workspace and workspace in primaries(record.directory):
+        require_idle_primary(record, workspace)
+        return
     names = [agent.get("name") for agent in live_agents() if workspace and agent.get("workspace_id") == workspace]
     if names and all(isinstance(name, str) and name in owned(record) for name in names):
         return
@@ -120,57 +146,54 @@ def require_owned_workspace(record: SessionRecord, workspace: str) -> None:
     raise ScopeError(f"Herdr workspace {shown} does not hold only agents this session started")
 
 
-def require_owned_group(record: SessionRecord, workspace: str) -> None:
-    """A group may close when this session created its primary and only this session's lanes run in it."""
-    entry = live_primary(record, workspace)
-    shown = workspace or "chosen at run time"
-    if not entry:
-        raise ScopeError(f"Herdr workspace {shown} is not a primary workspace this session created")
-    group = group_workspaces(workspace, entry["path"])
-    names = [agent.get("name") for agent in live_agents() if agent.get("workspace_id") in group]
-    if not all(isinstance(name, str) and name in owned(record) for name in names):
-        raise ScopeError(f"Herdr group {shown} holds an agent this session did not start")
+def require_removable(record: SessionRecord, workspace: str) -> None:
+    if workspace and workspace in primaries(record.directory):
+        raise ScopeError(f"Herdr workspace {workspace} is a primary checkout; removing it deletes the repository")
+    require_owned_workspace(record, workspace)
+
+
+def require_idle_primary(record: SessionRecord, workspace: str) -> None:
+    """Close the primary only while Herdr still serves what was recorded and nothing runs in it."""
+    entry = primaries(record.directory)[workspace]
+    if entry.get("server") != server_identity() or not matches_live(workspace, entry):
+        raise ScopeError(f"Herdr workspace {workspace} no longer matches the primary this session created")
+    if any(agent.get("workspace_id") == workspace for agent in live_agents()):
+        raise ScopeError(f"Herdr workspace {workspace} still runs an agent")
     forget_primary(record.directory, workspace)
-
-
-def live_primary(record: SessionRecord, workspace: str) -> dict[str, str]:
-    """The recorded primary, only while the live workspace still has the recorded ID, path, and label."""
-    entry = primaries(record.directory).get(workspace)
-    return entry if entry and matches_live(workspace, entry) else {}
 
 
 def matches_live(workspace: str, entry: dict[str, str]) -> bool:
     for item in workspace_items():
-        info = item["worktree"]
-        if (
-            item["workspace_id"] == workspace
-            and not info.get("is_linked_worktree")
-            and isinstance(info.get("checkout_path"), str)
-            and normpath(info["checkout_path"]) == entry["path"]
-            and item.get("label") == entry["label"]
-        ):
-            return True
+        if item["workspace_id"] == workspace:
+            return item.get("label") == entry["label"] and live_path(item) == entry["path"]
     return False
 
 
-def idle_primaries(directory: Path, repository: Path) -> list[str]:
-    """Recorded primaries of one repository that still match the live workspace and hold no worktree or agent."""
-    idle = []
-    for workspace, entry in primaries(directory).items():
-        if Path(entry["path"]).resolve() != repository.resolve() or not matches_live(workspace, entry):
-            continue
-        if group_workspaces(workspace, entry["path"]) != {workspace}:
-            continue
-        if any(agent.get("workspace_id") == workspace for agent in live_agents()):
-            continue
-        idle.append(workspace)
-    return idle
+def live_path(item: dict) -> str:
+    """The workspace's checkout path, or its root pane's directory before a worktree attaches the group."""
+    info = item.get("worktree")
+    pane = item.get("root_pane")
+    candidates = [
+        info.get("checkout_path") if isinstance(info, dict) else None,
+        pane.get("cwd") if isinstance(pane, dict) else None,
+    ]
+    return next((normpath(path) for path in candidates if isinstance(path, str) and path), "")
 
 
-def group_workspaces(primary: str, path: str) -> set[str]:
-    worktrees = herdr_result("worktree", "list", "--cwd", path).get("worktrees", [])
-    opened = {item.get("open_workspace_id") for item in worktrees if isinstance(item, dict)}
-    return {primary} | {value for value in opened if isinstance(value, str)}
+def server_identity() -> str:
+    """The running server's socket file, by path, inode, and birth time; a restart recreates it.
+
+    Herdr documents no server ID, pid, or start time, so the socket it listens on stands in. An
+    unreadable or missing socket gives no identity, and nothing is recorded or closed on it.
+    """
+    path = os.environ.get("HERDR_SOCKET_PATH")
+    try:
+        status = os.stat(path) if path else None
+    except OSError:
+        return ""
+    if status is None:
+        return ""
+    return f"{path}:{status.st_ino}:{getattr(status, 'st_birthtime_ns', status.st_ctime_ns)}"
 
 
 def primaries(directory: Path) -> dict[str, dict[str, str]]:
@@ -181,7 +204,7 @@ def primaries(directory: Path) -> dict[str, dict[str, str]]:
     return {
         key: entry
         for key, entry in value.items()
-        if isinstance(entry, dict) and isinstance(entry.get("path"), str) and isinstance(entry.get("label"), str)
+        if isinstance(entry, dict) and all(isinstance(entry.get(name), str) for name in ("path", "label", "server"))
     }
 
 
@@ -231,7 +254,7 @@ def update(directory: Path, **values: object) -> None:
 
 
 def workspace_items() -> list[dict]:
-    """Open workspaces that carry worktree details."""
+    """Open workspaces."""
     workspaces = herdr_result("workspace", "list").get("workspaces", [])
     return [
         item

@@ -244,72 +244,23 @@ def test_main_stays_when_pulling_could_disturb_work_or_nothing_merged(
     assert git("rev-parse", "main", cwd=primary) == before
 
 
-def record_primary(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, path: Path, label: str = "repo") -> None:
-    """A session record that created primary workspace w3 for path."""
-    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
-    directory = tmp_path / "state/agent-harness/verification/worktree/codex-session"
-    directory.mkdir(parents=True)
-    (directory / "herdr_agents.json").write_text(
-        json.dumps({"primaries": {"w3": {"path": str(path), "label": label}}})
-    )
-
-
-def open_primary(tmp_path: Path, path: Path, label: str = "repo", agents: str = "") -> None:
-    row = {"workspace_id": "w3", "label": label, "worktree": {"checkout_path": str(path), "is_linked_worktree": False}}
-    (tmp_path / "herdr_workspaces.json").write_text(json.dumps({"result": {"workspaces": [row]}}))
-    (tmp_path / "herdr_agents.json").write_text(f'{{"result":{{"agents":[{agents}]}}}}')
-
-
-def merged_lane(primary: Path, merged: dict[str, str], tmp_path: Path) -> None:
+def test_a_recorded_primary_is_never_closed_by_the_sweep(
+    primary: Path, merged: dict[str, str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Records belong to their own session, so the session-start sweep neither reads nor acts on them."""
     path = task_worktree(primary, "feat/lane")
     merged["feat/lane"] = git("rev-parse", "HEAD", cwd=path)
     (tmp_path / "herdr_path.txt").write_text(str(path))
     (tmp_path / "herdr_worktrees.json").write_text(
         json.dumps({"result": {"worktrees": [{"path": str(path), "open_workspace_id": "w9"}]}})
     )
-
-
-def closed(tmp_path: Path) -> list[str]:
-    log = tmp_path / "herdr_removed.txt"
-    return log.read_text().splitlines() if log.exists() else []
-
-
-def test_the_recorded_primary_closes_once_its_group_is_empty(
-    primary: Path, merged: dict[str, str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    merged_lane(primary, merged, tmp_path)
-    record_primary(tmp_path, monkeypatch, primary)
-    open_primary(tmp_path, primary)
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    directory = tmp_path / "state/agent-harness/verification/worktree/codex-session"
+    directory.mkdir(parents=True)
+    record = {"primaries": {"w3": {"path": str(primary), "label": "repo", "server": "s"}}}
+    (directory / "herdr_agents.json").write_text(json.dumps(record))
+    row = {"workspace_id": "w3", "label": "repo", "worktree": {"checkout_path": str(primary)}}
+    (tmp_path / "herdr_workspaces.json").write_text(json.dumps({"result": {"workspaces": [row]}}))
     cleanup(primary)
-    (tmp_path / "herdr_worktrees.json").write_text('{"result":{"worktrees":[]}}')
     cleanup(primary)
-    assert closed(tmp_path) == ["worktree remove --workspace w9", "workspace close w3"]
-    assert (
-        not (tmp_path / "state/agent-harness/verification/worktree/codex-session/herdr_agents.json")
-        .read_text()
-        .count("w3")
-    )
-
-
-@pytest.mark.parametrize(
-    "change",
-    ["another label", "another path", "an agent in it", "a lane still open", "no record"],
-)
-def test_a_primary_that_does_not_match_or_is_not_idle_stays_open(
-    primary: Path, merged: dict[str, str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch, change: str
-) -> None:
-    record_primary(tmp_path, monkeypatch, primary)
-    open_primary(
-        tmp_path,
-        tmp_path / "elsewhere" if change == "another path" else primary,
-        "renamed" if change == "another label" else "repo",
-        '{"name":"x","workspace_id":"w3"}' if change == "an agent in it" else "",
-    )
-    if change == "no record":
-        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "empty"))
-    if change == "a lane still open":
-        (tmp_path / "herdr_worktrees.json").write_text(
-            '{"result":{"worktrees":[{"path":"/lane","open_workspace_id":"w9"}]}}'
-        )
-    cleanup(primary)
-    assert closed(tmp_path) == []
+    assert (tmp_path / "herdr_removed.txt").read_text().split() == ["worktree", "remove", "--workspace", "w9"]
