@@ -151,8 +151,10 @@ def open_workspaces(tmp_path: Path, *entries: tuple[str, str]) -> None:
 def test_the_parent_workspace_a_worktree_opened_closes_with_the_lane(
     repository: Path, herdr: Path, tmp_path: Path
 ) -> None:
-    run(repository, "herdr worktree create --cwd /repos/site --branch feat/x --no-focus")
+    command = "herdr worktree create --cwd /repos/site --branch feat/x --no-focus"
+    run(repository, command)
     open_workspaces(tmp_path, ("w5", "/repos/site"))
+    after(repository, command)
     assert decision(run(repository, "herdr workspace close w5")) == "allow"
 
 
@@ -160,13 +162,17 @@ def test_a_parent_workspace_the_user_already_had_open_is_left_alone(
     repository: Path, herdr: Path, tmp_path: Path
 ) -> None:
     open_workspaces(tmp_path, ("w5", "/repos/site"))
-    run(repository, "herdr worktree create --cwd /repos/site --branch feat/x --no-focus")
+    command = "herdr worktree create --cwd /repos/site --branch feat/x --no-focus"
+    run(repository, command)
+    after(repository, command)
     assert decision(run(repository, "herdr workspace close w5")) == "ask"
 
 
 def test_a_recorded_parent_with_an_agent_in_it_asks(repository: Path, herdr: Path, tmp_path: Path) -> None:
-    run(repository, "herdr worktree create --cwd /repos/site --branch feat/x --no-focus")
+    command = "herdr worktree create --cwd /repos/site --branch feat/x --no-focus"
+    run(repository, command)
     open_workspaces(tmp_path, ("w5", "/repos/site"))
+    after(repository, command)
     herdr.write_text(" w5\n")
     assert decision(run(repository, "herdr workspace close w5")) == "ask"
 
@@ -174,6 +180,55 @@ def test_a_recorded_parent_with_an_agent_in_it_asks(repository: Path, herdr: Pat
 def test_the_parent_workspace_a_worktree_open_opened_closes_with_the_lane(
     repository: Path, herdr: Path, tmp_path: Path
 ) -> None:
-    run(repository, "herdr worktree open --cwd /repos/site --path /repos/site-x --no-focus")
+    run(repository, OPEN)
     open_workspaces(tmp_path, ("w5", "/repos/site"))
+    after(repository, OPEN)
     assert decision(run(repository, "herdr workspace close w5")) == "allow"
+
+
+def after(repository: Path, command: str) -> None:
+    subprocess.run(
+        [sys.executable, "-I", "-B", str(hook), "codex", "post-tool-use"],
+        input=json.dumps(
+            {"cwd": str(repository), "session_id": "session", "tool_name": "Bash", "tool_input": {"command": command}}
+        ),
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=10,
+    )
+
+
+OPEN = "herdr worktree open --cwd /repos/site --path /repos/site-x --no-focus"
+
+
+def test_a_failed_open_followed_by_the_users_own_open_does_not_hand_over_the_workspace(
+    repository: Path, herdr: Path, tmp_path: Path
+) -> None:
+    run(repository, OPEN)  # the command then fails: no post step, no new workspace
+    open_workspaces(tmp_path, ("w7", "/repos/site"))
+    assert decision(run(repository, "herdr workspace close w7")) == "ask"
+
+
+def test_a_reopened_parent_under_a_new_id_is_not_the_sessions(repository: Path, herdr: Path, tmp_path: Path) -> None:
+    run(repository, OPEN)
+    open_workspaces(tmp_path, ("w5", "/repos/site"))
+    after(repository, OPEN)
+    assert decision(run(repository, "herdr workspace close w5")) == "allow"
+    open_workspaces(tmp_path, ("w8", "/repos/site"))
+    assert decision(run(repository, "herdr workspace close w8")) == "ask"
+
+
+def test_a_workspace_stays_the_sessions_only_until_it_is_closed(repository: Path, herdr: Path, tmp_path: Path) -> None:
+    run(repository, OPEN)
+    open_workspaces(tmp_path, ("w5", "/repos/site"))
+    after(repository, OPEN)
+    run(repository, "herdr workspace close w5")
+    assert decision(run(repository, "herdr workspace close w5")) == "ask"
+
+
+def test_a_post_step_for_another_command_claims_nothing(repository: Path, herdr: Path, tmp_path: Path) -> None:
+    run(repository, OPEN)
+    open_workspaces(tmp_path, ("w5", "/repos/site"))
+    after(repository, "herdr worktree create --cwd /repos/site --branch feat/y --no-focus")
+    assert decision(run(repository, "herdr workspace close w5")) == "ask"

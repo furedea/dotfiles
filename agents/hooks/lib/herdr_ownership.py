@@ -15,6 +15,7 @@ import shell_syntax
 
 AGENTS_FILE = "herdr_agents.json"
 LIST_TIMEOUT_SECONDS = 5
+WORKTREE_OPENERS = (("worktree", "create"), ("worktree", "open"))
 
 
 def check(record: SessionRecord, command: str) -> None:
@@ -31,8 +32,8 @@ def check(record: SessionRecord, command: str) -> None:
             claim(record, target(parsed))
         elif action == ("agent", "prompt"):
             require_owned(record, target(parsed))
-        elif action in (("worktree", "create"), ("worktree", "open")):
-            note_opened_parent(record, option_value(parsed, "--cwd"))
+        elif action in WORKTREE_OPENERS:
+            note_pending_open(record, command)
         elif action == ("workspace", "close"):
             require_owned_workspace(record, target(parsed))
         elif action == ("worktree", "remove"):
@@ -55,23 +56,41 @@ def option_value(parsed: shell_syntax.Command, option: str) -> str:
     return ""
 
 
-def note_opened_parent(record: SessionRecord, repository: str) -> None:
-    """Remember a repository workspace that `worktree create` or `worktree open` is about to open for its group."""
-    if not repository or repository in open_checkouts():
+def note_pending_open(record: SessionRecord, command: str) -> None:
+    """Snapshot the open workspaces before `worktree create` or `worktree open`; `confirm` reads them after."""
+    save(record, pending={"command": command, "before": sorted(open_checkouts().values())})
+
+
+def confirm(record: SessionRecord, command: str) -> None:
+    """After the command ran, own the primary-checkout workspaces it opened; no other workspace becomes owned."""
+    path = record.directory / AGENTS_FILE
+    pending = read_json(path).get("pending") if path.exists() else None
+    if not isinstance(pending, dict) or pending.get("command") != command:
         return
-    save(record, parents=sorted(stored(record, "parents") | {repository}))
+    before = {value for value in pending.get("before", []) if isinstance(value, str)}
+    opened = set(open_checkouts().values()) - before
+    save(record, pending=None, workspaces=sorted(stored(record, "workspaces") | opened))
 
 
 def require_owned_workspace(record: SessionRecord, workspace: str) -> None:
     """A workspace may close when every agent in it is this session's, or it is an empty parent it opened."""
-    names = [agent.get("name") for agent in live_agents() if workspace and agent.get("workspace_id") == workspace]
-    if names and all(isinstance(name, str) and name in owned(record) for name in names):
-        return
-    checkout = next((path for path, opened in open_checkouts().items() if opened == workspace), "")
-    if not names and checkout and checkout in stored(record, "parents"):
+    if allowed_workspace(record, workspace):
+        forget(record, workspace)
         return
     shown = workspace or "chosen at run time"
     raise ScopeError(f"Herdr workspace {shown} does not hold only agents this session started")
+
+
+def allowed_workspace(record: SessionRecord, workspace: str) -> bool:
+    names = [agent.get("name") for agent in live_agents() if workspace and agent.get("workspace_id") == workspace]
+    if names:
+        return all(isinstance(name, str) and name in owned(record) for name in names)
+    return bool(workspace) and workspace in stored(record, "workspaces") and workspace in open_checkouts().values()
+
+
+def forget(record: SessionRecord, workspace: str) -> None:
+    """A closed workspace's ID may come back for the user's own workspace, so the claim ends with the close."""
+    save(record, workspaces=sorted(stored(record, "workspaces") - {workspace}))
 
 
 def claim(record: SessionRecord, name: str) -> None:
@@ -100,7 +119,7 @@ def stored(record: SessionRecord, key: str) -> set[str]:
     return {value for value in read_json(path).get(key, []) if isinstance(value, str)}
 
 
-def save(record: SessionRecord, **values: list[str]) -> None:
+def save(record: SessionRecord, **values: object) -> None:
     path = record.directory / AGENTS_FILE
     current = read_json(path) if path.exists() else {}
     atomic_json(path, {**current, **values})

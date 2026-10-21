@@ -47,7 +47,9 @@ Rules:
   when it has none, and its ID is not in their result. Run `herdr workspace list` again after the
   call and note every new workspace. When the lane is done, close each one (the lane's, and any
   primary-checkout workspace the call opened) in which no agent runs; the hooks allow closing a
-  workspace this session opened, never one that existed before or that runs another agent.
+  workspace only when a successful call of this session opened it (confirmed after the call, once),
+  never one that existed before, reopened under a new ID, or that runs another agent. If the hook
+  asks, accept the one prompt.
 - A variable inside a `gh api` endpoint must be double-quoted (`gh api "repos/o/$r/..."`);
   unquoted expansions ask.
 - Read the workspace and root pane IDs from the JSON that `worktree create` returns
