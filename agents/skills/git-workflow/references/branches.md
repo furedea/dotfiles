@@ -51,17 +51,17 @@ Rules:
   (`.result.workspace.workspace_id`) as `--workspace`; `worktree create --workspace` then opens no
   extra workspace. The hooks record a primary this session created from that successful result: ID
   and label from `.result.workspace`, path from `.result.root_pane.cwd` (the result has no checkout
-  path), and the running server's identity. Herdr documents no server ID, pid, or start time, so the
-  identity is its socket file (`HERDR_SOCKET_PATH`: path, inode, birth time), which a restart
-  recreates. The record lives only in this session's state. A primary that was already open is the
+  path), and the root pane's `.result.root_pane.terminal_id`, a per-terminal-instance ID that a
+  reused workspace ID or a restarted server never repeats (Herdr exposes no server ID or start
+  time). The record lives only in this session's state. A primary that was already open is the
   user's and is never recorded.
 - Clean up when the lanes are done, one workspace at a time and never with `--group` (it always asks):
   close each lane (`herdr workspace close <lane-workspace-id>`), then, if this session created the
   primary, `herdr workspace close <primary-id>`. Herdr refuses the primary's close with
   `workspace_group_close_required` while any linked workspace is open. The hooks allow the primary's
   close only while `workspace list` still shows the recorded ID, label, and path
-  (`worktree.checkout_path` or the root pane directory), the server identity matches, and no agent
-  runs in it; otherwise it asks, so accept that one prompt. The record expires on close. The
+  (`worktree.checkout_path` or the root pane directory), `herdr pane list --workspace <id>` still
+  shows the recorded `terminal_id`, and no agent runs in it; otherwise it asks, so accept that one prompt. The record expires on close. The
   session-start sweep below closes only the workspaces of the worktrees it removes, never a primary.
 - A variable inside a `gh api` endpoint must be double-quoted (`gh api "repos/o/$r/..."`);
   unquoted expansions ask.

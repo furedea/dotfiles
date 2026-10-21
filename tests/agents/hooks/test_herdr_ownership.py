@@ -5,7 +5,6 @@ import os
 from pathlib import Path
 import subprocess
 import sys
-import time
 
 import pytest
 
@@ -15,6 +14,9 @@ from tests.runtime import REPO_ROOT
 hook = REPO_ROOT / "agents/hooks/verification_session.py"
 sys.path.insert(0, str(REPO_ROOT / "agents/hooks/lib"))
 import session_store as store
+
+
+TERMINAL = "term_65e57fd60160846c"
 
 
 @pytest.fixture
@@ -38,17 +40,17 @@ def herdr(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     workspaces.write_text('{"result":{"workspaces":[]}}')
     worktrees = tmp_path / "worktrees.json"
     worktrees.write_text('{"result":{"worktrees":[]}}')
+    panes = tmp_path / "panes.json"
+    panes.write_text(json.dumps({"result": {"panes": [{"pane_id": "p1", "terminal_id": TERMINAL}]}}))
     script.write_text(
         "#!/bin/sh\n"
         f'if [ "$1 $2" = "workspace list" ]; then cat {workspaces}; exit 0; fi\n'
+        f'if [ "$1 $2" = "pane list" ]; then cat {panes}; exit 0; fi\n'
         f'if [ "$1 $2" = "worktree list" ]; then cat {worktrees}; exit 0; fi\n'
         f'agents=$(sed -E \'s/^([^ ]*) ?(.*)$/{{"name":"\\1","workspace_id":"\\2"}}/\' {names} | paste -sd, -)\n'
         'printf \'{"result":{"agents":[%s]}}\\n\' "$agents"\n'
     )
     script.chmod(0o755)
-    socket = tmp_path / "herdr.sock"
-    socket.write_text("")
-    monkeypatch.setenv("HERDR_SOCKET_PATH", str(socket))
     monkeypatch.setenv("PATH", f"{directory}{os.pathsep}{os.environ['PATH']}")
     return names
 
@@ -167,7 +169,10 @@ def workspace_list(tmp_path: Path, *entries: tuple[str, str, str], linked: tuple
 
 def created(workspace: str = "w5", label: str = "site", cwd: str = PRIMARY) -> str:
     """The shape `herdr workspace create` returns: no checkout path, the directory is the root pane's."""
-    result = {"workspace": {"workspace_id": workspace, "label": label}, "root_pane": {"pane_id": "p1", "cwd": cwd}}
+    result = {
+        "workspace": {"workspace_id": workspace, "label": label},
+        "root_pane": {"pane_id": "p1", "cwd": cwd, "terminal_id": TERMINAL},
+    }
     return json.dumps({"result": result})
 
 
@@ -194,14 +199,6 @@ def open_primary(repository: Path, tmp_path: Path, *, linked: tuple[str, ...] = 
     workspace_list(tmp_path, ("w5", PRIMARY, "site"), linked=linked)
     run(repository, CREATE)
     after(repository, CREATE, {"stdout": created()})
-
-
-def restart_server(tmp_path: Path) -> None:
-    """A restarted server recreates its socket, so the file is a new one."""
-    socket = tmp_path / "herdr.sock"
-    socket.unlink()
-    time.sleep(0.02)
-    socket.write_text("")
 
 
 def test_the_primary_this_session_created_closes_after_its_lane(repository: Path, herdr: Path, tmp_path: Path) -> None:
@@ -297,28 +294,36 @@ def test_a_primary_workspace_from_another_session_post_step_is_not_recorded_here
     assert decision(run(repository, CLOSE)) == "ask"
 
 
-def test_another_server_identity_asks(
-    repository: Path, herdr: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def set_terminals(tmp_path: Path, *terminals: str) -> None:
+    panes = [{"pane_id": f"p{index}", "terminal_id": terminal} for index, terminal in enumerate(terminals, 1)]
+    (tmp_path / "panes.json").write_text(json.dumps({"result": {"panes": panes}}))
+
+
+@pytest.mark.parametrize("terminals", [("term_other",), ()], ids=["another terminal", "no pane"])
+def test_the_same_id_label_and_path_with_another_root_terminal_asks(
+    repository: Path, herdr: Path, tmp_path: Path, terminals: tuple[str, ...]
 ) -> None:
+    """A reused workspace ID or a restarted server never repeats the terminal instance."""
     open_primary(repository, tmp_path)
-    other = tmp_path / "other.sock"
-    other.write_text("")
-    monkeypatch.setenv("HERDR_SOCKET_PATH", str(other))
-    assert decision(run(repository, CLOSE)) == "ask"
-
-
-def test_the_same_id_label_and_path_after_a_server_restart_asks(repository: Path, herdr: Path, tmp_path: Path) -> None:
-    open_primary(repository, tmp_path)
-    restart_server(tmp_path)
+    set_terminals(tmp_path, *terminals)
     workspace_list(tmp_path, ("w5", PRIMARY, "site"))
     assert decision(run(repository, CLOSE)) == "ask"
 
 
-def test_no_server_socket_means_no_record(
-    repository: Path, herdr: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.delenv("HERDR_SOCKET_PATH")
+def test_the_recorded_terminal_may_sit_among_other_panes(repository: Path, herdr: Path, tmp_path: Path) -> None:
     open_primary(repository, tmp_path)
+    set_terminals(tmp_path, "term_extra", TERMINAL)
+    assert decision(run(repository, CLOSE)) == "allow"
+
+
+@pytest.mark.parametrize("pane", [{"pane_id": "p1", "cwd": PRIMARY}, {"pane_id": "p1", "terminal_id": ""}])
+def test_a_result_without_a_root_terminal_is_not_owned(
+    repository: Path, herdr: Path, tmp_path: Path, pane: dict
+) -> None:
+    workspace_list(tmp_path, ("w5", PRIMARY, "site"))
+    run(repository, CREATE)
+    result = {"workspace": {"workspace_id": "w5", "label": "site"}, "root_pane": {**pane, "cwd": PRIMARY}}
+    after(repository, CREATE, {"stdout": json.dumps({"result": result})})
     assert decision(run(repository, CLOSE)) == "ask"
 
 
@@ -343,7 +348,10 @@ def test_the_path_falls_back_to_the_root_panes_foreground_directory(
 ) -> None:
     workspace_list(tmp_path, ("w5", PRIMARY, "site"))
     run(repository, CREATE)
-    result = {"workspace": {"workspace_id": "w5", "label": "site"}, "root_pane": {"foreground_cwd": PRIMARY}}
+    result = {
+        "workspace": {"workspace_id": "w5", "label": "site"},
+        "root_pane": {"foreground_cwd": PRIMARY, "terminal_id": TERMINAL},
+    }
     after(repository, CREATE, {"stdout": json.dumps({"result": result})})
     assert decision(run(repository, CLOSE)) == "allow"
 

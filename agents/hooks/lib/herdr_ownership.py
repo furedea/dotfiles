@@ -102,10 +102,10 @@ def record_primary(record: SessionRecord, parsed: shell_syntax.Command, response
         return
     if label != option_value(parsed, "--label"):
         return
-    server = server_identity()
-    if not server:
+    terminal = pane.get("terminal_id")
+    if not (isinstance(terminal, str) and terminal):
         return
-    entry = {"path": normpath(path), "label": label, "server": server}
+    entry = {"path": normpath(path), "label": label, "terminal": terminal}
     save(record, primaries={**primaries(record.directory), identifier: entry})
 
 
@@ -155,11 +155,17 @@ def require_removable(record: SessionRecord, workspace: str) -> None:
 def require_idle_primary(record: SessionRecord, workspace: str) -> None:
     """Close the primary only while Herdr still serves what was recorded and nothing runs in it."""
     entry = primaries(record.directory)[workspace]
-    if entry.get("server") != server_identity() or not matches_live(workspace, entry):
+    if not matches_live(workspace, entry) or not holds_terminal(workspace, entry["terminal"]):
         raise ScopeError(f"Herdr workspace {workspace} no longer matches the primary this session created")
     if any(agent.get("workspace_id") == workspace for agent in live_agents()):
         raise ScopeError(f"Herdr workspace {workspace} still runs an agent")
     forget_primary(record.directory, workspace)
+
+
+def holds_terminal(workspace: str, terminal: str) -> bool:
+    """Whether the live workspace still has the recorded root terminal, which a reused ID or restart never repeats."""
+    panes = herdr_result("pane", "list", "--workspace", workspace).get("panes", [])
+    return any(isinstance(pane, dict) and pane.get("terminal_id") == terminal for pane in panes)
 
 
 def matches_live(workspace: str, entry: dict[str, str]) -> bool:
@@ -180,22 +186,6 @@ def live_path(item: dict) -> str:
     return next((normpath(path) for path in candidates if isinstance(path, str) and path), "")
 
 
-def server_identity() -> str:
-    """The running server's socket file, by path, inode, and birth time; a restart recreates it.
-
-    Herdr documents no server ID, pid, or start time, so the socket it listens on stands in. An
-    unreadable or missing socket gives no identity, and nothing is recorded or closed on it.
-    """
-    path = os.environ.get("HERDR_SOCKET_PATH")
-    try:
-        status = os.stat(path) if path else None
-    except OSError:
-        return ""
-    if status is None:
-        return ""
-    return f"{path}:{status.st_ino}:{getattr(status, 'st_birthtime_ns', status.st_ctime_ns)}"
-
-
 def primaries(directory: Path) -> dict[str, dict[str, str]]:
     path = directory / AGENTS_FILE
     value = read_json(path).get("primaries") if path.exists() else None
@@ -204,7 +194,7 @@ def primaries(directory: Path) -> dict[str, dict[str, str]]:
     return {
         key: entry
         for key, entry in value.items()
-        if isinstance(entry, dict) and all(isinstance(entry.get(name), str) for name in ("path", "label", "server"))
+        if isinstance(entry, dict) and all(isinstance(entry.get(name), str) for name in ("path", "label", "terminal"))
     }
 
 
