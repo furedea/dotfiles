@@ -9,9 +9,11 @@ import json
 import os
 from pathlib import Path
 import subprocess
+from typing import TypeGuard
 
 from session_store import ScopeError, SessionRecord, atomic_json, read_json
 import shell_syntax
+from herdr_grammar import has_global_option
 
 
 AGENTS_FILE = "herdr_agents.json"
@@ -19,7 +21,7 @@ LIST_TIMEOUT_SECONDS = 5
 
 
 def check(record: SessionRecord, command: str) -> None:
-    """Record agents this command starts and refuse prompts to agents the session did not start."""
+    """Refuse ownership actions that cannot be tied to this session's terminals."""
     try:
         commands = shell_syntax.parse(command)
     except shell_syntax.UnsupportedSyntax:
@@ -29,68 +31,70 @@ def check(record: SessionRecord, command: str) -> None:
         if (
             parsed.program_is_dynamic
             or Path(parsed.arguments[0]).name != "herdr"
-            or action
-            not in {
-                ("agent", "start"),
-                ("agent", "prompt"),
-                ("workspace", "close"),
-                ("worktree", "remove"),
-                ("agent", "rename"),
-            }
+            or (
+                not server_override(parsed)
+                and action
+                not in {
+                    ("agent", "start"),
+                    ("agent", "prompt"),
+                    ("workspace", "close"),
+                    ("worktree", "remove"),
+                    ("agent", "rename"),
+                }
+            )
         ):
             continue
-        try:
-            simple = (
-                len(commands) == 1 and parsed.arguments[0] == "herdr" and shell_syntax.is_one_simple_command(command)
-            )
-        except shell_syntax.UnsupportedSyntax:
-            simple = False
-        if not simple:
+        simple = is_single_call(command, commands)
+        if not simple or "--group" in parsed.arguments:
             raise ScopeError("Herdr ownership actions need one simple direct Herdr call")
         if action == ("agent", "start"):
-            claim(record, target(parsed))
+            claim(target(parsed))
         elif action == ("agent", "prompt"):
             require_owned(record, target(parsed))
         elif action == ("workspace", "close"):
             require_closable(record, parsed)
         elif action == ("worktree", "remove"):
-            require_removable(record, option_value(parsed, "--workspace"))
+            require_owned_workspace(record, option_value(parsed, "--workspace"))
         else:
             raise ScopeError("Renaming a Herdr agent could hand one of this session's names to another pane")
 
 
 def confirm(record: SessionRecord, command: str, response: object) -> None:
-    """After a plain `workspace create` succeeded, own the primary workspace its result names.
-
-    Only one simple call counts, so the output is Herdr's own and not something a list, pipe,
-    redirection, or wrapper could have printed.
-    """
+    """Record successful creations only when their output comes from one simple direct call."""
     try:
-        if not shell_syntax.is_one_simple_command(command):
-            return
         commands = shell_syntax.parse(command)
     except shell_syntax.UnsupportedSyntax:
         return
-    if len(commands) == 1 and is_plain_create(commands[0]):
-        record_primary(record, commands[0], response)
+    if not is_single_call(command, commands):
+        return
+    parsed = commands[0]
+    if any(parsed.dynamic):
+        return
+    result = created_result(response)
+    action = parsed.arguments[1:3]
+    if action in {("workspace", "create"), ("worktree", "create")}:
+        record_workspace(record, parsed, result)
+    elif action == ("agent", "start"):
+        agent = result.get("agent")
+        if valid_entry(agent, ("name", "terminal_id", "pane_id", "workspace_id")) and agent["name"] == target(parsed):
+            save(record, agents={**entries(record, "agents"), agent["name"]: agent})
 
 
-def is_plain_create(parsed: shell_syntax.Command) -> bool:
-    """`herdr workspace create --cwd <path> --label <label> --no-focus`, options in any order, all literal."""
-    arguments = parsed.arguments
-    if (
-        parsed.program_is_dynamic
-        or any(parsed.dynamic)
-        or arguments[0] != "herdr"
-        or arguments[1:3] != ("workspace", "create")
-    ):
+def is_single_call(command: str, commands: tuple[shell_syntax.Command, ...]) -> bool:
+    try:
+        return (
+            len(commands) == 1
+            and commands[0].arguments[0] == "herdr"
+            and not server_override(commands[0])
+            and shell_syntax.is_one_simple_command(command)
+        )
+    except shell_syntax.UnsupportedSyntax:
         return False
-    rest = arguments[3:]
-    options = [word for word in rest if word.startswith("--")]
-    return (
-        len(rest) == 5
-        and sorted(options) == ["--cwd", "--label", "--no-focus"]
-        and bool(option_value(parsed, "--cwd") and option_value(parsed, "--label"))
+
+
+def server_override(parsed: shell_syntax.Command) -> bool:
+    return has_global_option(parsed.arguments) or any(
+        word.split("=", 1)[0] in {"--socket", "--socket-path"} for word in parsed.arguments
     )
 
 
@@ -108,24 +112,24 @@ def option_value(parsed: shell_syntax.Command, option: str) -> str:
     return ""
 
 
-def record_primary(record: SessionRecord, parsed: shell_syntax.Command, response: object) -> None:
-    """Own the workspace a successful result names; its path is the root pane's, since the result has no checkout."""
-    result = created_result(response)
-    workspace = result.get("workspace")
-    pane = result.get("root_pane")
-    if not isinstance(workspace, dict) or not isinstance(pane, dict):
+def record_workspace(record: SessionRecord, parsed: shell_syntax.Command, result: dict) -> None:
+    workspace, pane = result.get("workspace"), result.get("root_pane")
+    if not valid_entry(workspace, ("workspace_id", "label")) or not valid_entry(pane, ("cwd", "terminal_id")):
         return
-    identifier, label = workspace.get("workspace_id"), workspace.get("label")
-    path = next((pane[key] for key in ("cwd", "foreground_cwd") if isinstance(pane.get(key), str) and pane[key]), "")
-    if not (isinstance(identifier, str) and isinstance(label, str) and label and path):
+    label = option_value(parsed, "--label")
+    if label and label != workspace["label"]:
         return
-    if label != option_value(parsed, "--label"):
+    worktree = result.get("worktree", {}) if parsed.arguments[1] == "worktree" else {}
+    path = worktree.get("path") if isinstance(worktree, dict) else None
+    if parsed.arguments[1] == "worktree" and not (isinstance(path, str) and path):
         return
-    terminal = pane.get("terminal_id")
-    if not (isinstance(terminal, str) and terminal):
-        return
-    entry = {"path": normpath(path), "label": label, "terminal": terminal}
-    save(record, primaries={**primaries(record.directory), identifier: entry})
+    entry = {
+        "path": normpath(path or pane["cwd"]),
+        "cwd": normpath(pane["cwd"]),
+        "label": workspace["label"],
+        "terminal_id": pane["terminal_id"],
+    }
+    save(record, workspaces={**entries(record, "workspaces"), workspace["workspace_id"]: entry})
 
 
 def created_result(response: object) -> dict:
@@ -154,37 +158,34 @@ def require_closable(record: SessionRecord, parsed: shell_syntax.Command) -> Non
 
 
 def require_owned_workspace(record: SessionRecord, workspace: str) -> None:
-    """A workspace may close when it is an idle primary this session created, or every agent in it is its own."""
-    if workspace and workspace in primaries(record.directory):
-        require_idle_primary(record, workspace)
-        return
-    names = [agent.get("name") for agent in live_agents() if workspace and agent.get("workspace_id") == workspace]
-    if names and all(isinstance(name, str) and name in owned(record) for name in names):
-        return
-    shown = workspace or "chosen at run time"
-    raise ScopeError(f"Herdr workspace {shown} does not hold only agents this session started")
+    """Close only a recorded workspace still holding its root and exclusively recorded agents."""
+    entry = entries(record, "workspaces").get(workspace)
+    if not entry or not matches_live(workspace, entry):
+        raise ScopeError(f"Herdr workspace {workspace} was not created by this session or no longer matches")
+    panes = live_panes(workspace)
+    terminals = {agent.get("terminal_id") for agent in entries(record, "agents").values()}
+    if (
+        not any(pane.get("terminal_id") == entry["terminal_id"] for pane in panes)
+        or any(
+            agent.get("terminal_id") not in terminals
+            for agent in live_agents()
+            if agent.get("workspace_id") == workspace
+        )
+        or any(pane.get("agent") and pane.get("terminal_id") not in terminals for pane in panes)
+    ):
+        raise ScopeError(f"Herdr workspace {workspace} no longer holds only terminals this session created")
+    save(
+        record,
+        workspaces={key: value for key, value in entries(record, "workspaces").items() if key != workspace},
+        agents={
+            key: value for key, value in entries(record, "agents").items() if value.get("workspace_id") != workspace
+        },
+    )
 
 
-def require_removable(record: SessionRecord, workspace: str) -> None:
-    if workspace and workspace in primaries(record.directory):
-        raise ScopeError(f"Herdr workspace {workspace} is a primary checkout; removing it deletes the repository")
-    require_owned_workspace(record, workspace)
-
-
-def require_idle_primary(record: SessionRecord, workspace: str) -> None:
-    """Close the primary only while Herdr still serves what was recorded and nothing runs in it."""
-    entry = primaries(record.directory)[workspace]
-    if not matches_live(workspace, entry) or not holds_terminal(workspace, entry["terminal"]):
-        raise ScopeError(f"Herdr workspace {workspace} no longer matches the primary this session created")
-    if any(agent.get("workspace_id") == workspace for agent in live_agents()):
-        raise ScopeError(f"Herdr workspace {workspace} still runs an agent")
-    forget_primary(record.directory, workspace)
-
-
-def holds_terminal(workspace: str, terminal: str) -> bool:
-    """Whether the live workspace still has the recorded root terminal, which a reused ID or restart never repeats."""
+def live_panes(workspace: str) -> list[dict]:
     panes = herdr_result("pane", "list", "--workspace", workspace).get("panes", [])
-    return any(isinstance(pane, dict) and pane.get("terminal_id") == terminal for pane in panes)
+    return [pane for pane in panes if isinstance(pane, dict)]
 
 
 def matches_live(workspace: str, entry: dict[str, str]) -> bool:
@@ -205,59 +206,48 @@ def live_path(item: dict) -> str:
     return next((normpath(path) for path in candidates if isinstance(path, str) and path), "")
 
 
-def primaries(directory: Path) -> dict[str, dict[str, str]]:
-    path = directory / AGENTS_FILE
-    value = read_json(path).get("primaries") if path.exists() else None
-    if not isinstance(value, dict):
-        return {}
-    return {
-        key: entry
-        for key, entry in value.items()
-        if isinstance(entry, dict) and all(isinstance(entry.get(name), str) for name in ("path", "label", "terminal"))
-    }
+def valid_entry(entry: object, keys: tuple[str, ...]) -> TypeGuard[dict]:
+    return isinstance(entry, dict) and all(isinstance(entry.get(key), str) and entry[key] for key in keys)
 
 
-def forget_primary(directory: Path, workspace: str) -> None:
-    """The record ends with the close, so a reused ID never inherits it."""
-    update(directory, primaries={key: entry for key, entry in primaries(directory).items() if key != workspace})
+def entries(record: SessionRecord, key: str) -> dict[str, dict]:
+    path = record.directory / AGENTS_FILE
+    value = read_json(path).get(key) if path.exists() else None
+    keys = ("terminal_id", "pane_id", "workspace_id", "name") if key == "agents" else ("terminal_id", "path", "label")
+    return (
+        {name: entry for name, entry in value.items() if valid_entry(entry, keys)} if isinstance(value, dict) else {}
+    )
 
 
 def normpath(path: str) -> str:
     return os.path.normpath(path)
 
 
-def claim(record: SessionRecord, name: str) -> None:
+def claim(name: str) -> None:
     if not name:
         raise ScopeError("Herdr agent name is a shell expansion, so this session cannot claim it")
     if name in live_agent_names():
         raise ScopeError(f"Herdr agent {name} already exists and was not started by this session")
-    save(record, agents=sorted(owned(record) | {name}))
 
 
 def require_owned(record: SessionRecord, name: str) -> None:
-    if name and name in owned(record):
-        return
+    entry = entries(record, "agents").get(name, {})
+    for agent in live_agents() if entry else []:
+        if (
+            agent.get("name") == name
+            and agent.get("terminal_id") == entry.get("terminal_id")
+            and any(
+                pane.get("pane_id") == agent.get("pane_id") and pane.get("terminal_id") == entry.get("terminal_id")
+                for pane in live_panes(agent.get("workspace_id", ""))
+            )
+        ):
+            return
     shown = name or "chosen at run time"
     raise ScopeError(f"Herdr agent {shown} was not started by this session; its pane may run outside the sandbox")
 
 
-def owned(record: SessionRecord) -> set[str]:
-    return stored(record, "agents")
-
-
-def stored(record: SessionRecord, key: str) -> set[str]:
-    path = record.directory / AGENTS_FILE
-    if not path.exists():
-        return set()
-    return {value for value in read_json(path).get(key, []) if isinstance(value, str)}
-
-
 def save(record: SessionRecord, **values: object) -> None:
-    update(record.directory, **values)
-
-
-def update(directory: Path, **values: object) -> None:
-    path = directory / AGENTS_FILE
+    path = record.directory / AGENTS_FILE
     current = read_json(path) if path.exists() else {}
     atomic_json(path, {**current, **values})
 
@@ -265,13 +255,7 @@ def update(directory: Path, **values: object) -> None:
 def workspace_items() -> list[dict]:
     """Open workspaces."""
     workspaces = herdr_result("workspace", "list").get("workspaces", [])
-    return [
-        item
-        for item in workspaces
-        if isinstance(item, dict)
-        and isinstance(item.get("workspace_id"), str)
-        and isinstance(item.get("worktree"), dict)
-    ]
+    return [item for item in workspaces if isinstance(item, dict) and isinstance(item.get("workspace_id"), str)]
 
 
 def live_agent_names() -> set[str]:
