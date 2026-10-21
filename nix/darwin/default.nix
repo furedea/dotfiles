@@ -23,6 +23,8 @@ let
 
   tinycastTap = "abue-ammar/tinycast";
 
+  orcaTap = "stablyai/orca";
+
   # Homebrew refuses to load items from third-party taps until they are
   # trusted. `brew bundle --cleanup` replaces the whole trust store with
   # entries derived from Brewfile `trusted:` options, so this file only
@@ -37,6 +39,7 @@ let
         omlxTap
         omlxTapUrl
         tinycastTap
+        orcaTap
       ];
     }
   );
@@ -355,6 +358,7 @@ in
         clone_target = omlxTapUrl;
       }
       { name = tinycastTap; }
+      { name = orcaTap; }
     ];
 
     # Local MLX inference server. Nixpkgs builds mlx with MLX_BUILD_METAL=false
@@ -380,6 +384,7 @@ in
       "microsoft-word"
       "nani"
       "obsidian"
+      "${orcaTap}/orca"
       "orbstack"
       "skim"
       "slack"
@@ -397,6 +402,7 @@ in
     extraConfig = ''
       tap "${omlxTap}", "${omlxTapUrl}", trusted: true
       tap "${tinycastTap}", trusted: true
+      tap "${orcaTap}", trusted: true
     '';
   };
 }
