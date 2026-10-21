@@ -58,10 +58,20 @@ in
   # eMudhra intermediates under these roots have recoverable private keys
   # (https://emudhra.we-have-a-problem.com/); drop once nixpkgs' cacert
   # distrusts them.
-  security.pki.caCertificateBlacklist = [
-    "Comodo AAA Services root"
-    "emSign ECC Root CA - G3"
-  ];
+  security.pki = {
+    caCertificateBlacklist = [
+      "Comodo AAA Services root"
+      "emSign ECC Root CA - G3"
+    ];
+    # The default ca-bundle.crt keeps blacklisted roots as OpenSSL TRUSTED
+    # CERTIFICATE blocks marked as rejected, which clients that ignore the mark
+    # trust anyway; this bundle leaves them out.
+    certificateFiles = lib.mkForce [
+      "${
+        pkgs.cacert.override { blacklist = config.security.pki.caCertificateBlacklist; }
+      }/etc/ssl/certs/ca-no-trust-rules-bundle.crt"
+    ];
+  };
 
   services.hister = {
     enable = enableHisterService;
