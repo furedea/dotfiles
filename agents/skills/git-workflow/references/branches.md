@@ -36,6 +36,8 @@ Rules:
 - Run each `herdr` command as a single Bash call. Herdr leaves the sandbox only when the whole
   call is one `herdr` command; chaining (`git fetch origin && herdr ...`) runs it inside the
   sandbox, where it fails. Fetch first in a separate call.
+- A variable inside a `gh api` endpoint must be double-quoted (`gh api "repos/o/$r/..."`);
+  unquoted expansions ask.
 - Keep the prompt text literal. A substitution such as `"$(cat brief.md)"` also makes the call
   more than one `herdr` command. Write the brief to a file in this session's scratchpad and
   prompt the lane to read that file.

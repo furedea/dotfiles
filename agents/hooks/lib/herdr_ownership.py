@@ -32,7 +32,7 @@ def check(record: SessionRecord, command: str) -> None:
             parsed.program_is_dynamic
             or Path(parsed.arguments[0]).name != "herdr"
             or (
-                not server_override(parsed)
+                not has_global_option(parsed.arguments)
                 and action
                 not in {
                     ("agent", "start"),
@@ -54,13 +54,13 @@ def check(record: SessionRecord, command: str) -> None:
         elif action == ("workspace", "close"):
             require_closable(record, parsed)
         elif action == ("worktree", "remove"):
-            require_owned_workspace(record, option_value(parsed, "--workspace"))
+            require_removable(record, parsed)
         else:
             raise ScopeError("Renaming a Herdr agent could hand one of this session's names to another pane")
 
 
 def confirm(record: SessionRecord, command: str, response: object) -> None:
-    """Record successful creations only when their output comes from one simple direct call."""
+    """Update ownership only for matching successful results of one simple direct call."""
     try:
         commands = shell_syntax.parse(command)
     except shell_syntax.UnsupportedSyntax:
@@ -72,11 +72,27 @@ def confirm(record: SessionRecord, command: str, response: object) -> None:
         return
     result = created_result(response)
     action = parsed.arguments[1:3]
+    expected = {
+        ("workspace", "create"): "workspace_created",
+        ("worktree", "create"): "worktree_created",
+        ("agent", "start"): "agent_started",
+        ("workspace", "close"): "workspace_closed",
+        ("worktree", "remove"): "worktree_removed",
+    }.get(action)
+    if expected is None or result.get("type") != expected:
+        return
     if action in {("workspace", "create"), ("worktree", "create")}:
         record_workspace(record, parsed, result)
+    elif action in {("workspace", "close"), ("worktree", "remove")}:
+        workspace = target(parsed) if action[0] == "workspace" else option_value(parsed, "--workspace")
+        expire_workspace(record, workspace)
     elif action == ("agent", "start"):
         agent = result.get("agent")
-        if valid_entry(agent, ("name", "terminal_id", "pane_id", "workspace_id")) and agent["name"] == target(parsed):
+        if (
+            valid_entry(agent, ("name", "terminal_id", "pane_id", "workspace_id"))
+            and agent_session(agent)
+            and agent["name"] == target(parsed)
+        ):
             save(record, agents={**entries(record, "agents"), agent["name"]: agent})
 
 
@@ -85,17 +101,11 @@ def is_single_call(command: str, commands: tuple[shell_syntax.Command, ...]) -> 
         return (
             len(commands) == 1
             and commands[0].arguments[0] == "herdr"
-            and not server_override(commands[0])
+            and not has_global_option(commands[0].arguments)
             and shell_syntax.is_one_simple_command(command)
         )
     except shell_syntax.UnsupportedSyntax:
         return False
-
-
-def server_override(parsed: shell_syntax.Command) -> bool:
-    return has_global_option(parsed.arguments) or any(
-        word.split("=", 1)[0] in {"--socket", "--socket-path"} for word in parsed.arguments
-    )
 
 
 def target(parsed: shell_syntax.Command) -> str:
@@ -125,7 +135,6 @@ def record_workspace(record: SessionRecord, parsed: shell_syntax.Command, result
         return
     entry = {
         "path": normpath(path or pane["cwd"]),
-        "cwd": normpath(pane["cwd"]),
         "label": workspace["label"],
         "terminal_id": pane["terminal_id"],
     }
@@ -157,23 +166,29 @@ def require_closable(record: SessionRecord, parsed: shell_syntax.Command) -> Non
     require_owned_workspace(record, ids[0] if len(ids) == 1 else "")
 
 
-def require_owned_workspace(record: SessionRecord, workspace: str) -> None:
+def require_removable(record: SessionRecord, parsed: shell_syntax.Command) -> None:
+    workspace = option_value(parsed, "--workspace")
+    if not workspace or parsed.arguments[3:] != ("--workspace", workspace):
+        raise ScopeError("Herdr worktree remove needs only --workspace ID for automatic approval")
+    require_owned_workspace(record, workspace, removable=True)
+
+
+def require_owned_workspace(record: SessionRecord, workspace: str, *, removable: bool = False) -> None:
     """Close only a recorded workspace still holding its root and exclusively recorded agents."""
     entry = entries(record, "workspaces").get(workspace)
-    if not entry or not matches_live(workspace, entry):
+    if not entry or not matches_live(workspace, entry, removable=removable):
         raise ScopeError(f"Herdr workspace {workspace} was not created by this session or no longer matches")
     panes = live_panes(workspace)
-    terminals = {agent.get("terminal_id") for agent in entries(record, "agents").values()}
-    if (
-        not any(pane.get("terminal_id") == entry["terminal_id"] for pane in panes)
-        or any(
-            agent.get("terminal_id") not in terminals
-            for agent in live_agents()
-            if agent.get("workspace_id") == workspace
-        )
-        or any(pane.get("agent") and pane.get("terminal_id") not in terminals for pane in panes)
+    agents = entries(record, "agents")
+    if not any(pane.get("terminal_id") == entry["terminal_id"] for pane in panes) or any(
+        not matches_agent(agent, agents.get(agent.get("name"), {}))
+        for agent in live_agents()
+        if agent.get("workspace_id") == workspace
     ):
         raise ScopeError(f"Herdr workspace {workspace} no longer holds only terminals this session created")
+
+
+def expire_workspace(record: SessionRecord, workspace: str) -> None:
     save(
         record,
         workspaces={key: value for key, value in entries(record, "workspaces").items() if key != workspace},
@@ -188,10 +203,14 @@ def live_panes(workspace: str) -> list[dict]:
     return [pane for pane in panes if isinstance(pane, dict)]
 
 
-def matches_live(workspace: str, entry: dict[str, str]) -> bool:
+def matches_live(workspace: str, entry: dict[str, str], *, removable: bool = False) -> bool:
     for item in workspace_items():
-        if item["workspace_id"] == workspace:
-            return item.get("label") == entry["label"] and live_path(item) == entry["path"]
+        if item["workspace_id"] != workspace:
+            continue
+        worktree = item.get("worktree")
+        if removable and not (isinstance(worktree, dict) and worktree.get("is_linked_worktree") is True):
+            return False
+        return item.get("label") == entry["label"] and live_path(item) == entry["path"]
     return False
 
 
@@ -232,18 +251,25 @@ def claim(name: str) -> None:
 
 def require_owned(record: SessionRecord, name: str) -> None:
     entry = entries(record, "agents").get(name, {})
-    for agent in live_agents() if entry else []:
-        if (
-            agent.get("name") == name
-            and agent.get("terminal_id") == entry.get("terminal_id")
-            and any(
-                pane.get("pane_id") == agent.get("pane_id") and pane.get("terminal_id") == entry.get("terminal_id")
-                for pane in live_panes(agent.get("workspace_id", ""))
-            )
-        ):
-            return
+    if any(matches_agent(agent, entry) for agent in live_agents() if entry):
+        return
     shown = name or "chosen at run time"
     raise ScopeError(f"Herdr agent {shown} was not started by this session; its pane may run outside the sandbox")
+
+
+def agent_session(agent: dict) -> str:
+    session = agent.get("agent_session")
+    value = session.get("value") if isinstance(session, dict) else None
+    return value if isinstance(value, str) else ""
+
+
+def matches_agent(agent: dict, entry: dict) -> bool:
+    return (
+        bool(agent_session(entry))
+        and agent.get("name") == entry.get("name")
+        and agent.get("terminal_id") == entry.get("terminal_id")
+        and agent_session(agent) == agent_session(entry)
+    )
 
 
 def save(record: SessionRecord, **values: object) -> None:

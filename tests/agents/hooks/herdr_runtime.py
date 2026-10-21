@@ -37,10 +37,10 @@ def decision(output: dict) -> str:
     return output.get("hookSpecificOutput", {}).get("permissionDecision", "allow")
 
 
-def workspace_list(tmp_path: Path, *entries: tuple[str, str, str]) -> None:
+def workspace_list(tmp_path: Path, *entries: tuple[str, str, str], linked: tuple[str, ...] = ()) -> None:
     """Open workspaces as (id, checkout path, label)."""
     rows = [
-        {"workspace_id": ws, "label": label, "worktree": {"checkout_path": path, "is_linked_worktree": False}}
+        {"workspace_id": ws, "label": label, "worktree": {"checkout_path": path, "is_linked_worktree": ws in linked}}
         for ws, path, label in entries
     ]
     (tmp_path / "workspaces.json").write_text(json.dumps({"result": {"workspaces": rows}}))
@@ -49,6 +49,7 @@ def workspace_list(tmp_path: Path, *entries: tuple[str, str, str]) -> None:
 def created(workspace: str = "w5", label: str = "site", cwd: str = PRIMARY) -> str:
     """The shape `herdr workspace create` returns: no checkout path, the directory is the root pane's."""
     result = {
+        "type": "workspace_created",
         "workspace": {"workspace_id": workspace, "label": label},
         "root_pane": {"pane_id": "p1", "cwd": cwd, "terminal_id": TERMINAL},
     }
@@ -88,6 +89,21 @@ def set_terminals(tmp_path: Path, *terminals: str) -> None:
 def start_agent(repository: Path, herdr: Path, workspace: str, *, command: str = "") -> None:
     command = command or f"herdr agent start lane-a --kind claude --pane {workspace}:p1"
     assert decision(run(repository, command)) == "allow"
-    agent = {"name": "lane-a", "workspace_id": workspace, "pane_id": "p1", "terminal_id": "term_agent"}
-    after(repository, command, {"stdout": json.dumps({"result": {"agent": agent}})})
+    agent = {
+        "name": "lane-a",
+        "workspace_id": workspace,
+        "pane_id": "p1",
+        "terminal_id": "term_agent",
+        "agent_session": {"value": "session_agent"},
+    }
+    after(repository, command, {"stdout": json.dumps({"result": {"type": "agent_started", "agent": agent}})})
     herdr.write_text(f"lane-a {workspace} term_agent\n")
+
+
+def open_lane(repository: Path, tmp_path: Path) -> None:
+    command = "herdr worktree create --workspace w5 --branch feat/x --label lane --no-focus"
+    workspace_list(tmp_path, ("w5", PRIMARY, "site"), ("w6", "/lanes/w6", "lane"), linked=("w6",))
+    result = json.loads(created("w6", "lane", PRIMARY))
+    result["result"]["type"] = "worktree_created"
+    result["result"]["worktree"] = {"path": "/lanes/w6"}
+    after(repository, command, {"stdout": json.dumps(result)})

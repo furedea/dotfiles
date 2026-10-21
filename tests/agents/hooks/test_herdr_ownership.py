@@ -135,29 +135,39 @@ def test_a_failed_start_does_not_claim_a_later_agent_with_the_same_name(reposito
     assert decision(run(repository, "herdr agent prompt lane-a hello")) == "ask"
 
 
-@pytest.mark.parametrize("stale_panes", [False, True])
-def test_an_exited_agents_name_does_not_own_its_replacement(
-    repository: Path, herdr: Path, tmp_path: Path, stale_panes: bool
-) -> None:
+@pytest.mark.parametrize("replacement", ["term_replacement session_agent", "term_agent session_replacement"])
+def test_an_exited_agents_name_does_not_own_its_replacement(repository: Path, herdr: Path, replacement: str) -> None:
     start_agent(repository, herdr, "w9")
-    herdr.write_text("lane-a w9 term_replacement\n")
-    if stale_panes:
-        panes = [{"pane_id": "p1", "terminal_id": "term_agent"}]
-        (tmp_path / "pane_override.json").write_text(json.dumps({"result": {"panes": panes}}))
+    herdr.write_text(f"lane-a w9 {replacement}\n")
     assert decision(run(repository, "herdr agent prompt lane-a hello")) == "ask"
 
 
-def test_a_prompt_requires_the_live_pane_terminal(repository: Path, herdr: Path, tmp_path: Path) -> None:
-    start_agent(repository, herdr, "w9")
-    (tmp_path / "pane_override.json").write_text(json.dumps({"result": {"panes": []}}))
-    assert decision(run(repository, "herdr agent prompt lane-a hello")) == "ask"
-
-
-@pytest.mark.parametrize("field", ["name", "terminal_id", "pane_id", "workspace_id"])
+@pytest.mark.parametrize("field", ["name", "terminal_id", "pane_id", "workspace_id", "agent_session"])
 def test_an_incomplete_start_result_does_not_claim_the_agent(repository: Path, herdr: Path, field: str) -> None:
     command = "herdr agent start lane-a --kind claude --pane w9:p1"
-    agent = {"name": "lane-a", "terminal_id": "term_agent", "pane_id": "p1", "workspace_id": "w9"}
+    agent = {
+        "name": "lane-a",
+        "terminal_id": "term_agent",
+        "pane_id": "p1",
+        "workspace_id": "w9",
+        "agent_session": {"value": "session_agent"},
+    }
     del agent[field]
-    after(repository, command, {"stdout": json.dumps({"result": {"agent": agent}})})
+    after(repository, command, {"stdout": json.dumps({"result": {"type": "agent_started", "agent": agent}})})
     herdr.write_text("lane-a w9\n")
+    assert decision(run(repository, "herdr agent prompt lane-a hello")) == "ask"
+
+
+@pytest.mark.parametrize("result_type", [None, "workspace_created", "worktree_created"])
+def test_a_start_requires_an_agent_started_result(repository: Path, herdr: Path, result_type: str | None) -> None:
+    agent = {
+        "name": "lane-a",
+        "workspace_id": "w9",
+        "pane_id": "p1",
+        "terminal_id": "term_agent",
+        "agent_session": {"value": "session_agent"},
+    }
+    herdr.write_text("lane-a w9 term_agent session_agent\n")
+    command = "herdr agent start lane-a --kind claude --pane w9:p1"
+    after(repository, command, {"stdout": json.dumps({"result": {"type": result_type, "agent": agent}})})
     assert decision(run(repository, "herdr agent prompt lane-a hello")) == "ask"

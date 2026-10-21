@@ -112,6 +112,18 @@
             "if": "Bash(herdr agent start *)",
             "type": "command",
             "timeout": 30
+          },
+          {
+            "command": "\"$HOME/.claude/hooks/verification_session.py\" claude post-tool-use",
+            "if": "Bash(herdr workspace close *)",
+            "type": "command",
+            "timeout": 30
+          },
+          {
+            "command": "\"$HOME/.claude/hooks/verification_session.py\" claude post-tool-use",
+            "if": "Bash(herdr worktree remove *)",
+            "type": "command",
+            "timeout": 30
           }
         ]
       },
