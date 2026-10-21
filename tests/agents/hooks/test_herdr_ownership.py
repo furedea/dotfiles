@@ -169,3 +169,11 @@ def test_a_recorded_parent_with_an_agent_in_it_asks(repository: Path, herdr: Pat
     open_workspaces(tmp_path, ("w5", "/repos/site"))
     herdr.write_text(" w5\n")
     assert decision(run(repository, "herdr workspace close w5")) == "ask"
+
+
+def test_the_parent_workspace_a_worktree_open_opened_closes_with_the_lane(
+    repository: Path, herdr: Path, tmp_path: Path
+) -> None:
+    run(repository, "herdr worktree open --cwd /repos/site --path /repos/site-x --no-focus")
+    open_workspaces(tmp_path, ("w5", "/repos/site"))
+    assert decision(run(repository, "herdr workspace close w5")) == "allow"

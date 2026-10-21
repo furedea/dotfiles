@@ -21,6 +21,7 @@ Task worktree hand-off through Herdr, once per lane, each line as its own Bash c
 
 ```bash
 git fetch origin
+herdr workspace list                                         # before: note the workspace IDs
 herdr worktree create --cwd <primary-checkout> --branch <branch> --base origin/<base> --label <branch> --no-focus
 herdr agent start <lane-name> --kind claude --pane <root-pane-id> -- --model sonnet --effort medium
 herdr agent prompt <lane-name> "Read your brief at <scratchpad>/briefs/<lane-name>.md and carry it out."
@@ -42,6 +43,13 @@ Rules:
   only for done or blocked can return at once while the agent still shows done from an earlier
   turn. Then read the lane's reply with `herdr agent read` and check its PR. This works for Claude
   and Codex lanes alike.
+- `worktree create` and `worktree open` also open a workspace for the repository's primary checkout
+  when it has none, and its ID is not in their result. Run `herdr workspace list` again after the
+  call and note every new workspace. When the lane is done, close each one (the lane's, and any
+  primary-checkout workspace the call opened) in which no agent runs; the hooks allow closing a
+  workspace this session opened, never one that existed before or that runs another agent.
+- A variable inside a `gh api` endpoint must be double-quoted (`gh api "repos/o/$r/..."`);
+  unquoted expansions ask.
 - Read the workspace and root pane IDs from the JSON that `worktree create` returns
   (`.result.workspace.workspace_id`, `.result.root_pane.pane_id`); never predict them.
 - `<lane-name>` matches `[a-z][a-z0-9_-]{0,31}` and is new: the hooks let a session prompt only the
@@ -49,8 +57,10 @@ Rules:
 - Start Claude for an implementation lane, even from a Codex session. Codex keeps a linked
   worktree's Git directory read-only inside its sandbox (openai/codex#14338), so a Codex lane
   cannot commit there without approval. Lanes run on Sonnet at medium effort to save usage; pass
-  exactly `-- --model sonnet --effort medium` and nothing else after `--`: other agent arguments
-  ask, since they could switch off the child's sandbox or approvals.
+  exactly `-- --model sonnet --effort medium` and nothing else after `--` (a reviewer lane for
+  Codex-written code uses `-- --model opus --effort medium`, see
+  [herdr-delegation](../../herdr-delegation/SKILL.md)): other agent arguments ask, since they
+  could switch off the child's sandbox or approvals.
 - The brief follows [herdr-delegation](../../herdr-delegation/SKILL.md) and is self-contained: the
   Issue body and the approved plan text, not only their numbers or links, the lane scope, delivery
   authority (commit, push, and open a PR; never merge), and the reply format.

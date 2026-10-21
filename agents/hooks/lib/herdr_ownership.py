@@ -31,7 +31,7 @@ def check(record: SessionRecord, command: str) -> None:
             claim(record, target(parsed))
         elif action == ("agent", "prompt"):
             require_owned(record, target(parsed))
-        elif action == ("worktree", "create"):
+        elif action in (("worktree", "create"), ("worktree", "open")):
             note_opened_parent(record, option_value(parsed, "--cwd"))
         elif action == ("workspace", "close"):
             require_owned_workspace(record, target(parsed))
@@ -56,7 +56,7 @@ def option_value(parsed: shell_syntax.Command, option: str) -> str:
 
 
 def note_opened_parent(record: SessionRecord, repository: str) -> None:
-    """Remember a repository workspace that `worktree create` is about to open for its group."""
+    """Remember a repository workspace that `worktree create` or `worktree open` is about to open for its group."""
     if not repository or repository in open_checkouts():
         return
     save(record, parents=sorted(stored(record, "parents") | {repository}))

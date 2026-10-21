@@ -124,6 +124,10 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
             id="Herdr Claude agents on Sonnet at medium effort",
         ),
         pytest.param(
+            "herdr agent start lane-d --kind claude --pane w1:p4 -- --model opus --effort medium",
+            id="Herdr Claude agents on Opus at medium effort",
+        ),
+        pytest.param(
             'herdr agent prompt lane-a "Implement #181.\nRead the plan first." --wait --timeout 120000',
             id="Herdr prompts",
         ),
