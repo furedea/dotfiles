@@ -22,7 +22,7 @@ Task worktree hand-off through Herdr, once per lane, each line as its own Bash c
 ```bash
 git fetch origin
 herdr worktree create --cwd <primary-checkout> --branch <branch> --base origin/<base> --label <branch> --no-focus
-herdr agent start <lane-name> --kind claude --pane <root-pane-id>
+herdr agent start <lane-name> --kind claude --pane <root-pane-id> -- --model sonnet --effort medium
 herdr agent prompt <lane-name> "Read your brief at <scratchpad>/briefs/<lane-name>.md and carry it out."
 herdr agent wait <lane-name> --until working                 # in the background
 herdr agent wait <lane-name> --until done --until blocked    # in the background, after the first returns
@@ -48,8 +48,9 @@ Rules:
   agents it started, and they ask before claiming a name another agent holds.
 - Start Claude for an implementation lane, even from a Codex session. Codex keeps a linked
   worktree's Git directory read-only inside its sandbox (openai/codex#14338), so a Codex lane
-  cannot commit there without approval. Pass nothing after `--`:
-  agent arguments are denied, since they could switch off the child's sandbox or approvals.
+  cannot commit there without approval. Lanes run on Sonnet at medium effort to save usage; pass
+  exactly `-- --model sonnet --effort medium` and nothing else after `--`: other agent arguments
+  ask, since they could switch off the child's sandbox or approvals.
 - The brief follows [herdr-delegation](../../herdr-delegation/SKILL.md) and is self-contained: the
   Issue body and the approved plan text, not only their numbers or links, the lane scope, delivery
   authority (commit, push, and open a PR; never merge), and the reply format.

@@ -88,6 +88,7 @@
         "^herdr worktree create( --(cwd|branch|base|path|label|workspace) ('[^']*'|\"([^\"\\\\]|\\\\.)*\"|[^ '\"]+)| --(no-)?focus)*$",
         "^herdr pane split( --(pane|direction|ratio|cwd) ('[^']*'|\"([^\"\\\\]|\\\\.)*\"|[^ '\"]+)| --current| --(no-)?focus)*$",
         "^herdr agent start [a-z][a-z0-9_-]*( --kind (claude|codex)| --pane [^ ]+| --timeout [0-9]+)+$",
+        "^herdr agent start [a-z][a-z0-9_-]*( --kind claude| --pane [^ ]+| --timeout [0-9]+)+ -- --model sonnet --effort medium$",
         "^herdr agent prompt [a-z][a-z0-9_-]* ('[^']*'|\"([^\"\\\\]|\\\\.)*\"|[^ '\"]+)( --wait| --until [a-z]+| --timeout [0-9]+)*$",
         "^herdr workspace close [^ -][^ ]*$",
         "^herdr worktree remove --workspace [^ -][^ ]*$",
