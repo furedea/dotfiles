@@ -86,6 +86,24 @@ def set_terminals(tmp_path: Path, *terminals: str) -> None:
     (tmp_path / "panes.json").write_text(json.dumps({"result": {"panes": panes}}))
 
 
+def set_agents(names: Path, text: str) -> None:
+    """Prepare the agent listing when live agents change, without a Python child."""
+    agents = []
+    for line in text.splitlines():
+        name, workspace, terminal, session = (line.split() + ["", "", ""])[:4]
+        agents.append(
+            {
+                "name": name,
+                "workspace_id": workspace,
+                "pane_id": "p1",
+                "terminal_id": terminal or "term_agent",
+                "agent_session": {"value": session or "session_agent"},
+            }
+        )
+    names.write_text(text)
+    (names.parent / "agents.json").write_text(json.dumps({"result": {"agents": agents}}))
+
+
 def start_agent(repository: Path, herdr: Path, workspace: str, *, command: str = "") -> None:
     command = command or f"herdr agent start lane-a --kind claude --pane {workspace}:p1"
     assert decision(run(repository, command)) == "allow"
@@ -97,7 +115,7 @@ def start_agent(repository: Path, herdr: Path, workspace: str, *, command: str =
         "agent_session": {"value": "session_agent"},
     }
     after(repository, command, {"stdout": json.dumps({"result": {"type": "agent_started", "agent": agent}})})
-    herdr.write_text(f"lane-a {workspace} term_agent\n")
+    set_agents(herdr, f"lane-a {workspace} term_agent\n")
 
 
 def open_lane(repository: Path, tmp_path: Path) -> None:

@@ -9,7 +9,7 @@ import sys
 import pytest
 
 from tests.runtime import REPO_ROOT, StubWriter
-from tests.agents.hooks.herdr_runtime import TERMINAL
+from tests.agents.hooks.herdr_runtime import TERMINAL, set_agents
 
 
 sys.path.insert(0, str(REPO_ROOT / "agents/hooks"))
@@ -65,7 +65,7 @@ def herdr(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     directory = tmp_path / "bin"
     directory.mkdir()
     names = tmp_path / "live_agents.txt"
-    names.write_text("")
+    set_agents(names, "")
     script = directory / "herdr"
     workspaces = tmp_path / "workspaces.json"
     workspaces.write_text('{"result":{"workspaces":[]}}')
@@ -73,23 +73,7 @@ def herdr(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     worktrees.write_text('{"result":{"worktrees":[]}}')
     panes = tmp_path / "panes.json"
     panes.write_text(json.dumps({"result": {"panes": [{"pane_id": "p1", "terminal_id": TERMINAL}]}}))
-    script.write_text(
-        f"#!{sys.executable} -I\n"
-        "import json\n"
-        "from pathlib import Path\n"
-        "import sys\n"
-        f"directory = Path({str(tmp_path)!r})\n"
-        "if sys.argv[1] == 'pane':\n"
-        "    print((directory / 'panes.json').read_text())\n"
-        "elif sys.argv[1] != 'agent':\n"
-        "    print((directory / f'{sys.argv[1]}s.json').read_text())\n"
-        "else:\n"
-        "    agents = []\n"
-        "    for line in (directory / 'live_agents.txt').read_text().splitlines():\n"
-        "        name, workspace, terminal, session = (line.split() + ['', '', ''])[:4]\n"
-        "        agents.append({'name': name, 'workspace_id': workspace, 'pane_id': 'p1', 'terminal_id': terminal or 'term_agent', 'agent_session': {'value': session or 'session_agent'}})\n"
-        "    print(json.dumps({'result': {'agents': agents}}))\n"
-    )
-    script.chmod(0o755)
+    script.symlink_to(Path(__file__).with_name("fake_herdr.sh"))
+    monkeypatch.setenv("HERDR_TEST_DIRECTORY", str(tmp_path))
     monkeypatch.setenv("PATH", f"{directory}{os.pathsep}{os.environ['PATH']}")
     return names

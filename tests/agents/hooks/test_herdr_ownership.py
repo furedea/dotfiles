@@ -9,7 +9,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 from tests.runtime import REPO_ROOT
-from tests.agents.hooks.herdr_runtime import after, decision, hook, run, start_agent
+from tests.agents.hooks.herdr_runtime import after, decision, hook, run, set_agents, start_agent
 
 
 sys.path.insert(0, str(REPO_ROOT / "agents/hooks/lib"))
@@ -40,9 +40,9 @@ def test_prompting_an_agent_the_session_did_not_start_asks(repository: Path, her
 
 
 def test_a_name_another_agent_already_holds_is_not_claimed(repository: Path, herdr: Path) -> None:
-    herdr.write_text("reviewer\n")
+    set_agents(herdr, "reviewer\n")
     assert decision(run(repository, "herdr agent start reviewer --kind claude --pane w1:p2")) == "ask"
-    herdr.write_text("")
+    set_agents(herdr, "")
     assert decision(run(repository, "herdr agent prompt reviewer 'hello'")) == "ask"
 
 
@@ -104,7 +104,7 @@ def test_ownership_actions_require_one_simple_direct_call(
     repository: Path, herdr: Path, command: str, plain_decision: str, form: str
 ) -> None:
     start_agent(repository, herdr, "w9")
-    herdr.write_text("lane-a w9\n")
+    set_agents(herdr, "lane-a w9\n")
     output = run(repository, form.format(command))
     assert decision(output) == "ask"
     assert "one simple direct Herdr call" in output["hookSpecificOutput"]["permissionDecisionReason"]
@@ -115,7 +115,7 @@ def test_an_ownership_action_asks_when_its_simple_command_shape_cannot_be_parsed
     repository: Path, herdr: Path, mocker: MockerFixture
 ) -> None:
     start_agent(repository, herdr, "w9")
-    herdr.write_text("lane-a w9\n")
+    set_agents(herdr, "lane-a w9\n")
     mocker.patch.object(
         herdr_ownership.shell_syntax,
         "is_one_simple_command",
@@ -131,14 +131,14 @@ def test_a_failed_start_does_not_claim_a_later_agent_with_the_same_name(reposito
     command = "herdr agent start lane-a --kind claude --pane w9:p1"
     run(repository, command)
     after(repository, command, {"stdout": "Error: failed"})
-    herdr.write_text("lane-a w9\n")
+    set_agents(herdr, "lane-a w9\n")
     assert decision(run(repository, "herdr agent prompt lane-a hello")) == "ask"
 
 
 @pytest.mark.parametrize("replacement", ["term_replacement session_agent", "term_agent session_replacement"])
 def test_an_exited_agents_name_does_not_own_its_replacement(repository: Path, herdr: Path, replacement: str) -> None:
     start_agent(repository, herdr, "w9")
-    herdr.write_text(f"lane-a w9 {replacement}\n")
+    set_agents(herdr, f"lane-a w9 {replacement}\n")
     assert decision(run(repository, "herdr agent prompt lane-a hello")) == "ask"
 
 
@@ -154,7 +154,7 @@ def test_an_incomplete_start_result_does_not_claim_the_agent(repository: Path, h
     }
     del agent[field]
     after(repository, command, {"stdout": json.dumps({"result": {"type": "agent_started", "agent": agent}})})
-    herdr.write_text("lane-a w9\n")
+    set_agents(herdr, "lane-a w9\n")
     assert decision(run(repository, "herdr agent prompt lane-a hello")) == "ask"
 
 
@@ -167,7 +167,7 @@ def test_a_start_requires_an_agent_started_result(repository: Path, herdr: Path,
         "terminal_id": "term_agent",
         "agent_session": {"value": "session_agent"},
     }
-    herdr.write_text("lane-a w9 term_agent session_agent\n")
+    set_agents(herdr, "lane-a w9 term_agent session_agent\n")
     command = "herdr agent start lane-a --kind claude --pane w9:p1"
     after(repository, command, {"stdout": json.dumps({"result": {"type": result_type, "agent": agent}})})
     assert decision(run(repository, "herdr agent prompt lane-a hello")) == "ask"

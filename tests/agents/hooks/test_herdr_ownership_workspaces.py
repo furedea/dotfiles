@@ -17,6 +17,7 @@ from tests.agents.hooks.herdr_runtime import (
     open_primary,
     open_lane,
     run,
+    set_agents,
     set_terminals,
     start_agent,
     workspace_list,
@@ -29,7 +30,7 @@ import session_store as store
 @pytest.mark.parametrize("command", ["herdr workspace close w9", "herdr worktree remove --workspace w9"])
 def test_starting_a_lane_in_the_users_workspace_does_not_own_it(repository: Path, herdr: Path, command: str) -> None:
     start_agent(repository, herdr, "w9")
-    herdr.write_text("lane-a w9\n")
+    set_agents(herdr, "lane-a w9\n")
     assert decision(run(repository, command)) == "ask"
 
 
@@ -221,7 +222,7 @@ def test_created_workspaces_and_agents_follow_one_ownership_flow(
         },
     )
     assert decision(run(repository, close)) == "ask"
-    herdr.write_text("")
+    set_agents(herdr, "")
     assert decision(run(repository, CLOSE)) == "allow"
     after(repository, CLOSE, {"stdout": json.dumps({"result": {"type": "ok"}})})
     assert decision(run(repository, CLOSE)) == "ask"
@@ -266,7 +267,7 @@ def test_only_a_single_direct_create_or_start_records_ownership(
     wrapped = form.format(command.removeprefix("herdr ") if form.startswith("herdr ") else command)
     after(repository, wrapped, {"stdout": json.dumps(response)})
     workspace_list(tmp_path, ("w5", PRIMARY, "site"))
-    herdr.write_text("lane-a w5\n")
+    set_agents(herdr, "lane-a w5\n")
     assert decision(run(repository, "herdr agent prompt lane-a hello")) == "ask"
     assert decision(run(repository, CLOSE)) == "ask"
 
@@ -281,7 +282,7 @@ def test_a_created_workspace_with_an_unowned_agent_asks(
     open_primary(repository, tmp_path)
     open_lane(repository, tmp_path)
     start_agent(repository, herdr, "w6")
-    herdr.write_text(agent)
+    set_agents(herdr, agent)
     assert decision(run(repository, command)) == "ask"
 
 
