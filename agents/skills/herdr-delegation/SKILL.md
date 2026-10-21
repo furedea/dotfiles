@@ -34,16 +34,13 @@ the request, evaluates the returned work, and reports the outcome to the user.
 | Review code                                | Claude for Codex-authored code; Codex for Claude-authored code     | Findings only; do not edit the reviewed source         |
 | Implement in another directory or worktree | A separate Claude session, since a Codex session cannot commit in a linked worktree | Changes limited to the delegated scope                 |
 
-When the user asks for Codex to implement, Codex implements and Claude reviews. The lane (Sonnet at
-medium effort, started as in `git-workflow`) writes the task and runs
-`node <codex plugin>/scripts/codex-companion.mjs task --write --model gpt-6.1-sol --effort medium --cwd <worktree> "<task>"` (no `$`
-in the task text). Codex edits files and runs tests but cannot write `.git`, so the lane reads
-the diff, commits, pushes, and opens the PR. Codex cannot reach the nix daemon from its sandbox, so the Claude lane computes Nix hashes and runs
-nix checks, and passes the values to Codex when needed.
-A Claude reviewer then reviews: the Sonnet lane itself for a few lines of mechanical
-configuration, otherwise a separate reviewer lane on Opus at medium effort
-(`-- --model opus --effort medium`) started fresh with only the requirements and the diff.
-When Claude implemented, Codex reviews with its configured default. Implementation medium, review xhigh.
+When the user asks for Codex to implement, Codex implements and Claude reviews. The lane runs
+`node <codex plugin>/scripts/codex-companion.mjs task --write --model gpt-6.1-sol --effort medium --cwd <worktree> "<task>"`
+as one command with no dollar sign in the task text and no pipe or redirect, then reads the diff,
+runs the checks Codex cannot (Nix hashes and nix builds), commits, pushes, and opens the PR.
+Review: the lane itself for a few lines of configuration, otherwise a fresh reviewer lane on
+`-- --model opus --effort medium` with only the requirements and the diff. When Claude implemented,
+Codex reviews.
 
 Honor an explicit provider choice. Keep plan review, code review, and implementation as distinct
 assignments; asking for findings does not authorize the reviewer to fix them.
