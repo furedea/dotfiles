@@ -7,6 +7,7 @@ import subprocess
 import sys
 
 import pytest
+from pytest_mock import MockerFixture
 
 from tests.runtime import REPO_ROOT
 
@@ -14,6 +15,7 @@ from tests.runtime import REPO_ROOT
 hook = REPO_ROOT / "agents/hooks/verification_session.py"
 sys.path.insert(0, str(REPO_ROOT / "agents/hooks/lib"))
 import session_store as store
+import herdr_ownership
 
 
 TERMINAL = "term_65e57fd60160846c"
@@ -43,12 +45,19 @@ def herdr(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     panes = tmp_path / "panes.json"
     panes.write_text(json.dumps({"result": {"panes": [{"pane_id": "p1", "terminal_id": TERMINAL}]}}))
     script.write_text(
-        "#!/bin/sh\n"
-        f'if [ "$1 $2" = "workspace list" ]; then cat {workspaces}; exit 0; fi\n'
-        f'if [ "$1 $2" = "pane list" ]; then cat {panes}; exit 0; fi\n'
-        f'if [ "$1 $2" = "worktree list" ]; then cat {worktrees}; exit 0; fi\n'
-        f'agents=$(sed -E \'s/^([^ ]*) ?(.*)$/{{"name":"\\1","workspace_id":"\\2"}}/\' {names} | paste -sd, -)\n'
-        'printf \'{"result":{"agents":[%s]}}\\n\' "$agents"\n'
+        f"#!{sys.executable} -I\n"
+        "import json\n"
+        "from pathlib import Path\n"
+        "import sys\n"
+        f"directory = Path({str(tmp_path)!r})\n"
+        "if sys.argv[1] != 'agent':\n"
+        "    print((directory / f'{sys.argv[1]}s.json').read_text())\n"
+        "else:\n"
+        "    agents = []\n"
+        "    for line in (directory / 'live_agents.txt').read_text().splitlines():\n"
+        "        name, _, workspace = line.partition(' ')\n"
+        "        agents.append({'name': name, 'workspace_id': workspace})\n"
+        "    print(json.dumps({'result': {'agents': agents}}))\n"
     )
     script.chmod(0o755)
     monkeypatch.setenv("PATH", f"{directory}{os.pathsep}{os.environ['PATH']}")
@@ -139,6 +148,54 @@ def test_a_session_closes_the_workspace_its_lane_ran_in(repository: Path, herdr:
     run(repository, "herdr agent start lane-a --kind claude --pane w9:p1")
     herdr.write_text("lane-a w9\n")
     assert decision(run(repository, command)) == "allow"
+
+
+@pytest.mark.parametrize(
+    ("command", "plain_decision"),
+    [
+        ("herdr worktree remove --workspace w9", "allow"),
+        ("herdr agent prompt lane-a 'hello'", "allow"),
+        ("herdr agent rename w9:p2 lane-a", "ask"),
+        ("herdr agent start lane-b --kind claude --pane w9:p2", "allow"),
+    ],
+)
+@pytest.mark.parametrize(
+    "form",
+    [
+        "HERDR_SOCKET_PATH=/tmp/other.sock {}",
+        "env HERDR_SOCKET_PATH=/tmp/other.sock {}",
+        "{}; echo done",
+        "({})",
+        "{} | cat",
+        "{} > /dev/null",
+        "/usr/local/bin/{}",
+    ],
+)
+def test_ownership_actions_require_one_simple_direct_call(
+    repository: Path, herdr: Path, command: str, plain_decision: str, form: str
+) -> None:
+    run(repository, "herdr agent start lane-a --kind claude --pane w9:p1")
+    herdr.write_text("lane-a w9\n")
+    output = run(repository, form.format(command))
+    assert decision(output) == "ask"
+    assert "one simple direct Herdr call" in output["hookSpecificOutput"]["permissionDecisionReason"]
+    assert decision(run(repository, command)) == plain_decision
+
+
+def test_an_ownership_action_asks_when_its_simple_command_shape_cannot_be_parsed(
+    repository: Path, herdr: Path, mocker: MockerFixture
+) -> None:
+    run(repository, "herdr agent start lane-a --kind claude --pane w9:p1")
+    herdr.write_text("lane-a w9\n")
+    mocker.patch.object(
+        herdr_ownership.shell_syntax,
+        "is_one_simple_command",
+        autospec=True,
+        side_effect=herdr_ownership.shell_syntax.UnsupportedSyntax("parser unavailable"),
+    )
+    record = store.register(repository, "codex", "session")
+    with pytest.raises(store.ScopeError, match="one simple direct Herdr call"):
+        herdr_ownership.check(record, "herdr worktree remove --workspace w9")
 
 
 @pytest.mark.parametrize(

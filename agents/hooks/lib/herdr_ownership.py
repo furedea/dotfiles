@@ -25,18 +25,37 @@ def check(record: SessionRecord, command: str) -> None:
     except shell_syntax.UnsupportedSyntax:
         return
     for parsed in commands:
-        if parsed.program_is_dynamic or Path(parsed.arguments[0]).name != "herdr":
-            continue
         action = parsed.arguments[1:3]
+        if (
+            parsed.program_is_dynamic
+            or Path(parsed.arguments[0]).name != "herdr"
+            or action
+            not in {
+                ("agent", "start"),
+                ("agent", "prompt"),
+                ("workspace", "close"),
+                ("worktree", "remove"),
+                ("agent", "rename"),
+            }
+        ):
+            continue
+        try:
+            simple = (
+                len(commands) == 1 and parsed.arguments[0] == "herdr" and shell_syntax.is_one_simple_command(command)
+            )
+        except shell_syntax.UnsupportedSyntax:
+            simple = False
+        if not simple:
+            raise ScopeError("Herdr ownership actions need one simple direct Herdr call")
         if action == ("agent", "start"):
             claim(record, target(parsed))
         elif action == ("agent", "prompt"):
             require_owned(record, target(parsed))
         elif action == ("workspace", "close"):
-            require_closable(record, command, commands)
+            require_closable(record, parsed)
         elif action == ("worktree", "remove"):
             require_removable(record, option_value(parsed, "--workspace"))
-        elif action == ("agent", "rename"):
+        else:
             raise ScopeError("Renaming a Herdr agent could hand one of this session's names to another pane")
 
 
@@ -124,11 +143,8 @@ def created_result(response: object) -> dict:
     return result if isinstance(result, dict) else {}
 
 
-def require_closable(record: SessionRecord, command: str, commands: tuple[shell_syntax.Command, ...]) -> None:
+def require_closable(record: SessionRecord, parsed: shell_syntax.Command) -> None:
     """Plain closes only: Herdr itself refuses a primary's close while a linked workspace is open."""
-    if len(commands) != 1 or commands[0].arguments[0] != "herdr" or not shell_syntax.is_one_simple_command(command):
-        raise ScopeError("Herdr workspace close needs one simple direct Herdr call")
-    parsed = commands[0]
     words = list(zip(parsed.arguments[3:], parsed.dynamic[3:], strict=True))
     options = {word for word, _ in words if word.startswith("-")}
     ids = [word if not dynamic else "" for word, dynamic in words if not word.startswith("-")]
