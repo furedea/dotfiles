@@ -62,6 +62,14 @@ in
     "Comodo AAA Services root"
     "emSign ECC Root CA - G3"
   ];
+  # The default ca-bundle.crt keeps blacklisted roots as OpenSSL TRUSTED
+  # CERTIFICATE blocks marked as rejected, and rustls clients such as codex
+  # trust them anyway; this bundle leaves them out.
+  security.pki.certificateFiles = lib.mkForce [
+    "${
+      pkgs.cacert.override { blacklist = config.security.pki.caCertificateBlacklist; }
+    }/etc/ssl/certs/ca-no-trust-rules-bundle.crt"
+  ];
 
   services.hister = {
     enable = enableHisterService;
