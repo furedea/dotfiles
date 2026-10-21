@@ -14,6 +14,53 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
 
 
 @pytest.mark.parametrize(
+    "command",
+    [
+        'cd /tmp/project && node "/plugin path/codex-companion.mjs" --task review',
+        'node "/plugin path/codex-companion.mjs" --task review; echo done',
+        'node "/plugin path/codex-companion.mjs" --task review | tee /tmp/log',
+        'node "/plugin path/codex-companion.mjs" --task review > /tmp/log',
+        'env A=1 node "/plugin path/codex-companion.mjs" --task review',
+        'A=1 node "/plugin path/codex-companion.mjs" --task review',
+        'cd /tmp/project && "/plugin path/codex-companion.mjs" --task review',
+        'echo ready; timeout 30 node "/plugin path/codex-companion.mjs" --task review',
+    ],
+)
+def test_companion_requires_one_simple_command(command: str) -> None:
+    verdict = guard.decide("forbidden", {"tool_input": {"command": command}})
+    assert verdict.decision == "deny"
+    assert 'node "<plugin path>/codex-companion.mjs"' in verdict.reason
+    assert "--cwd <dir> instead of cd" in verdict.reason
+    assert "no pipes, redirects, &&, or assignments" in verdict.reason
+    assert "sandbox exclusion matches only that form" in verdict.reason
+
+
+def test_companion_is_denied_when_its_simple_command_shape_cannot_be_parsed(mocker: MockerFixture) -> None:
+    mocker.patch.object(
+        guard.shell_syntax,
+        "is_one_simple_command",
+        autospec=True,
+        side_effect=guard.shell_syntax.UnsupportedSyntax("parser unavailable"),
+    )
+    command = 'node "/plugin path/codex-companion.mjs" --cwd /tmp/project --task "確認"'
+    assert guard.decide("forbidden", {"tool_input": {"command": command}}).decision == "deny"
+
+
+@pytest.mark.parametrize("kind", ["allowed", "forbidden"])
+@pytest.mark.parametrize(
+    "command",
+    [
+        'node "/plugin path/codex-companion.mjs" --cwd /tmp/project --task "日本語のタスクを確認"',
+        'node "/plugin path/codex-companion.mjs" --cwd /tmp/project --task "引用符と && | > は本文" --background',
+        'echo "/plugin path/codex-companion.mjs" | tee /tmp/log',
+        'node "/plugin path/other.mjs" > /tmp/log',
+    ],
+)
+def test_simple_companion_calls_and_unrelated_commands_stay_allowed(kind: str, command: str) -> None:
+    assert guard.decide(kind, {"tool_input": {"command": command}}).decision == "allow"
+
+
+@pytest.mark.parametrize(
     "command,status,reason",
     [
         ("git status", 0, ""),
