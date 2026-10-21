@@ -162,8 +162,10 @@ def workspace_list(tmp_path: Path, *entries: tuple[str, str, str], linked: tuple
     (tmp_path / "worktrees.json").write_text(json.dumps({"result": {"worktrees": group}}))
 
 
-def created(workspace: str = "w5", label: str = "site") -> str:
-    return json.dumps({"result": {"workspace": {"workspace_id": workspace, "label": label}}})
+def created(workspace: str = "w5", label: str = "site", cwd: str = PRIMARY) -> str:
+    """The shape `herdr workspace create` returns: no checkout path, the directory is the root pane's."""
+    result = {"workspace": {"workspace_id": workspace, "label": label}, "root_pane": {"pane_id": "p1", "cwd": cwd}}
+    return json.dumps({"result": result})
 
 
 def after(repository: Path, command: str, response: object) -> None:
@@ -249,6 +251,24 @@ def test_a_reused_id_with_another_path_or_label_asks(
 def test_a_closed_primary_expires_from_the_record(repository: Path, herdr: Path, tmp_path: Path) -> None:
     open_primary(repository, tmp_path)
     run(repository, GROUP_CLOSE)
+    assert decision(run(repository, GROUP_CLOSE)) == "ask"
+
+
+def test_the_path_falls_back_to_the_root_panes_foreground_directory(
+    repository: Path, herdr: Path, tmp_path: Path
+) -> None:
+    workspace_list(tmp_path, ("w5", PRIMARY, "site"))
+    run(repository, CREATE)
+    result = {"workspace": {"workspace_id": "w5", "label": "site"}, "root_pane": {"foreground_cwd": PRIMARY}}
+    after(repository, CREATE, {"stdout": json.dumps({"result": result})})
+    assert decision(run(repository, GROUP_CLOSE)) == "allow"
+
+
+def test_a_result_without_a_root_pane_directory_is_not_owned(repository: Path, herdr: Path, tmp_path: Path) -> None:
+    workspace_list(tmp_path, ("w5", PRIMARY, "site"))
+    run(repository, CREATE)
+    result = {"workspace": {"workspace_id": "w5", "label": "site"}, "root_pane": {"pane_id": "p1"}}
+    after(repository, CREATE, {"stdout": json.dumps({"result": result})})
     assert decision(run(repository, GROUP_CLOSE)) == "ask"
 
 

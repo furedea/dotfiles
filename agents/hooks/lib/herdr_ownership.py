@@ -68,21 +68,23 @@ def option_value(parsed: shell_syntax.Command, option: str) -> str:
 
 
 def record_primary(record: SessionRecord, parsed: shell_syntax.Command, response: object) -> None:
-    """Own only the workspace the successful result names, and only when it carries the asked label."""
-    path, label = option_value(parsed, "--cwd"), option_value(parsed, "--label")
-    workspace = created_workspace(response)
-    if not (path and label and workspace):
+    """Own the workspace a successful result names; its path is the root pane's, since the result has no checkout."""
+    result = created_result(response)
+    workspace = result.get("workspace")
+    pane = result.get("root_pane")
+    if not isinstance(workspace, dict) or not isinstance(pane, dict):
         return
-    if workspace.get("label", label) != label or not isinstance(workspace.get("workspace_id"), str):
+    identifier, label = workspace.get("workspace_id"), workspace.get("label")
+    path = next((pane[key] for key in ("cwd", "foreground_cwd") if isinstance(pane.get(key), str) and pane[key]), "")
+    if not (isinstance(identifier, str) and isinstance(label, str) and label and path):
         return
-    save(
-        record,
-        primaries={**primaries(record.directory), workspace["workspace_id"]: {"path": normpath(path), "label": label}},
-    )
+    if label != option_value(parsed, "--label"):
+        return
+    save(record, primaries={**primaries(record.directory), identifier: {"path": normpath(path), "label": label}})
 
 
-def created_workspace(response: object) -> dict:
-    """The `result.workspace` object of a command's JSON output; anything failed or malformed gives none."""
+def created_result(response: object) -> dict:
+    """The `result` object of a command's JSON output; anything failed or malformed gives none."""
     if isinstance(response, dict):
         if response.get("interrupted") or response.get("is_error") or response.get("isError"):
             return {}
@@ -90,10 +92,10 @@ def created_workspace(response: object) -> dict:
     if not isinstance(response, str):
         return {}
     try:
-        workspace = json.loads(response)["result"]["workspace"]
+        result = json.loads(response)["result"]
     except TypeError, ValueError, KeyError:
         return {}
-    return workspace if isinstance(workspace, dict) else {}
+    return result if isinstance(result, dict) else {}
 
 
 def require_closable(record: SessionRecord, parsed: shell_syntax.Command) -> None:

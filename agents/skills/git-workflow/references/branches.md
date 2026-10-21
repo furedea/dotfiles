@@ -47,12 +47,15 @@ Rules:
 - With `--cwd` and no open primary workspace, `worktree create` opens one implicitly, which no hook can
   attribute to this session. When `workspace list` shows no workspace for the primary checkout, open
   it yourself with `workspace create` and pass its ID (`.result.workspace.workspace_id`) as
-  `--workspace`. The hooks record a primary this session created from that successful result, with
-  its checkout path and label; a primary that was already open is the user's and is never recorded.
+  `--workspace`; `worktree create --workspace` then opens no extra workspace. The hooks record a
+  primary this session created from that successful result: its ID and label from
+  `.result.workspace`, its path from `.result.root_pane.cwd` (the result has no checkout path). A
+  primary that was already open is the user's and is never recorded.
 - Clean up when the lanes are done: if this session created the primary, run
-  `herdr workspace close <primary-id> --group`, which closes the primary with its lane workspaces;
-  otherwise close only each lane's workspace. The hooks allow `--group` only while the live
-  workspace still matches the recorded ID, path, and label and no agent but this session's lanes runs
+  `herdr workspace close <primary-id> --group`, which closes the primary with its lane workspaces (a plain close fails with
+  `workspace_group_close_required` while lanes are open);
+  otherwise close only each lane's workspace. The hooks allow `--group` only while `workspace list`
+  still shows the recorded ID, `worktree.checkout_path`, and label and no agent but this session's lanes runs
   in the group; anything else asks, so accept that one prompt. The record expires on close. The
   session-start sweep below also closes the recorded primary once its group is empty.
 - A variable inside a `gh api` endpoint must be double-quoted (`gh api "repos/o/$r/..."`);
