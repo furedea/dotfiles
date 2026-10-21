@@ -31,6 +31,7 @@ let
   devinCliPackage = pkgs.callPackage ../packages/devin_cli.nix { };
   nodejsPackage = pkgs.callPackage ../packages/nodejs_bin.nix { };
   uvPackage = pkgs.callPackage ../packages/uv_bin.nix { };
+  dprintPackage = pkgs.callPackage ../packages/dprint_bin.nix { };
   codexPackage = llm-agents.packages.${system}.codex;
   claudePackage = llm-agents.packages.${system}.claude-code;
   agentHarnessPackage = agent-harness.packages.${system}.default;
@@ -198,7 +199,7 @@ in
     actionlint
     autocorrect
     commitlint
-    dprint
+    dprintPackage
     unstable.lefthook
     ls-lint
     # prettierd: used for markdown because dprint-plugin-markdown hardcodes 2-space list indent.
