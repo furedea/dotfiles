@@ -22,7 +22,10 @@
       "patterns": [
         "^herdr[[:space:]]+agent[[:space:]]+start([[:space:]].*)?[[:space:]]--([[:space:]]|$)"
       ],
-      "justification": "Do not pass arguments to an agent Herdr starts; they could switch off its sandbox, hooks, or approvals."
+      "exceptions": [
+        "^herdr agent start [a-z][a-z0-9_-]*( --kind claude| --pane [^ ]+| --timeout [0-9]+)+ -- --model sonnet --effort medium$"
+      ],
+      "justification": "Do not pass arguments to an agent Herdr starts, except the Sonnet model at medium effort for Claude lanes; others could switch off its sandbox, hooks, or approvals."
     }
   ]
 }

@@ -68,6 +68,8 @@ def validate_rule(rule: object, prefixes: bool) -> None:
         raise ValueError("invalid decision")
     if not prefixes and "programs" in rule and not is_name_list(rule["programs"]):
         raise ValueError("invalid governed program list")
+    if not prefixes and "exceptions" in rule and not is_name_list(rule["exceptions"]):
+        raise ValueError("invalid exception list")
     if not prefixes and not isinstance(rule.get("literal_words", False), bool):
         raise ValueError("invalid literal word flag")
 
@@ -130,7 +132,12 @@ def regex_reason(raw: str, rules: list[dict]) -> str:
     raw = re.sub(r"\s+(?:2>&1|2>/dev/null|>&2)\s*$", "", raw.strip())
     if not any_regex_matches(all_patterns(rules), raw):
         return ""
-    return next((rule["justification"] for rule in rules if any_regex_matches(rule.get("patterns", ()), raw)), "")
+    return next((rule["justification"] for rule in rules if rule_matches(rule, raw)), "")
+
+
+def rule_matches(rule: dict, raw: str) -> bool:
+    """A rule applies when a pattern matches and none of its narrow exceptions does."""
+    return any_regex_matches(rule.get("patterns", ()), raw) and not any_regex_matches(rule.get("exceptions", ()), raw)
 
 
 def all_patterns(rules: list[dict]) -> list[str]:

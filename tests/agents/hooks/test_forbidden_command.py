@@ -94,10 +94,19 @@ def test_generated_deny_prefixes(
         "uv run --frozen python -m pip install requests",
         "herdr agent start lane-a --kind claude --pane w1:p2 -- --dangerously-skip-permissions",
         "herdr agent start lane-a --kind codex --pane w1:p2 -- --sandbox danger-full-access",
+        "herdr agent start lane-a --kind codex --pane w1:p2 -- --model sonnet --effort medium",
+        "herdr agent start lane-a --kind claude --pane w1:p2 -- --model sonnet --effort medium --settings x.json",
+        "herdr agent start lane-a --kind claude --pane w1:p2 -- --model sonnet --effort high",
+        "herdr agent start lane-a --kind claude --pane w1:p2 -- --effort medium --model sonnet",
     ],
 )
 def test_global_rules_reject_policy_bypasses(command: str) -> None:
     assert guard.check("forbidden", {"tool_input": {"command": command}}) == 2
+
+
+def test_lanes_may_start_on_sonnet_at_medium_effort() -> None:
+    command = "herdr agent start lane-a --kind claude --pane w1:p2 -- --model sonnet --effort medium"
+    assert guard.check("forbidden", {"tool_input": {"command": command}}) == 0
 
 
 @pytest.mark.parametrize(
