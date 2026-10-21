@@ -97,6 +97,7 @@
         "hooks": [
           {
             "command": "\"$HOME/.claude/hooks/verification_session.py\" claude post-tool-use",
+            "if": "Bash(herdr workspace create *)",
             "type": "command",
             "timeout": 30
           }

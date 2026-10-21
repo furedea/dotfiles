@@ -83,7 +83,7 @@ def confirm_tool(record: SessionRecord, payload: dict) -> None:
     value = payload.get("tool_input", {})
     command = value.get("command", value.get("cmd", "")) if isinstance(value, dict) else ""
     if isinstance(command, str):
-        herdr_ownership.confirm(record, command)
+        herdr_ownership.confirm(record, command, payload.get("tool_response"))
 
 
 def require_inside(record: SessionRecord, path: Path) -> None:

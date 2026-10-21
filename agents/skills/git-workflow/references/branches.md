@@ -21,8 +21,9 @@ Task worktree hand-off through Herdr, once per lane, each line as its own Bash c
 
 ```bash
 git fetch origin
-herdr workspace list                                         # before: note the workspace IDs
-herdr worktree create --cwd <primary-checkout> --branch <branch> --base origin/<base> --label <branch> --no-focus
+herdr workspace list                                         # is the primary checkout already open?
+herdr workspace create --cwd <primary-checkout> --label <repo> --no-focus   # only when it is not open
+herdr worktree create --workspace <primary-id> --branch <branch> --base origin/<base> --label <branch> --no-focus
 herdr agent start <lane-name> --kind claude --pane <root-pane-id> -- --model sonnet --effort medium
 herdr agent prompt <lane-name> "Read your brief at <scratchpad>/briefs/<lane-name>.md and carry it out."
 herdr agent wait <lane-name> --until working                 # in the background
@@ -43,13 +44,17 @@ Rules:
   only for done or blocked can return at once while the agent still shows done from an earlier
   turn. Then read the lane's reply with `herdr agent read` and check its PR. This works for Claude
   and Codex lanes alike.
-- `worktree create` and `worktree open` also open a workspace for the repository's primary checkout
-  when it has none, and its ID is not in their result. Run `herdr workspace list` again after the
-  call and note every new workspace. When the lane is done, close each one (the lane's, and any
-  primary-checkout workspace the call opened) in which no agent runs; the hooks allow closing a
-  workspace only when a successful call of this session opened it (confirmed after the call, once),
-  never one that existed before, reopened under a new ID, or that runs another agent. If the hook
-  asks, accept the one prompt.
+- With `--cwd` and no open primary workspace, `worktree create` opens one implicitly, which no hook can
+  attribute to this session. When `workspace list` shows no workspace for the primary checkout, open
+  it yourself with `workspace create` and pass its ID (`.result.workspace.workspace_id`) as
+  `--workspace`. The hooks record a primary this session created from that successful result, with
+  its checkout path and label; a primary that was already open is the user's and is never recorded.
+- Clean up when the lanes are done: if this session created the primary, run
+  `herdr workspace close <primary-id> --group`, which closes the primary with its lane workspaces;
+  otherwise close only each lane's workspace. The hooks allow `--group` only while the live
+  workspace still matches the recorded ID, path, and label and no agent but this session's lanes runs
+  in the group; anything else asks, so accept that one prompt. The record expires on close. The
+  session-start sweep below also closes the recorded primary once its group is empty.
 - A variable inside a `gh api` endpoint must be double-quoted (`gh api "repos/o/$r/..."`);
   unquoted expansions ask.
 - Read the workspace and root pane IDs from the JSON that `worktree create` returns

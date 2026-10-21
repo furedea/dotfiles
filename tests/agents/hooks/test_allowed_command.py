@@ -111,6 +111,9 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
         pytest.param(
             "herdr worktree open --cwd /repo --branch feat/x --label x --no-focus", id="Herdr worktree opens"
         ),
+        pytest.param("herdr workspace create --cwd /repo --label repo --no-focus", id="Herdr primary workspaces"),
+        pytest.param("herdr workspace close w5 --group", id="Herdr group closes"),
+        pytest.param("herdr workspace close --group w5", id="Herdr group closes with the option first"),
         pytest.param("herdr pane list", id="Herdr reads"),
         pytest.param(
             "herdr worktree create --cwd /repo --branch feat/lane-a --base origin/main --label 'lane a' --no-focus",
@@ -156,6 +159,8 @@ def test_commands_whose_effects_the_checks_can_see_pass(capsys: pytest.CaptureFi
         pytest.param("for n in 1 2; do gh pr review $n --approve; done", [], id="inside a loop"),
         pytest.param("gh api repos/owner/repo/issues/1 --method DELETE", ["not in allowlist"], id="GitHub API writes"),
         pytest.param("gh api repos/owner/repo/dispatches --method POST", [], id="GitHub API dispatches"),
+        pytest.param("herdr workspace create --cwd /repo --env A=b", [], id="Herdr workspaces with an environment"),
+        pytest.param("herdr workspace close w5 --group --force", [], id="Herdr group closes with other options"),
         pytest.param("gh api $ENDPOINT --method DELETE", [], id="GitHub API writes at run-time endpoints"),
         pytest.param(
             "gh api repos/owner/repo/issues -f title=$TITLE", [], id="GitHub API writes with run-time fields"
