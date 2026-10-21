@@ -36,13 +36,13 @@ the request, evaluates the returned work, and reports the outcome to the user.
 
 When the user asks to save Claude usage, Codex implements and Claude reviews. The lane (Sonnet at
 medium effort, started as in `git-workflow`) writes the task and runs
-`node <codex plugin>/scripts/codex-companion.mjs task --write --cwd <worktree> "<task>"` (no `$`
+`node <codex plugin>/scripts/codex-companion.mjs task --write --model gpt-6.1-sol --effort medium --cwd <worktree> "<task>"` (no `$`
 in the task text). Codex edits files and runs tests but cannot write `.git` or reach the nix
 daemon socket, so the lane runs the nix checks, reads the diff, commits, pushes, and opens the PR.
 A Claude reviewer then reviews: the Sonnet lane itself for a few lines of mechanical
 configuration, otherwise a separate reviewer lane on Opus at medium effort
 (`-- --model opus --effort medium`) started fresh with only the requirements and the diff.
-When Claude implemented, Codex reviews.
+When Claude implemented, Codex reviews with its configured default. Implementation medium, review xhigh.
 
 Honor an explicit provider choice. Keep plan review, code review, and implementation as distinct
 assignments; asking for findings does not authorize the reviewer to fix them.
