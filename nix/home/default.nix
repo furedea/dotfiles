@@ -32,7 +32,7 @@ let
   nodejsPackage = pkgs.callPackage ../packages/nodejs_bin.nix { };
   uvPackage = pkgs.callPackage ../packages/uv_bin.nix { };
   dprintPackage = pkgs.callPackage ../packages/dprint_bin.nix { };
-  codexPackage = llm-agents.packages.${system}.codex;
+  codexPackage = pkgs.callPackage ../packages/codex_bin.nix { };
   claudePackage = llm-agents.packages.${system}.claude-code;
   agentHarnessPackage = agent-harness.packages.${system}.default;
   moshiHookPackage = pkgs.callPackage ../packages/moshi_hook.nix { };
