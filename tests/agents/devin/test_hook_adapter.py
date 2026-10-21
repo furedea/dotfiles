@@ -121,7 +121,7 @@ def test_session_start_registers_the_devin_session(run_cli: CliRunner, project: 
     assert result.returncode == 0
     output = json.loads(result.stdout)
     assert "additionalContext" in output["hookSpecificOutput"]
-    assert store.session_directory(project, "devin", "devin-session").exists()
+    assert store.session_directory(store.SessionKey(project, "devin", "devin-session")).exists()
 
 
 @pytest.mark.parametrize("command,blocked", [("git reset --hard", True), ("git status", False)])

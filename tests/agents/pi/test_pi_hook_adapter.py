@@ -128,7 +128,7 @@ def test_session_start_registers_the_pi_session(run_cli: CliRunner, project: Pat
     }
     result = run_cli(SCRIPT, "native", "session-start", payload=payload, cwd=project)
     assert result.returncode == 0
-    assert store.session_directory(project, "pi", "pi-session").exists()
+    assert store.session_directory(store.SessionKey(project, "pi", "pi-session")).exists()
 
 
 @pytest.mark.parametrize("command,blocked", [("git reset --hard", True), ("git status", False)])

@@ -1,6 +1,7 @@
 """Execute planned quality steps and return bounded diagnostics."""
 
 from collections.abc import Callable, Iterable
+from dataclasses import dataclass
 import os
 from pathlib import Path
 import shutil
@@ -8,6 +9,14 @@ import tempfile
 
 from lib.formatter_policy import Step, plan
 from lib import process_runner
+
+
+@dataclass(frozen=True, slots=True)
+class LintTarget:
+    """An existing file and the quality language that checks it."""
+
+    language: str
+    path: Path
 
 
 def origin(step: Step, path: Path) -> str:
@@ -94,19 +103,19 @@ def check_file(kind: str, path: Path, readonly: bool = False) -> tuple[str, ...]
 
 def supported_targets(
     paths: Iterable[Path], extensions: dict[str, str], kind: str | None = None
-) -> tuple[tuple[str, Path], ...]:
+) -> tuple[LintTarget, ...]:
     """Pair existing files with their quality language, optionally restricted to one language."""
-    targets: list[tuple[str, Path]] = []
+    targets: list[LintTarget] = []
     for path in paths:
         language = extensions.get(path.suffix.lower())
         if language is None or (kind is not None and language != kind) or not path.is_file():
             continue
-        targets.append((language, path))
+        targets.append(LintTarget(language, path))
     return tuple(targets)
 
 
 def diagnostics(
-    targets: Iterable[tuple[str, Path]], checker: Callable[[str, Path], tuple[str, ...]] = check_file
+    targets: Iterable[LintTarget], checker: Callable[[str, Path], tuple[str, ...]] = check_file
 ) -> tuple[str, ...]:
     """Run checks for supported targets selected from one normalized hook payload."""
-    return tuple(message for language, path in targets for message in checker(language, path))
+    return tuple(message for target in targets for message in checker(target.language, target.path))

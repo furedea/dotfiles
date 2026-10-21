@@ -28,6 +28,31 @@ class VerificationRun:
     force: bool
     started: float
 
+    def current_receipt(self, inputs: str, invocation: check_selection.Invocation) -> tuple[str, dict, bool | None]:
+        """Reuse a valid receipt or execute the check; the flag is None when nothing ran."""
+        check_id, identity, previous, reusable = receipt_state(self.state, inputs, invocation)
+        if not self.force and reusable:
+            return check_id, previous, None
+        budget = min(check_budget(), max(0.01, GATE_BUDGET_SECONDS - (time.monotonic() - self.started)))
+        result = execute(invocation, self.record.root, budget)
+        receipt = {
+            "input": identity,
+            "status": str(result.status),
+            "summary": bounded_summary(result.summary),
+            "scope": invocation.scope,
+        }
+        if result.failed:
+            log = f"cwd: {self.record.root}\ncommand: {shlex.join(invocation.arguments)}\n\n{result.output}"
+            receipt["log"] = str(self.record.write_log(check_id, log))
+        return check_id, receipt, result.failed
+
+    def configuration_failure(self, identity: str, error: str) -> dict[str, str]:
+        failure = hashlib.sha256((identity + error).encode()).hexdigest()
+        repeated = self.state.get("configuration_failure") == failure
+        self.state["configuration_failure"] = failure
+        self.record.save_results(self.state)
+        return notification(f"Verification unresolved · invalid test configuration\n{error}", block=not repeated)
+
 
 def gate(record: SessionRecord, *, force: bool = False) -> dict[str, str]:
     """Serialize Stop and verify calls so concurrent delivery cannot run a check twice."""
@@ -46,7 +71,7 @@ def verify(record: SessionRecord, *, force: bool) -> dict[str, str]:
     try:
         invocations, skip_reason = selected_checks(record, current, state)
     except (OSError, ValueError, TypeError) as error:
-        return configuration_failure(run, current.digest, str(error))
+        return run.configuration_failure(current.digest, str(error))
     if not invocations:
         return save_skip(record, state, skip_reason)
     receipts: dict[str, dict] = {}
@@ -54,7 +79,7 @@ def verify(record: SessionRecord, *, force: bool) -> dict[str, str]:
     failed = new_failure = executed = passed = False
     inputs = verification_inputs(current)
     for invocation in invocations:
-        check_id, receipt, failed_now = current_receipt(run, inputs, invocation)
+        check_id, receipt, failed_now = run.current_receipt(inputs, invocation)
         if failed_now is not None:
             executed = True
             new_failure |= failed_now
@@ -99,27 +124,6 @@ def selected_checks(
     if errors:
         raise StateError("\n".join(errors))
     return invocations, "no related test runner matched changed paths" if not invocations else ""
-
-
-def current_receipt(
-    run: VerificationRun, inputs: str, invocation: check_selection.Invocation
-) -> tuple[str, dict, bool | None]:
-    """Reuse a valid receipt or execute the check; the flag is None when nothing ran."""
-    check_id, identity, previous, reusable = receipt_state(run.state, inputs, invocation)
-    if not run.force and reusable:
-        return check_id, previous, None
-    budget = min(check_budget(), max(0.01, GATE_BUDGET_SECONDS - (time.monotonic() - run.started)))
-    result = execute(invocation, run.record.root, budget)
-    receipt = {
-        "input": identity,
-        "status": str(result.status),
-        "summary": bounded_summary(result.summary),
-        "scope": invocation.scope,
-    }
-    if result.failed:
-        log = f"cwd: {run.record.root}\ncommand: {shlex.join(invocation.arguments)}\n\n{result.output}"
-        receipt["log"] = str(run.record.write_log(check_id, log))
-    return check_id, receipt, result.failed
 
 
 def receipt_state(state: dict, inputs: str, invocation: check_selection.Invocation) -> tuple[str, str, dict, bool]:
@@ -264,14 +268,6 @@ def check_budget() -> float:
     if not 0 < value <= GATE_BUDGET_SECONDS:
         raise StateError(f"Test timeout must be between 0 and {GATE_BUDGET_SECONDS} seconds")
     return value
-
-
-def configuration_failure(run: VerificationRun, identity: str, error: str) -> dict[str, str]:
-    failure = hashlib.sha256((identity + error).encode()).hexdigest()
-    repeated = run.state.get("configuration_failure") == failure
-    run.state["configuration_failure"] = failure
-    run.record.save_results(run.state)
-    return notification(f"Verification unresolved · invalid test configuration\n{error}", block=not repeated)
 
 
 def notification(message: str, *, block: bool) -> dict[str, str]:

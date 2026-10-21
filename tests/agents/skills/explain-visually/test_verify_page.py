@@ -157,14 +157,14 @@ def test_main_reports_mechanical_verification_without_claiming_visual_inspection
     browser.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
     browser.chmod(browser.stat().st_mode | stat.S_IXUSR)
 
-    def run_browser(_browser: Path, arguments: list[str], _timeout_seconds: int) -> object:
+    def run_browser(_browser: object, arguments: list[str]) -> object:
         if "--dump-dom" in arguments:
             return verify_page._BrowserResult('<body data-page-height="1200">', "", 124, True)
         screenshot_argument = next(argument for argument in arguments if argument.startswith("--screenshot="))
         Path(screenshot_argument.partition("=")[2]).write_bytes(b"\x89PNG\r\n\x1a\n")
         return verify_page._BrowserResult("", "", 124, True)
 
-    mocker.patch.object(verify_page, "_run_browser", autospec=True, side_effect=run_browser)
+    mocker.patch.object(verify_page._Browser, "run", autospec=True, side_effect=run_browser)
 
     exit_code = verify_page.main([str(html_path), "--browser", str(browser)])
     report = json.loads(capsys.readouterr().out)
@@ -189,12 +189,12 @@ def test_main_does_not_accept_a_stale_screenshot_as_render_evidence(
     browser.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
     browser.chmod(browser.stat().st_mode | stat.S_IXUSR)
 
-    def run_browser(_browser: Path, arguments: list[str], _timeout_seconds: int) -> object:
+    def run_browser(_browser: object, arguments: list[str]) -> object:
         if "--dump-dom" in arguments:
             return verify_page._BrowserResult('<body data-page-height="1200">', "", 0, False)
         return verify_page._BrowserResult("", "render failed", 1, False)
 
-    mocker.patch.object(verify_page, "_run_browser", autospec=True, side_effect=run_browser)
+    mocker.patch.object(verify_page._Browser, "run", autospec=True, side_effect=run_browser)
 
     exit_code = verify_page.main([str(html_path), "--browser", str(browser)])
     report = json.loads(capsys.readouterr().out)
@@ -288,12 +288,12 @@ def test_main_passes_rendering_options_to_the_browser(
     browser = tmp_path / "browser"
     calls: list[tuple[list[str], int]] = []
 
-    def run_browser(_browser: Path, arguments: list[str], timeout_seconds: int) -> object:
-        calls.append((arguments, timeout_seconds))
+    def run_browser(browser: verify_page._Browser, arguments: list[str]) -> object:
+        calls.append((arguments, browser.timeout_seconds))
         return verify_page._BrowserResult("", "dom failed", 1, False)
 
     mocker.patch.object(verify_page, "find_browser", autospec=True, return_value=browser)
-    mocker.patch.object(verify_page, "_run_browser", autospec=True, side_effect=run_browser)
+    mocker.patch.object(verify_page._Browser, "run", autospec=True, side_effect=run_browser)
 
     exit_code = verify_page.main([str(html_path), "--width", "900", "--wait-ms", "700", "--timeout-seconds", "3"])
     report = json.loads(capsys.readouterr().out)

@@ -181,14 +181,14 @@ def test_generated_hooks_register_and_verify_without_a_launcher(
         output = json.loads(result.stdout)
         assert "decision" not in output
         if event == "SessionStart":
-            directory = store.session_directory(repository, provider, "session")
+            directory = store.session_directory(store.SessionKey(repository, provider, "session"))
             assert output["hookSpecificOutput"] == {
                 "hookEventName": "SessionStart",
                 "additionalContext": f"Verification record: {directory}",
             }
         else:
             assert output == {} or "no changes" in output.get("systemMessage", "")
-    record = store.load(store.session_directory(repository, provider, "session"))
+    record = store.load(store.session_directory(store.SessionKey(repository, provider, "session")))
     assert record.results()["ended_at"] > 0
     installed = prefix / ".claude/hooks/verification_session.py"
     assert os.access(installed, os.X_OK)
@@ -213,10 +213,10 @@ def test_clear_preserves_pending_changes_with_a_new_session_id(
     record = store.register(repository, "codex", "old-session")
     (repository / "source.py").write_text("pending edit")
     result = invoke("session-start", {"cwd": str(repository), "session_id": "new-session", "source": "clear"})
-    directory = store.session_directory(repository, "codex", "new-session")
+    directory = store.session_directory(store.SessionKey(repository, "codex", "new-session"))
     assert json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"] == f"Verification record: {directory}"
     assert record.baseline.changed_paths(store.capture(repository)) == ("source.py",)
-    cleared = store.load(store.session_directory(repository, "codex", "new-session"))
+    cleared = store.load(store.session_directory(store.SessionKey(repository, "codex", "new-session")))
     assert cleared.results()["revalidate_all"] is True
 
 
