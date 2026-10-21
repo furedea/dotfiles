@@ -1,5 +1,6 @@
 #!/usr/bin/env bats
 # Tests for opening esa posts from Zsh.
+# zsh -f keeps the user's .zshenv from replacing the EDITOR and PATH stubs.
 
 bats_require_minimum_version 1.5.0
 
@@ -14,7 +15,7 @@ setup() {
 @test "en displays help for its help options" {
   local _option
   for _option in -h --help; do
-    run zsh -c "source '$ESA_ZSH'; en '$_option'"
+    run zsh -f -c "source '$ESA_ZSH'; en '$_option'"
 
     [ "$status" -eq 0 ]
     [ "${lines[0]}" = "Usage: en <title>" ]
@@ -26,7 +27,7 @@ setup() {
 @test "en rejects invalid argument counts with usage" {
   local _arguments
   for _arguments in "" "one two"; do
-    run --separate-stderr zsh -c "source '$ESA_ZSH'; en $_arguments"
+    run --separate-stderr zsh -f -c "source '$ESA_ZSH'; en $_arguments"
 
     [ "$status" -eq 1 ]
     [ -z "$output" ]
@@ -36,7 +37,7 @@ setup() {
 }
 
 @test "en rejects an empty title with usage" {
-  run --separate-stderr zsh -c "source '$ESA_ZSH'; en ''"
+  run --separate-stderr zsh -f -c "source '$ESA_ZSH'; en ''"
 
   [ "$status" -eq 1 ]
   [ -z "$output" ]
@@ -47,7 +48,7 @@ setup() {
 @test "ee displays help for its help options" {
   local _option
   for _option in -h --help; do
-    run zsh -c "source '$ESA_ZSH'; ee '$_option'"
+    run zsh -f -c "source '$ESA_ZSH'; ee '$_option'"
 
     [ "$status" -eq 0 ]
     [ "${lines[0]}" = "Usage: ee [title]" ]
@@ -57,7 +58,7 @@ setup() {
 }
 
 @test "ee rejects extra arguments with usage" {
-  run --separate-stderr zsh -c "source '$ESA_ZSH'; ee one two"
+  run --separate-stderr zsh -f -c "source '$ESA_ZSH'; ee one two"
 
   [ "$status" -eq 1 ]
   [ -z "$output" ]
@@ -68,7 +69,7 @@ setup() {
 @test "eep displays help for its help options" {
   local _option
   for _option in -h --help; do
-    run zsh -c "source '$ESA_ZSH'; eep '$_option'"
+    run zsh -f -c "source '$ESA_ZSH'; eep '$_option'"
 
     [ "$status" -eq 0 ]
     [ "${lines[0]}" = "Usage: eep" ]
@@ -78,7 +79,7 @@ setup() {
 }
 
 @test "eep rejects unexpected arguments with usage" {
-  run --separate-stderr zsh -c "source '$ESA_ZSH'; eep unexpected"
+  run --separate-stderr zsh -f -c "source '$ESA_ZSH'; eep unexpected"
 
   [ "$status" -eq 1 ]
   [ -z "$output" ]
@@ -89,7 +90,7 @@ setup() {
 @test "es displays help for its help options" {
   local _option
   for _option in -h --help; do
-    run zsh -c "source '$ESA_ZSH'; es '$_option'"
+    run zsh -f -c "source '$ESA_ZSH'; es '$_option'"
 
     [ "$status" -eq 0 ]
     [ "${lines[0]}" = "Usage: es [-q|--quiet]" ]
@@ -110,7 +111,7 @@ setup() {
 
   local _index
   for ((_index = 0; _index < ${#_commands[@]}; _index++)); do
-    run zsh -c \
+    run zsh -f -c \
       "alias cat=false; source '$ESA_ZSH'; ${_commands[$_index]} --help"
 
     [ "$status" -eq 0 ]
@@ -121,7 +122,7 @@ setup() {
 @test "es rejects invalid options with usage" {
   local _arguments
   for _arguments in "--unknown" "--quiet unexpected"; do
-    run --separate-stderr zsh -c "source '$ESA_ZSH'; es $_arguments"
+    run --separate-stderr zsh -f -c "source '$ESA_ZSH'; es $_arguments"
 
     [ "$status" -eq 1 ]
     [ -z "$output" ]
@@ -131,7 +132,7 @@ setup() {
 }
 
 @test "opening a numbered esa post fetches its body through the official CLI" {
-  run zsh -c "source '$ESA_ZSH'; _esa_edit 1515"
+  run zsh -f -c "source '$ESA_ZSH'; _esa_edit 1515"
 
   [ "$status" -eq 0 ]
   [ "$(esa_calls)" = "post view 1515 --json body_md" ]
@@ -145,7 +146,7 @@ setup() {
 @test "closing an editor saves changed content as WIP without notice" {
   export EDITOR_STUB_BODY="# Updated body"
 
-  run zsh -c "source '$ESA_ZSH'; _esa_edit 1515"
+  run zsh -f -c "source '$ESA_ZSH'; _esa_edit 1515"
 
   [ "$status" -eq 0 ]
   [[ "$(esa_calls)" == $'post view 1515 --json body_md\npost update 1515 --body-file '* ]]
@@ -156,7 +157,7 @@ setup() {
   export EDITOR_STUB_BODY="# Updated body"
   export EDITOR_STUB_SYNC=1
 
-  run zsh -c "source '$ESA_ZSH'; _esa_edit 1515"
+  run zsh -f -c "source '$ESA_ZSH'; _esa_edit 1515"
 
   [ "$status" -eq 0 ]
   [ "$(esa_calls | wc -l | tr -d ' ')" -eq 2 ]
@@ -169,7 +170,7 @@ setup() {
   export ESA_STUB_STDERR="esa: error: request rejected"
   export TMPDIR="$BATS_TEST_TMPDIR"
 
-  run --separate-stderr zsh -c "source '$ESA_ZSH'; _esa_edit 1515"
+  run --separate-stderr zsh -f -c "source '$ESA_ZSH'; _esa_edit 1515"
 
   [ "$status" -eq 1 ]
   [[ "$stderr" == *"esa: edits preserved at "* ]]
@@ -184,14 +185,14 @@ setup() {
   export EDITOR_STUB_BODY="# Unsaved body"
   export EDITOR_STUB_EXIT_STATUS=1
 
-  run zsh -c "source '$ESA_ZSH'; _esa_edit 1515"
+  run zsh -f -c "source '$ESA_ZSH'; _esa_edit 1515"
 
   [ "$status" -eq 1 ]
   [ "$(esa_calls)" = "post view 1515 --json body_md" ]
 }
 
 @test "creating a personal esa post opens it as WIP in the editor" {
-  run zsh -c "source '$ESA_ZSH'; en 'new note'"
+  run zsh -f -c "source '$ESA_ZSH'; en 'new note'"
 
   local expected_calls
   expected_calls=$'post create Members/k-shigyo/new note --wip --message [skip notice] --json number\n'
@@ -202,7 +203,7 @@ setup() {
 }
 
 @test "opening a named personal esa post resolves its number through the official CLI" {
-  run zsh -c "source '$ESA_ZSH'; ee example"
+  run zsh -f -c "source '$ESA_ZSH'; ee example"
 
   local expected_calls
   expected_calls=$'post search full_name:"Members/k-shigyo/example" '
@@ -214,7 +215,7 @@ setup() {
 }
 
 @test "selecting a personal esa post opens the chosen search result" {
-  run zsh -c "source '$ESA_ZSH'; ee"
+  run zsh -f -c "source '$ESA_ZSH'; ee"
 
   local expected_calls
   expected_calls=$'post search in:"Members/k-shigyo" sort:updated-desc '
@@ -226,7 +227,7 @@ setup() {
 }
 
 @test "opening the placement minutes resolves the fixed esa post" {
-  run zsh -c "source '$ESA_ZSH'; eep"
+  run zsh -f -c "source '$ESA_ZSH'; eep"
 
   local expected_calls
   expected_calls=$'post search full_name:"議事録/2026年度配属/shigyo" '
@@ -238,14 +239,14 @@ setup() {
 }
 
 @test "shipping the last edited esa post uses its remembered number" {
-  run zsh -c "source '$ESA_ZSH'; _ESA_LAST_POST_NUMBER=1515; es"
+  run zsh -f -c "source '$ESA_ZSH'; _ESA_LAST_POST_NUMBER=1515; es"
 
   [ "$status" -eq 0 ]
   [ "$(esa_calls)" = "post update 1515 --ship" ]
 }
 
 @test "quietly shipping an esa post suppresses its notification" {
-  run zsh -c "source '$ESA_ZSH'; _ESA_LAST_POST_NUMBER=1515; es --quiet"
+  run zsh -f -c "source '$ESA_ZSH'; _ESA_LAST_POST_NUMBER=1515; es --quiet"
 
   [ "$status" -eq 0 ]
   [ "$(esa_calls)" = "post update 1515 --ship --message [skip notice]" ]
