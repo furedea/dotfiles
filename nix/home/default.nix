@@ -29,6 +29,8 @@ let
   rootsPackage = pkgs.callPackage ../packages/roots.nix { };
   terminalBrowserPackage = pkgs.callPackage ../packages/terminal_browser.nix { };
   devinCliPackage = pkgs.callPackage ../packages/devin_cli.nix { };
+  nodejsPackage = pkgs.callPackage ../packages/nodejs_bin.nix { };
+  uvPackage = pkgs.callPackage ../packages/uv_bin.nix { };
   codexPackage = llm-agents.packages.${system}.codex;
   claudePackage = llm-agents.packages.${system}.claude-code;
   agentHarnessPackage = agent-harness.packages.${system}.default;
@@ -235,7 +237,7 @@ in
 
     # Python tooling
     python314
-    uv
+    uvPackage
 
     # Rust tooling
     cargo
@@ -246,7 +248,7 @@ in
 
     # TypeScript tooling
     ni
-    unstable.nodejs_24
+    nodejsPackage
     unstable.oxfmt
     unstable.oxlint
     pnpm
