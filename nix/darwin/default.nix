@@ -49,8 +49,10 @@ in
     # documented mechanisms are --permission-mode and this env var.
     DEVIN_PERMISSION_MODE = "smart";
     # Tools that ship no CA bundle of their own (uv-managed Python, for one)
-    # read this, the store filtered below, instead.
+    # read this, the store filtered below, instead; requests reads only its own
+    # variable and otherwise uses each venv's certifi.
     SSL_CERT_FILE = "/etc/ssl/certs/ca-certificates.crt";
+    REQUESTS_CA_BUNDLE = "/etc/ssl/certs/ca-certificates.crt";
   };
 
   # eMudhra intermediates under these roots have recoverable private keys
