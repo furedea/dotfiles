@@ -87,7 +87,7 @@ def test_session_start_notifies_the_registered_path_as_model_context(
     prefix = "Verification record: "
     message = context["additionalContext"]
     assert message.startswith(prefix) and len(message.splitlines()) == 1
-    expected = session_store.session_directory(root, provider, "notified-session")
+    expected = session_store.session_directory(session_store.SessionKey(root, provider, "notified-session"))
     assert Path(message.removeprefix(prefix)) == expected
     assert session_store.load(expected).results()["session_id"] == "notified-session"
 

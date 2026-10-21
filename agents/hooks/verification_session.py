@@ -16,7 +16,17 @@ import hook_input
 import patch_input
 import session_gate
 from session_snapshot import repository_root
-from session_store import ScopeError, SessionRecord, StateError, load, prune, register, resume, session_directory
+from session_store import (
+    ScopeError,
+    SessionKey,
+    SessionRecord,
+    StateError,
+    load,
+    prune,
+    register,
+    resume,
+    session_directory,
+)
 
 
 EVENTS = ("session-start", "pre-tool-use", "stop", "session-end")
@@ -31,7 +41,7 @@ def registered_record(provider: str, payload: dict, *, starting: bool = False) -
     session = payload.get("session_id")
     if not isinstance(session, str):
         raise StateError("Missing provider session ID")
-    directory = session_directory(root, provider, session)
+    directory = session_directory(SessionKey(root.resolve(), provider, session))
     if starting:
         # New IDs after clear/fork have no reliable predecessor in native hook input.
         start = register if payload.get("source") == "startup" else resume

@@ -59,15 +59,6 @@ class Policy:
         return self.rules if self.literal_words else command_policy.literal_rules(self.rules, literal=False)
 
 
-@dataclass(frozen=True, slots=True)
-class Attempt:
-    """What an audit record names: the guard kind, the inspected command, and the raw payload."""
-
-    kind: str
-    command: str
-    payload: object
-
-
 def policies(kind: str, directory: Path) -> Policy:
     """Load required global rules and optional project additions exactly once."""
     permissions = Path(os.environ.get("AGENT_COMMAND_PERMISSIONS", str(directory / "rules/command_permissions.json")))
@@ -166,17 +157,15 @@ def settings_objection(command: str, commands: tuple[shell_syntax.Command, ...])
 
 def decide(kind: str, payload: dict, directory: Path = ROOT) -> Verdict:
     """Decide for an already decoded provider payload, recording every denial and escalation."""
-    command = ""
     try:
         policy = policies(kind, directory)
         if not isinstance(payload, dict):
             raise ValueError("failed to parse tool input JSON: expected an object")
-        command = payload.get("tool_input", {}).get("command") or ""
         verdict = command_verdict(kind, payload, policy)
     except (ValueError, TypeError, AttributeError, OSError) as error:
         prefix = "forbidden command: " if kind == "forbidden" else ""
         verdict = hook_decision.deny(f"BLOCKED: {prefix}{error}\n\n{hook_decision.REVIEW_HINT}")
-    record(verdict, Attempt(kind, command, payload))
+    record(verdict, kind, payload)
     return verdict
 
 
@@ -216,16 +205,13 @@ def allows_literal_rules(command: str, commands: tuple[shell_syntax.Command, ...
         return False
 
 
-def record(verdict: Verdict, attempt: Attempt) -> None:
+def record(verdict: Verdict, kind: str, payload: object) -> None:
     if verdict.decision == "allow":
         return
-    payload = attempt.payload
     context = payload if isinstance(payload, dict) else None
     session = payload.get("session_id", "") if isinstance(payload, dict) else ""
     writer = audit_log.blocked if verdict.decision == "deny" else audit_log.escalated
-    writer(
-        audit_log.Refusal("Bash", f"guard_{attempt.kind}_commands.sh", session, payload=context, detail=verdict.detail)
-    )
+    writer(audit_log.Refusal("Bash", f"guard_{kind}_commands.sh", session, payload=context, detail=verdict.detail))
 
 
 def check(kind: str, payload: dict, directory: Path = ROOT) -> int:

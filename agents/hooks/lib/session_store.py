@@ -96,15 +96,24 @@ def worktree_id(root: Path) -> str:
     return hashlib.sha256(os.fsencode(root.resolve())).hexdigest()[:32]
 
 
-def session_directory(root: Path, provider: str, session_id: str) -> Path:
+@dataclass(frozen=True, slots=True)
+class SessionKey:
+    """The resolved worktree and provider session one registration belongs to."""
+
+    root: Path
+    provider: str
+    session_id: str
+
+
+def session_directory(key: SessionKey) -> Path:
     if (
-        provider not in {"codex", "claude", "devin", "hermes", "pi"}
-        or not isinstance(session_id, str)
-        or not 0 < len(session_id) <= 256
+        key.provider not in {"codex", "claude", "devin", "hermes", "pi"}
+        or not isinstance(key.session_id, str)
+        or not 0 < len(key.session_id) <= 256
     ):
         raise StateError("Missing or invalid provider session ID")
-    identity = hashlib.sha256(session_id.encode()).hexdigest()[:32]
-    return state_directory() / worktree_id(root) / f"{provider}-{identity}"
+    identity = hashlib.sha256(key.session_id.encode()).hexdigest()[:32]
+    return state_directory() / worktree_id(key.root) / f"{key.provider}-{identity}"
 
 
 def register(root: Path, provider: str, session_id: str) -> SessionRecord:
@@ -117,20 +126,11 @@ def resume(root: Path, provider: str, session_id: str) -> SessionRecord:
     return _register(SessionKey(root.resolve(), provider, session_id), resuming=True)
 
 
-@dataclass(frozen=True, slots=True)
-class SessionKey:
-    """The resolved worktree and provider session one registration belongs to."""
-
-    root: Path
-    provider: str
-    session_id: str
-
-
 def _register(key: SessionKey, *, resuming: bool) -> SessionRecord:
     base = state_directory()
     if base.resolve().is_relative_to(key.root):
         raise StateError("Verification state must be outside the worktree")
-    directory = session_directory(key.root, key.provider, key.session_id)
+    directory = session_directory(key)
     private_directory(base)
     private_directory(directory.parent)
     with file_lock(directory.parent / ".register.lock", blocking=False):
