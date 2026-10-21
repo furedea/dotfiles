@@ -3,7 +3,7 @@
   "cleanupPeriodDays": 9999,
   "env": {
     "CLAUDE_CODE_NO_FLICKER": "1",
-    "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "haiku",
     "ENABLE_TOOL_SEARCH": "true",
     "GIT_CONFIG_COUNT": "3",
     "GIT_CONFIG_KEY_0": "core.fsmonitor",
