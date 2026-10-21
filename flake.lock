@@ -11,11 +11,11 @@
         "nixpkgs-unstable": "nixpkgs-unstable"
       },
       "locked": {
-        "lastModified": 1792546626,
-        "narHash": "sha256-yhM9v493PVrDTCwDzT91LSwMZs2rcphl5PI/8Yt5s+4=",
+        "lastModified": 1792559061,
+        "narHash": "sha256-hm02yZ4chcCN0hUtiAVCgqfY1/YsavbzgFN01oN1lOo=",
         "owner": "furedea",
         "repo": "agent-harness",
-        "rev": "60c871bbb24563e023f0768cc7e15749d46cc8cd",
+        "rev": "4057e01e47ebb68a7d5c3e3c0e742f0290ea8962",
         "type": "github"
       },
       "original": {
