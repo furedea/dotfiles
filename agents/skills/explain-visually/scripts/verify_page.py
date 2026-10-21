@@ -82,10 +82,41 @@ class _BrowserResult:
 
 
 @dataclass(frozen=True, slots=True)
-class _RenderOptions:
-    width: int
+class _Browser:
+    """A headless browser executable and the time budgets every invocation of it gets."""
+
+    path: Path
     wait_ms: int
     timeout_seconds: int
+
+    def run(self, arguments: list[str]) -> _BrowserResult:
+        process = subprocess.Popen(
+            [str(self.path), *arguments],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            start_new_session=True,
+        )
+        try:
+            stdout, stderr = process.communicate(timeout=self.timeout_seconds)
+            return _BrowserResult(stdout, stderr, process.returncode, False)
+        except subprocess.TimeoutExpired:
+            _kill_browser(process)
+            stdout, stderr = process.communicate()
+            return _BrowserResult(stdout, stderr, 124, True)
+
+    def arguments(self, profile: Path, width: int) -> list[str]:
+        return [
+            "--headless=new",
+            "--disable-crash-reporter",
+            "--disable-gpu",
+            "--hide-scrollbars",
+            "--no-default-browser-check",
+            "--no-first-run",
+            f"--user-data-dir={profile}",
+            f"--virtual-time-budget={self.wait_ms}",
+            f"--window-size={width},1200",
+        ]
 
 
 class _VerificationFailure(Exception):
@@ -269,23 +300,6 @@ def _resolve_executable(value: str) -> Path | None:
     return Path(resolved) if resolved is not None else None
 
 
-def _run_browser(browser: Path, arguments: list[str], timeout_seconds: int) -> _BrowserResult:
-    process = subprocess.Popen(
-        [str(browser), *arguments],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        start_new_session=True,
-    )
-    try:
-        stdout, stderr = process.communicate(timeout=timeout_seconds)
-        return _BrowserResult(stdout, stderr, process.returncode, False)
-    except subprocess.TimeoutExpired:
-        _kill_browser(process)
-        stdout, stderr = process.communicate()
-        return _BrowserResult(stdout, stderr, 124, True)
-
-
 def _kill_browser(process: subprocess.Popen[str]) -> None:
     if os.name != "posix":
         process.kill()
@@ -296,21 +310,7 @@ def _kill_browser(process: subprocess.Popen[str]) -> None:
         pass
 
 
-def _browser_arguments(profile: Path, width: int, wait_ms: int) -> list[str]:
-    return [
-        "--headless=new",
-        "--disable-crash-reporter",
-        "--disable-gpu",
-        "--hide-scrollbars",
-        "--no-default-browser-check",
-        "--no-first-run",
-        f"--user-data-dir={profile}",
-        f"--virtual-time-budget={wait_ms}",
-        f"--window-size={width},1200",
-    ]
-
-
-def _render_page(html_path: Path, browser: Path, options: _RenderOptions) -> tuple[Path, tuple[str, ...]]:
+def _render_page(html_path: Path, browser: _Browser, width: int) -> tuple[Path, tuple[str, ...]]:
     warnings: list[str] = []
     page_url = html_path.as_uri()
     screenshot_path = html_path.with_name(f"{html_path.stem}-shot.png")
@@ -319,8 +319,8 @@ def _render_page(html_path: Path, browser: Path, options: _RenderOptions) -> tup
         temporary_path = Path(temporary_directory)
         profile = temporary_path / "browser-profile"
         rendered_screenshot_path = temporary_path / "rendered-page.png"
-        common_arguments = _browser_arguments(profile, options.width, options.wait_ms)
-        dom_result = _run_browser(browser, [*common_arguments, "--dump-dom", page_url], options.timeout_seconds)
+        common_arguments = browser.arguments(profile, width)
+        dom_result = browser.run([*common_arguments, "--dump-dom", page_url])
         if not dom_result.stdout and dom_result.return_code != 0:
             detail = (
                 "browser timed out before producing the rendered DOM"
@@ -335,11 +335,11 @@ def _render_page(html_path: Path, browser: Path, options: _RenderOptions) -> tup
 
         screenshot_arguments = [
             *common_arguments,
-            f"--window-size={options.width},{height}",
+            f"--window-size={width},{height}",
             f"--screenshot={rendered_screenshot_path}",
             page_url,
         ]
-        screenshot_result = _run_browser(browser, screenshot_arguments, options.timeout_seconds)
+        screenshot_result = browser.run(screenshot_arguments)
         if not rendered_screenshot_path.is_file() or rendered_screenshot_path.stat().st_size == 0:
             detail = (
                 "browser timed out before producing the screenshot"
@@ -406,8 +406,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             raise _VerificationFailure(errors, 1)
         browser = _resolve_browser(args.browser)
         report["browser"] = str(browser)
-        options = _RenderOptions(args.width, args.wait_ms, args.timeout_seconds)
-        screenshot_path, warnings = _render_page(html_path, browser, options)
+        screenshot_path, warnings = _render_page(
+            html_path, _Browser(browser, args.wait_ms, args.timeout_seconds), args.width
+        )
     except _VerificationFailure as failure:
         report["errors"] = list(failure.errors)
         print(json.dumps(report, indent=2))
