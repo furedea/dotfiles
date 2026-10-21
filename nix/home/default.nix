@@ -237,7 +237,6 @@ in
 
     # Python tooling
     python314
-    uvPackage
 
     # Rust tooling
     cargo
@@ -279,6 +278,15 @@ in
   '';
 
   programs = {
+    # A project's own exclude-newer wins; this covers projects without one and
+    # uvx or uv tool runs outside any project, so a package published in the
+    # last week (such as the backdoored litellm 1.107.0) is never resolved.
+    uv = {
+      enable = true;
+      package = uvPackage;
+      settings.exclude-newer = "1 week";
+    };
+
     neovim = {
       enable = true;
       withPython3 = false;
