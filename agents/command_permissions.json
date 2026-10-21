@@ -2332,13 +2332,13 @@
       "justification": "Allow handing work to a new Herdr session; the hooks limit prompts to agents this session started."
     },
     {
-      "decision": "ask",
+      "decision": "allow",
       "prefix": [
         "herdr",
         "workspace",
         "create"
       ],
-      "justification": "Ask before managing workspaces that may belong to the user; the hooks let a session close only its own."
+      "justification": "Allow opening the primary workspace a lane group needs; the hooks let a session close only one it created."
     },
     {
       "decision": "ask",
@@ -2374,7 +2374,7 @@
         "workspace",
         "close"
       ],
-      "justification": "Allow closing a workspace this session's lanes ran in; the hooks ask for any other workspace."
+      "justification": "Allow closing a workspace this session's lanes ran in or a primary it created once its lanes are closed; the hooks ask for any other workspace."
     },
     {
       "decision": "allow",
@@ -2383,7 +2383,7 @@
         "worktree",
         "remove"
       ],
-      "justification": "Allow closing a workspace this session's lanes ran in; the hooks ask for any other workspace."
+      "justification": "Allow closing a workspace this session's lanes ran in or a primary it created once its lanes are closed; the hooks ask for any other workspace."
     },
     {
       "decision": "allow",

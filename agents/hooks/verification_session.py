@@ -29,7 +29,7 @@ from session_store import (
 )
 
 
-EVENTS = ("session-start", "pre-tool-use", "stop", "session-end")
+EVENTS = ("session-start", "pre-tool-use", "post-tool-use", "stop", "session-end")
 TEMPORARY_DIRECTORY_VARIABLES = ("TMPDIR", "CLAUDE_TMPDIR", "CLAUDE_CODE_TMPDIR")
 
 
@@ -79,6 +79,13 @@ def check_scope(record: SessionRecord, payload: dict) -> None:
             require_inside(record, cwd / filename)
 
 
+def confirm_tool(record: SessionRecord, payload: dict) -> None:
+    value = payload.get("tool_input", {})
+    command = value.get("command", value.get("cmd", "")) if isinstance(value, dict) else ""
+    if isinstance(command, str):
+        herdr_ownership.confirm(record, command, payload.get("tool_response"))
+
+
 def require_inside(record: SessionRecord, path: Path) -> None:
     resolved = path.expanduser().resolve()
     if resolved.is_relative_to(record.root) or any(resolved.is_relative_to(root) for root in temporary_roots()):
@@ -96,6 +103,8 @@ def dispatch(provider: str, event: str, payload: dict) -> dict[str, object]:
     record = registered_record(provider, payload, starting=event == "session-start")
     if event == "pre-tool-use":
         check_scope(record, payload)
+    elif event == "post-tool-use":
+        confirm_tool(record, payload)
     elif event == "stop":
         return {**session_gate.gate(record)}
     elif event == "session-end":
@@ -138,7 +147,7 @@ def main() -> int:
     native = len(arguments) == 2 and arguments[0] in {"codex", "claude"} and arguments[1] in EVENTS
     if not (explicit or native):
         print(
-            "Usage: verification_session.py codex|claude session-start|pre-tool-use|stop|session-end\n"
+            "Usage: verification_session.py codex|claude session-start|pre-tool-use|post-tool-use|stop|session-end\n"
             "       verification_session.py verify [--force] /path/to/session-record\n"
             "       verification_session.py status /path/to/session-record\n"
             "Native events read the provider hook input from stdin.",

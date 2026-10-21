@@ -21,7 +21,9 @@ Task worktree hand-off through Herdr, once per lane, each line as its own Bash c
 
 ```bash
 git fetch origin
-herdr worktree create --cwd <primary-checkout> --branch <branch> --base origin/<base> --label <branch> --no-focus
+herdr workspace list                                         # is the primary checkout already open?
+herdr workspace create --cwd <primary-checkout> --label <repo> --no-focus   # only when it is not open
+herdr worktree create --workspace <primary-id> --branch <branch> --base origin/<base> --label <branch> --no-focus
 herdr agent start <lane-name> --kind claude --pane <root-pane-id> -- --model sonnet --effort medium
 herdr agent prompt <lane-name> "Read your brief at <scratchpad>/briefs/<lane-name>.md and carry it out."
 herdr agent wait <lane-name> --until working                 # in the background
@@ -42,6 +44,27 @@ Rules:
   only for done or blocked can return at once while the agent still shows done from an earlier
   turn. Then read the lane's reply with `herdr agent read` and check its PR. This works for Claude
   and Codex lanes alike.
+- With `--cwd` and no open primary workspace, `worktree create` opens one implicitly, which no hook can
+  attribute to this session. When `workspace list` shows no workspace for the primary checkout, open
+  it yourself with exactly `herdr workspace create --cwd <primary-checkout> --label <repo> --no-focus`
+  as one plain call (no `;`, pipe, redirection, wrapper, or extra option), and pass its ID
+  (`.result.workspace.workspace_id`) as `--workspace`; `worktree create --workspace` then opens no
+  extra workspace. The hooks record a primary this session created from that successful result: ID
+  and label from `.result.workspace`, path from `.result.root_pane.cwd` (the result has no checkout
+  path), and the root pane's `.result.root_pane.terminal_id`, a per-terminal-instance ID that a
+  reused workspace ID or a restarted server never repeats (Herdr exposes no server ID or start
+  time). The record lives only in this session's state. A primary that was already open is the
+  user's and is never recorded.
+- Clean up when the lanes are done, one workspace at a time and never with `--group` (it always asks):
+  close each lane (`herdr workspace close <lane-workspace-id>`), then, if this session created the
+  primary, `herdr workspace close <primary-id>`. Herdr refuses the primary's close with
+  `workspace_group_close_required` while any linked workspace is open. The hooks allow the primary's
+  close only while `workspace list` still shows the recorded ID, label, and path
+  (`worktree.checkout_path` or the root pane directory), `herdr pane list --workspace <id>` still
+  shows the recorded `terminal_id`, and no agent runs in it; otherwise it asks, so accept that one prompt. The record expires on close. The
+  session-start sweep below closes only the workspaces of the worktrees it removes, never a primary.
+- A variable inside a `gh api` endpoint must be double-quoted (`gh api "repos/o/$r/..."`);
+  unquoted expansions ask.
 - Read the workspace and root pane IDs from the JSON that `worktree create` returns
   (`.result.workspace.workspace_id`, `.result.root_pane.pane_id`); never predict them.
 - `<lane-name>` matches `[a-z][a-z0-9_-]{0,31}` and is new: the hooks let a session prompt only the
@@ -49,8 +72,10 @@ Rules:
 - Start Claude for an implementation lane, even from a Codex session. Codex keeps a linked
   worktree's Git directory read-only inside its sandbox (openai/codex#14338), so a Codex lane
   cannot commit there without approval. Lanes run on Sonnet at medium effort to save usage; pass
-  exactly `-- --model sonnet --effort medium` and nothing else after `--`: other agent arguments
-  ask, since they could switch off the child's sandbox or approvals.
+  exactly `-- --model sonnet --effort medium` and nothing else after `--` (a reviewer lane for
+  Codex-written code uses `-- --model opus --effort medium`, see
+  [herdr-delegation](../../herdr-delegation/SKILL.md)): other agent arguments ask, since they
+  could switch off the child's sandbox or approvals.
 - The brief follows [herdr-delegation](../../herdr-delegation/SKILL.md) and is self-contained: the
   Issue body and the approved plan text, not only their numbers or links, the lane scope, delivery
   authority (commit, push, and open a PR; never merge), and the reply format.

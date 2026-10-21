@@ -93,6 +93,17 @@
         ]
       },
       {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "command": "\"$HOME/.claude/hooks/verification_session.py\" claude post-tool-use",
+            "if": "Bash(herdr workspace create *)",
+            "type": "command",
+            "timeout": 30
+          }
+        ]
+      },
+      {
         "matcher": "Bash|Edit|Write|WebFetch|WebSearch|Task|Agent",
         "hooks": [
           {
@@ -301,6 +312,16 @@
         }
       ],
       "PostToolUse": [
+        {
+          "matcher": "^(Bash|exec_command|functions\\.exec_command)$",
+          "hooks": [
+            {
+              "command": "\"$HOME/.claude/hooks/verification_session.py\" codex post-tool-use",
+              "type": "command",
+              "timeout": 30
+            }
+          ]
+        },
         {
           "matcher": "^apply_patch$|^Edit$|^Write$",
           "hooks": [
