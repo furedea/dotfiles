@@ -214,14 +214,16 @@ def test_created_workspaces_and_agents_follow_one_ownership_flow(
         close,
         {
             "stdout": json.dumps(
-                {"result": {"type": "workspace_closed" if "workspace close" in close else "worktree_removed"}}
+                {"result": {"type": "ok"}}
+                if "workspace close" in close
+                else {"result": {"type": "worktree_removed", "workspace_id": "w6"}}
             )
         },
     )
     assert decision(run(repository, close)) == "ask"
     herdr.write_text("")
     assert decision(run(repository, CLOSE)) == "allow"
-    after(repository, CLOSE, {"stdout": json.dumps({"result": {"type": "workspace_closed"}})})
+    after(repository, CLOSE, {"stdout": json.dumps({"result": {"type": "ok"}})})
     assert decision(run(repository, CLOSE)) == "ask"
 
 
@@ -287,8 +289,25 @@ def test_a_created_workspace_can_close_with_its_recorded_agent(repository: Path,
     open_primary(repository, tmp_path)
     start_agent(repository, herdr, "w5")
     assert decision(run(repository, CLOSE)) == "allow"
-    after(repository, CLOSE, {"stdout": json.dumps({"result": {"type": "workspace_closed"}})})
+    after(repository, CLOSE, {"stdout": json.dumps({"result": {"type": "ok"}})})
     assert decision(run(repository, "herdr agent prompt lane-a hello")) == "ask"
+
+
+@pytest.mark.parametrize("workspace", ["w6", None])
+def test_worktree_removal_expires_only_the_workspace_named_in_the_result(
+    repository: Path, herdr: Path, tmp_path: Path, workspace: str | None
+) -> None:
+    open_primary(repository, tmp_path)
+    open_lane(repository, tmp_path)
+    start_agent(repository, herdr, "w6")
+    result = {"type": "worktree_removed"}
+    if workspace is not None:
+        result["workspace_id"] = workspace
+    after(repository, "herdr worktree remove --workspace lane", {"stdout": json.dumps({"result": result})})
+    expected = "ask" if workspace == "w6" else "allow"
+    assert decision(run(repository, "herdr workspace close w6")) == expected
+    assert decision(run(repository, "herdr agent prompt lane-a hello")) == expected
+    assert decision(run(repository, CLOSE)) == "allow"
 
 
 def test_a_workspace_without_an_attached_worktree_matches_its_root_directory(
@@ -340,8 +359,10 @@ def test_failed_cleanup_preserves_prompts_and_retries_until_success(
     after(repository, command, {"stdout": json.dumps({"error": {"code": "workspace_group_close_required"}})})
     assert decision(run(repository, "herdr agent prompt lane-a hello")) == "allow"
     assert decision(run(repository, command)) == "allow"
-    result_type = "workspace_closed" if "workspace close" in command else "worktree_removed"
-    after(repository, command, {"stdout": json.dumps({"result": {"type": result_type}})})
+    result = (
+        {"type": "ok"} if "workspace close" in command else {"type": "worktree_removed", "workspace_id": workspace}
+    )
+    after(repository, command, {"stdout": json.dumps({"result": result})})
     assert decision(run(repository, "herdr agent prompt lane-a hello")) == "ask"
     assert decision(run(repository, command)) == "ask"
     assert decision(run(repository, CLOSE)) == ("ask" if command == CLOSE else "allow")
@@ -381,5 +402,5 @@ def test_a_lane_created_in_the_users_primary_does_not_own_the_primary(
     open_lane(repository, tmp_path)
     command = "herdr workspace close w6"
     assert decision(run(repository, command)) == "allow"
-    after(repository, command, {"stdout": json.dumps({"result": {"type": "workspace_closed"}})})
+    after(repository, command, {"stdout": json.dumps({"result": {"type": "ok"}})})
     assert decision(run(repository, CLOSE)) == "ask"

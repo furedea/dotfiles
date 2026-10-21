@@ -76,15 +76,21 @@ def confirm(record: SessionRecord, command: str, response: object) -> None:
         ("workspace", "create"): "workspace_created",
         ("worktree", "create"): "worktree_created",
         ("agent", "start"): "agent_started",
-        ("workspace", "close"): "workspace_closed",
+        ("workspace", "close"): "ok",
         ("worktree", "remove"): "worktree_removed",
     }.get(action)
     if expected is None or result.get("type") != expected:
         return
+    with record.lock():
+        record_result(record, parsed, result)
+
+
+def record_result(record: SessionRecord, parsed: shell_syntax.Command, result: dict) -> None:
+    action = parsed.arguments[1:3]
     if action in {("workspace", "create"), ("worktree", "create")}:
         record_workspace(record, parsed, result)
     elif action in {("workspace", "close"), ("worktree", "remove")}:
-        workspace = target(parsed) if action[0] == "workspace" else option_value(parsed, "--workspace")
+        workspace = target(parsed) if action[0] == "workspace" else result.get("workspace_id", "")
         expire_workspace(record, workspace)
     elif action == ("agent", "start"):
         agent = result.get("agent")
@@ -129,12 +135,10 @@ def record_workspace(record: SessionRecord, parsed: shell_syntax.Command, result
     label = option_value(parsed, "--label")
     if label and label != workspace["label"]:
         return
-    worktree = result.get("worktree", {}) if parsed.arguments[1] == "worktree" else {}
-    path = worktree.get("path") if isinstance(worktree, dict) else None
-    if parsed.arguments[1] == "worktree" and not (isinstance(path, str) and path):
+    if parsed.arguments[1] == "worktree" and not valid_entry(result.get("worktree"), ("path",)):
         return
     entry = {
-        "path": normpath(path or pane["cwd"]),
+        "path": normpath(result["worktree"]["path"] if parsed.arguments[1] == "worktree" else pane["cwd"]),
         "label": workspace["label"],
         "terminal_id": pane["terminal_id"],
     }
@@ -265,8 +269,7 @@ def agent_session(agent: dict) -> str:
 
 def matches_agent(agent: dict, entry: dict) -> bool:
     return (
-        bool(agent_session(entry))
-        and agent.get("name") == entry.get("name")
+        agent.get("name") == entry.get("name")
         and agent.get("terminal_id") == entry.get("terminal_id")
         and agent_session(agent) == agent_session(entry)
     )
