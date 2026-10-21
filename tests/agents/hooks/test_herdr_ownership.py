@@ -69,6 +69,12 @@ def test_a_session_prompts_the_agent_it_started(repository: Path, herdr: Path) -
     assert decision(run(repository, "herdr agent prompt lane-a 'Implement #181' --wait")) == "allow"
 
 
+def test_a_session_prompts_the_sonnet_agent_it_started(repository: Path, herdr: Path) -> None:
+    start = "herdr agent start lane-a --kind claude --pane w1:p2 -- --model sonnet --effort medium"
+    assert decision(run(repository, start)) == "allow"
+    assert decision(run(repository, "herdr agent prompt lane-a 'Implement #181' --wait")) == "allow"
+
+
 @pytest.mark.parametrize(
     "target", ["reviewer", "w1:p2", "$AGENT"], ids=["another name", "a pane id", "a run-time target"]
 )

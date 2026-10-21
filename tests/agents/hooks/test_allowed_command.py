@@ -120,6 +120,10 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
         pytest.param("herdr agent start lane-a --kind claude --pane w1:p2", id="Herdr Claude agents"),
         pytest.param("herdr agent start lane-b --pane w1:p3 --kind codex --timeout 60000", id="Herdr Codex agents"),
         pytest.param(
+            "herdr agent start lane-c --kind claude --pane w1:p4 -- --model sonnet --effort medium",
+            id="Herdr Claude agents on Sonnet at medium effort",
+        ),
+        pytest.param(
             'herdr agent prompt lane-a "Implement #181.\nRead the plan first." --wait --timeout 120000',
             id="Herdr prompts",
         ),
@@ -401,6 +405,21 @@ def test_commands_whose_effects_the_checks_can_see_pass(capsys: pytest.CaptureFi
         pytest.param("herdr worktree create --cwd /repo --trust-repository", [], id="Herdr repository trust"),
         pytest.param("herdr pane split --pane w1:p2 --env CLAUDE_CONFIG_DIR=/tmp/x", [], id="Herdr pane environments"),
         pytest.param("herdr agent start lane-a --kind gemini --pane w1:p2", [], id="Herdr agents without our hooks"),
+        pytest.param(
+            "herdr agent start lane-a --kind claude --pane w1:p2 -- --dangerously-skip-permissions",
+            [],
+            id="Herdr agent arguments that switch off approvals",
+        ),
+        pytest.param(
+            "herdr agent start lane-a --kind claude --pane w1:p2 -- --model sonnet --effort medium --settings x.json",
+            [],
+            id="Herdr agent arguments beyond the model and effort",
+        ),
+        pytest.param(
+            "herdr agent start lane-a --kind codex --pane w1:p2 -- --model sonnet --effort medium",
+            [],
+            id="Herdr Codex agents given Claude arguments",
+        ),
     ],
 )
 def test_unlisted_forms_of_commands_that_reach_github_or_the_network_ask(
