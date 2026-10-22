@@ -56,7 +56,7 @@ class VerificationRun:
 
 def gate(record: SessionRecord, *, force: bool = False) -> dict[str, str]:
     """Serialize Stop and verify calls so concurrent delivery cannot run a check twice."""
-    with record.lock():
+    with record.lock(unbounded=True):
         record.touch()
         result = verify(record, force=force)
     prune()

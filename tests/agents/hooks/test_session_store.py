@@ -6,6 +6,7 @@ import subprocess
 import sys
 
 import pytest
+from pytest_mock import MockerFixture
 
 from tests.runtime import REPO_ROOT
 
@@ -70,15 +71,17 @@ def test_failure_logs_are_capped_and_replace_previous_output(repository: Path) -
     assert path.read_text() == "latest failure"
 
 
-def test_gc_removes_expired_runs_but_keeps_a_running_hook(repository: Path) -> None:
+def test_gc_removes_expired_runs_but_keeps_a_running_hook(repository: Path, mocker: MockerFixture) -> None:
     ended = store.register(repository, "codex", "ended")
     ended.end(now=1)
     live = store.register(repository, "claude", "live")
     live.end(now=1)
+    sleep = mocker.patch.object(store.time, "sleep", autospec=True)
     with live.lock():
         store.prune(now=store.RETENTION_SECONDS + 2)
         assert live.directory.exists()
     assert not ended.directory.exists()
+    sleep.assert_not_called()
 
 
 def test_global_log_budget_does_not_erase_failure_status(repository: Path, monkeypatch: pytest.MonkeyPatch) -> None:

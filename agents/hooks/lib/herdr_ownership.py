@@ -11,7 +11,8 @@ from pathlib import Path
 import subprocess
 from typing import TypeGuard
 
-from session_store import ScopeError, SessionRecord, atomic_json, read_json
+import session_store
+from session_store import ScopeError, SessionRecord, atomic_json, file_lock, read_json
 import shell_syntax
 from herdr_grammar import has_global_option
 
@@ -81,7 +82,7 @@ def confirm(record: SessionRecord, command: str, response: object) -> None:
     }.get(action)
     if expected is None or result.get("type") != expected:
         return
-    with record.lock():
+    with file_lock(record.directory / ".herdr.lock", timeout=session_store.LOCK_WAIT_SECONDS):
         record_result(record, parsed, result)
 
 

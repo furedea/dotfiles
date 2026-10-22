@@ -1,6 +1,6 @@
 """Private, bounded verification state keyed by native provider sessions."""
 
-from collections.abc import Iterator
+from collections.abc import Generator, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 import fcntl
@@ -19,6 +19,10 @@ SCHEMA = 1
 RETENTION_SECONDS = 7 * 24 * 60 * 60
 LOG_LIMIT_BYTES = 1024 * 1024
 TOTAL_LOG_LIMIT_BYTES = 100 * LOG_LIMIT_BYTES
+# SessionStart and Herdr ownership hooks wait 0.5 seconds to absorb brief contention
+# without stalling interactive hooks behind long-running verification.
+LOCK_WAIT_SECONDS = 0.5
+LOCK_RETRY_SECONDS = 0.01
 
 
 class StateError(ValueError):
@@ -27,6 +31,10 @@ class StateError(ValueError):
 
 class ScopeError(StateError):
     """A tool target lies outside the registered worktree and needs the user's judgment."""
+
+
+class LockTimeoutError(StateError):
+    """Another hook held the state lock past the wait limit."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,8 +88,8 @@ class SessionRecord:
         return path
 
     @contextmanager
-    def lock(self, *, blocking: bool = True) -> Iterator[None]:
-        with file_lock(self.directory / ".lock", blocking=blocking):
+    def lock(self, *, unbounded: bool = False) -> Generator[None]:
+        with file_lock(self.directory / ".lock", timeout=None if unbounded else LOCK_WAIT_SECONDS):
             yield
 
 
@@ -133,38 +141,43 @@ def _register(key: SessionKey, *, resuming: bool) -> SessionRecord:
     directory = session_directory(key)
     private_directory(base)
     private_directory(directory.parent)
-    with file_lock(directory.parent / ".register.lock", blocking=False):
-        if directory.exists() or directory.is_symlink():
-            return reopen(directory)
-        baseline = capture(key.root)
-        with tempfile.TemporaryDirectory(prefix=".register-", dir=directory.parent) as temporary:
-            staging = Path(temporary)
-            atomic_json(
-                staging / "baseline.json",
-                {
-                    "schema": SCHEMA,
-                    "root": str(key.root),
-                    "provider": key.provider,
-                    "created_at": time.time(),
-                    "files": baseline.to_json(),
-                },
-            )
-            atomic_json(
-                staging / "results.json", {"checks": {}, "session_id": key.session_id, "revalidate_all": resuming}
-            )
-            atomic_bytes(staging / ".lock", b"")
-            os.rename(staging, directory)
-        return SessionRecord(directory, key.root, key.provider)
+    with file_lock(directory.parent / ".register.lock", timeout=LOCK_WAIT_SECONDS):
+        if not directory.exists() and not directory.is_symlink():
+            return create_record(key, directory, resuming=resuming)
+    return reopen(directory)
+
+
+def create_record(key: SessionKey, directory: Path, *, resuming: bool) -> SessionRecord:
+    baseline = capture(key.root)
+    with tempfile.TemporaryDirectory(prefix=".register-", dir=directory.parent) as temporary:
+        staging = Path(temporary)
+        atomic_json(
+            staging / "baseline.json",
+            {
+                "schema": SCHEMA,
+                "root": str(key.root),
+                "provider": key.provider,
+                "created_at": time.time(),
+                "files": baseline.to_json(),
+            },
+        )
+        atomic_json(staging / "results.json", {"checks": {}, "session_id": key.session_id, "revalidate_all": resuming})
+        atomic_bytes(staging / ".lock", b"")
+        os.rename(staging, directory)
+    return SessionRecord(directory, key.root, key.provider)
 
 
 def reopen(directory: Path) -> SessionRecord:
     """Reactivate an existing registration without discarding its pending results."""
     record = load(directory)
-    with record.lock(blocking=False):
-        results = record.results()
-        results.pop("ended_at", None)
-        record.save_results(results)
-        record.touch()
+    try:
+        with record.lock():
+            results = record.results()
+            results.pop("ended_at", None)
+            record.save_results(results)
+    except LockTimeoutError:
+        pass
+    record.touch()
     return record
 
 
@@ -221,14 +234,34 @@ def atomic_bytes(path: Path, value: bytes) -> None:
 
 
 @contextmanager
-def file_lock(path: Path, *, blocking: bool = True) -> Iterator[None]:
+def file_lock(path: Path, *, blocking: bool = True, timeout: float | None = None) -> Generator[None]:
+    """Optionally bound lock acquisition; non-blocking callers can skip busy records."""
     descriptor = os.open(path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
     with os.fdopen(descriptor, "r+") as stream:
-        fcntl.flock(stream, fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
+        if not blocking:
+            fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        elif timeout is None:
+            fcntl.flock(stream, fcntl.LOCK_EX)
+        else:
+            acquire_lock(stream.fileno(), path, timeout)
         try:
             yield
         finally:
             fcntl.flock(stream, fcntl.LOCK_UN)
+
+
+def acquire_lock(descriptor: int, path: Path, timeout: float) -> None:
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return
+        except BlockingIOError:
+            pass
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise LockTimeoutError(f"Timed out waiting for lock {path}; another hook holds it")
+        time.sleep(min(LOCK_RETRY_SECONDS, remaining))
 
 
 def prune(*, now: float | None = None) -> None:
@@ -238,11 +271,18 @@ def prune(*, now: float | None = None) -> None:
         return
     private_directory(base)
     current = time.time() if now is None else now
-    with file_lock(base / ".gc.lock"):
-        candidates = tuple(base.glob("*/*"))
-        for directory in (path for path in candidates if trusted_record_directory(path)):
-            prune_record(directory, current)
-        bound_logs(base)
+    try:
+        with file_lock(base / ".gc.lock", blocking=False):
+            prune_records(base, current)
+    except BlockingIOError:
+        return
+
+
+def prune_records(base: Path, now: float) -> None:
+    candidates = tuple(base.glob("*/*"))
+    for directory in (path for path in candidates if trusted_record_directory(path)):
+        prune_record(directory, now)
+    bound_logs(base)
 
 
 def trusted_record_directory(path: Path) -> bool:
@@ -281,6 +321,7 @@ def prune_record(directory: Path, now: float) -> None:
 
 
 def remove_if_expired(directory: Path, now: float) -> None:
+    # Stop holds this lock throughout verification; GC must skip it without waiting per record.
     with file_lock(directory / ".lock", blocking=False):
         results = load(directory).results()
         last_seen = results.get("ended_at", directory.stat().st_mtime)

@@ -17,10 +17,12 @@ import patch_input
 import session_gate
 from session_snapshot import repository_root
 from session_store import (
+    LockTimeoutError,
     ScopeError,
     SessionKey,
     SessionRecord,
     StateError,
+    file_lock,
     load,
     prune,
     register,
@@ -49,10 +51,9 @@ def registered_record(provider: str, payload: dict, *, starting: bool = False) -
     if not directory.exists():
         raise StateError("Missing verification registration; restart or resume to run SessionStart in this worktree")
     record = load(directory)
-    with record.lock(blocking=False):
-        if record.results().get("session_id") != session or record.provider != provider:
-            raise StateError("Provider session differs from the registered session")
-        record.touch()
+    if record.results().get("session_id") != session or record.provider != provider:
+        raise StateError("Provider session differs from the registered session")
+    record.touch()
     return record
 
 
@@ -108,8 +109,7 @@ def dispatch(provider: str, event: str, payload: dict) -> dict[str, object]:
     elif event == "stop":
         return {**session_gate.gate(record)}
     elif event == "session-end":
-        with record.lock():
-            record.end()
+        end_session(record)
         prune()
     elif event == "session-start":
         prune()
@@ -120,6 +120,16 @@ def dispatch(provider: str, event: str, payload: dict) -> dict[str, object]:
             }
         }
     return {}
+
+
+def end_session(record: SessionRecord) -> None:
+    """Mark an idle session ended, leaving busy verification to mtime-based GC."""
+    try:
+        # Codex gives SessionEnd only 3 seconds; a running Stop keeps the session alive.
+        with file_lock(record.directory / ".lock", timeout=2):
+            record.end()
+    except LockTimeoutError:
+        pass
 
 
 def failure(event: str, payload: dict, error: Exception) -> dict[str, object]:

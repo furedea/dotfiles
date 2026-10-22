@@ -20,7 +20,7 @@ import session_store as store
 def test_overlapping_successful_results_keep_both_records(repository: Path, mocker: MockerFixture, kind: str) -> None:
     record = store.register(repository, "codex", "session")
     first_writing, second_waiting, release_first = Event(), Event(), Event()
-    atomic_json, lock = herdr_ownership.atomic_json, store.SessionRecord.lock
+    atomic_json, lock = herdr_ownership.atomic_json, herdr_ownership.file_lock
 
     def pause_first_write(path: Path, value: dict) -> None:
         if not first_writing.is_set():
@@ -29,10 +29,10 @@ def test_overlapping_successful_results_keep_both_records(repository: Path, mock
         atomic_json(path, value)
 
     @contextmanager
-    def observe_lock(record: store.SessionRecord, *, blocking: bool = True) -> Generator[None]:
+    def observe_lock(path: Path, *, timeout: float | None = None) -> Generator[None]:
         if first_writing.is_set():
             second_waiting.set()
-        with lock(record, blocking=blocking):
+        with lock(path, timeout=5):
             yield
 
     def confirm(index: int) -> None:
@@ -53,7 +53,7 @@ def test_overlapping_successful_results_keep_both_records(repository: Path, mock
             second_waiting.set()
 
     mocker.patch.object(herdr_ownership, "atomic_json", autospec=True, side_effect=pause_first_write)
-    mocker.patch.object(store.SessionRecord, "lock", autospec=True, side_effect=observe_lock)
+    mocker.patch.object(herdr_ownership, "file_lock", autospec=True, side_effect=observe_lock)
     with ThreadPoolExecutor(max_workers=2) as executor:
         first = executor.submit(confirm, 1)
         try:

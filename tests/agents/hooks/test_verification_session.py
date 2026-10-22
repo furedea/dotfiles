@@ -74,11 +74,11 @@ def test_corrupt_registration_denies_tools(repository: Path, filename: str, fiel
     assert json.loads(result.stdout)["hookSpecificOutput"]["permissionDecision"] == "deny"
 
 
-def test_busy_registration_denies_tools_without_waiting_for_hook_timeout(repository: Path) -> None:
+def test_busy_verification_allows_tools_without_waiting(repository: Path) -> None:
     record = store.register(repository, "codex", "session")
     with record.lock():
         result = invoke("pre-tool-use", {"cwd": str(repository), "session_id": "session"})
-    assert json.loads(result.stdout)["hookSpecificOutput"]["permissionDecision"] == "deny"
+    assert json.loads(result.stdout) == {}
 
 
 @pytest.mark.parametrize(
