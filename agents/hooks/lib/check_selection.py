@@ -382,13 +382,16 @@ def rust_plan(selection: Selection) -> list[Invocation]:
         return [RUST_FULL_SUITE]
     explicit, root = selection.targets, selection.scope.root
     filters = {Path(path).stem for path in explicit if not path.startswith("tests/")}
-    targets = {Path(path).stem for path in explicit if path.startswith("tests/")}
+    test_paths = {path for path in explicit if path.startswith("tests/")}
     for path in selection.scope.changed:
         if not path.endswith(".rs"):
             continue
         stem = Path(path).stem
         if path.startswith("tests/") or (path.startswith("src/") and (root / "tests" / f"{stem}.rs").is_file()):
-            targets.add(stem)
+            test_paths.add(path if path.startswith("tests/") else f"tests/{stem}.rs")
+    targets = {rust_test_target(root, path) for path in test_paths}
+    if "" in targets:
+        return [RUST_FULL_SUITE]
     invocations = [
         Invocation("rust", f"unit filter {stem}", ("cargo", "test", stem, "--quiet")) for stem in sorted(filters)
     ]
@@ -397,6 +400,21 @@ def rust_plan(selection: Selection) -> list[Invocation]:
         for stem in sorted(targets)
     ]
     return invocations or [RUST_FULL_SUITE]
+
+
+def rust_test_target(root: Path, filename: str) -> str:
+    """Resolve an integration test file to its declared or auto-discovered Cargo target."""
+    manifest = tomllib.loads((root / "Cargo.toml").read_text())
+    path = Path(filename)
+    for entry in manifest.get("test", []):
+        if "path" not in entry or "name" not in entry:
+            continue
+        declared = Path(entry["path"])
+        if path == declared or path.is_relative_to(declared.parent):
+            return entry["name"]
+    if len(path.parts) > 2 and (root / "tests" / path.parts[1] / "main.rs").is_file():
+        return path.parts[1]
+    return path.stem if len(path.parts) == 2 else ""
 
 
 def javascript_plan(selection: Selection) -> list[Invocation]:
