@@ -175,13 +175,13 @@ def cleanup(primary: Path, current: Path | None, *, dry_run: bool) -> list[str]:
         report.append(f"remove worktree {worktree.path} and branch {worktree.branch}")
         if not dry_run:
             remove_worktree(primary, worktree, workspaces.get(worktree.path))
-            run("git", "branch", "-D", worktree.branch, cwd=primary)
+            run("git", "branch", "-D", "--", worktree.branch, cwd=primary)
     for branch in local_branches(primary) - checked_out:
         if not is_merged(primary, branch, merged):
             continue
         report.append(f"remove branch {branch}")
         if not dry_run:
-            run("git", "branch", "-D", branch, cwd=primary)
+            run("git", "branch", "-D", "--", branch, cwd=primary)
     if report:
         report += fast_forward_default_branch(primary, dry_run=dry_run)
     remaining = worktrees if dry_run else linked_worktrees(primary)
@@ -311,7 +311,7 @@ def fast_forward_default_branch(primary: Path, *, dry_run: bool) -> list[str]:
     if checked_out and run("git", "status", "--porcelain", cwd=primary):
         return []
     pull = ("git", "pull", "--quiet", "--ff-only")
-    fetch = ("git", "fetch", "--quiet", "origin", f"{branch}:{branch}")
+    fetch = ("git", "fetch", "--quiet", "--", "origin", f"{branch}:{branch}")
     if not dry_run:
         try:
             run(*(pull if checked_out else fetch), cwd=primary)
@@ -327,7 +327,9 @@ def has_branch(primary: Path, branch: str) -> bool:
 def is_merged(primary: Path, branch: str, merged: dict[str, set[str]]) -> bool:
     if not branch or branch in PROTECTED_BRANCHES:
         return False
-    return run("git", "rev-parse", f"refs/heads/{branch}", cwd=primary) in merged.get(branch, set())
+    return run("git", "rev-parse", "--verify", "--end-of-options", f"refs/heads/{branch}", cwd=primary) in merged.get(
+        branch, set()
+    )
 
 
 def merged_heads(primary: Path) -> dict[str, set[str]]:
@@ -402,13 +404,15 @@ def herdr_workspaces(primary: Path) -> dict[Path, str]:
 
 def remove_worktree(primary: Path, worktree: Worktree, workspace: str | None) -> None:
     """Remove a checkout already verified clean, closing its Herdr workspace when one is open."""
-    run("git", "worktree", "remove", "--force", str(worktree.path), cwd=primary)
+    run("git", "worktree", "remove", "--force", "--", str(worktree.path), cwd=primary)
     if workspace:
         run("herdr", "workspace", "close", workspace, cwd=primary)
 
 
 def run(*command: str, cwd: Path) -> str:
+    environment = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
     if command[0] == "git":
+        environment.update(GIT_COMMON_DIR=str(cwd / ".git"), GIT_CONFIG_NOSYSTEM="1")
         location = (
             ()
             if command[1].startswith("--git-dir=")
@@ -423,6 +427,8 @@ def run(*command: str, cwd: Path) -> str:
             "core.fsmonitor=false",
             "-c",
             "core.hooksPath=/dev/null",
+            "-c",
+            "extensions.worktreeConfig=false",
             *(
                 ("-c", "filter.lfs.process=", "-c", "filter.lfs.clean=", "-c", "filter.lfs.smudge=")
                 if not location
@@ -438,7 +444,7 @@ def run(*command: str, cwd: Path) -> str:
         text=True,
         check=True,
         timeout=TIMEOUT_SECONDS,
-        env={key: value for key, value in os.environ.items() if not key.startswith("GIT_")},
+        env=environment,
     ).stdout.strip()
 
 

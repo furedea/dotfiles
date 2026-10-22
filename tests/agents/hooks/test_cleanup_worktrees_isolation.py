@@ -13,6 +13,52 @@ from tests.agents.hooks.cleanup_worktrees_runtime import branches, cleanup, git,
 import cleanup_worktrees
 
 
+@pytest.mark.parametrize("planted", ["commondir", "both"])
+def test_lane_status_never_runs_a_filter_from_raced_admin_configuration(
+    primary: Path, merged: dict[str, str], tmp_path: Path, planted: str
+) -> None:
+    path = task_worktree(primary, "feat/race")
+    (path / ".gitattributes").write_text("README.md filter=planted\n")
+    git("add", ".gitattributes", cwd=path)
+    git("commit", "--quiet", "-m", "Add filter attribute", cwd=path)
+    worktree = next(tree for tree in cleanup_worktrees.linked_worktrees(primary) if tree.path == path)
+    admin = worktree.admin_dir
+    assert admin is not None
+    fake = tmp_path / "fake.git"
+    shutil.copytree(primary / ".git", fake)
+    git("config", "--file", str(fake / "config"), "extensions.worktreeConfig", "true", cwd=primary)
+    marker = tmp_path / "clean-filter-ran"
+    filter_command = f"touch {shlex.quote(str(marker))}; cat"
+    git("config", "--file", str(fake / "config"), "filter.planted.clean", filter_command, cwd=primary)
+    config = tmp_path / "config.worktree"
+    git("config", "--file", str(config), "filter.planted.clean", filter_command, cwd=primary)
+    readme = path / "README.md"
+    readme.unlink()
+    readme.write_text("base\n")
+    index_time = (admin / "index").stat().st_mtime_ns
+    os.utime(readme, ns=(index_time, index_time))
+    executable = shutil.which("git")
+    assert executable
+    rewrite = ""
+    if planted in {"commondir", "both"}:
+        rewrite += f"printf '%s' {shlex.quote(str(fake))} > {shlex.quote(str(admin / 'commondir'))}\n"
+    if planted in {"config.worktree", "both"}:
+        rewrite += f"cp {shlex.quote(str(config))} {shlex.quote(str(admin / 'config.worktree'))}\n"
+    wrapper = tmp_path / "bin/git"
+    wrapper.write_text(
+        '#!/bin/sh\ncase " $* " in *" status "*)\n' + rewrite + f';; esac\nexec {shlex.quote(executable)} "$@"\n'
+    )
+    wrapper.chmod(0o755)
+
+    assert cleanup_worktrees.worktree_is_clean(primary, worktree)
+
+    assert not marker.exists()
+    if planted in {"commondir", "both"}:
+        assert (admin / "commondir").read_text() == str(fake)
+    if planted in {"config.worktree", "both"}:
+        assert (admin / "config.worktree").exists()
+
+
 def test_git_index_file_is_not_inherited(
     primary: Path, merged: dict[str, str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -30,8 +76,28 @@ def test_git_index_file_is_not_inherited(
     assert branches(primary) == {"main"}
 
 
-def test_run_removes_all_git_environment_variables_and_preserves_the_rest(
-    primary: Path, monkeypatch: pytest.MonkeyPatch, mocker: pytest_mock.MockerFixture
+def test_lane_git_uses_the_primary_common_directory(
+    primary: Path, merged: dict[str, str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = task_worktree(primary, "feat/lane")
+    worktree = next(tree for tree in cleanup_worktrees.linked_worktrees(primary) if tree.path == path)
+    record = tmp_path / "git-environment"
+    wrapper = tmp_path / "bin/git"
+    wrapper.write_text(
+        '#!/bin/sh\nprintf "%s|%s\\n" "$GIT_COMMON_DIR" "$GIT_CONFIG_NOSYSTEM" >> ' + shlex.quote(str(record)) + "\n"
+    )
+    wrapper.chmod(0o755)
+    monkeypatch.setenv("GIT_COMMON_DIR", str(tmp_path / "planted"))
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "0")
+
+    assert cleanup_worktrees.worktree_is_clean(primary, worktree)
+
+    assert record.read_text().splitlines() == [f"{primary / '.git'}|1"] * 2
+
+
+@pytest.mark.parametrize("executable", ["git", "gh"])
+def test_run_removes_inherited_git_environment_variables_and_preserves_the_rest(
+    primary: Path, monkeypatch: pytest.MonkeyPatch, mocker: pytest_mock.MockerFixture, executable: str
 ) -> None:
     monkeypatch.setenv("GIT_INDEX_FILE", "/planted-index")
     monkeypatch.setenv("GIT_CONFIG_COUNT", "1")
@@ -41,11 +107,12 @@ def test_run_removes_all_git_environment_variables_and_preserves_the_rest(
     process = mocker.patch("cleanup_worktrees.subprocess.run", autospec=True)
     process.return_value.stdout = ""
 
-    cleanup_worktrees.run("git", "status", cwd=primary)
+    cleanup_worktrees.run(executable, "status", cwd=primary)
 
-    assert process.call_args.kwargs["env"] == {
-        key: value for key, value in os.environ.items() if not key.startswith("GIT_")
-    }
+    expected = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+    if executable == "git":
+        expected.update(GIT_COMMON_DIR=str(primary / ".git"), GIT_CONFIG_NOSYSTEM="1")
+    assert process.call_args.kwargs["env"] == expected
 
 
 def test_lane_status_disables_submodules_and_lfs_filters(primary: Path, mocker: pytest_mock.MockerFixture) -> None:
@@ -59,7 +126,13 @@ def test_lane_status_disables_submodules_and_lfs_filters(primary: Path, mocker: 
     status = process.call_args.args[0]
     assert "status" in status
     assert "--ignore-submodules=all" in status
-    for setting in ("diff.ignoreSubmodules=all", "filter.lfs.process=", "filter.lfs.clean=", "filter.lfs.smudge="):
+    for setting in (
+        "extensions.worktreeConfig=false",
+        "diff.ignoreSubmodules=all",
+        "filter.lfs.process=",
+        "filter.lfs.clean=",
+        "filter.lfs.smudge=",
+    ):
         assert any(status[index : index + 2] == ("-c", setting) for index in range(len(status) - 1))
 
 
