@@ -70,7 +70,9 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
         pytest.param("gh stack submit --auto", id="non-interactive stack commands"),
         pytest.param("gh pr list 2>&1 | head -5", id="GitHub forms in pipelines"),
         pytest.param("curl -fsS http://localhost:3000/health", id="local server requests"),
-        pytest.param("curl -s -H 'Accept: x' -o out.json http://127.0.0.1:8080/api", id="local server downloads"),
+        pytest.param(
+            "curl -s -H 'Accept: x' -o /dev/null http://127.0.0.1:8080/api", id="local server discarded output"
+        ),
         pytest.param("curl -X POST -d '{\"a\": 1}' http://127.0.0.1:8080/api", id="local server writes"),
         pytest.param(
             'gh api -H "Accept: application/vnd.github.raw" repos/o/r/contents/README.md',

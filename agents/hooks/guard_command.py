@@ -108,7 +108,8 @@ def is_listed(candidate: shell_syntax.Command, rules: list[dict]) -> bool:
     if not command_policy.regex_reason(candidate.static_words_text, rules):
         return False
     if candidate.arguments[0] == "curl" and any(
-        option in {"-w", "--write-out"} and not SAFE_WRITE_OUT.fullmatch(value)
+        (option in {"-w", "--write-out"} and not SAFE_WRITE_OUT.fullmatch(value))
+        or (option == "-H" and ("\r" in value or "\n" in value))
         for option, value in zip(candidate.arguments, candidate.arguments[1:], strict=False)
     ):
         return False

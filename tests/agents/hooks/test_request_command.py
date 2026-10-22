@@ -120,6 +120,87 @@ def test_remote_requests_ask_and_point_to_safer_tools(capsys: pytest.CaptureFixt
 
 @pytest.mark.parametrize("suffix", ["", " | jq '.'"])
 @pytest.mark.parametrize(
+    ("path", "decision"),
+    [
+        ("/Users/kaito/.zshrc", "ask"),
+        ("/tmp/out.json", "ask"),
+        ("../x", "ask"),
+        ("~/x", "ask"),
+        ("..", "ask"),
+        ("out/../x", "ask"),
+        ("out/..", "ask"),
+        ("out//../x", "ask"),
+        ("/dev/null/../x", "ask"),
+        ("/dev/null/", "ask"),
+        ("/dev/./null", "ask"),
+        ("//dev/null", "ask"),
+        ("-", "ask"),
+        ("/dev/null", "allow"),
+        ("out.json", "ask"),
+        ("./out.json", "ask"),
+        ("out/result.json", "ask"),
+        ("out..json", "ask"),
+    ],
+)
+def test_local_curl_output_is_only_exact_dev_null(path: str, decision: str, suffix: str) -> None:
+    command = f"curl -s -o {path} http://localhost/{suffix}"
+    assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == decision
+
+
+@pytest.mark.parametrize("suffix", ["", " | jq '.'"])
+@pytest.mark.parametrize(
+    ("target_kind", "path"),
+    [
+        ("file", "output"),
+        ("directory", "output/result.json"),
+        ("directory", "output/new/result.json"),
+        ("missing", "output"),
+    ],
+)
+@pytest.mark.parametrize("outside", [False, True])
+def test_local_curl_output_symlinks_ask(
+    tmp_path: Path, target_kind: str, path: str, outside: bool, suffix: str
+) -> None:
+    cwd = tmp_path / "project"
+    cwd.mkdir()
+    target = (tmp_path if outside else cwd) / "target"
+    if target_kind == "directory":
+        target.mkdir()
+    elif target_kind == "file":
+        target.write_text("existing data")
+    (cwd / "output").symlink_to(target, target_is_directory=target_kind == "directory")
+    command = f"curl -s -o {path} http://localhost/{suffix}"
+    assert guard.decide("allowed", {"cwd": str(cwd), "tool_input": {"command": command}}).decision == "ask"
+
+
+@pytest.mark.parametrize("suffix", ["", " | jq '.'"])
+@pytest.mark.parametrize("path", [".envrc", ".git/hooks/pre-commit", "./.envrc", "out/.secret", "out/.cache/data"])
+def test_local_curl_hidden_output_asks(tmp_path: Path, path: str, suffix: str) -> None:
+    command = f"curl -s -o {path} http://localhost/{suffix}"
+    assert guard.decide("allowed", {"cwd": str(tmp_path), "tool_input": {"command": command}}).decision == "ask"
+
+
+@pytest.mark.parametrize("suffix", ["", " | jq '.'"])
+@pytest.mark.parametrize(
+    ("data", "decision"),
+    [
+        ("@/etc/passwd", "ask"),
+        ("'@file'", "ask"),
+        ("'@/etc/passwd'", "ask"),
+        ("'@'", "ask"),
+        ("'@-'", "ask"),
+        ("'{\"a\":1}'", "allow"),
+        ("'email@example.com'", "allow"),
+        ("''", "allow"),
+    ],
+)
+def test_local_curl_data_cannot_read_files(data: str, decision: str, suffix: str) -> None:
+    command = f"curl -s -d {data} http://localhost/{suffix}"
+    assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == decision
+
+
+@pytest.mark.parametrize("suffix", ["", " | jq '.'"])
+@pytest.mark.parametrize(
     "command",
     [
         r"curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:4399/app/",
@@ -130,6 +211,32 @@ def test_remote_requests_ask_and_point_to_safer_tools(capsys: pytest.CaptureFixt
 )
 def test_local_curl_fixed_diagnostics_are_allowed(command: str, suffix: str) -> None:
     assert guard.decide("allowed", {"tool_input": {"command": command + suffix}}).decision == "allow"
+
+
+@pytest.mark.parametrize("suffix", ["", " | jq '.'"])
+@pytest.mark.parametrize(
+    ("header", "decision"),
+    [
+        ("Host: evil.com", "ask"),
+        ("X-Forwarded-Host: evil", "ask"),
+        ("Authorization: Bearer secret", "ask"),
+        ("Cookie: session=secret", "ask"),
+        ("X-Custom: value", "ask"),
+        ("Accept-Language: en", "ask"),
+        ("@headers.txt", "ask"),
+        ("Accept: application/json\r\nHost: evil.com", "ask"),
+        ("Accept: application/json\nCookie: secret", "ask"),
+        ("Content-Type: application/json", "allow"),
+        ("Accept: application/json", "allow"),
+        ("User-Agent: local-check", "allow"),
+        ("content-type: application/json", "allow"),
+        ("aCcEpT: application/json", "allow"),
+        ("USER-AGENT: local-check", "allow"),
+    ],
+)
+def test_local_curl_headers_are_limited_to_dev_check_metadata(header: str, decision: str, suffix: str) -> None:
+    command = f"curl -s -H '{header}' http://localhost/{suffix}"
+    assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == decision
 
 
 @pytest.mark.parametrize("suffix", ["", " | jq '.'"])
