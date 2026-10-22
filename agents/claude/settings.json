@@ -68,6 +68,11 @@
       ],
       "denyRead": [
         "~/.codex/auth.json"
+      ],
+      "denyWrite": [
+        "~/**/.git/hooks",
+        "~/**/.git/config",
+        "~/**/.git/worktrees/*/config.worktree"
       ]
     },
     "network": {

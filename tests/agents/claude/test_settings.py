@@ -50,6 +50,16 @@ def test_agent_git_and_its_hooks_run_inside_the_sandbox() -> None:
     assert [command for command in sandbox["excludedCommands"] if command.startswith("git ")] == []
 
 
+def test_sandboxed_commands_cannot_write_git_hooks_and_configuration() -> None:
+    sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
+    assert {
+        "~/**/.git/hooks",
+        "~/**/.git/config",
+        "~/**/.git/worktrees/*/config.worktree",
+    } <= set(sandbox["filesystem"]["denyWrite"])
+    assert all(path.startswith(("~/", "/")) for path in sandbox["filesystem"]["denyWrite"])
+
+
 def test_agent_commits_and_tags_are_left_unsigned() -> None:
     environment = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["env"]
     count = int(environment["GIT_CONFIG_COUNT"])
