@@ -49,7 +49,7 @@ def registered_record(provider: str, payload: dict, *, starting: bool = False) -
     if not directory.exists():
         raise StateError("Missing verification registration; restart or resume to run SessionStart in this worktree")
     record = load(directory)
-    with record.lock(blocking=False):
+    with record.lock():
         if record.results().get("session_id") != session or record.provider != provider:
             raise StateError("Provider session differs from the registered session")
         record.touch()
