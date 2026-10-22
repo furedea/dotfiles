@@ -66,10 +66,10 @@ def test_companion_is_denied_when_its_simple_command_shape_cannot_be_parsed(mock
 @pytest.mark.parametrize(
     "command",
     [
-        'node "~/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" --task review',
-        'node "~/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" --cwd /tmp/project --task "日本語のタスクを確認"',
-        "node \"~/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs\" --task 'review $HOME'",
-        'node "~/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" --cwd /tmp/project --task "引用符と && | > は本文" --background',
+        f'node "{Path.home()}/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" --task review',
+        f'node "{Path.home()}/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" --cwd /tmp/project --task "日本語のタスクを確認"',
+        f"node \"{Path.home()}/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs\" --task 'review $HOME'",
+        f'node "{Path.home()}/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" --cwd /tmp/project --task "引用符と && | > は本文" --background',
         'echo "~/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" | tee /tmp/log',
         'node "/plugin path/other.mjs" > /tmp/log',
     ],
@@ -78,11 +78,18 @@ def test_simple_companion_calls_and_unrelated_commands_stay_allowed(kind: str, c
     assert guard.decide(kind, {"tool_input": {"command": command}}).decision == "allow"
 
 
-@pytest.mark.parametrize("root", ["~", str(Path.home())])
+@pytest.mark.parametrize("quote", ['"', "'"])
+def test_companion_rejects_quoted_literal_tilde_paths(quote: str) -> None:
+    script = "~/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs"
+    command = f"node {quote}{script}{quote} task --cwd /tmp/project review"
+    assert guard.decide("forbidden", {"tool_input": {"command": command}}).decision == "deny"
+
+
+@pytest.mark.parametrize("quote", ['"', "'"])
 @pytest.mark.parametrize("version", ["0.0.0", "1.0.3", "12.345.6789"])
-def test_companion_accepts_numeric_versions_in_the_plugin_cache(root: str, version: str) -> None:
-    script = f"{root}/.claude/plugins/cache/openai-codex/codex/{version}/scripts/codex-companion.mjs"
-    command = f'node "{script}" task --cwd /tmp/project "review"'
+def test_companion_accepts_numeric_versions_in_the_plugin_cache(quote: str, version: str) -> None:
+    script = f"{Path.home()}/.claude/plugins/cache/openai-codex/codex/{version}/scripts/codex-companion.mjs"
+    command = f'node {quote}{script}{quote} task --cwd /tmp/project "review"'
     assert guard.decide("forbidden", {"tool_input": {"command": command}}).decision == "allow"
 
 

@@ -264,11 +264,7 @@ def companion_objection(command: str, commands: tuple[shell_syntax.Command, ...]
         simple = False
     if simple:
         arguments = commands[0].arguments
-        script = (
-            "(?:"
-            + "|".join(re.escape(root) for root in roots)
-            + r")[0-9]+\.[0-9]+\.[0-9]+/scripts/codex-companion\.mjs"
-        )
+        script = re.escape(str(Path.home()) + cache) + r"[0-9]+\.[0-9]+\.[0-9]+/scripts/codex-companion\.mjs"
         if len(arguments) >= 2 and arguments[0] == "node" and re.fullmatch(script, arguments[1]):
             return hook_decision.ALLOW
         return hook_decision.deny(
