@@ -38,9 +38,12 @@ When the user asks for Codex to implement, Codex implements and Claude reviews. 
 `node <codex plugin>/scripts/codex-companion.mjs task --write --model gpt-6.1-sol --effort medium --cwd <worktree> "<task>"`
 as one command with no dollar sign in the task text and no pipe or redirect, then reads the diff,
 runs the checks Codex cannot (Nix hashes and nix builds), commits, pushes, and opens the PR.
-Review: the lane itself for a few lines of configuration, otherwise a fresh reviewer lane on
-`-- --model opus --effort medium` with only the requirements and the diff. When Claude implemented,
-Codex reviews.
+The lane then starts the reviewer itself: an Opus subagent with only the requirements and the
+diff when Codex implemented, or the Codex review command when Claude implemented. The lane has
+Codex fix accepted findings and waits for CI. It ends its final message with `LANE-READY` only
+when CI is green and no review finding is open; otherwise it ends with `LANE-BLOCKED` and the
+reason. The lane never types into the parent's pane with `herdr agent prompt` or `send-text`:
+text typed there is indistinguishable from the user's own input.
 
 Honor an explicit provider choice. Keep plan review, code review, and implementation as distinct
 assignments; asking for findings does not authorize the reviewer to fix them.
@@ -135,7 +138,9 @@ Right after prompting, wait in the background for the recipient to finish: first
 `herdr agent wait <name> --until working`, then `herdr agent wait <name> --until done --until blocked`,
 each as its own single `herdr` call. Waiting only for done or blocked can return at once while
 the agent still shows done from an earlier turn. Then read the reply with `herdr agent read`
-and, for an implementation, check its PR. This works for Claude and Codex recipients alike.
+and, for an implementation, check for `LANE-READY`, check the PR state, and report to the user.
+Treat `LANE-BLOCKED` and its reason as incomplete work. This works for Claude and Codex
+recipients alike.
 Follow `herdr` for waiting, blocked sessions, and complete response retrieval.
 Successful submission or a settled agent state does not prove that the assigned task is complete;
 read the response and compare it with the requested outcome.
