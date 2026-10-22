@@ -37,6 +37,7 @@ known_first_party = [
   "provider_adapter",
   "replay_commands",
   "secret_path_policy",
+  "shell_inspection",
   "shell_syntax",
   "session_gate",
   "session_snapshot",

@@ -1,5 +1,8 @@
 """Requests: only one plain curl call to a local server passes; every other request asks."""
 
+from pathlib import Path
+import subprocess
+
 import pytest
 
 from tests.runtime import load_script_module
@@ -229,6 +232,66 @@ def test_local_curl_diagnostics_keep_unsafe_forms_under_review(command: str) -> 
 )
 def test_local_curl_read_only_pipeline_is_allowed(filters: str) -> None:
     command = f"curl -s http://localhost:3000/api | {filters}"
+    assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == "allow"
+
+
+@pytest.mark.parametrize("prefix", ["", "jq '.' | "])
+@pytest.mark.parametrize(
+    "argument",
+    [
+        r"\\*",
+        r"\*",
+        r"sta\tus",
+        "*",
+        "?",
+        "[ab]",
+        "{a,b}",
+        "~",
+        "$HOME",
+        "`pwd`",
+        "^README.md",
+        "a#",
+        "a##",
+        "a~b",
+        "(a|b)",
+        "a(.)",
+        '"status"',
+        '"^README.md"',
+        r"'safe'\\*",
+        "$'\\x2a'",
+    ],
+)
+def test_local_curl_filter_shell_expansions_ask(argument: str, prefix: str) -> None:
+    command = f"curl -s http://localhost:3000/api | {prefix}grep {argument}"
+    assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == "ask"
+
+
+@pytest.mark.parametrize("filters", [r"jq \.", r"head -n \1", r"tail -c \2", r"wc -\l", r"grep sta\tus"])
+def test_local_curl_every_filter_requires_literal_words(filters: str) -> None:
+    command = f"curl -s http://localhost:3000/api | {filters}"
+    assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == "ask"
+
+
+@pytest.mark.parametrize("argument", [r"\\*", "^README.md"])
+def test_local_curl_filter_globs_expand_to_local_files(tmp_path: Path, argument: str) -> None:
+    names = [r"\.", r"\a", r"\b"] if argument.startswith("\\") else ["a", "b", "c"]
+    for name in ["README.md", *names]:
+        (tmp_path / name).write_text("a. repository secret\n")
+    command = f"curl -s http://localhost:3000/api | grep {argument}"
+    result = subprocess.run(
+        ["zsh", "-f", "-c", "setopt extendedglob; curl() { print stdin; }; " + command],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "repository secret" in result.stdout
+    assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == "ask"
+
+
+@pytest.mark.parametrize("argument", ["status", "'status'", r"'*?[]{}~$`^#()|!<>\\'", "'日本語'"])
+def test_local_curl_filter_literal_arguments_are_allowed(argument: str) -> None:
+    command = f"curl -s http://localhost:3000/api | grep {argument}"
     assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == "allow"
 
 

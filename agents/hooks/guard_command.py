@@ -40,6 +40,8 @@ LITERAL_PROGRAMS = frozenset({"curl", "gh", "herdr", "wget"})
 # outside single quotes, in the program name, an assignment, or a redirect included, gets no
 # literal_words rule.
 EXPANDING_TEXT = re.compile(r"[$`~*?\[\]{}]|\\\n")
+# Filter words must stay literal even with zsh extended_glob; quote everything else with single quotes.
+FILTER_LITERAL_TEXT = re.compile(r"[A-Za-z0-9_./:=,%+ \t\n-]*")
 SAFE_WRITE_OUT = re.compile(
     r"(?:%\{(?:http_code|time_total|time_connect|time_starttransfer|size_download|content_type|url_effective|remote_ip)\}"
     r"|\\n|[A-Za-z0-9 :=_.,/-])*"
@@ -249,7 +251,12 @@ def allows_literal_rules(command: str, commands: tuple[shell_syntax.Command, ...
 
 def is_read_only_filter(command: shell_syntax.Command) -> bool:
     """List only known stdin-only forms; unknown options and jq programs ask."""
-    if command.wrapper_depth or command.has_dynamic_words or command.hides_options:
+    if (
+        command.wrapper_depth
+        or command.has_dynamic_words
+        or command.hides_options
+        or not FILTER_LITERAL_TEXT.fullmatch(shell_inspection.text_outside_single_quotes(command.raw))
+    ):
         return False
     program, *arguments = command.arguments
     text = " ".join(arguments)
