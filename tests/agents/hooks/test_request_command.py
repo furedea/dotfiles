@@ -1,6 +1,7 @@
 """Requests: only one plain curl call to a local server passes; every other request asks."""
 
 from pathlib import Path
+import shutil
 import subprocess
 
 import pytest
@@ -273,20 +274,28 @@ def test_local_curl_every_filter_requires_literal_words(filters: str) -> None:
 
 
 @pytest.mark.parametrize("argument", [r"\\*", "^README.md"])
+def test_local_curl_filter_globs_ask(argument: str) -> None:
+    command = f"curl -s http://localhost:3000/api | grep {argument}"
+    assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == "ask"
+
+
+@pytest.mark.parametrize("argument", [r"\\*", "^README.md"])
 def test_local_curl_filter_globs_expand_to_local_files(tmp_path: Path, argument: str) -> None:
+    zsh = shutil.which("zsh")
+    if zsh is None:
+        pytest.skip("zsh is required to demonstrate glob expansion to local files")
     names = [r"\.", r"\a", r"\b"] if argument.startswith("\\") else ["a", "b", "c"]
     for name in ["README.md", *names]:
         (tmp_path / name).write_text("a. repository secret\n")
     command = f"curl -s http://localhost:3000/api | grep {argument}"
     result = subprocess.run(
-        ["zsh", "-f", "-c", "setopt extendedglob; curl() { print stdin; }; " + command],
+        [zsh, "-f", "-c", "setopt extendedglob; curl() { print stdin; }; " + command],
         cwd=tmp_path,
         capture_output=True,
         text=True,
         check=True,
     )
     assert "repository secret" in result.stdout
-    assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == "ask"
 
 
 @pytest.mark.parametrize("argument", ["status", "'status'", r"'*?[]{}~$`^#()|!<>\\'", "'日本語'"])
