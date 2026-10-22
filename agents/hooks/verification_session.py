@@ -49,10 +49,9 @@ def registered_record(provider: str, payload: dict, *, starting: bool = False) -
     if not directory.exists():
         raise StateError("Missing verification registration; restart or resume to run SessionStart in this worktree")
     record = load(directory)
-    with record.lock():
-        if record.results().get("session_id") != session or record.provider != provider:
-            raise StateError("Provider session differs from the registered session")
-        record.touch()
+    if record.results().get("session_id") != session or record.provider != provider:
+        raise StateError("Provider session differs from the registered session")
+    record.touch()
     return record
 
 
@@ -108,7 +107,7 @@ def dispatch(provider: str, event: str, payload: dict) -> dict[str, object]:
     elif event == "stop":
         return {**session_gate.gate(record)}
     elif event == "session-end":
-        with record.lock():
+        with record.lock(timeout=None):
             record.end()
         prune()
     elif event == "session-start":
