@@ -106,6 +106,7 @@ def test_invalid_lint_format_invocations_fail(
         ("tex", "tex", "chktex", "lint"),
         ("json_toml", "toml", "dprint", "lint"),
         ("gha", "yml", "actionlint", "lint"),
+        ("gha", "yml", "zizmor", "lint"),
     ],
 )
 def test_process_failures_survive_later_successful_steps(
@@ -127,6 +128,7 @@ def test_process_failures_survive_later_successful_steps(
         "prettierd",
         "dprint",
         "actionlint",
+        "zizmor",
     ):
         executable(
             name,

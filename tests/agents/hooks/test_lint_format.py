@@ -43,8 +43,11 @@ def test_missing_project_marker_has_no_invented_root(tmp_path: Path) -> None:
         ("tex", "file.bib", ("tex-fmt",)),
         ("md", "file.md", ("autocorrect", "prettierd")),
         ("txt", "file.txt", ("autocorrect",)),
-        ("gha", ".github/workflows/ci.yml", ("actionlint",)),
+        ("gha", ".github/workflows/ci.yml", ("actionlint", "zizmor")),
+        ("gha", ".github/workflows/ci.yaml", ("actionlint", "zizmor")),
         ("gha", "other.yml", ()),
+        ("gha", "other.yaml", ()),
+        ("gha", ".github/workflows/ci.txt", ()),
     ],
 )
 def test_language_plans_preserve_the_configured_quality_tools(
@@ -52,6 +55,15 @@ def test_language_plans_preserve_the_configured_quality_tools(
 ) -> None:
     steps = formatter_policy.plan(kind, tmp_path / filename)
     assert tuple(step.arguments[0] for step in steps if step.arguments) == tools
+
+
+@pytest.mark.parametrize("suffix", ["yml", "yaml"])
+def test_workflow_linters_run_in_order_with_offline_plain_diagnostics(tmp_path: Path, suffix: str) -> None:
+    path = tmp_path / ".github/workflows" / f"ci.{suffix}"
+    assert formatter_policy.plan("gha", path) == (
+        formatter_policy.Step("actionlint lint", ("actionlint", "-oneline", str(path))),
+        formatter_policy.Step("zizmor lint", ("zizmor", "--offline", "--no-progress", "--format", "plain", str(path))),
+    )
 
 
 def test_python_project_uses_its_frozen_uv_tools(tmp_path: Path) -> None:
@@ -243,14 +255,28 @@ def test_conflicting_project_formatters_are_not_guessed(tmp_path: Path) -> None:
     assert "conflict" in steps[0].policy_error
 
 
-def test_missing_tool_reports_target_and_prevents_later_steps(tmp_path: Path, mocker: MockerFixture) -> None:
-    mocker.patch.object(lint_engine.shutil, "which", return_value=None, autospec=True)
-    execute = mocker.patch.object(process_runner, "run_process", autospec=True)
-    target = tmp_path / "file with spaces.sh"
-    assert lint_engine.check_file("sh", target) == (
-        f"Lint/format unavailable\nshfmt · {target}\nReason: shfmt not found in PATH.",
+@pytest.mark.parametrize(
+    "kind,filename,tool,completed",
+    [
+        ("sh", "file with spaces.sh", "shfmt", ()),
+        ("gha", ".github/workflows/ci.yml", "actionlint", ()),
+        ("gha", ".github/workflows/ci.yml", "zizmor", ("actionlint",)),
+    ],
+)
+def test_missing_tool_reports_target_and_prevents_later_steps(
+    tmp_path: Path, mocker: MockerFixture, kind: str, filename: str, tool: str, completed: tuple[str, ...]
+) -> None:
+    mocker.patch.object(
+        lint_engine.shutil, "which", side_effect=lambda name: None if name == tool else name, autospec=True
     )
-    execute.assert_not_called()
+    execute = mocker.patch.object(
+        process_runner, "run_process", return_value=process_runner.ProcessResult(0), autospec=True
+    )
+    target = tmp_path / filename
+    assert lint_engine.check_file(kind, target) == (
+        f"Lint/format unavailable\n{tool} · {target}\nReason: {tool} not found in PATH.",
+    )
+    assert tuple(call.args[0].arguments[0] for call in execute.call_args_list) == completed
 
 
 def test_successful_steps_are_silent_even_with_output(tmp_path: Path, mocker: MockerFixture) -> None:
