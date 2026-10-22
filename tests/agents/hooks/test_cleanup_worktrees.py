@@ -3,6 +3,8 @@
 import json
 import os
 from pathlib import Path
+import shlex
+import shutil
 import subprocess
 import sys
 
@@ -105,6 +107,86 @@ def test_a_merged_clean_worktree_and_its_branch_are_removed(primary: Path, merge
     assert cleanup(primary).returncode == 0
     assert not path.exists()
     assert branches(primary) == {"main"}
+
+
+def test_a_worktree_with_a_replaced_git_file_is_skipped(primary: Path, merged: dict[str, str], tmp_path: Path) -> None:
+    path = task_worktree(primary, "feat/planted")
+    merged["feat/planted"] = git("rev-parse", "HEAD", cwd=path)
+    fake = tmp_path / "fake"
+    git("clone", "--quiet", "--no-checkout", str(primary), str(fake), cwd=primary)
+    git(f"--git-dir={fake / '.git'}", "read-tree", merged["feat/planted"], cwd=primary)
+    (path / ".git").write_text(f"gitdir: {fake / '.git'}\n")
+
+    result = cleanup(primary, "--dry-run")
+
+    assert result.returncode == 0
+    assert "remove worktree" not in result.stdout
+    assert path.exists()
+    assert "feat/planted" in branches(primary)
+
+
+@pytest.mark.parametrize("entry", ["primary", "lane", "session-start", "sweep"])
+@pytest.mark.parametrize("config", ["shared", "worktree"])
+def test_lane_fsmonitor_is_never_executed_and_git_and_gh_run_from_the_primary(
+    primary: Path,
+    merged: dict[str, str],
+    tmp_path: Path,
+    entry: str,
+    config: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path = task_worktree(primary, "feat/planted")
+    current = task_worktree(primary, "feat/current")
+    if entry == "sweep":
+        home = tmp_path / "home"
+        lane = home / ".herdr/worktrees/repo/feat-planted"
+        lane.parent.mkdir(parents=True)
+        git("worktree", "move", str(path), str(lane), cwd=primary)
+        path = lane
+        monkeypatch.setenv("HOME", str(home))
+    merged["feat/planted"] = git("rev-parse", "HEAD", cwd=path)
+    marker = tmp_path / "fsmonitor-ran"
+    # Inherited command-line config must not mask the planted monitor.
+    monkeypatch.delenv("GIT_CONFIG_COUNT", raising=False)
+    monkeypatch.delenv("GIT_CONFIG_PARAMETERS", raising=False)
+    monitor = tmp_path / "monitor"
+    monitor.write_text(f"#!/bin/sh\ntouch {shlex.quote(str(marker))}\n")
+    monitor.chmod(0o755)
+    if config == "worktree":
+        git("config", "extensions.worktreeConfig", "true", cwd=primary)
+    git("config", *(["--worktree"] if config == "worktree" else []), "core.fsmonitor", str(monitor), cwd=path)
+    discovery = tmp_path / "lane-discovery"
+    for name in ("git", "gh"):
+        executable = shutil.which(name)
+        assert executable
+        wrapper = tmp_path / "bin" / name
+        if name == "gh":
+            wrapper.rename(tmp_path / "original-gh")
+            executable = str(tmp_path / "original-gh")
+        wrapper.write_text(
+            f'#!/bin/sh\ncase "$PWD" in {shlex.quote(str(path))}*|{shlex.quote(str(current))}*) '
+            f'touch {shlex.quote(str(discovery))}; exit 99;; esac\nexec {shlex.quote(executable)} "$@"\n'
+        )
+        wrapper.chmod(0o755)
+
+    if entry in {"session-start", "sweep"}:
+        result = subprocess.run(
+            [sys.executable, "-I", "-B", str(SCRIPT), "session-start"],
+            input=json.dumps({"cwd": str(tmp_path if entry == "sweep" else current)}),
+            cwd=tmp_path,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+    else:
+        result = cleanup(primary if entry == "primary" else current)
+
+    assert result.returncode == 0
+    assert not marker.exists()
+    assert not discovery.exists()
+    assert not path.exists()
+    assert current.exists()
 
 
 def test_a_merged_branch_without_a_worktree_is_removed(primary: Path, merged: dict[str, str]) -> None:

@@ -37,6 +37,7 @@ HERDR_WORKTREES = Path(".herdr/worktrees")
 class Worktree:
     path: Path
     branch: str
+    admin_dir: Path | None
 
 
 def main(arguments: list[str]) -> int:
@@ -74,18 +75,35 @@ def sweep(cwd: Path, *, dry_run: bool) -> list[str]:
 
 
 def toplevel(path: Path) -> Path | None:
-    try:
-        return Path(run("git", "rev-parse", "--show-toplevel", cwd=path)).resolve()
-    except OSError, subprocess.SubprocessError:
+    if not path.is_dir():
         return None
+    return next((root for root in (path.resolve(), *path.resolve().parents) if (root / ".git").exists()), None)
 
 
 def primary_checkout(path: Path) -> Path | None:
-    try:
-        common = Path(run("git", "rev-parse", "--path-format=absolute", "--git-common-dir", cwd=path))
-    except OSError, subprocess.SubprocessError:
+    root = toplevel(path)
+    if root is None:
         return None
-    return common.parent.resolve()
+    if (root / ".git").is_dir():
+        return None if root.is_relative_to(Path.home() / HERDR_WORKTREES) else root
+    admin = git_file_target(root)
+    if admin is None or admin.parent.name != "worktrees" or admin.parent.parent.name != ".git":
+        return None
+    primary = admin.parent.parent.parent
+    try:
+        if (
+            Path((admin / "gitdir").read_text().strip()).resolve() != root / ".git"
+            or (admin / (admin / "commondir").read_text().strip()).resolve() != primary / ".git"
+        ):
+            return None
+        return (
+            primary
+            if any(worktree.path == root and worktree.admin_dir == admin for worktree in linked_worktrees(primary))
+            else None
+        )
+    except OSError, subprocess.SubprocessError:
+        pass
+    return None
 
 
 def cleanup(primary: Path, current: Path | None, *, dry_run: bool) -> list[str]:
@@ -99,7 +117,7 @@ def cleanup(primary: Path, current: Path | None, *, dry_run: bool) -> list[str]:
     for worktree in worktrees:
         if worktree.path in {primary, current} or not is_merged(primary, worktree.branch, merged):
             continue
-        if run("git", "status", "--porcelain", cwd=worktree.path):
+        if not worktree_is_clean(primary, worktree):
             continue
         removed.add(worktree.path)
         report.append(f"remove worktree {worktree.path} and branch {worktree.branch}")
@@ -120,6 +138,19 @@ def cleanup(primary: Path, current: Path | None, *, dry_run: bool) -> list[str]:
     ):
         report += close_primary_workspaces(primary, dry_run=dry_run)
     return report
+
+
+def worktree_is_clean(primary: Path, worktree: Worktree) -> bool:
+    if not worktree.admin_dir or git_file_target(worktree.path) != worktree.admin_dir:
+        return False
+    return not run(
+        "git",
+        f"--git-dir={worktree.admin_dir}",
+        f"--work-tree={worktree.path}",
+        "status",
+        "--porcelain",
+        cwd=primary,
+    )
 
 
 def recorded_primary_workspaces(primary: Path) -> dict[str, dict]:
@@ -253,13 +284,29 @@ def merged_heads(primary: Path) -> dict[str, set[str]]:
 
 
 def linked_worktrees(primary: Path) -> list[Worktree]:
+    admin_dirs = {
+        Path((admin / "gitdir").read_text().strip()).parent.resolve(): admin.resolve()
+        for admin in (primary / ".git/worktrees").glob("*")
+        if (admin / "gitdir").is_file()
+    }
     worktrees = []
     for block in run("git", "worktree", "list", "--porcelain", cwd=primary).split("\n\n"):
         fields = dict(line.split(" ", 1) for line in block.splitlines() if " " in line)
         branch = fields.get("branch", "").removeprefix("refs/heads/")
         if "worktree" in fields:
-            worktrees.append(Worktree(Path(fields["worktree"]).resolve(), branch))
+            path = Path(fields["worktree"]).resolve()
+            worktrees.append(Worktree(path, branch, admin_dirs.get(path)))
     return worktrees
+
+
+def git_file_target(path: Path) -> Path | None:
+    try:
+        content = (path / ".git").read_text().strip()
+        if content.startswith("gitdir: "):
+            return (path / content.removeprefix("gitdir: ")).resolve()
+    except OSError:
+        pass
+    return None
 
 
 def local_branches(primary: Path) -> set[str]:
@@ -293,6 +340,24 @@ def remove_worktree(primary: Path, worktree: Worktree, workspace: str | None) ->
 
 
 def run(*command: str, cwd: Path) -> str:
+    if command[0] == "git":
+        location = (
+            ()
+            if command[1].startswith("--git-dir=")
+            else (
+                f"--git-dir={cwd / '.git'}",
+                f"--work-tree={cwd}",
+            )
+        )
+        command = (
+            "git",
+            "-c",
+            "core.fsmonitor=false",
+            "-c",
+            "core.hooksPath=/dev/null",
+            *location,
+            *command[1:],
+        )
     return subprocess.run(
         command, cwd=cwd, capture_output=True, text=True, check=True, timeout=TIMEOUT_SECONDS, env=os.environ
     ).stdout.strip()
