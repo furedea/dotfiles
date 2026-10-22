@@ -64,10 +64,10 @@
       ],
       "literal_words": true,
       "patterns": [
-        "^curl( -[sSfiIv]+)*( -X (GET|POST|PUT|PATCH|DELETE))?( -H '[^']*')*( -d '[^']*')?( -o [A-Za-z0-9._/-]+)? (https?://(localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)?(/[A-Za-z0-9._/?&=%-]*)?|'https?://(localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)?(/[A-Za-z0-9._/?&=%-]*)?')$",
+        "^curl( -[sSfiIv]+)*( -X (GET|POST|PUT|PATCH|DELETE))?( -H '[^']*')*( -d '[^']*')?( (-D|--dump-header) -)?( --compressed)?( -o [A-Za-z0-9._/-]+)?( (-w|--write-out) '[^']*')? (https?://(localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)?(/[A-Za-z0-9._/?&=%-]*)?|'https?://(localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)?(/[A-Za-z0-9._/?&=%-]*)?')$",
         "^wget (--help|--version)$"
       ],
-      "justification": "Allow a single plain curl call, with value-less flags (-s -S -f -i -I -v) and the fixed -X, -H, -d, and -o slots, to a local server named exactly localhost, 127.0.0.1, or [::1]; any assignment, redirect, wrapper, list, or option that follows redirects, reads a config file, or sets a proxy asks, and wget, which follows redirects by default, asks except for its help and version."
+      "justification": "Allow a single plain curl call, with value-less flags (-s -S -f -i -I -v) and fixed -X, -H, -d, -o, and single-quoted -w/--write-out diagnostic formats, stdout-only -D/--dump-header, and --compressed, to a local server named exactly localhost, 127.0.0.1, or [::1]; any assignment, redirect, wrapper, list, or option that follows redirects, reads a config file, or sets a proxy asks, and wget, which follows redirects by default, asks except for its help and version."
     },
     {
       "programs": [

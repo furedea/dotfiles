@@ -8,7 +8,7 @@ from pathlib import Path
 import re
 import shlex
 import subprocess
-from typing import Self
+from typing import Literal, Self
 
 
 COMMAND_PREVIEW_LIMIT = 200
@@ -73,6 +73,14 @@ WRAPPERS: dict[str, tuple[frozenset[str], frozenset[str]]] = {
 
 class UnsupportedSyntax(ValueError):
     """The command cannot be statically inspected by this supplementary guard."""
+
+    def __init__(
+        self,
+        message: str,
+        kind: Literal["heredoc", "expansion", "dollar-quote", "wrapper", "parse-failure"] = "parse-failure",
+    ) -> None:
+        super().__init__(message)
+        self.kind = kind
 
 
 @dataclass(frozen=True, slots=True)
@@ -177,11 +185,11 @@ def parse(source: str, depth: int = 0) -> tuple[Command, ...]:
     if not source.strip():
         return ()
     if depth > 8:
-        raise UnsupportedSyntax("shell wrapper nesting exceeds the inspection limit")
+        raise UnsupportedSyntax("shell wrapper nesting exceeds the inspection limit", "wrapper")
     records = tuple(nodes(syntax_tree(source)))
     owners = {id(node["Cmd"]): node for node in records if isinstance(node.get("Cmd"), dict)}
     if any(node.get("Type") not in ALLOWED_NODES for node in records):
-        raise UnsupportedSyntax("dynamic or unsupported shell syntax requires explicit review")
+        raise UnsupportedSyntax("dynamic or unsupported shell syntax requires explicit review", "expansion")
     data = source.encode()
     commands: list[Command] = []
     for node in records:
@@ -223,22 +231,6 @@ def is_one_simple_command(source: str) -> bool:
     )
 
 
-def text_outside_single_quotes(source: str) -> str:
-    """The source without its single-quoted strings, which no shell expands; $'...' stays, as it decodes escapes."""
-    data = source.encode()
-    spans = sorted(
-        (node["Pos"]["Offset"], node["End"]["Offset"])
-        for node in nodes(syntax_tree(source))
-        if node.get("Type") == "SglQuoted" and not node.get("Dollar")
-    )
-    kept, start = [], 0
-    for begin, end in spans:
-        kept.append(data[start:begin])
-        start = max(start, end)
-    kept.append(data[start:])
-    return b"".join(kept).decode()
-
-
 def heredoc_script(owner: dict) -> str:
     """Return the static script a shell reads from a heredoc, refusing one the shell computes."""
     bodies = [redirect["Hdoc"] for redirect in owner.get("Redirs", []) if redirect.get("Hdoc")]
@@ -246,7 +238,7 @@ def heredoc_script(owner: dict) -> str:
         return ""
     parts = [part for body in bodies for part in body.get("Parts", [])]
     if any(part.get("Type") != "Lit" for part in parts):
-        raise UnsupportedSyntax("a shell heredoc whose text is computed requires explicit review")
+        raise UnsupportedSyntax("a shell heredoc whose text is computed requires explicit review", "heredoc")
     return "".join(part.get("Value", "") for part in parts)
 
 
@@ -257,10 +249,10 @@ def syntax_tree(source: str) -> dict:
             ["shfmt", "-ln", "bash", "--to-json"], input=source, text=True, capture_output=True, timeout=5, check=False
         )
         if result.returncode:
-            raise UnsupportedSyntax("unsupported or invalid shell syntax")
+            raise UnsupportedSyntax("unsupported or invalid shell syntax", "parse-failure")
         return json.loads(result.stdout)
     except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError) as error:
-        raise UnsupportedSyntax("shell parser unavailable; command cannot be validated") from error
+        raise UnsupportedSyntax("shell parser unavailable; command cannot be validated", "parse-failure") from error
 
 
 def nodes(value: object) -> Iterator[dict]:
@@ -322,13 +314,13 @@ def literal_word(word: dict, source: bytes) -> tuple[str, bool]:
     dynamic = False
     for part in word_nodes(word):
         if part.get("Type") in QUOTED_PARTS and part.get("Dollar"):
-            raise UnsupportedSyntax("dollar-quoted shell words require explicit review")
+            raise UnsupportedSyntax("dollar-quoted shell words require explicit review", "dollar-quote")
         if part.get("Type") == "ParamExp":
             dynamic |= not is_home_parameter(part)
         elif part.get("Type") in SUBSTITUTIONS:
             dynamic = True
         elif part.get("Type") not in WORD_PARTS:
-            raise UnsupportedSyntax("shell expansions require explicit review")
+            raise UnsupportedSyntax("shell expansions require explicit review", "expansion")
     parts = word.get("Parts", [])
     for index, part in enumerate(parts):
         if part.get("Type") == "Lit" and not is_literal_text(part.get("Value", ""), first=index == 0):
@@ -408,16 +400,21 @@ def literal_part(index: int, part: dict, source: bytes) -> str:
 
 def unquoted(text: str) -> str:
     """Decode an unquoted or double-quoted part as the shell does, dropping each line continuation."""
-    values = shlex.split(text.replace(LINE_CONTINUATION, ""), posix=True)
+    try:
+        values = shlex.split(text.replace(LINE_CONTINUATION, ""), posix=True)
+    except ValueError as error:
+        raise UnsupportedSyntax("a shell word could not be decoded unambiguously", "parse-failure") from error
     if len(values) != 1:
-        raise UnsupportedSyntax("a shell word could not be decoded unambiguously")
+        raise UnsupportedSyntax("a shell word could not be decoded unambiguously", "parse-failure")
     return values[0]
 
 
 def home_directory() -> str:
     home = os.path.expanduser("~")
     if home == "~":
-        raise UnsupportedSyntax("the home directory is unknown, so its expansion requires explicit review")
+        raise UnsupportedSyntax(
+            "the home directory is unknown, so its expansion requires explicit review", "expansion"
+        )
     return home
 
 
@@ -450,7 +447,7 @@ def wrapped_index(arguments: tuple[str, ...]) -> int | None:
         elif (name == "env" and ASSIGNMENT.match(token)) or is_flag(name, token):
             index += 1
         elif token.startswith("-"):
-            raise UnsupportedSyntax(f"{name} option requires explicit review: {token}")
+            raise UnsupportedSyntax(f"{name} option requires explicit review: {token}", "wrapper")
         else:
             break
     if name == "timeout":
@@ -479,7 +476,7 @@ def shell_script(command: Command) -> str:
     executable = Path(arguments[0]).name
     if executable == "eval":
         if any(command.dynamic[1:]):
-            raise UnsupportedSyntax("eval of a computed script requires explicit review")
+            raise UnsupportedSyntax("eval of a computed script requires explicit review", "wrapper")
         return " ".join(arguments[1:])
     if executable not in SHELLS:
         return ""
@@ -494,7 +491,7 @@ def shell_script(command: Command) -> str:
     if option is None:
         return ""
     if option + 1 >= len(arguments):
-        raise UnsupportedSyntax("shell wrapper has no literal command")
+        raise UnsupportedSyntax("shell wrapper has no literal command", "wrapper")
     if command.dynamic[option + 1]:
-        raise UnsupportedSyntax("a shell wrapper running a computed script requires explicit review")
+        raise UnsupportedSyntax("a shell wrapper running a computed script requires explicit review", "wrapper")
     return arguments[option + 1]
