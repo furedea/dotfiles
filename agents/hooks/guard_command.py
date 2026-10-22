@@ -23,6 +23,7 @@ import command_policy
 import herdr_grammar
 import hook_decision
 from hook_decision import Verdict
+import shell_inspection
 import shell_syntax
 
 
@@ -39,6 +40,7 @@ LITERAL_PROGRAMS = frozenset({"curl", "gh", "herdr", "wget"})
 # outside single quotes, in the program name, an assignment, or a redirect included, gets no
 # literal_words rule.
 EXPANDING_TEXT = re.compile(r"[$`~*?\[\]{}]|\\\n")
+FIXED_WRITE_OUT = re.compile(r' (-w|--write-out) "[^"$`]*"')
 REQUEST_SETTINGS = re.compile(r"proxy|curlrc|wgetrc|curl_home|(^|[^a-z0-9_])(home|xdg_config_home)=", re.IGNORECASE)
 
 
@@ -172,15 +174,15 @@ def decide(kind: str, payload: dict, directory: Path = ROOT) -> Verdict:
 def command_verdict(kind: str, payload: dict, policy: Policy) -> Verdict:
     """The first objection any segment raises, then whether the command's settings could redirect a request.
 
-    Rules marked literal_words apply only when the whole command is one plain gh, herdr, curl, or wget
-    call whose text, outside single quotes, holds nothing a shell expands.
+    Rules marked literal_words apply to one plain gh, herdr, curl, or wget call, or a curl call
+    piped through known stdin-only filters, with no shell expansions.
     """
     command = payload.get("tool_input", {}).get("command") or ""
     try:
         commands = shell_syntax.parse(command)
     except shell_syntax.UnsupportedSyntax as error:
         preview = shell_syntax.command_preview(command)
-        return hook_decision.ask(f"Needs review: {error}.\n\nCommand: {preview}", "syntax")
+        return hook_decision.ask(f"Needs review: {error}.\n\nCommand: {preview}", error.kind)
     if kind == "forbidden" and (verdict := companion_objection(command, commands)).decision != "allow":
         return verdict
     if not allows_literal_rules(command, commands):
@@ -218,18 +220,44 @@ def companion_objection(command: str, commands: tuple[shell_syntax.Command, ...]
 
 
 def allows_literal_rules(command: str, commands: tuple[shell_syntax.Command, ...]) -> bool:
-    """Whether the command is exactly one plain gh, herdr, curl, or wget call with nothing expanding outside single
-    quotes: no list, pipe, compound, wrapper, eval, or nested script; when unsure, it is not."""
-    if len(commands) != 1 or Path(commands[0].arguments[0]).name not in LITERAL_PROGRAMS:
+    """Allow literal calls and curl pipelines through known read-only filters; when unsure, ask."""
+    if len(commands) > 1:
+        return (
+            commands[0].arguments[0] == "curl"
+            and shell_inspection.is_plain_pipeline(command)
+            and all(is_read_only_filter(item) for item in commands[1:])
+            and allows_literal_rules(commands[0].raw, commands[:1])
+        )
+    if not commands or Path(commands[0].arguments[0]).name not in LITERAL_PROGRAMS:
         return False
     try:
         if not shell_syntax.is_one_simple_command(command):
             return False
-        return not EXPANDING_TEXT.search(command) or not EXPANDING_TEXT.search(
-            shell_syntax.text_outside_single_quotes(command)
-        )
+        literal_text = shell_inspection.text_outside_single_quotes(command)
+        if commands[0].arguments[0] == "curl" and "\\\n" not in literal_text:
+            literal_text = FIXED_WRITE_OUT.sub("", literal_text)
+        return not EXPANDING_TEXT.search(literal_text)
     except shell_syntax.UnsupportedSyntax:
         return False
+
+
+def is_read_only_filter(command: shell_syntax.Command) -> bool:
+    """List only known stdin-only forms; unknown options and jq programs ask."""
+    if command.wrapper_depth or command.has_dynamic_words or command.hides_options:
+        return False
+    program, *arguments = command.arguments
+    text = " ".join(arguments)
+    if program == "jq":
+        return bool(re.fullmatch(r"(-[rceCMS]+ )*\.(?:[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)?", text))
+    if program in {"head", "tail"}:
+        return bool(re.fullmatch(r"(?:(?:-[nc] |--(?:lines|bytes)=)[0-9]+|-[0-9]+)?", text))
+    if program == "wc":
+        return all(re.fullmatch(r"-[lwcmL]+", argument) for argument in arguments)
+    if program == "grep":
+        while arguments and re.fullmatch(r"-[ivnEcFowqx]+", arguments[0]):
+            arguments.pop(0)
+        return len(arguments) == 1 and not arguments[0].startswith("-")
+    return False
 
 
 def record(verdict: Verdict, kind: str, payload: object) -> None:

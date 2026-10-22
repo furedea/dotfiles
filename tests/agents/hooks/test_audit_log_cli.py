@@ -170,3 +170,33 @@ def test_parallel_audit_writes_remain_valid_jsonl(tmp_path: Path) -> None:
     paths = audit_paths(tmp_path / "state")
     rows = [json.loads(line) for path in paths for line in path.read_text().splitlines()]
     assert len(rows) == len(processes)
+
+
+@pytest.mark.parametrize(
+    "command,kind",
+    [
+        ("echo $'secret-value'", "dollar-quote"),
+        ("echo 'secret-value", "parse-failure"),
+        ('bash -c "$secret_value"', "wrapper"),
+        ("bash <<EOF\n$secret_value\nEOF", "heredoc"),
+        ("echo @(secret-value)", "expansion"),
+    ],
+)
+def test_syntax_asks_record_only_reason_kind(run_cli: CliRunner, tmp_path: Path, command: str, kind: str) -> None:
+    result = run_cli(
+        "agents/hooks/guard_command.py",
+        "allowed",
+        payload={"cwd": str(tmp_path / "worktree"), "tool_input": {"command": command}},
+    )
+    assert result.returncode == 0
+    assert json.loads(result.stdout)["hookSpecificOutput"]["permissionDecision"] == "ask"
+    paths = audit_paths(tmp_path / "state")
+    assert len(paths) == 1
+    content = paths[0].read_text()
+    row = json.loads(content)
+    assert row["event"] == "Escalated"
+    assert row["detail"] == kind
+    assert "secret" not in content
+    assert command not in content
+    assert "command" not in row
+    assert "reason" not in row
