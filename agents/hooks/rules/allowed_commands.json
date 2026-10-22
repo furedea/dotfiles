@@ -3,6 +3,15 @@
   "rules": [
     {
       "programs": [
+        "cleanup_worktrees.py"
+      ],
+      "patterns": [
+        "^(/Users/kaito|~)/\\.claude/hooks/cleanup_worktrees\\.py( --dry-run)?$"
+      ],
+      "justification": "Allow the parent session to clean merged worktrees after the user merges, or preview with --dry-run, as one exact call."
+    },
+    {
+      "programs": [
         "gh"
       ],
       "patterns": [

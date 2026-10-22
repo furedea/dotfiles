@@ -287,7 +287,7 @@ flowchart LR
 | 7. Report             | Lane → Parent | the lane ends with `LANE-READY`; the parent waits with `herdr agent wait` and reads it | `herdr-delegation`                                             |
 | 8. Check and report   | Parent        | —                                                                                      | —                                                              |
 | 9. Merge              | User          | — (run `switch` after merging dotfiles changes)                                        | —                                                              |
-| 10. Clean up          | Parent        | —                                                                                      | `git-workflow` (branches), `issue-workflow`, `source-of-truth` |
+| 10. Clean up          | Parent        | after the user merges: run `~/.claude/hooks/cleanup_worktrees.py`; never remove lane worktrees by hand with `herdr worktree remove` | `git-workflow` (branches), `issue-workflow`, `source-of-truth` |
 
 | Who                   | Does                                                                            | Never does                                              |
 | --------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------- |

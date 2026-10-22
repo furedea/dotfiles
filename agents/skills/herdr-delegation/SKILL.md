@@ -184,6 +184,8 @@ Once the result is fully captured and no follow-up remains for that worker:
   retain a newly created worker for continued work.
 - Keep branches and worktrees while their changes await integration or merge. Follow
   `git-workflow` for their eventual removal; closing a worker must not discard pending changes.
+  After the user merges, the parent runs `~/.claude/hooks/cleanup_worktrees.py`.
+  Do not remove lane worktrees by hand with `herdr worktree remove`.
 - Remove task-created temporary outputs only after their needed contents are captured in the
   originating conversation or a requested artifact. Do not create a permanent report solely
   to justify closing a worker.

@@ -30,9 +30,17 @@ def test_verification_and_agent_tools_work_without_escaping_the_sandbox() -> Non
     assert {"gh *", "herdr *"} <= set(sandbox["excludedCommands"])
 
 
-def test_excluded_commands_match_invocations_with_arguments() -> None:
+def test_cleanup_sandbox_exclusions_are_exact_absolute_calls() -> None:
     sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
-    assert [command for command in sandbox["excludedCommands"] if not command.endswith(" *")] == []
+    cleanup = "/Users/kaito/.claude/hooks/cleanup_worktrees.py"
+    assert [command for command in sandbox["excludedCommands"] if "cleanup_worktrees" in command] == [
+        cleanup,
+        f"{cleanup} --dry-run",
+    ]
+    assert [command for command in sandbox["excludedCommands"] if not command.endswith(" *")] == [
+        cleanup,
+        f"{cleanup} --dry-run",
+    ]
 
 
 def test_sandbox_paths_use_the_home_prefix_the_sandbox_expands() -> None:

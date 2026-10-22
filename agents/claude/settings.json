@@ -89,6 +89,8 @@
       "allowLocalBinding": true
     },
     "excludedCommands": [
+      "/Users/kaito/.claude/hooks/cleanup_worktrees.py",
+      "/Users/kaito/.claude/hooks/cleanup_worktrees.py --dry-run",
       "docker *",
       "gh *",
       "herdr *",
