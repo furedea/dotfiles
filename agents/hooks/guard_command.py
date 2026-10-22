@@ -212,7 +212,10 @@ def cleanup_objection(command: str, commands: tuple[shell_syntax.Command, ...], 
     cleanup = any(
         Path(item.arguments[0]).name == "cleanup_worktrees.py"
         or (
-            Path(item.arguments[0]).name in {"python", "python3"}
+            (
+                Path(item.arguments[0]).name.startswith("python")
+                or Path(item.arguments[0]).name in {"uv", "bash", "sh", "zsh"}
+            )
             and any(Path(argument).name == "cleanup_worktrees.py" for argument in item.arguments[1:])
         )
         for item in commands
@@ -220,7 +223,11 @@ def cleanup_objection(command: str, commands: tuple[shell_syntax.Command, ...], 
     if not cleanup:
         return hook_decision.ALLOW
     rules = [rule for rule in policy.rules if "cleanup_worktrees.py" in rule.get("programs", ())]
-    if any(command_policy.rule_matches(rule, command) for rule in rules):
+    if (
+        "\n" not in command
+        and "\r" not in command
+        and any(command_policy.rule_matches(rule, command) for rule in rules)
+    ):
         return hook_decision.ALLOW
     return hook_decision.ask(
         "Needs review: run cleanup_worktrees.py as one bare call or with --dry-run only.", "cleanup_worktrees.py"

@@ -77,7 +77,7 @@ Rules:
   fetch another repository for it, so the lane fetches and rebases onto its base before editing.
 - Herdr places the checkout under its `worktrees.directory`; do not pass `--path` without a reason.
 - Merged task worktrees and branches, in this repository and every repository with a Herdr task
-  worktree, are removed by the parent running `~/.claude/hooks/cleanup_worktrees.py` after the
+  worktree, are removed by the parent running `/Users/kaito/.claude/hooks/cleanup_worktrees.py` after the
   user merges, or at the next Claude session start (`--dry-run` previews): only when a merged pull request's head
   is the branch tip and the tree is clean, and the primary checkout's `main` then fast-forwards.
   Do not remove lane worktrees by hand with `herdr worktree remove` or pull by hand. An abandoned worktree is

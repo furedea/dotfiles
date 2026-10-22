@@ -9,12 +9,16 @@ guard = load_script_module("agents/hooks/guard_command.py", "guard_command")
 pytestmark = pytest.mark.usefixtures("isolated_project")
 
 
-@pytest.mark.parametrize(
-    "path", ["/Users/kaito/.claude/hooks/cleanup_worktrees.py", "~/.claude/hooks/cleanup_worktrees.py"]
-)
 @pytest.mark.parametrize("suffix", ["", " --dry-run"])
-def test_cleanup_documented_calls_are_allowed(path: str, suffix: str) -> None:
-    assert guard.decide("allowed", {"tool_input": {"command": path + suffix}}).decision == "allow"
+def test_cleanup_documented_calls_are_allowed(suffix: str) -> None:
+    command = "/Users/kaito/.claude/hooks/cleanup_worktrees.py" + suffix
+    assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == "allow"
+
+
+@pytest.mark.parametrize("suffix", ["", " --dry-run"])
+def test_cleanup_tilde_calls_require_review(suffix: str) -> None:
+    command = "~/.claude/hooks/cleanup_worktrees.py" + suffix
+    assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == "ask"
 
 
 @pytest.mark.parametrize(
@@ -54,3 +58,19 @@ def test_cleanup_other_arguments_and_shell_shapes_require_review(path: str, shap
 )
 def test_cleanup_other_program_paths_require_review(command: str) -> None:
     assert guard.decide("allowed", {"tool_input": {"command": command}}).decision != "allow"
+
+
+@pytest.mark.parametrize("separator", ["\n", "\r"])
+@pytest.mark.parametrize("shape", ["{path}{separator}--dry-run", "{path} --dry-run{separator}"])
+def test_cleanup_line_breaks_require_review(separator: str, shape: str) -> None:
+    command = shape.format(path="/Users/kaito/.claude/hooks/cleanup_worktrees.py", separator=separator)
+    assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == "ask"
+
+
+@pytest.mark.parametrize(
+    "wrapper", ["python", "python3", "python3.13", "/usr/bin/python3.13", "uv run", "bash", "sh", "zsh"]
+)
+@pytest.mark.parametrize("suffix", ["", " --dry-run", " --force"])
+def test_cleanup_wrapped_calls_require_review(wrapper: str, suffix: str) -> None:
+    command = f"{wrapper} /Users/kaito/.claude/hooks/cleanup_worktrees.py{suffix}"
+    assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == "ask"
