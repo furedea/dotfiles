@@ -19,7 +19,8 @@ SCHEMA = 1
 RETENTION_SECONDS = 7 * 24 * 60 * 60
 LOG_LIMIT_BYTES = 1024 * 1024
 TOTAL_LOG_LIMIT_BYTES = 100 * LOG_LIMIT_BYTES
-# Only Codex SessionEnd has a 3-second timeout.
+# SessionStart and Herdr ownership hooks wait 0.5 seconds to absorb brief contention
+# without stalling interactive hooks behind long-running verification.
 LOCK_WAIT_SECONDS = 0.5
 LOCK_RETRY_SECONDS = 0.01
 
@@ -30,6 +31,10 @@ class StateError(ValueError):
 
 class ScopeError(StateError):
     """A tool target lies outside the registered worktree and needs the user's judgment."""
+
+
+class LockTimeoutError(StateError):
+    """Another hook held the state lock past the wait limit."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -83,8 +88,8 @@ class SessionRecord:
         return path
 
     @contextmanager
-    def lock(self, *, timeout: float | None = LOCK_WAIT_SECONDS) -> Generator[None]:
-        with file_lock(self.directory / ".lock", timeout=timeout):
+    def lock(self, *, unbounded: bool = False) -> Generator[None]:
+        with file_lock(self.directory / ".lock", timeout=None if unbounded else LOCK_WAIT_SECONDS):
             yield
 
 
@@ -165,11 +170,14 @@ def create_record(key: SessionKey, directory: Path, *, resuming: bool) -> Sessio
 def reopen(directory: Path) -> SessionRecord:
     """Reactivate an existing registration without discarding its pending results."""
     record = load(directory)
-    with record.lock():
-        results = record.results()
-        results.pop("ended_at", None)
-        record.save_results(results)
-        record.touch()
+    try:
+        with record.lock():
+            results = record.results()
+            results.pop("ended_at", None)
+            record.save_results(results)
+    except LockTimeoutError:
+        pass
+    record.touch()
     return record
 
 
@@ -252,7 +260,7 @@ def acquire_lock(descriptor: int, path: Path, timeout: float) -> None:
             pass
         remaining = deadline - time.monotonic()
         if remaining <= 0:
-            raise StateError(f"Timed out waiting for lock {path}; another hook holds it")
+            raise LockTimeoutError(f"Timed out waiting for lock {path}; another hook holds it")
         time.sleep(min(LOCK_RETRY_SECONDS, remaining))
 
 

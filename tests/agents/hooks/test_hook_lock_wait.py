@@ -2,6 +2,7 @@
 
 from contextlib import ExitStack
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -26,12 +27,9 @@ import runpy
 import sys
 sys.path.insert(0, str(Path(sys.argv[1]).parent / 'lib'))
 import session_store
+import herdr_ownership
 if sys.argv[4]:
     session_store.LOCK_WAIT_SECONDS = float(sys.argv[4])
-    lock = session_store.SessionRecord.lock
-    def waited_lock(self, *, timeout=session_store.LOCK_WAIT_SECONDS):
-        return lock(self, timeout=timeout)
-    session_store.SessionRecord.lock = waited_lock
 flock = fcntl.flock
 waiting = Path(sys.argv[3])
 def observed_flock(stream, operation):
@@ -96,6 +94,8 @@ def test_concurrent_hook_entries_wait_and_preserve_results(repository: Path, tmp
                 for payload, marker in zip(payloads, markers, strict=True)
             ]
             wait_for_contention(markers)
+            time.sleep(0.7)
+            assert all(process.poll() is None for process in processes)
         outputs = [hook_output(process) for process in processes]
     for output in outputs:
         if event in {"session-start", "resume"}:
@@ -157,6 +157,8 @@ def test_hook_reports_the_lock_held_past_the_wait_limit(repository: Path, tmp_pa
     elif event == "resume":
         native_event = "session-start"
         payload["source"] = "resume"
+        record.end(now=1)
+        os.utime(record.directory, (1, 1))
     elif event == "post-agent":
         native_event = "post-tool-use"
         lock_path = record.directory / ".herdr.lock"
@@ -166,11 +168,36 @@ def test_hook_reports_the_lock_held_past_the_wait_limit(repository: Path, tmp_pa
         start_hook(native_event, payload, tmp_path / "waiting", wait_seconds=0.5) as process,
     ):
         output = hook_output(process)
+    if event == "resume":
+        assert "additionalContext" in output["hookSpecificOutput"], output
+        assert "systemMessage" not in output
+        assert record.results()["ended_at"] == 1
+        assert record.directory.stat().st_mtime > 1
+        return
     message = output["systemMessage"]
     assert str(lock_path) in message
     assert "another hook holds it" in message
     assert "Timed out" in message
     assert "Errno" not in message
+
+
+def test_session_end_skips_a_record_locked_past_its_wait_limit(repository: Path, tmp_path: Path) -> None:
+    record = store.register(repository, "codex", "session")
+    payload = {"cwd": str(repository), "session_id": "session"}
+    with (
+        record.lock(),
+        start_hook("session-end", payload, tmp_path / "waiting") as process,
+    ):
+        try:
+            stdout, stderr = process.communicate(timeout=2.8)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.communicate()
+            pytest.fail("SessionEnd must finish before Codex's 3-second timeout")
+        assert process.returncode == 0, stderr
+        assert stderr == ""
+        assert json.loads(stdout) == {}
+        assert "ended_at" not in record.results()
 
 
 @pytest.mark.parametrize("event", ["session-start", "session-end", "stop"])

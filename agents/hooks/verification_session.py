@@ -17,10 +17,12 @@ import patch_input
 import session_gate
 from session_snapshot import repository_root
 from session_store import (
+    LockTimeoutError,
     ScopeError,
     SessionKey,
     SessionRecord,
     StateError,
+    file_lock,
     load,
     prune,
     register,
@@ -107,8 +109,7 @@ def dispatch(provider: str, event: str, payload: dict) -> dict[str, object]:
     elif event == "stop":
         return {**session_gate.gate(record)}
     elif event == "session-end":
-        with record.lock(timeout=None):
-            record.end()
+        end_session(record)
         prune()
     elif event == "session-start":
         prune()
@@ -119,6 +120,16 @@ def dispatch(provider: str, event: str, payload: dict) -> dict[str, object]:
             }
         }
     return {}
+
+
+def end_session(record: SessionRecord) -> None:
+    """Mark an idle session ended, leaving busy verification to mtime-based GC."""
+    try:
+        # Codex gives SessionEnd only 3 seconds; a running Stop keeps the session alive.
+        with file_lock(record.directory / ".lock", timeout=2):
+            record.end()
+    except LockTimeoutError:
+        pass
 
 
 def failure(event: str, payload: dict, error: Exception) -> dict[str, object]:
