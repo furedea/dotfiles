@@ -1,6 +1,7 @@
 """Lane metadata never authorizes commands in a sandbox-writable primary."""
 
 import json
+import os
 from pathlib import Path
 import shlex
 import shutil
@@ -9,15 +10,43 @@ from collections.abc import Iterator
 
 import pytest
 
-from tests.agents.hooks.cleanup_worktrees_runtime import branches, cleanup, git, task_worktree
+from tests.agents.hooks.cleanup_worktrees_runtime import (
+    branches,
+    cleanup,
+    cleanup_with_real_policy,
+    git,
+    task_worktree,
+)
 
 import cleanup_worktrees
 
 
 @pytest.fixture
-def temporary() -> Iterator[Path]:
-    with tempfile.TemporaryDirectory(dir="/private/tmp") as directory:
-        yield Path(directory)
+def temporary(tmp_path: Path, merged: dict[str, str], location: str) -> Iterator[Path]:
+    if location not in {"tmp", "private-tmp"}:
+        yield tmp_path
+        return
+
+    # The merged fixture points TMPDIR at this disposable sandbox directory.
+    sandbox_tmp = tmp_path / "sandbox-tmp"
+    sandbox_tmp.mkdir()
+    candidates = [Path("/tmp"), Path("/private/tmp"), Path("/tmp/claude"), Path("/private/tmp/claude")]
+    candidates.extend(Path(value) for name in ("TMPDIR", "TMP", "TEMP") if (value := os.environ.get(name)))
+    writable = cleanup_worktrees.sandbox_writable_paths()
+    assert writable is not None
+    failures = []
+    for candidate in dict.fromkeys(candidates):
+        if not any(candidate.resolve().is_relative_to(root.resolve()) for root in writable):
+            continue
+        try:
+            directory = tempfile.TemporaryDirectory(dir=candidate)
+        except OSError as error:
+            failures.append(f"{candidate}: {error}")
+            continue
+        with directory:
+            yield Path(directory.name)
+        return
+    pytest.skip("No writable temporary directory inside the checked writable set: " + "; ".join(failures))
 
 
 def herdr_lane(primary: Path) -> Path:
@@ -80,8 +109,8 @@ def test_lane_metadata_cannot_authorize_a_sandbox_writable_primary(
     git("clone", "--quiet", str(primary), str(fake), cwd=primary)
     lane = herdr_lane(fake)
     merged["feat/done"] = git("rev-parse", "HEAD", cwd=lane)
-    if location == "tmp":
-        alias = Path("/tmp") / Path(temporary).name / "fake"
+    if location == "tmp" and fake.resolve().is_relative_to(Path("/tmp").resolve()):
+        alias = Path("/tmp") / fake.resolve().relative_to(Path("/tmp").resolve())
         (lane / ".git").write_text((lane / ".git").read_text().replace(str(fake), str(alias)))
     if location == "symlink":
         alias = tmp_path / "alias"
@@ -91,7 +120,7 @@ def test_lane_metadata_cannot_authorize_a_sandbox_writable_primary(
     settings.write_text(json.dumps({"sandbox": {"filesystem": {"allowWrite": entries}}}))
     marker = record_commands(tmp_path, fake)
 
-    result = cleanup(tmp_path if entry == "sweep" else fake)
+    result = cleanup_with_real_policy(tmp_path if entry == "sweep" else fake)
 
     assert result.returncode == 0
     assert not marker.exists()
@@ -132,9 +161,9 @@ def test_unknown_writable_paths_skip_lane_primaries_but_clean_the_callers_reposi
         path.write_text("not json" if settings == "invalid" else '{"sandbox":null}')
     marker = record_commands(tmp_path, other)
 
-    assert cleanup(lane).returncode == 0
+    assert cleanup_with_real_policy(lane).returncode == 0
     assert not marker.exists()
-    result = cleanup(primary)
+    result = cleanup_with_real_policy(primary)
 
     assert result.returncode == 0
     assert not marker.exists()

@@ -10,11 +10,12 @@ import pytest
 
 from tests.runtime import REPO_ROOT, StubWriter
 from tests.agents.hooks.herdr_runtime import TERMINAL, set_agents
-from tests.agents.hooks.cleanup_worktrees_runtime import git
 
 
 sys.path.insert(0, str(REPO_ROOT / "agents/hooks"))
 sys.path.insert(0, str(REPO_ROOT / "agents/hooks/lib"))
+from tests.agents.hooks.cleanup_worktrees_runtime import git
+
 import session_store
 
 

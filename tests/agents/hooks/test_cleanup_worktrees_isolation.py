@@ -1,17 +1,14 @@
 """Untrusted worktree metadata and Git configuration cannot affect cleanup or current detection."""
 
-import json
 import os
 from pathlib import Path
 import shlex
 import shutil
-import subprocess
-import sys
 
 import pytest
 import pytest_mock
 
-from tests.agents.hooks.cleanup_worktrees_runtime import SCRIPT, branches, cleanup, git, task_worktree
+from tests.agents.hooks.cleanup_worktrees_runtime import branches, cleanup, git, task_worktree
 
 import cleanup_worktrees
 
@@ -183,15 +180,7 @@ def test_lane_fsmonitor_is_never_executed_and_git_and_gh_run_from_the_primary(
         wrapper.chmod(0o755)
 
     if entry in {"session-start", "sweep"}:
-        result = subprocess.run(
-            [sys.executable, "-I", "-B", str(SCRIPT), "session-start"],
-            input=json.dumps({"cwd": str(tmp_path if entry == "sweep" else current)}),
-            cwd=tmp_path,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=30,
-        )
+        result = cleanup(tmp_path, "session-start", payload={"cwd": str(tmp_path if entry == "sweep" else current)})
     else:
         result = cleanup(primary if entry == "primary" else current)
 
@@ -251,4 +240,5 @@ def test_a_planted_git_entry_inside_a_lane_is_neither_current_nor_primary(
     assert path.exists()
     assert not other.exists()
     assert branches(primary) == {"main", "feat/here"}
+    monkeypatch.setattr(cleanup_worktrees, "sandbox_writable_paths", set)
     assert cleanup_worktrees.toplevel(nested) == path
