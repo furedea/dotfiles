@@ -131,16 +131,18 @@ def test_remote_requests_ask_and_point_to_safer_tools(capsys: pytest.CaptureFixt
         ("out/..", "ask"),
         ("out//../x", "ask"),
         ("/dev/null/../x", "ask"),
+        ("/dev/null/", "ask"),
+        ("/dev/./null", "ask"),
+        ("//dev/null", "ask"),
+        ("-", "ask"),
         ("/dev/null", "allow"),
-        ("out.json", "allow"),
-        ("./out.json", "allow"),
-        ("out/result.json", "allow"),
-        ("out..json", "allow"),
+        ("out.json", "ask"),
+        ("./out.json", "ask"),
+        ("out/result.json", "ask"),
+        ("out..json", "ask"),
     ],
 )
-def test_local_curl_output_is_dev_null_or_relative_without_parent_segments(
-    path: str, decision: str, suffix: str
-) -> None:
+def test_local_curl_output_is_only_exact_dev_null(path: str, decision: str, suffix: str) -> None:
     command = f"curl -s -o {path} http://localhost/{suffix}"
     assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == decision
 
@@ -169,14 +171,6 @@ def test_local_curl_output_symlinks_ask(
     (cwd / "output").symlink_to(target, target_is_directory=target_kind == "directory")
     command = f"curl -s -o {path} http://localhost/{suffix}"
     assert guard.decide("allowed", {"cwd": str(cwd), "tool_input": {"command": command}}).decision == "ask"
-
-
-@pytest.mark.parametrize("suffix", ["", " | jq '.'"])
-@pytest.mark.parametrize("path", ["out.json", "./out.json", "out/result.json", "/dev/null"])
-def test_local_curl_plain_output_uses_payload_cwd(tmp_path: Path, path: str, suffix: str) -> None:
-    (tmp_path / "out").mkdir()
-    command = f"curl -s -o {path} http://localhost/{suffix}"
-    assert guard.decide("allowed", {"cwd": str(tmp_path), "tool_input": {"command": command}}).decision == "allow"
 
 
 @pytest.mark.parametrize("suffix", ["", " | jq '.'"])
