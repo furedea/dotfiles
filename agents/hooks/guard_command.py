@@ -40,7 +40,10 @@ LITERAL_PROGRAMS = frozenset({"curl", "gh", "herdr", "wget"})
 # outside single quotes, in the program name, an assignment, or a redirect included, gets no
 # literal_words rule.
 EXPANDING_TEXT = re.compile(r"[$`~*?\[\]{}]|\\\n")
-FIXED_WRITE_OUT = re.compile(r' (-w|--write-out) "[^"$`]*"')
+SAFE_WRITE_OUT = re.compile(
+    r"(?:%\{(?:http_code|time_total|time_connect|time_starttransfer|size_download|content_type|url_effective|remote_ip)\}"
+    r"|\\n|[A-Za-z0-9 :=_.,/-])*"
+)
 REQUEST_SETTINGS = re.compile(r"proxy|curlrc|wgetrc|curl_home|(^|[^a-z0-9_])(home|xdg_config_home)=", re.IGNORECASE)
 
 
@@ -101,6 +104,11 @@ def objection(kind: str, item: shell_syntax.Command, policy: Policy) -> Verdict:
 def is_listed(candidate: shell_syntax.Command, rules: list[dict]) -> bool:
     """Whether a rule lists the form; Herdr's watching commands must also keep to their documented options."""
     if not command_policy.regex_reason(candidate.static_words_text, rules):
+        return False
+    if candidate.arguments[0] == "curl" and any(
+        option in {"-w", "--write-out"} and not SAFE_WRITE_OUT.fullmatch(value)
+        for option, value in zip(candidate.arguments, candidate.arguments[1:], strict=False)
+    ):
         return False
     return not herdr_grammar.is_watch_command(candidate.arguments) or herdr_grammar.is_documented(candidate.arguments)
 
@@ -234,8 +242,6 @@ def allows_literal_rules(command: str, commands: tuple[shell_syntax.Command, ...
         if not shell_syntax.is_one_simple_command(command):
             return False
         literal_text = shell_inspection.text_outside_single_quotes(command)
-        if commands[0].arguments[0] == "curl" and "\\\n" not in literal_text:
-            literal_text = FIXED_WRITE_OUT.sub("", literal_text)
         return not EXPANDING_TEXT.search(literal_text)
     except shell_syntax.UnsupportedSyntax:
         return False
