@@ -86,6 +86,7 @@ in
       "python3"
       "uv"
       "nodejs"
+      "zizmor"
       "pnpm"
       "cargo"
       "rustc"

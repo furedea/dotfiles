@@ -197,6 +197,7 @@ in
 
     # Code quality
     actionlint
+    zizmor
     autocorrect
     commitlint
     dprintPackage
