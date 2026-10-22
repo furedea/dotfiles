@@ -20,6 +20,12 @@ import subprocess
 import sys
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
+
+import herdr_ownership
+import session_store
+
+
 PROTECTED_BRANCHES = frozenset({"main", "master"})
 MERGED_PULL_REQUEST_LIMIT = "200"
 TIMEOUT_SECONDS = 30
@@ -89,11 +95,13 @@ def cleanup(primary: Path, current: Path | None, *, dry_run: bool) -> list[str]:
     checked_out = {worktree.branch for worktree in worktrees} | {current_branch(primary)}
     workspaces = herdr_workspaces(primary)
     report = []
+    removed = set()
     for worktree in worktrees:
         if worktree.path in {primary, current} or not is_merged(primary, worktree.branch, merged):
             continue
         if run("git", "status", "--porcelain", cwd=worktree.path):
             continue
+        removed.add(worktree.path)
         report.append(f"remove worktree {worktree.path} and branch {worktree.branch}")
         if not dry_run:
             remove_worktree(primary, worktree, workspaces.get(worktree.path))
@@ -106,7 +114,83 @@ def cleanup(primary: Path, current: Path | None, *, dry_run: bool) -> list[str]:
             run("git", "branch", "-D", branch, cwd=primary)
     if report:
         report += fast_forward_default_branch(primary, dry_run=dry_run)
+    remaining = worktrees if dry_run else linked_worktrees(primary)
+    if not any(worktree.path != primary and (not dry_run or worktree.path not in removed) for worktree in remaining):
+        report += close_primary_workspaces(primary, dry_run=dry_run)
     return report
+
+
+def recorded_primary_workspaces(primary: Path) -> dict[str, dict]:
+    """Find primary workspaces created by any registered agent session."""
+    base = session_store.state_directory()
+    if not base.is_dir():
+        return {}
+    workspaces = {}
+    for directory in session_store.record_directories(base):
+        try:
+            record = session_store.load(directory)
+            owned = herdr_ownership.entries(record, "workspaces")
+        except OSError, ValueError, KeyError, TypeError:
+            continue
+        workspaces.update({key: entry for key, entry in owned.items() if Path(entry["path"]).resolve() == primary})
+    return workspaces
+
+
+def close_primary_workspaces(primary: Path, *, dry_run: bool) -> list[str]:
+    """Close an agent-created primary only while its identity matches and no agent occupies it."""
+    try:
+        identities = idle_primary_workspaces(primary)
+    except OSError, subprocess.SubprocessError, ValueError:
+        return []
+    report = []
+    for identity in identities:
+        if not dry_run:
+            run("herdr", "workspace", "close", identity, cwd=primary)
+        report.append(f"close primary workspace {identity} ({primary})")
+    return report
+
+
+def idle_primary_workspaces(primary: Path) -> list[str]:
+    owned = recorded_primary_workspaces(primary)
+    if not owned:
+        return []
+    identities = []
+    for workspace in herdr_items("workspace"):
+        identity = workspace.get("workspace_id")
+        if not isinstance(identity, str) or not identity:
+            continue
+        entry = owned.get(identity)
+        if (
+            not entry
+            or workspace.get("label") != entry["label"]
+            or herdr_ownership.live_path(workspace) != str(primary)
+        ):
+            continue
+        if primary_workspace_idle(identity, entry):
+            identities.append(identity)
+    return identities
+
+
+def primary_workspace_idle(identity: str, entry: dict) -> bool:
+    panes = herdr_items("pane", "--workspace", identity)
+    if not any(pane.get("terminal_id") == entry["terminal_id"] for pane in panes):
+        return False
+    terminals = {pane["terminal_id"] for pane in panes if pane.get("terminal_id")}
+    pane_ids = {pane["pane_id"] for pane in panes if pane.get("pane_id")}
+    return not any(
+        agent.get("workspace_id") == identity
+        or agent.get("terminal_id") in terminals
+        or (not agent.get("workspace_id") and agent.get("pane_id") in pane_ids)
+        for agent in herdr_items("agent")
+    )
+
+
+def herdr_items(kind: str, *arguments: str) -> list[dict]:
+    """Require an explicit listing; missing or malformed live state cannot prove a workspace idle."""
+    items = herdr_ownership.herdr_result(kind, "list", *arguments).get(kind + "s")
+    if not isinstance(items, list) or any(not isinstance(item, dict) for item in items):
+        raise ValueError(f"Invalid Herdr {kind} listing")
+    return items
 
 
 def fast_forward_default_branch(primary: Path, *, dry_run: bool) -> list[str]:
@@ -166,7 +250,7 @@ def linked_worktrees(primary: Path) -> list[Worktree]:
     for block in run("git", "worktree", "list", "--porcelain", cwd=primary).split("\n\n"):
         fields = dict(line.split(" ", 1) for line in block.splitlines() if " " in line)
         branch = fields.get("branch", "").removeprefix("refs/heads/")
-        if "worktree" in fields and branch:
+        if "worktree" in fields:
             worktrees.append(Worktree(Path(fields["worktree"]).resolve(), branch))
     return worktrees
 

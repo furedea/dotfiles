@@ -82,6 +82,11 @@ def policies(kind: str, directory: Path) -> Policy:
         if kind == "forbidden":
             raise ValueError(f"forbidden command regex rules were not found or are invalid: {path}") from error
         raise ValueError(f"invalid global {kind} command rules: {path}") from error
+    for rule in rules:
+        patterns = rule["patterns"]
+        rule["patterns"] = patterns + [
+            "^" + re.escape(str(Path.home())) + pattern[2:] for pattern in patterns if pattern.startswith("^~/")
+        ]
     if project := command_policy.project_file(name):
         try:
             rules += command_policy.load_rules(project)
