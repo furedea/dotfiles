@@ -1,7 +1,6 @@
 """Merged task worktrees and branches are removed only when nothing unmerged would be lost."""
 
 import json
-import os
 from pathlib import Path
 import shlex
 import shutil
@@ -10,95 +9,10 @@ import sys
 
 import pytest
 
-from tests.runtime import REPO_ROOT
+from tests.agents.hooks.cleanup_worktrees_runtime import SCRIPT, branches, cleanup, git, task_worktree
 
 import herdr_ownership
 import session_store
-
-
-SCRIPT = REPO_ROOT / "agents/hooks/cleanup_worktrees.py"
-
-
-def git(*arguments: str, cwd: Path) -> str:
-    return subprocess.run(["git", *arguments], cwd=cwd, check=True, capture_output=True, text=True).stdout.strip()
-
-
-@pytest.fixture
-def primary(tmp_path: Path) -> Path:
-    root = tmp_path / "repo"
-    root.mkdir()
-    git("init", "--quiet", "--initial-branch=main", cwd=root)
-    git("config", "user.email", "test@example.com", cwd=root)
-    git("config", "user.name", "Test", cwd=root)
-    git("config", "commit.gpgsign", "false", cwd=root)
-    (root / "README.md").write_text("base\n")
-    git("add", "README.md", cwd=root)
-    git("commit", "--quiet", "-m", "base", cwd=root)
-    return root
-
-
-@pytest.fixture
-def merged(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
-    """Fake gh and Herdr: merged PR heads come from this dict; Herdr records removals."""
-    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
-    directory = tmp_path / "bin"
-    directory.mkdir()
-    state = tmp_path / "merged.json"
-    removed = tmp_path / "herdr_removed.txt"
-    (directory / "gh").write_text(f"#!/bin/sh\ncat {state}\n")
-    listing = tmp_path / "herdr_worktrees.json"
-    listing.write_text('{"result":{"worktrees":[]}}')
-    (tmp_path / "herdr_workspaces.json").write_text('{"result":{"workspaces":[]}}')
-    (tmp_path / "herdr_agents.json").write_text('{"result":{"agents":[]}}')
-    (tmp_path / "herdr_panes.json").write_text(
-        json.dumps({"result": {"panes": [{"pane_id": "p1", "terminal_id": "term_primary"}]}})
-    )
-    (directory / "herdr").write_text(
-        "#!/bin/sh\n"
-        f'if [ "$1 $2" = "pane list" ]; then cat {tmp_path / "herdr_panes.json"}; exit 0; fi\n'
-        f'if [ "$1 $2" = "workspace list" ]; then cat {tmp_path / "herdr_workspaces.json"}; exit 0; fi\n'
-        f'if [ "$1 $2" = "agent list" ]; then cat {tmp_path / "herdr_agents.json"}; exit 0; fi\n'
-        f'if [ "$1 $2" = "workspace close" ]; then echo "$@" >> {removed}; exit 0; fi\n'
-        f'if [ "$2" = list ]; then cat {listing}; exit 0; fi\n'
-        f'echo "$@" >> {removed}\n'
-        f'git worktree remove "$(cat {tmp_path / "herdr_path.txt"})"\n'
-    )
-    for name in ("gh", "herdr"):
-        (directory / name).chmod(0o755)
-    monkeypatch.setenv("PATH", f"{directory}{os.pathsep}{os.environ['PATH']}")
-
-    class Heads(dict):
-        def __setitem__(self, branch: str, oid: str) -> None:
-            super().__setitem__(branch, oid)
-            state.write_text(json.dumps([{"headRefName": b, "headRefOid": o} for b, o in self.items()]))
-
-    heads = Heads()
-    state.write_text("[]")
-    return heads
-
-
-def task_worktree(primary: Path, branch: str) -> Path:
-    path = primary.parent / branch.replace("/", "-")
-    git("worktree", "add", "--quiet", "-b", branch, str(path), cwd=primary)
-    (path / f"{branch.replace('/', '-')}.txt").write_text("work\n")
-    git("add", ".", cwd=path)
-    git("commit", "--quiet", "-m", branch, cwd=path)
-    return path
-
-
-def cleanup(cwd: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        [sys.executable, "-I", "-B", str(SCRIPT), *arguments],
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=30,
-    )
-
-
-def branches(primary: Path) -> set[str]:
-    return set(git("for-each-ref", "--format=%(refname:short)", "refs/heads", cwd=primary).splitlines())
 
 
 def test_a_merged_clean_worktree_and_its_branch_are_removed(primary: Path, merged: dict[str, str]) -> None:
@@ -109,84 +23,24 @@ def test_a_merged_clean_worktree_and_its_branch_are_removed(primary: Path, merge
     assert branches(primary) == {"main"}
 
 
-def test_a_worktree_with_a_replaced_git_file_is_skipped(primary: Path, merged: dict[str, str], tmp_path: Path) -> None:
-    path = task_worktree(primary, "feat/planted")
-    merged["feat/planted"] = git("rev-parse", "HEAD", cwd=path)
-    fake = tmp_path / "fake"
-    git("clone", "--quiet", "--no-checkout", str(primary), str(fake), cwd=primary)
-    git(f"--git-dir={fake / '.git'}", "read-tree", merged["feat/planted"], cwd=primary)
-    (path / ".git").write_text(f"gitdir: {fake / '.git'}\n")
+def test_removal_does_not_repeat_gits_cleanliness_check(primary: Path, merged: dict[str, str], tmp_path: Path) -> None:
+    path = task_worktree(primary, "feat/done")
+    merged["feat/done"] = git("rev-parse", "HEAD", cwd=path)
+    executable = shutil.which("git")
+    assert executable
+    wrapper = tmp_path / "bin/git"
+    wrapper.write_text(
+        '#!/bin/sh\ncase " $* " in *" worktree remove "*)\n'
+        'case " $* " in *" --force "*) ;; *) exit 99;; esac;; esac\n'
+        f'exec {shlex.quote(executable)} "$@"\n'
+    )
+    wrapper.chmod(0o755)
 
-    result = cleanup(primary, "--dry-run")
-
-    assert result.returncode == 0
-    assert "remove worktree" not in result.stdout
-    assert path.exists()
-    assert "feat/planted" in branches(primary)
-
-
-@pytest.mark.parametrize("entry", ["primary", "lane", "session-start", "sweep"])
-@pytest.mark.parametrize("config", ["shared", "worktree"])
-def test_lane_fsmonitor_is_never_executed_and_git_and_gh_run_from_the_primary(
-    primary: Path,
-    merged: dict[str, str],
-    tmp_path: Path,
-    entry: str,
-    config: str,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    path = task_worktree(primary, "feat/planted")
-    current = task_worktree(primary, "feat/current")
-    if entry == "sweep":
-        home = tmp_path / "home"
-        lane = home / ".herdr/worktrees/repo/feat-planted"
-        lane.parent.mkdir(parents=True)
-        git("worktree", "move", str(path), str(lane), cwd=primary)
-        path = lane
-        monkeypatch.setenv("HOME", str(home))
-    merged["feat/planted"] = git("rev-parse", "HEAD", cwd=path)
-    marker = tmp_path / "fsmonitor-ran"
-    # Inherited command-line config must not mask the planted monitor.
-    monkeypatch.delenv("GIT_CONFIG_COUNT", raising=False)
-    monkeypatch.delenv("GIT_CONFIG_PARAMETERS", raising=False)
-    monitor = tmp_path / "monitor"
-    monitor.write_text(f"#!/bin/sh\ntouch {shlex.quote(str(marker))}\n")
-    monitor.chmod(0o755)
-    if config == "worktree":
-        git("config", "extensions.worktreeConfig", "true", cwd=primary)
-    git("config", *(["--worktree"] if config == "worktree" else []), "core.fsmonitor", str(monitor), cwd=path)
-    discovery = tmp_path / "lane-discovery"
-    for name in ("git", "gh"):
-        executable = shutil.which(name)
-        assert executable
-        wrapper = tmp_path / "bin" / name
-        if name == "gh":
-            wrapper.rename(tmp_path / "original-gh")
-            executable = str(tmp_path / "original-gh")
-        wrapper.write_text(
-            f'#!/bin/sh\ncase "$PWD" in {shlex.quote(str(path))}*|{shlex.quote(str(current))}*) '
-            f'touch {shlex.quote(str(discovery))}; exit 99;; esac\nexec {shlex.quote(executable)} "$@"\n'
-        )
-        wrapper.chmod(0o755)
-
-    if entry in {"session-start", "sweep"}:
-        result = subprocess.run(
-            [sys.executable, "-I", "-B", str(SCRIPT), "session-start"],
-            input=json.dumps({"cwd": str(tmp_path if entry == "sweep" else current)}),
-            cwd=tmp_path,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=30,
-        )
-    else:
-        result = cleanup(primary if entry == "primary" else current)
+    result = cleanup(primary)
 
     assert result.returncode == 0
-    assert not marker.exists()
-    assert not discovery.exists()
     assert not path.exists()
-    assert current.exists()
+    assert branches(primary) == {"main"}
 
 
 def test_a_merged_branch_without_a_worktree_is_removed(primary: Path, merged: dict[str, str]) -> None:
@@ -214,16 +68,6 @@ def test_work_a_merge_does_not_cover_is_kept(primary: Path, merged: dict[str, st
     cleanup(primary)
     assert path.exists()
     assert "feat/busy" in branches(primary)
-
-
-def test_the_primary_and_current_checkouts_are_never_removed(primary: Path, merged: dict[str, str]) -> None:
-    path = task_worktree(primary, "feat/here")
-    merged["feat/here"] = git("rev-parse", "HEAD", cwd=path)
-    merged["main"] = git("rev-parse", "HEAD", cwd=primary)
-    cleanup(path)
-    assert path.exists()
-    assert primary.exists()
-    assert {"main", "feat/here"} <= branches(primary)
 
 
 def test_dry_run_reports_without_removing(primary: Path, merged: dict[str, str]) -> None:

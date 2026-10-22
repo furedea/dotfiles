@@ -64,7 +64,7 @@ def sweep(cwd: Path, *, dry_run: bool) -> list[str]:
     """Clean the caller's repository and every repository with a Herdr task worktree."""
     current = toplevel(cwd)
     lanes = sorted(path for path in (Path.home() / HERDR_WORKTREES).glob("*/*") if path.is_dir())
-    primaries = {primary for primary in map(primary_checkout, [cwd, *lanes]) if primary}
+    primaries = {primary for path in [current, *lanes] if path and (primary := primary_checkout(path))}
     report = []
     for primary in sorted(primaries):
         try:
@@ -77,11 +77,21 @@ def sweep(cwd: Path, *, dry_run: bool) -> list[str]:
 def toplevel(path: Path) -> Path | None:
     if not path.is_dir():
         return None
-    return next((root for root in (path.resolve(), *path.resolve().parents) if (root / ".git").exists()), None)
+    roots = [root for root in (path.resolve(), *path.resolve().parents) if (root / ".git").exists()]
+    for root in reversed(roots):
+        primary = primary_checkout(root)
+        if primary:
+            known = {worktree.path for worktree in linked_worktrees(primary)}
+            return next((ancestor for ancestor in roots if ancestor in known), None)
+    return None
 
 
 def primary_checkout(path: Path) -> Path | None:
-    root = toplevel(path)
+    root = (
+        next((root for root in (path.resolve(), *path.resolve().parents) if (root / ".git").exists()), None)
+        if path.is_dir()
+        else None
+    )
     if root is None:
         return None
     if (root / ".git").is_dir():
@@ -143,12 +153,25 @@ def cleanup(primary: Path, current: Path | None, *, dry_run: bool) -> list[str]:
 def worktree_is_clean(primary: Path, worktree: Worktree) -> bool:
     if not worktree.admin_dir or git_file_target(worktree.path) != worktree.admin_dir:
         return False
+    try:
+        if (
+            worktree.admin_dir / (worktree.admin_dir / "commondir").read_text().strip()
+        ).resolve() != primary / ".git" or (worktree.admin_dir / "config.worktree").exists():
+            return False
+    except OSError:
+        return False
+    command = ("git", f"--git-dir={worktree.admin_dir}", f"--work-tree={worktree.path}")
+    if any(
+        entry.startswith("160000 ") for entry in run(*command, "ls-files", "--stage", "-z", cwd=primary).split("\0")
+    ):
+        return False
     return not run(
-        "git",
-        f"--git-dir={worktree.admin_dir}",
-        f"--work-tree={worktree.path}",
+        *command,
+        "-c",
+        "diff.ignoreSubmodules=all",
         "status",
         "--porcelain",
+        "--ignore-submodules=all",
         cwd=primary,
     )
 
@@ -332,11 +355,11 @@ def herdr_workspaces(primary: Path) -> dict[Path, str]:
 
 
 def remove_worktree(primary: Path, worktree: Worktree, workspace: str | None) -> None:
-    """Close the Herdr workspace with the checkout when one is open; Git refuses a dirty tree either way."""
+    """Remove a checkout already verified clean, closing its Herdr workspace when one is open."""
     if workspace:
         run("herdr", "worktree", "remove", "--workspace", workspace, cwd=primary)
     else:
-        run("git", "worktree", "remove", str(worktree.path), cwd=primary)
+        run("git", "worktree", "remove", "--force", str(worktree.path), cwd=primary)
 
 
 def run(*command: str, cwd: Path) -> str:
@@ -355,11 +378,22 @@ def run(*command: str, cwd: Path) -> str:
             "core.fsmonitor=false",
             "-c",
             "core.hooksPath=/dev/null",
+            *(
+                ("-c", "filter.lfs.process=", "-c", "filter.lfs.clean=", "-c", "filter.lfs.smudge=")
+                if not location
+                else ()
+            ),
             *location,
             *command[1:],
         )
     return subprocess.run(
-        command, cwd=cwd, capture_output=True, text=True, check=True, timeout=TIMEOUT_SECONDS, env=os.environ
+        command,
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=TIMEOUT_SECONDS,
+        env={key: value for key, value in os.environ.items() if not key.startswith("GIT_")},
     ).stdout.strip()
 
 
