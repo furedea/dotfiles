@@ -201,7 +201,7 @@ def command_verdict(kind: str, payload: dict, policy: Policy) -> Verdict:
         return hook_decision.ask(f"Needs review: {error}.\n\nCommand: {preview}", error.kind)
     if kind == "forbidden" and (verdict := companion_objection(command, commands)).decision != "allow":
         return verdict
-    if kind == "allowed" and (verdict := cleanup_objection(command, commands, policy)).decision != "allow":
+    if kind == "allowed" and (verdict := cleanup_objection(command, commands)).decision != "allow":
         return verdict
     if not allows_literal_rules(command, commands):
         policy = replace(policy, literal_words=False)
@@ -212,7 +212,7 @@ def command_verdict(kind: str, payload: dict, policy: Policy) -> Verdict:
     return verdict
 
 
-def cleanup_objection(command: str, commands: tuple[shell_syntax.Command, ...], policy: Policy) -> Verdict:
+def cleanup_objection(command: str, commands: tuple[shell_syntax.Command, ...]) -> Verdict:
     """Match the entire cleanup call before segment parsing can hide a wrapper or shell operator."""
     cleanup = any(
         Path(item.arguments[0]).name == "cleanup_worktrees.py"
@@ -227,12 +227,8 @@ def cleanup_objection(command: str, commands: tuple[shell_syntax.Command, ...], 
     )
     if not cleanup:
         return hook_decision.ALLOW
-    rules = [rule for rule in policy.rules if "cleanup_worktrees.py" in rule.get("programs", ())]
-    if (
-        "\n" not in command
-        and "\r" not in command
-        and any(command_policy.rule_matches(rule, command) for rule in rules)
-    ):
+    pattern = re.escape(str(Path.home() / ".claude/hooks/cleanup_worktrees.py")) + r"( --dry-run)?"
+    if re.fullmatch(pattern, command):
         return hook_decision.ALLOW
     return hook_decision.ask(
         "Needs review: run cleanup_worktrees.py as one bare call or with --dry-run only.", "cleanup_worktrees.py"

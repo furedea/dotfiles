@@ -12,9 +12,16 @@ CLEANUP_PATHS = ["~/.claude/hooks/cleanup_worktrees.py", str(Path.home() / ".cla
 pytestmark = pytest.mark.usefixtures("isolated_project")
 
 
-@pytest.mark.parametrize("path", CLEANUP_PATHS)
+@pytest.mark.parametrize("quote", ["", "'", '"'])
 @pytest.mark.parametrize("suffix", ["", " --dry-run"])
-def test_cleanup_documented_calls_are_allowed(path: str, suffix: str) -> None:
+def test_cleanup_tilde_paths_require_review(quote: str, suffix: str) -> None:
+    command = f"{quote}~/.claude/hooks/cleanup_worktrees.py{quote}{suffix}"
+    assert guard.decide("allowed", {"tool_input": {"command": command}}).decision == "ask"
+
+
+@pytest.mark.parametrize("suffix", ["", " --dry-run"])
+def test_cleanup_documented_calls_are_allowed(suffix: str) -> None:
+    path = str(Path.home() / ".claude/hooks/cleanup_worktrees.py")
     assert guard.decide("allowed", {"tool_input": {"command": path + suffix}}).decision == "allow"
 
 
