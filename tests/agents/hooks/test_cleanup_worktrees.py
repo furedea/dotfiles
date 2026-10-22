@@ -100,7 +100,7 @@ def test_an_open_herdr_workspace_is_closed_with_its_worktree(
         json.dumps({"result": {"worktrees": [{"path": str(path), "open_workspace_id": "w9"}]}})
     )
     cleanup(primary)
-    assert (tmp_path / "herdr_removed.txt").read_text().split() == ["worktree", "remove", "--workspace", "w9"]
+    assert (tmp_path / "herdr_removed.txt").read_text().split() == ["workspace", "close", "w9"]
     assert not path.exists()
     assert branches(primary) == {"main"}
 

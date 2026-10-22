@@ -94,12 +94,20 @@ def primary_checkout(path: Path) -> Path | None:
     )
     if root is None:
         return None
-    if (root / ".git").is_dir():
-        return None if root.is_relative_to(Path.home() / HERDR_WORKTREES) else root
+    if real_primary(root):
+        writable = sandbox_writable_paths()
+        return root if writable is None or not any(root.is_relative_to(path) for path in writable) else None
+    return lane_primary(root)
+
+
+def lane_primary(root: Path) -> Path | None:
     admin = git_file_target(root)
     if admin is None or admin.parent.name != "worktrees" or admin.parent.parent.name != ".git":
         return None
     primary = admin.parent.parent.parent
+    writable = sandbox_writable_paths()
+    if not real_primary(primary) or writable is None or any(primary.is_relative_to(path) for path in writable):
+        return None
     try:
         if (
             Path((admin / "gitdir").read_text().strip()).resolve() != root / ".git"
@@ -114,6 +122,40 @@ def primary_checkout(path: Path) -> Path | None:
     except OSError, subprocess.SubprocessError:
         pass
     return None
+
+
+def real_primary(path: Path) -> bool:
+    return (
+        (path / ".git").is_dir()
+        and not (path / ".git").is_symlink()
+        and not path.is_relative_to((Path.home() / HERDR_WORKTREES).resolve())
+    )
+
+
+def sandbox_writable_paths() -> set[Path] | None:
+    """Read rendered home policy before trusting any primary inferred from a lane."""
+    home = Path.home().resolve()
+    try:
+        entries = json.loads((home / ".claude/settings.json").read_text())["sandbox"]["filesystem"]["allowWrite"]
+        if not isinstance(entries, list) or any(not isinstance(entry, str) for entry in entries):
+            return None
+        paths = {
+            home / entry.removeprefix("~").lstrip("/") if entry.startswith("~") else home / entry for entry in entries
+        }
+        paths.update(
+            {
+                Path("/tmp"),
+                Path("/private/tmp"),
+                Path("/tmp/claude"),
+                Path("/private/tmp/claude"),
+                home / HERDR_WORKTREES,
+            }
+        )
+        if temporary := os.environ.get("TMPDIR"):
+            paths.add(Path(temporary))
+        return paths | {path.resolve() for path in paths}
+    except OSError, ValueError, KeyError, TypeError:
+        return None
 
 
 def cleanup(primary: Path, current: Path | None, *, dry_run: bool) -> list[str]:
@@ -155,8 +197,10 @@ def worktree_is_clean(primary: Path, worktree: Worktree) -> bool:
         return False
     try:
         if (
-            worktree.admin_dir / (worktree.admin_dir / "commondir").read_text().strip()
-        ).resolve() != primary / ".git" or (worktree.admin_dir / "config.worktree").exists():
+            (worktree.admin_dir / (worktree.admin_dir / "commondir").read_text().strip()).resolve() != primary / ".git"
+            or Path((worktree.admin_dir / "gitdir").read_text().strip()).resolve() != worktree.path / ".git"
+            or (worktree.admin_dir / "config.worktree").exists()
+        ):
             return False
     except OSError:
         return False
@@ -324,6 +368,8 @@ def linked_worktrees(primary: Path) -> list[Worktree]:
 
 def git_file_target(path: Path) -> Path | None:
     try:
+        if (path / ".git").is_symlink():
+            return None
         content = (path / ".git").read_text().strip()
         if content.startswith("gitdir: "):
             return (path / content.removeprefix("gitdir: ")).resolve()
@@ -356,10 +402,9 @@ def herdr_workspaces(primary: Path) -> dict[Path, str]:
 
 def remove_worktree(primary: Path, worktree: Worktree, workspace: str | None) -> None:
     """Remove a checkout already verified clean, closing its Herdr workspace when one is open."""
+    run("git", "worktree", "remove", "--force", str(worktree.path), cwd=primary)
     if workspace:
-        run("herdr", "worktree", "remove", "--workspace", workspace, cwd=primary)
-    else:
-        run("git", "worktree", "remove", "--force", str(worktree.path), cwd=primary)
+        run("herdr", "workspace", "close", workspace, cwd=primary)
 
 
 def run(*command: str, cwd: Path) -> str:

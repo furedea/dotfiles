@@ -98,6 +98,11 @@ def primary(tmp_path: Path) -> Path:
 def merged(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
     """Fake gh and Herdr: merged PR heads come from this dict; Herdr records removals."""
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    home = tmp_path / "home"
+    (home / ".claude").mkdir(parents=True)
+    (home / ".claude/settings.json").write_text('{"sandbox":{"filesystem":{"allowWrite":[]}}}')
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("TMPDIR", str(tmp_path / "sandbox-tmp"))
     directory = tmp_path / "bin"
     directory.mkdir()
     state = tmp_path / "merged.json"
