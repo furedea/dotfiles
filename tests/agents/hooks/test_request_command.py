@@ -147,6 +147,47 @@ def test_local_curl_output_is_dev_null_or_relative_without_parent_segments(
 
 @pytest.mark.parametrize("suffix", ["", " | jq '.'"])
 @pytest.mark.parametrize(
+    ("target_kind", "path"),
+    [
+        ("file", "output"),
+        ("directory", "output/result.json"),
+        ("directory", "output/new/result.json"),
+        ("missing", "output"),
+    ],
+)
+@pytest.mark.parametrize("outside", [False, True])
+def test_local_curl_output_symlinks_ask(
+    tmp_path: Path, target_kind: str, path: str, outside: bool, suffix: str
+) -> None:
+    cwd = tmp_path / "project"
+    cwd.mkdir()
+    target = (tmp_path if outside else cwd) / "target"
+    if target_kind == "directory":
+        target.mkdir()
+    elif target_kind == "file":
+        target.write_text("existing data")
+    (cwd / "output").symlink_to(target, target_is_directory=target_kind == "directory")
+    command = f"curl -s -o {path} http://localhost/{suffix}"
+    assert guard.decide("allowed", {"cwd": str(cwd), "tool_input": {"command": command}}).decision == "ask"
+
+
+@pytest.mark.parametrize("suffix", ["", " | jq '.'"])
+@pytest.mark.parametrize("path", ["out.json", "./out.json", "out/result.json", "/dev/null"])
+def test_local_curl_plain_output_uses_payload_cwd(tmp_path: Path, path: str, suffix: str) -> None:
+    (tmp_path / "out").mkdir()
+    command = f"curl -s -o {path} http://localhost/{suffix}"
+    assert guard.decide("allowed", {"cwd": str(tmp_path), "tool_input": {"command": command}}).decision == "allow"
+
+
+@pytest.mark.parametrize("suffix", ["", " | jq '.'"])
+@pytest.mark.parametrize("path", [".envrc", ".git/hooks/pre-commit", "./.envrc", "out/.secret", "out/.cache/data"])
+def test_local_curl_hidden_output_asks(tmp_path: Path, path: str, suffix: str) -> None:
+    command = f"curl -s -o {path} http://localhost/{suffix}"
+    assert guard.decide("allowed", {"cwd": str(tmp_path), "tool_input": {"command": command}}).decision == "ask"
+
+
+@pytest.mark.parametrize("suffix", ["", " | jq '.'"])
+@pytest.mark.parametrize(
     ("data", "decision"),
     [
         ("@/etc/passwd", "ask"),

@@ -60,6 +60,7 @@ class Policy:
     prefixes: list[dict]
     rules: list[dict]
     literal_words: bool = True
+    cwd: Path = Path(".")
 
     @property
     def listing_rules(self) -> list[dict]:
@@ -103,18 +104,35 @@ def objection(kind: str, item: shell_syntax.Command, policy: Policy) -> Verdict:
     return governed_objection(candidate, policy, preview)
 
 
-def is_listed(candidate: shell_syntax.Command, rules: list[dict]) -> bool:
+def is_listed(candidate: shell_syntax.Command, rules: list[dict], cwd: Path) -> bool:
     """Whether a rule lists the form; Herdr's watching commands must also keep to their documented options."""
     if not command_policy.regex_reason(candidate.static_words_text, rules):
         return False
     if candidate.arguments[0] == "curl" and any(
         (option in {"-w", "--write-out"} and not SAFE_WRITE_OUT.fullmatch(value))
-        or (option == "-o" and ".." in value.split("/"))
+        or (option == "-o" and not is_local_output(value, cwd))
         or (option == "-H" and ("\r" in value or "\n" in value))
         for option, value in zip(candidate.arguments, candidate.arguments[1:], strict=False)
     ):
         return False
     return not herdr_grammar.is_watch_command(candidate.arguments) or herdr_grammar.is_documented(candidate.arguments)
+
+
+def is_local_output(value: str, cwd: Path) -> bool:
+    """Allow /dev/null or a relative output confined to cwd without hidden components or symlinks."""
+    if value == "/dev/null":
+        return True
+    path = Path(value)
+    if path.is_absolute() or any(part.startswith(".") for part in value.removeprefix("./").split("/")):
+        return False
+    try:
+        root = cwd.resolve()
+        output = root / path
+        if output.is_symlink() or any(parent.is_symlink() for parent in output.parents):
+            return False
+        return output.resolve().is_relative_to(root) and output.parent.resolve().is_relative_to(root)
+    except OSError, ValueError:
+        return False
 
 
 def forbidden_objection(item: shell_syntax.Command, candidate: shell_syntax.Command, policy: Policy) -> Verdict:
@@ -149,7 +167,9 @@ def governed_objection(candidate: shell_syntax.Command, policy: Policy, preview:
         )
     governed = command_policy.prefix_rule(candidate.arguments, prefixes, "allow")
     if governed is None or (
-        not candidate.appends_input and not candidate.hides_options and is_listed(candidate, policy.listing_rules)
+        not candidate.appends_input
+        and not candidate.hides_options
+        and is_listed(candidate, policy.listing_rules, policy.cwd)
     ):
         return hook_decision.ALLOW
     prefix = " ".join(governed["prefix"])
@@ -190,6 +210,7 @@ def command_verdict(kind: str, payload: dict, policy: Policy) -> Verdict:
     piped through known stdin-only filters, with no shell expansions.
     """
     command = payload.get("tool_input", {}).get("command") or ""
+    policy = replace(policy, cwd=Path(payload.get("cwd") or Path.cwd()))
     try:
         commands = shell_syntax.parse(command)
     except shell_syntax.UnsupportedSyntax as error:
