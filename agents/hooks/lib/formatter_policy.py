@@ -347,12 +347,15 @@ def markdown_plan(path: Path) -> tuple[Step, ...]:
     )
 
 
-def actionlint_plan(path: Path) -> tuple[Step, ...]:
-    """Lint only workflow files under .github/workflows/."""
+def workflow_plan(path: Path) -> tuple[Step, ...]:
+    """Lint workflow YAML under .github/workflows/ with actionlint, then offline zizmor."""
     filename = str(path)
     if ".github/workflows/" not in filename or path.suffix not in {".yml", ".yaml"}:
         return ()
-    return (Step("actionlint lint", ("actionlint", "-oneline", filename)),)
+    return (
+        Step("actionlint lint", ("actionlint", "-oneline", filename)),
+        Step("zizmor lint", ("zizmor", "--offline", "--no-progress", "--format", "plain", filename)),
+    )
 
 
 LANGUAGE_PLANS = {
@@ -362,7 +365,7 @@ LANGUAGE_PLANS = {
     "lua": lua_plan,
     "tex": tex_plan,
     "md": markdown_plan,
-    "gha": actionlint_plan,
+    "gha": workflow_plan,
 }
 FILE_COMMANDS: dict[str, tuple[tuple, ...]] = {
     "rs": (("rustfmt format", True, "rustfmt"),),
