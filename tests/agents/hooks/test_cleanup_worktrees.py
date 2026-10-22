@@ -269,9 +269,38 @@ def recorded_primary(primary: Path, merged: dict[str, str], tmp_path: Path) -> N
     (tmp_path / "herdr_workspaces.json").write_text(json.dumps({"result": {"workspaces": [row]}}))
 
 
+@pytest.mark.usefixtures("recorded_primary")
+@pytest.mark.parametrize("dry_run", [False, True])
+def test_an_idle_primary_stays_open_when_no_merged_worktrees_are_removed(
+    primary: Path, tmp_path: Path, dry_run: bool
+) -> None:
+    result = cleanup(primary, *(["--dry-run"] if dry_run else []))
+    assert result.returncode == 0
+    assert "close primary workspace" not in result.stdout
+    assert not (tmp_path / "herdr_removed.txt").exists()
+
+
+@pytest.mark.usefixtures("recorded_primary")
+def test_a_failed_primary_close_preserves_completed_removal_reports(
+    primary: Path, merged: dict[str, str], tmp_path: Path
+) -> None:
+    path = task_worktree(primary, "feat/lane")
+    merged["feat/lane"] = git("rev-parse", "HEAD", cwd=path)
+    herdr = tmp_path / "bin/herdr"
+    herdr.write_text(herdr.read_text().replace('echo "$@" >>', 'exit 1; echo "$@" >>', 1))
+    result = cleanup(primary)
+    assert result.returncode == 0
+    assert not path.exists()
+    assert branches(primary) == {"main"}
+    assert f"remove worktree {path} and branch feat/lane" in result.stdout
+    assert "failed to close primary workspace w3" in result.stdout
+    assert not any(line.startswith("close primary workspace") for line in result.stdout.splitlines())
+
+
+@pytest.mark.usefixtures("recorded_primary")
 @pytest.mark.parametrize("dry_run", [False, True])
 def test_an_agent_created_primary_closes_after_its_last_lane_is_removed(
-    primary: Path, merged: dict[str, str], tmp_path: Path, recorded_primary: None, dry_run: bool
+    primary: Path, merged: dict[str, str], tmp_path: Path, dry_run: bool
 ) -> None:
     path = task_worktree(primary, "feat/lane")
     merged["feat/lane"] = git("rev-parse", "HEAD", cwd=path)
@@ -286,9 +315,10 @@ def test_an_agent_created_primary_closes_after_its_last_lane_is_removed(
         assert (tmp_path / "herdr_removed.txt").read_text().splitlines() == ["workspace close w3"]
 
 
+@pytest.mark.usefixtures("recorded_primary")
 @pytest.mark.parametrize("remaining", ["unmerged", "dirty", "current", "detached"])
 def test_a_primary_stays_open_while_any_linked_checkout_remains(
-    primary: Path, merged: dict[str, str], tmp_path: Path, recorded_primary: None, remaining: str
+    primary: Path, merged: dict[str, str], tmp_path: Path, remaining: str
 ) -> None:
     path = task_worktree(primary, "feat/remaining")
     if remaining != "unmerged":
@@ -303,10 +333,13 @@ def test_a_primary_stays_open_while_any_linked_checkout_remains(
         assert not (tmp_path / "herdr_removed.txt").exists()
 
 
+@pytest.mark.usefixtures("recorded_primary")
 @pytest.mark.parametrize("location", ["workspace", "terminal", "pane"])
 def test_a_primary_with_an_agent_in_any_pane_stays_open(
-    primary: Path, merged: dict[str, str], tmp_path: Path, recorded_primary: None, location: str
+    primary: Path, merged: dict[str, str], tmp_path: Path, location: str
 ) -> None:
+    path = task_worktree(primary, "feat/lane")
+    merged["feat/lane"] = git("rev-parse", "HEAD", cwd=path)
     agent = {
         "name": "busy",
         "workspace_id": "w3" if location == "workspace" else "",
@@ -320,10 +353,13 @@ def test_a_primary_with_an_agent_in_any_pane_stays_open(
     assert not (tmp_path / "herdr_removed.txt").exists()
 
 
+@pytest.mark.usefixtures("recorded_primary")
 @pytest.mark.parametrize("mismatch", ["unrecorded", "label", "path", "terminal", "invalid record"])
 def test_user_owned_or_replaced_primary_workspaces_stay_open(
-    primary: Path, merged: dict[str, str], tmp_path: Path, recorded_primary: None, mismatch: str
+    primary: Path, merged: dict[str, str], tmp_path: Path, mismatch: str
 ) -> None:
+    path = task_worktree(primary, "feat/lane")
+    merged["feat/lane"] = git("rev-parse", "HEAD", cwd=path)
     listing = tmp_path / "herdr_workspaces.json"
     value = json.loads(listing.read_text())
     row = value["result"]["workspaces"][0]
@@ -341,11 +377,35 @@ def test_user_owned_or_replaced_primary_workspaces_stay_open(
     assert not (tmp_path / "herdr_removed.txt").exists()
 
 
+@pytest.mark.usefixtures("recorded_primary")
 @pytest.mark.parametrize("listing", ["agents", "workspaces", "panes"])
 @pytest.mark.parametrize("content", ["unavailable", '{"result":{}}', '{"result":{"agents":null}}'])
 def test_a_primary_stays_open_when_live_state_cannot_be_verified(
-    primary: Path, merged: dict[str, str], tmp_path: Path, recorded_primary: None, listing: str, content: str
+    primary: Path, merged: dict[str, str], tmp_path: Path, listing: str, content: str
 ) -> None:
+    path = task_worktree(primary, "feat/lane")
+    merged["feat/lane"] = git("rev-parse", "HEAD", cwd=path)
     (tmp_path / f"herdr_{listing}.json").write_text(content)
     assert cleanup(primary).returncode == 0
+    assert not (tmp_path / "herdr_removed.txt").exists()
+
+
+@pytest.mark.usefixtures("recorded_primary")
+@pytest.mark.parametrize("listing", ["panes", "agents"])
+@pytest.mark.parametrize("field", ["terminal_id", "pane_id"])
+@pytest.mark.parametrize("value", [["invalid"], {"invalid": "value"}])
+def test_a_primary_stays_open_when_live_state_has_unhashable_values(
+    primary: Path, merged: dict[str, str], tmp_path: Path, listing: str, field: str, value: object
+) -> None:
+    path = task_worktree(primary, "feat/lane")
+    merged["feat/lane"] = git("rev-parse", "HEAD", cwd=path)
+    rows = (
+        [{"pane_id": "p1", "terminal_id": "term_primary"}, {field: value}] if listing == "panes" else [{field: value}]
+    )
+    (tmp_path / f"herdr_{listing}.json").write_text(json.dumps({"result": {listing: rows}}))
+    result = cleanup(primary)
+    assert result.returncode == 0
+    assert not path.exists()
+    assert f"remove worktree {path}" in result.stdout
+    assert "close primary workspace" not in result.stdout
     assert not (tmp_path / "herdr_removed.txt").exists()

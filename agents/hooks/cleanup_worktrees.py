@@ -115,7 +115,9 @@ def cleanup(primary: Path, current: Path | None, *, dry_run: bool) -> list[str]:
     if report:
         report += fast_forward_default_branch(primary, dry_run=dry_run)
     remaining = worktrees if dry_run else linked_worktrees(primary)
-    if not any(worktree.path != primary and (not dry_run or worktree.path not in removed) for worktree in remaining):
+    if removed and not any(
+        worktree.path != primary and (not dry_run or worktree.path not in removed) for worktree in remaining
+    ):
         report += close_primary_workspaces(primary, dry_run=dry_run)
     return report
 
@@ -140,12 +142,17 @@ def close_primary_workspaces(primary: Path, *, dry_run: bool) -> list[str]:
     """Close an agent-created primary only while its identity matches and no agent occupies it."""
     try:
         identities = idle_primary_workspaces(primary)
-    except OSError, subprocess.SubprocessError, ValueError:
+    except OSError, subprocess.SubprocessError, ValueError, TypeError:
         return []
+    if dry_run:
+        return [f"close primary workspace {identity} ({primary})" for identity in identities]
     report = []
     for identity in identities:
-        if not dry_run:
+        try:
             run("herdr", "workspace", "close", identity, cwd=primary)
+        except subprocess.CalledProcessError as error:
+            report.append(f"failed to close primary workspace {identity} ({primary}): {error}")
+            continue
         report.append(f"close primary workspace {identity} ({primary})")
     return report
 
