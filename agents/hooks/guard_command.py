@@ -216,6 +216,12 @@ def companion_objection(command: str, commands: tuple[shell_syntax.Command, ...]
     )
     if not companion:
         return hook_decision.ALLOW
+    literal_text = shell_inspection.text_outside_single_quotes(command)
+    if "$" in literal_text or "`" in literal_text:
+        return hook_decision.deny(
+            "BLOCKED: forbidden command: task or focus text must not contain a dollar sign or backtick, "
+            "because the sandbox exclusion does not match a command with expansions."
+        )
     try:
         simple = len(commands) == 1 and shell_syntax.is_one_simple_command(command)
     except shell_syntax.UnsupportedSyntax:

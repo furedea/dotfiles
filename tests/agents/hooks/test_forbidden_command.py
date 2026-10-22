@@ -35,6 +35,22 @@ def test_companion_requires_one_simple_command(command: str) -> None:
     assert "sandbox exclusion matches only that form" in verdict.reason
 
 
+@pytest.mark.parametrize(
+    "command",
+    [
+        'node "/plugin path/codex-companion.mjs" --task "review $HOME"',
+        'node "/plugin path/codex-companion.mjs" --task $TASK',
+        'node "/plugin path/codex-companion.mjs" --focus "review `pwd`"',
+        'node "/plugin path/codex-companion.mjs" --task "review $(pwd)"',
+    ],
+)
+def test_companion_rejects_expansions_outside_single_quotes(command: str) -> None:
+    verdict = guard.decide("forbidden", {"tool_input": {"command": command}})
+    assert verdict.decision == "deny"
+    assert "task or focus text must not contain a dollar sign or backtick" in verdict.reason
+    assert "sandbox exclusion does not match a command with expansions" in verdict.reason
+
+
 def test_companion_is_denied_when_its_simple_command_shape_cannot_be_parsed(mocker: MockerFixture) -> None:
     mocker.patch.object(
         guard.shell_syntax,
@@ -50,7 +66,9 @@ def test_companion_is_denied_when_its_simple_command_shape_cannot_be_parsed(mock
 @pytest.mark.parametrize(
     "command",
     [
+        'node "/plugin path/codex-companion.mjs" --task review',
         'node "/plugin path/codex-companion.mjs" --cwd /tmp/project --task "日本語のタスクを確認"',
+        "node \"/plugin path/codex-companion.mjs\" --task 'review $HOME'",
         'node "/plugin path/codex-companion.mjs" --cwd /tmp/project --task "引用符と && | > は本文" --background',
         'echo "/plugin path/codex-companion.mjs" | tee /tmp/log',
         'node "/plugin path/other.mjs" > /tmp/log',
