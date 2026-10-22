@@ -243,6 +243,50 @@ def test_rust_declared_test_paths_select_the_named_target(tmp_path: Path, change
     assert [item.arguments for item in commands] == [("cargo", "test", "--test", "artifact-contracts", "--quiet")]
 
 
+@pytest.mark.parametrize(
+    "declared,other",
+    [
+        ("tests/a.rs", "tests/b.rs"),
+        ("tests/a.rs", "tests/support/helper.rs"),
+        ("it.rs", "tests/b.rs"),
+        ("integration/it.rs", "integration/helper.rs"),
+    ],
+)
+def test_rust_declarations_outside_tests_subdirectories_match_only_exact_files(
+    tmp_path: Path, declared: str, other: str
+) -> None:
+    (tmp_path / "Cargo.toml").write_text(f'[[test]]\nname = "declared"\npath = "{declared}"\n')
+    assert selection.rust_test_target(tmp_path, declared) == "declared"
+    assert selection.rust_test_target(tmp_path, other) != "declared"
+
+
+@pytest.mark.parametrize("manifest", [None, "[[test]"])
+def test_rust_unreadable_manifest_requires_the_full_suite(tmp_path: Path, manifest: str | None) -> None:
+    if manifest is not None:
+        (tmp_path / "Cargo.toml").write_text(manifest)
+    assert selection.rust_test_target(tmp_path, "tests/parser.rs") == ""
+    scope = selection.LanguageScope("rust", {}, tmp_path, ("tests/parser.rs",))
+    chosen = selection.Selection(scope, frozenset(), frozenset(), triggered=False, affected=True)
+    assert selection.rust_plan(chosen) == [selection.RUST_FULL_SUITE]
+
+
+@pytest.mark.parametrize("deepest_first", [False, True])
+@pytest.mark.parametrize("changed", ["tests/contracts/nested/main.rs", "tests/contracts/nested/helper.rs"])
+def test_rust_overlapping_declarations_prefer_the_deepest_parent(
+    tmp_path: Path, deepest_first: bool, changed: str
+) -> None:
+    rules = project(tmp_path, {})
+    entries = [
+        '[[test]]\nname = "broad"\npath = "tests/contracts/main.rs"\n',
+        '[[test]]\nname = "specific"\npath = "tests/contracts/nested/main.rs"\n',
+    ]
+    (tmp_path / "Cargo.toml").write_text("".join(reversed(entries) if deepest_first else entries))
+    touch_all(tmp_path, [changed])
+    commands, errors = selection.language_plan(tmp_path, rules, (changed,))
+    assert not errors
+    assert [item.arguments for item in commands] == [("cargo", "test", "--test", "specific", "--quiet")]
+
+
 @pytest.mark.parametrize("changed", ["tests/contracts/main.rs", "tests/contracts/nested/config_sync.rs"])
 def test_rust_directory_tests_use_the_auto_discovered_target(tmp_path: Path, changed: str) -> None:
     rules = project(tmp_path, {})
