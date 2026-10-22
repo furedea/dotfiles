@@ -258,6 +258,63 @@ The `persiyanov.reviewr` plugin revision is declared in
 activation by [`herdr/plugin_sync.py`](herdr/plugin_sync.py), and justified by
 [`ADR-0002`](docs/adr/0002_manage_herdr_plugins_through_home_manager_activation.md).
 
+#### Development Cycle
+
+How work flows from a request to a merged pull request, which session owns each step, and which skill the agent follows there. The cycle is the same wherever the session is opened.
+
+```mermaid
+flowchart LR
+  P[Parent: Issue and plan] --> A{User approves}
+  A --> L[Parent: open lanes]
+  L --> I[Lane: Codex implements]
+  I --> V[Lane: verify, commit, PR]
+  V --> RV[Lane: start reviewer]
+  RV -->|findings| I
+  RV --> R[Lane: LANE-READY]
+  R --> W[Parent: check and report]
+  W --> M[User merges]
+  M --> C[Parent: clean up]
+```
+
+| Step                  | Owner         | Starts                                                                                 | Skills                                                         |
+| --------------------- | ------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| 1. Issue and plan     | Parent        | —                                                                                      | `issue-workflow`                                               |
+| 2. Approve            | User          | —                                                                                      | —                                                              |
+| 3. Open lanes         | Parent        | a Herdr worktree and a Sonnet lane per lane, with a brief                              | `git-workflow` (branches), `herdr-delegation`                  |
+| 4. Implement          | Lane          | Codex (tests first, no commits)                                                        | `tsdd`, the language style skills, `domain-modeling`           |
+| 5. Verify and deliver | Lane          | —                                                                                      | `git-workflow` (commits, delivery)                             |
+| 6. Review and fix     | Lane          | an Opus subagent for Codex's code, or Codex for Claude's; Codex fixes findings         | `herdr-delegation`                                             |
+| 7. Report             | Lane → Parent | the lane ends with `LANE-READY`; the parent waits with `herdr agent wait` and reads it | `herdr-delegation`                                             |
+| 8. Check and report   | Parent        | —                                                                                      | —                                                              |
+| 9. Merge              | User          | — (run `switch` after merging dotfiles changes)                                        | —                                                              |
+| 10. Clean up          | Parent        | —                                                                                      | `git-workflow` (branches), `issue-workflow`, `source-of-truth` |
+
+| Who                   | Does                                                                            | Never does                                              |
+| --------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| User                  | approves plans, merges, pushes workflow files, deletes or archives repositories | —                                                       |
+| Parent session (Opus) | Issues, plans, lanes, final check, cleanup                                      | edits files, merges                                     |
+| Lane (Sonnet)         | runs Codex and the reviewer, verifies, commits, opens PRs                       | writes the implementation, types into the parent's pane |
+| Codex                 | implements and fixes findings                                                   | commits or pushes (it cannot write `.git`)              |
+
+The lane reports by ending its last message with `LANE-READY`, and the parent reads it. The lane never types into the parent's pane, because the parent cannot tell that text from the user's.
+
+##### Run Only Merged Changes
+
+The sandbox limits where an agent writes; it does not stop what you later run outside it. Run agent changes yourself only after they are reviewed and merged: a lane that rewrote `lefthook.yml` in its worktree runs that code with your permissions if you commit there, and `switch` on a lane branch runs unreviewed Nix as root. Run `switch` on `main` after merging.
+
+##### Where to Open the Session
+
+Open the session in a repository: the one you work on, or dotfiles for work across repositories. A session outside a Git work tree cannot register its SessionStart hook and stops. Do not open it in the home directory: the sandbox lets a session write everywhere under its working directory, so from `~` it could write `~/.gitconfig`, LaunchAgents, shell startup files, or directories on `PATH`, none of which show up in any pull request.
+
+##### Constraints
+
+- The parent cannot write another repository's `.git`; lanes fetch, commit, and push there.
+- No session writes any repository's `.git/hooks` or `.git/config`, so lanes push without `-u`.
+- Run each `herdr` command and each Codex plugin call as one command: no `cd`, pipe, redirect, or `$`.
+- Codex cannot reach the network or the Nix daemon; the lane updates dependencies and computes Nix hashes.
+- The agent's GitHub App cannot push workflow files; the user pushes them.
+- Dependencies younger than seven days are not installed (pnpm `minimumReleaseAge`, uv `exclude-newer`).
+
 ### Editable Symlinks
 
 The following repository sources are linked directly into the home directory:

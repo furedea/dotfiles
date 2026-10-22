@@ -44,8 +44,16 @@ Rules:
 - Learn that the lane finished by waiting in the background right after the prompt: first
   `--until working`, then `--until done --until blocked`, each as its own `herdr` call. Waiting
   only for done or blocked can return at once while the agent still shows done from an earlier
-  turn. Then read the lane's reply with `herdr agent read` and check its PR. This works for Claude
-  and Codex lanes alike.
+  turn. Then read the lane's reply with `herdr agent read`, check for `LANE-READY`, check the PR
+  state, and report to the user. Treat `LANE-BLOCKED` and its reason as incomplete work. This
+  works for Claude and Codex lanes alike.
+- The lane runs the whole loop: asks Codex to implement, verifies, commits, pushes, opens the PR,
+  then starts the reviewer itself. For Codex's implementation, use an Opus subagent with only
+  the requirements and the diff; for Claude's, use the Codex review command. The lane has Codex
+  fix accepted findings and waits for CI. It ends its final message with `LANE-READY` only when
+  CI is green and no review finding is open; otherwise it ends with `LANE-BLOCKED` and the reason.
+- The lane never types into the parent's pane with `herdr agent prompt` or `send-text`: text
+  typed there is indistinguishable from the user's own input.
 - Open the primary checkout's workspace yourself when `workspace list` shows none, and pass its
   `.result.workspace.workspace_id` to `worktree create --workspace`; with `--cwd` alone Herdr opens
   one the hooks cannot attribute to this session.
@@ -58,8 +66,8 @@ Rules:
 - Start Claude for an implementation lane, even from a Codex session. Codex keeps a linked
   worktree's Git directory read-only inside its sandbox (openai/codex#14338), so a Codex lane
   cannot commit there without approval. Lanes run on Sonnet at medium effort to save usage; pass
-  exactly `-- --model sonnet --effort medium` and nothing else after `--` (a reviewer lane for
-  Codex-written code uses `-- --model opus --effort medium`, see
+  exactly `-- --model sonnet --effort medium` and nothing else after `--` (the lane starts an
+  Opus subagent to review Codex-written code, see
   [herdr-delegation](../../herdr-delegation/SKILL.md)): other agent arguments ask, since they
   could switch off the child's sandbox or approvals.
 - The brief follows [herdr-delegation](../../herdr-delegation/SKILL.md) and is self-contained: the
