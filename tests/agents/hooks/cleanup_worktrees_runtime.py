@@ -36,7 +36,6 @@ def cleanup(cwd: Path, *arguments: str, payload: dict | None = None) -> subproce
     stderr = io.StringIO()
     with pytest.MonkeyPatch.context() as patch, redirect_stdout(stdout), redirect_stderr(stderr):
         patch.chdir(cwd)
-        patch.setattr(cleanup_worktrees, "sandbox_writable_paths", set)
         if payload is not None:
             patch.setattr(sys, "stdin", io.StringIO(json.dumps(payload)))
         returncode = cleanup_worktrees.main(list(arguments))
