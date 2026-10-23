@@ -49,7 +49,7 @@ EOF
     XDG_CACHE_HOME="$TEST_HOME/.cache" \
     FPATH="$BATS_TEST_TMPDIR/functions" \
     PATH="$TEST_BIN:$PATH" \
-    zsh -dfi -c "source '$REPO_ROOT/zsh/.zshrc'"
+    zsh -dfi -c "source '$REPO_ROOT/zsh/.zshenv'; source '$REPO_ROOT/zsh/.zshrc'"
 
   [ "$status" -eq 0 ]
   grep -Fx -- "--quiet -S hl=herdr --session main" "$ABBR_LOG"
@@ -61,7 +61,7 @@ EOF
     XDG_CACHE_HOME="$TEST_HOME/.cache" \
     FPATH="$BATS_TEST_TMPDIR/functions" \
     PATH="$TEST_BIN:$PATH" \
-    zsh -dfi -c "source '$REPO_ROOT/zsh/.zshrc'"
+    zsh -dfi -c "source '$REPO_ROOT/zsh/.zshenv'; source '$REPO_ROOT/zsh/.zshrc'"
 
   [ "$status" -eq 0 ]
   grep -Fx -- \
@@ -75,7 +75,7 @@ EOF
     XDG_CACHE_HOME="$TEST_HOME/.cache" \
     FPATH="$BATS_TEST_TMPDIR/functions" \
     PATH="$TEST_BIN:$PATH" \
-    zsh -dfi -c "source '$REPO_ROOT/zsh/.zshrc'"
+    zsh -dfi -c "source '$REPO_ROOT/zsh/.zshenv'; source '$REPO_ROOT/zsh/.zshrc'"
 
   [ "$status" -eq 0 ]
   [ "$(cat "$COMPINIT_LOG")" = "-C -d $TEST_HOME/.cache/zsh/.zcompdump" ]
@@ -91,7 +91,7 @@ EOF
   ! [[ "$stderr" == *"brew shellenv"* ]]
 }
 
-@test "clean login startup keeps Nix profiles ahead of system and Homebrew tools without duplicates" {
+@test "clean login startup orders Nix profiles and fallback tools before system entries" {
   local _user_profile="$TEST_HOME/.nix-profile/bin"
   local _per_user_profile="/etc/profiles/per-user/startup-test/bin"
   local _system_profile="/run/current-system/sw/bin"
@@ -105,15 +105,15 @@ EOF
     "$_per_user_profile"
     "$_system_profile"
     "$_default_profile"
-    /usr/bin
-    "$TEST_BIN"
-    /bin
     "$TEST_HOME/.local/bin"
     "$TEST_HOME/.cargo/bin"
     "$TEST_HOME/.gem/bin"
-    /Applications/Obsidian.app/Contents/MacOS
     /opt/homebrew/bin
     /Library/TeX/texbin
+    /usr/bin
+    "$TEST_BIN"
+    /bin
+    /Applications/Obsidian.app/Contents/MacOS
   )
   [ "${#lines[@]}" -eq "${#_expected[@]}" ]
   local _index
@@ -138,12 +138,12 @@ EOF
       "$TEST_HOME/.cargo/bin"
       /opt/homebrew/bin
       "$TEST_HOME/.nix-profile/bin"
+      "$TEST_HOME/.gem/bin"
       /usr/bin
       "$TEST_HOME/.local/bin"
       /Library/TeX/texbin
       "$TEST_BIN"
       /bin
-      "$TEST_HOME/.gem/bin"
     )
     if [ "$_mode" = -lic ]; then
       _expected+=(/Applications/Obsidian.app/Contents/MacOS)
@@ -156,6 +156,62 @@ EOF
         return 1
       }
     done
+  done
+}
+
+@test "startup inserts missing fallback tools after inherited devShell entries in all shell modes" {
+  local _inherited="/nix/store/devshell-tools/bin:/workspace/project/bin:$TEST_BIN"
+  local _mode
+  for _mode in -c -ic -lic; do
+    run_startup_path "$_inherited:/usr/bin:/bin" "$_mode"
+
+    [ "$status" -eq 0 ]
+    local _expected=(
+      /nix/store/devshell-tools/bin
+      /workspace/project/bin
+      "$TEST_BIN"
+      "$TEST_HOME/.local/bin"
+      "$TEST_HOME/.cargo/bin"
+      "$TEST_HOME/.gem/bin"
+    )
+    if [ "$_mode" != -c ]; then
+      _expected+=(/opt/homebrew/bin /Library/TeX/texbin)
+    fi
+    _expected+=(/usr/bin /bin)
+    if [ "$_mode" = -lic ]; then
+      _expected+=(/Applications/Obsidian.app/Contents/MacOS)
+    fi
+    [ "$output" = "$(printf '%s\n' "${_expected[@]}")" ] || {
+      printf 'unexpected PATH in %s: %s\n' "$_mode" "$output" >&2
+      return 1
+    }
+  done
+}
+
+@test "startup inserts before the first system entry or appends when none exists" {
+  local _system
+  for _system in /usr/local/bin /usr/bin /bin /usr/sbin /sbin ''; do
+    local _inherited="$TEST_BIN"
+    local _expected=(
+      "$TEST_BIN"
+      "$TEST_HOME/.local/bin"
+      "$TEST_HOME/.cargo/bin"
+      "$TEST_HOME/.gem/bin"
+    )
+    if [ -n "$_system" ]; then
+      _inherited+=":$_system:/custom/bin:/usr/bin"
+      _expected+=("$_system" /custom/bin)
+      if [ "$_system" != /usr/bin ]; then
+        _expected+=(/usr/bin)
+      fi
+    fi
+    run_startup_path "$_inherited" -c
+
+    [ "$status" -eq 0 ]
+    [ "$output" = "$(printf '%s\n' "${_expected[@]}")" ] || {
+      printf 'unexpected PATH for system entry %s: %s\n' "$_system" "$output" >&2
+      return 1
+    }
   done
 }
 

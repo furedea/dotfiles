@@ -11,8 +11,7 @@ if [[ "$OSTYPE" == darwin* && -z "${SSH_AUTH_SOCK:-}" ]]; then
 fi
 
 # Global tools remain fallbacks without changing inherited tool precedence.
-(( ${path[(Ie)/opt/homebrew/bin]} )) || path+=(/opt/homebrew/bin)
-(( ${path[(Ie)/Library/TeX/texbin]} )) || path+=(/Library/TeX/texbin)
+_insert_fallback_paths /opt/homebrew/bin /Library/TeX/texbin
 
 # Completion
 ZSH_COMPDUMP="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/.zcompdump"
