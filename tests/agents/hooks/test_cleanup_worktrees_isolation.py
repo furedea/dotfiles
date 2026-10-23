@@ -9,6 +9,7 @@ import pytest
 import pytest_mock
 
 from tests.agents.hooks.cleanup_worktrees_runtime import branches, cleanup, git, task_worktree
+from tests.runtime import real_git
 
 import cleanup_worktrees
 
@@ -37,8 +38,7 @@ def test_lane_status_never_runs_a_filter_from_raced_admin_configuration(
     readme.write_text("base\n")
     index_time = (admin / "index").stat().st_mtime_ns
     os.utime(readme, ns=(index_time, index_time))
-    executable = shutil.which("git")
-    assert executable
+    executable = real_git()
     rewrite = ""
     if planted in {"commondir", "both"}:
         rewrite += f"printf '%s' {shlex.quote(str(fake))} > {shlex.quote(str(admin / 'commondir'))}\n"
@@ -241,12 +241,10 @@ def test_lane_fsmonitor_is_never_executed_and_git_and_gh_run_from_the_primary(
     git("config", *(["--worktree"] if config == "worktree" else []), "core.fsmonitor", str(monitor), cwd=path)
     discovery = tmp_path / "lane-discovery"
     for name in ("git", "gh"):
-        executable = shutil.which(name)
-        assert executable
+        executable = real_git() if name == "git" else str(tmp_path / "original-gh")
         wrapper = tmp_path / "bin" / name
         if name == "gh":
             wrapper.rename(tmp_path / "original-gh")
-            executable = str(tmp_path / "original-gh")
         wrapper.write_text(
             f'#!/bin/sh\ncase "$PWD" in {shlex.quote(str(path))}*|{shlex.quote(str(current))}*) '
             f'touch {shlex.quote(str(discovery))}; exit 99;; esac\nexec {shlex.quote(executable)} "$@"\n'
@@ -298,8 +296,7 @@ def test_a_planted_git_entry_inside_a_lane_is_neither_current_nor_primary(
         git("init", "--quiet", cwd=nested)
     monkeypatch.setenv("HOME", str(home))
     marker = tmp_path / "nested-git-ran"
-    executable = shutil.which("git")
-    assert executable
+    executable = real_git()
     wrapper = tmp_path / "bin/git"
     wrapper.write_text(
         f'#!/bin/sh\nif [ "$PWD" = {shlex.quote(str(nested))} ]; then '

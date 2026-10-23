@@ -13,6 +13,15 @@ CliRunner = Callable[..., subprocess.CompletedProcess[str]]
 StubWriter = Callable[[str, str], Path]
 
 
+def real_git() -> str:
+    """Resolve Git before installing a PATH wrapper that delegates to it."""
+    result = subprocess.run(["git", "--exec-path"], check=True, capture_output=True, text=True, timeout=10)
+    # /usr/bin/git on macOS redispatches through PATH; git-core/git is the actual binary.
+    executable = (Path(result.stdout.strip()) / "git").resolve()
+    assert executable.is_file()
+    return str(executable)
+
+
 def load_script_module(relative_path: str, module_name: str) -> ModuleType:
     """Load a trusted repository module for direct behavior tests."""
     spec = util.spec_from_file_location(module_name, REPO_ROOT / relative_path)
