@@ -4,7 +4,6 @@ import json
 import os
 from pathlib import Path
 import shlex
-import shutil
 import tempfile
 from collections.abc import Iterator
 
@@ -17,6 +16,7 @@ from tests.agents.hooks.cleanup_worktrees_runtime import (
     git,
     task_worktree,
 )
+from tests.runtime import real_git
 
 import cleanup_worktrees
 
@@ -55,13 +55,11 @@ def herdr_lane(primary: Path) -> Path:
 def record_commands(tmp_path: Path, forbidden: Path) -> Path:
     marker = tmp_path / "untrusted-command"
     for name in ("git", "gh"):
-        executable = shutil.which(name)
-        assert executable
+        executable = real_git() if name == "git" else str(tmp_path / "original-gh")
         wrapper = tmp_path / "bin" / name
         if name == "gh":
             original = tmp_path / "original-gh"
             wrapper.rename(original)
-            executable = str(original)
         wrapper.write_text(
             f'#!/bin/sh\nprintf "%s %s %s\\n" "$PWD" {name} "$*" >> {shlex.quote(str(tmp_path / "commands"))}\n'
             f'case "$PWD $*" in *{shlex.quote(str(forbidden))}*) '
@@ -210,8 +208,7 @@ def test_git_removal_is_isolated_and_herdr_only_closes_the_workspace(
     lane = task_worktree(primary, "feat/done")
     worktree = next(tree for tree in cleanup_worktrees.linked_worktrees(primary) if tree.path == lane)
     # The process wrapper rejects any invocation missing the required isolation.
-    executable = shutil.which("git")
-    assert executable
+    executable = real_git()
     wrapper = tmp_path / "bin/git"
     wrapper.write_text(
         '#!/bin/sh\ncase " $* " in *" worktree remove "*)\n'

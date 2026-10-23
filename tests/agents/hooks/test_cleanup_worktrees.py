@@ -3,13 +3,13 @@
 import json
 from pathlib import Path
 import shlex
-import shutil
 import subprocess
 import sys
 
 import pytest
 
 from tests.agents.hooks.cleanup_worktrees_runtime import SCRIPT, branches, cleanup, git, task_worktree
+from tests.runtime import real_git
 
 import herdr_ownership
 import session_store
@@ -26,8 +26,7 @@ def test_a_merged_clean_worktree_and_its_branch_are_removed(primary: Path, merge
 def test_removal_does_not_repeat_gits_cleanliness_check(primary: Path, merged: dict[str, str], tmp_path: Path) -> None:
     path = task_worktree(primary, "feat/done")
     merged["feat/done"] = git("rev-parse", "HEAD", cwd=path)
-    executable = shutil.which("git")
-    assert executable
+    executable = real_git()
     wrapper = tmp_path / "bin/git"
     wrapper.write_text(
         '#!/bin/sh\ncase " $* " in *" worktree remove "*)\n'
