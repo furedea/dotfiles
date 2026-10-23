@@ -75,11 +75,8 @@ function command_not_found_handler() {
 
 DOTFILES="$HOME/ghq/github.com/furedea/dotfiles"
 
-export PATH="/usr/bin:$PATH"
-export PATH="/opt/homebrew/bin:$PATH"
 export XDG_CONFIG_HOME="$HOME/.config"
-export PATH="/Library/TeX/texbin:$PATH"
-export PATH="$HOME/.local/bin:$PATH"
+path+=(/opt/homebrew/bin /Library/TeX/texbin "$HOME/.local/bin")
 
 # Plugins
 source "$XDG_CONFIG_HOME/zsh/nix-plugins.zsh"

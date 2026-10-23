@@ -91,6 +91,54 @@ EOF
   ! [[ "$stderr" == *"brew shellenv"* ]]
 }
 
+@test "startup preserves Nix command precedence without duplicate PATH entries" {
+  local _user_profile="$TEST_HOME/.nix-profile/bin"
+  local _per_user_profile="$BATS_TEST_TMPDIR/profiles/per-user/bin"
+  local _system_profile="$BATS_TEST_TMPDIR/current-system/sw/bin"
+  mkdir -p "$_user_profile" "$_per_user_profile" "$_system_profile" "$TEST_HOME/.local/bin"
+  touch "$_user_profile/git" "$TEST_HOME/.local/bin/git"
+  chmod +x "$_user_profile/git" "$TEST_HOME/.local/bin/git"
+
+  local _mode
+  for _mode in -dfc -dfic -dflic; do
+    # Source repository files explicitly to isolate host startup configuration.
+    run --separate-stderr env -i \
+      HOME="$TEST_HOME" \
+      XDG_CACHE_HOME="$TEST_HOME/.cache" \
+      FPATH="$BATS_TEST_TMPDIR/functions" \
+      COMPINIT_LOG="$COMPINIT_LOG" \
+      ABBR_LOG="$ABBR_LOG" \
+      REPO_ROOT="$REPO_ROOT" \
+      PATH="$_user_profile:$_per_user_profile:$_system_profile:$TEST_BIN:/usr/bin:/bin:/opt/homebrew/bin:/usr/bin:$_user_profile" \
+      "$(command -v zsh)" "$_mode" '
+        source "$REPO_ROOT/zsh/.zshenv"
+        if [[ -o login ]]; then
+          source "$REPO_ROOT/zsh/.zprofile"
+        fi
+        if [[ -o interactive ]]; then
+          source "$REPO_ROOT/zsh/.zshrc"
+        fi
+        print -r -- "$(command -v git)"
+        print -rl -- "${path[@]}"
+      '
+
+    [ "$status" -eq 0 ]
+    [ "${lines[0]}" = "$_user_profile/git" ]
+    [ "${lines[1]}" = "$_user_profile" ]
+    [ "${lines[2]}" = "$_per_user_profile" ]
+    [ "${lines[3]}" = "$_system_profile" ]
+    [ "$(printf '%s\n' "${lines[@]:1}" | sort | uniq -d)" = "" ] || {
+      printf 'duplicate PATH entries in %s: %s\n' "$_mode" "$output" >&2
+      return 1
+    }
+    [[ "$output" == *"/usr/bin"* ]]
+    [[ "$output" == *"/opt/homebrew/bin"* ]]
+    if [[ "$_mode" == *i* ]]; then
+      [[ "$output" == *"/Library/TeX/texbin"* ]]
+    fi
+  done
+}
+
 @test "Home Manager activation invokes the packaged Zsh cache builder" {
   run --separate-stderr nix build --no-link --print-out-paths \
     "$TEST_FLAKE#homeConfigurations.\"kaito@mbp\".activationPackage"
