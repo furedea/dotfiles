@@ -91,59 +91,96 @@ EOF
   ! [[ "$stderr" == *"brew shellenv"* ]]
 }
 
-@test "startup repairs inherited PATH order without duplicate entries" {
+@test "clean login startup keeps Nix profiles ahead of system and Homebrew tools without duplicates" {
   local _user_profile="$TEST_HOME/.nix-profile/bin"
   local _per_user_profile="/etc/profiles/per-user/startup-test/bin"
   local _system_profile="/run/current-system/sw/bin"
   local _default_profile="/nix/var/nix/profiles/default/bin"
-  mkdir -p "$_user_profile" "$TEST_HOME/.local/bin"
-  touch "$_user_profile/git" "$TEST_HOME/.local/bin/git"
-  chmod +x "$_user_profile/git" "$TEST_HOME/.local/bin/git"
 
-  local _mode
-  for _mode in -dfc -dfic -dflic; do
-    # Source repository files explicitly to isolate host startup configuration.
-    run --separate-stderr env -i \
-      HOME="$TEST_HOME" \
-      USER=startup-test \
-      XDG_CACHE_HOME="$TEST_HOME/.cache" \
-      FPATH="$BATS_TEST_TMPDIR/functions" \
-      COMPINIT_LOG="$COMPINIT_LOG" \
-      ABBR_LOG="$ABBR_LOG" \
-      REPO_ROOT="$REPO_ROOT" \
-      PATH="$TEST_HOME/.local/bin:/Library/TeX/texbin:/opt/homebrew/bin:/usr/bin:$_user_profile:$_per_user_profile:$_system_profile:$_default_profile:$TEST_BIN:/bin:/usr/bin:$_user_profile:$TEST_HOME/.cargo/bin:$TEST_HOME/.gem/bin:/opt/homebrew/bin:/Library/TeX/texbin" \
-      "$(command -v zsh)" "$_mode" '
-        source "$REPO_ROOT/zsh/.zshenv"
-        source "$REPO_ROOT/zsh/.zshenv"
-        if [[ -o login ]]; then
-          source "$REPO_ROOT/zsh/.zprofile"
-        fi
-        if [[ -o interactive ]]; then
-          source "$REPO_ROOT/zsh/.zshrc"
-        fi
-        print -r -- "$(command -v git)"
-        print -rl -- "${path[@]}"
-      '
+  run_startup_path "$_user_profile:$_per_user_profile:$_system_profile:$_default_profile:/usr/bin:$TEST_BIN:/bin" -lic
 
-    [ "$status" -eq 0 ]
-    [ "${lines[0]}" = "$_user_profile/git" ]
-    [ "${lines[1]}" = "$_user_profile" ]
-    [ "${lines[2]}" = "$_per_user_profile" ]
-    [ "${lines[3]}" = "$_system_profile" ]
-    [ "${lines[4]}" = "$_default_profile" ]
-    [ "${lines[5]}" = "$TEST_HOME/.local/bin" ]
-    [ "${lines[6]}" = "$TEST_HOME/.cargo/bin" ]
-    [ "${lines[7]}" = "$TEST_HOME/.gem/bin" ]
-    [ "${lines[8]}" = "/usr/bin" ]
-    [ "${lines[9]}" = "$TEST_BIN" ]
-    [ "${lines[10]}" = "/bin" ]
-    [ "${lines[11]}" = "/opt/homebrew/bin" ]
-    [ "${lines[12]}" = "/Library/TeX/texbin" ]
-    [ "$(printf '%s\n' "${lines[@]:1}" | sort | uniq -d)" = "" ] || {
-      printf 'duplicate PATH entries in %s: %s\n' "$_mode" "$output" >&2
+  [ "$status" -eq 0 ]
+  local _expected=(
+    "$_user_profile"
+    "$_per_user_profile"
+    "$_system_profile"
+    "$_default_profile"
+    /usr/bin
+    "$TEST_BIN"
+    /bin
+    "$TEST_HOME/.local/bin"
+    "$TEST_HOME/.cargo/bin"
+    "$TEST_HOME/.gem/bin"
+    /Applications/Obsidian.app/Contents/MacOS
+    /opt/homebrew/bin
+    /Library/TeX/texbin
+  )
+  [ "${#lines[@]}" -eq "${#_expected[@]}" ]
+  local _index
+  for _index in "${!_expected[@]}"; do
+    [ "${lines[_index]}" = "${_expected[_index]}" ] || {
+      printf 'unexpected PATH entry at %s: %s\n' "$_index" "$output" >&2
       return 1
     }
   done
+}
+
+@test "startup preserves inherited devShell PATH order in all shell modes" {
+  local _inherited="/nix/store/devshell-tools/bin:/workspace/project/bin:$TEST_HOME/.cargo/bin:/opt/homebrew/bin:$TEST_HOME/.nix-profile/bin:/usr/bin:$TEST_HOME/.local/bin:/Library/TeX/texbin:$TEST_BIN:/bin"
+  local _mode
+  for _mode in -c -ic -lic; do
+    run_startup_path "$_inherited:$_inherited" "$_mode"
+
+    [ "$status" -eq 0 ]
+    local _expected=(
+      /nix/store/devshell-tools/bin
+      /workspace/project/bin
+      "$TEST_HOME/.cargo/bin"
+      /opt/homebrew/bin
+      "$TEST_HOME/.nix-profile/bin"
+      /usr/bin
+      "$TEST_HOME/.local/bin"
+      /Library/TeX/texbin
+      "$TEST_BIN"
+      /bin
+      "$TEST_HOME/.gem/bin"
+    )
+    if [ "$_mode" = -lic ]; then
+      _expected+=(/Applications/Obsidian.app/Contents/MacOS)
+    fi
+    [ "${#lines[@]}" -eq "${#_expected[@]}" ]
+    local _index
+    for _index in "${!_expected[@]}"; do
+      [ "${lines[_index]}" = "${_expected[_index]}" ] || {
+        printf 'unexpected PATH entry in %s at %s: %s\n' "$_mode" "$_index" "$output" >&2
+        return 1
+      }
+    done
+  done
+}
+
+run_startup_path() {
+  # Source repository files explicitly to isolate host startup configuration.
+  run --separate-stderr env -i \
+    HOME="$TEST_HOME" \
+    USER=startup-test \
+    XDG_CACHE_HOME="$TEST_HOME/.cache" \
+    FPATH="$BATS_TEST_TMPDIR/functions" \
+    COMPINIT_LOG="$COMPINIT_LOG" \
+    ABBR_LOG="$ABBR_LOG" \
+    REPO_ROOT="$REPO_ROOT" \
+    PATH="$1" \
+    "$(command -v zsh)" -df "$2" '
+      source "$REPO_ROOT/zsh/.zshenv"
+      source "$REPO_ROOT/zsh/.zshenv"
+      if [[ -o login ]]; then
+        source "$REPO_ROOT/zsh/.zprofile"
+      fi
+      if [[ -o interactive ]]; then
+        source "$REPO_ROOT/zsh/.zshrc"
+      fi
+      print -rl -- "${path[@]}"
+    '
 }
 
 @test "Home Manager activation invokes the packaged Zsh cache builder" {
