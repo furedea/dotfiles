@@ -82,6 +82,11 @@ def policies(kind: str, directory: Path) -> Policy:
         if kind == "forbidden":
             raise ValueError(f"forbidden command regex rules were not found or are invalid: {path}") from error
         raise ValueError(f"invalid global {kind} command rules: {path}") from error
+    for rule in rules:
+        patterns = rule["patterns"]
+        rule["patterns"] = patterns + [
+            "^" + re.escape(str(Path.home())) + pattern[2:] for pattern in patterns if pattern.startswith("^~/")
+        ]
     if project := command_policy.project_file(name):
         try:
             rules += command_policy.load_rules(project)
@@ -196,6 +201,8 @@ def command_verdict(kind: str, payload: dict, policy: Policy) -> Verdict:
         return hook_decision.ask(f"Needs review: {error}.\n\nCommand: {preview}", error.kind)
     if kind == "forbidden" and (verdict := companion_objection(command, commands)).decision != "allow":
         return verdict
+    if kind == "allowed" and (verdict := cleanup_objection(command, commands)).decision != "allow":
+        return verdict
     if not allows_literal_rules(command, commands):
         policy = replace(policy, literal_words=False)
     verdicts = (objection(kind, item, policy) for item in commands)
@@ -203,6 +210,29 @@ def command_verdict(kind: str, payload: dict, policy: Policy) -> Verdict:
     if kind == "allowed" and verdict.decision == "allow":
         return settings_objection(command, commands)
     return verdict
+
+
+def cleanup_objection(command: str, commands: tuple[shell_syntax.Command, ...]) -> Verdict:
+    """Match the entire cleanup call before segment parsing can hide a wrapper or shell operator."""
+    cleanup = any(
+        Path(item.arguments[0]).name == "cleanup_worktrees.py"
+        or (
+            (
+                Path(item.arguments[0]).name.startswith("python")
+                or Path(item.arguments[0]).name in {"uv", "bash", "sh", "zsh"}
+            )
+            and any(Path(argument).name == "cleanup_worktrees.py" for argument in item.arguments[1:])
+        )
+        for item in commands
+    )
+    if not cleanup:
+        return hook_decision.ALLOW
+    pattern = re.escape(str(Path.home() / ".claude/hooks/cleanup_worktrees.py")) + r"( --dry-run)?"
+    if re.fullmatch(pattern, command):
+        return hook_decision.ALLOW
+    return hook_decision.ask(
+        "Needs review: run cleanup_worktrees.py as one bare call or with --dry-run only.", "cleanup_worktrees.py"
+    )
 
 
 def companion_objection(command: str, commands: tuple[shell_syntax.Command, ...]) -> Verdict:

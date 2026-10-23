@@ -27,7 +27,7 @@ The repository currently assumes:
 
 - `aarch64-darwin`
 - macOS user `kaito`
-- checkout path `/Users/kaito/ghq/github.com/furedea/dotfiles`
+- checkout path `~/ghq/github.com/furedea/dotfiles`
 
 The username and checkout path are defined together in [`flake.nix`](flake.nix).
 Change them there before applying the configuration for another user or path.
@@ -287,7 +287,7 @@ flowchart LR
 | 7. Report             | Lane → Parent | the lane ends with `LANE-READY`; the parent waits with `herdr agent wait` and reads it | `herdr-delegation`                                             |
 | 8. Check and report   | Parent        | —                                                                                      | —                                                              |
 | 9. Merge              | User          | — (run `switch` after merging dotfiles changes)                                        | —                                                              |
-| 10. Clean up          | Parent        | —                                                                                      | `git-workflow` (branches), `issue-workflow`, `source-of-truth` |
+| 10. Clean up          | Parent        | after the user merges: run `cleanup_worktrees.py` by its absolute path with the home directory expanded, as shown in the rendered `excludedCommands` entry; never remove lane worktrees by hand with `herdr worktree remove` | `git-workflow` (branches), `issue-workflow`, `source-of-truth` |
 
 | Who                   | Does                                                                            | Never does                                              |
 | --------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------- |

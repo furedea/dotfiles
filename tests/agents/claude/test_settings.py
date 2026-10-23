@@ -30,9 +30,17 @@ def test_verification_and_agent_tools_work_without_escaping_the_sandbox() -> Non
     assert {"gh *", "herdr *"} <= set(sandbox["excludedCommands"])
 
 
-def test_excluded_commands_match_invocations_with_arguments() -> None:
+def test_cleanup_sandbox_exclusions_are_exact_tilde_calls() -> None:
     sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
-    assert [command for command in sandbox["excludedCommands"] if not command.endswith(" *")] == []
+    cleanup = "~/.claude/hooks/cleanup_worktrees.py"
+    assert [command for command in sandbox["excludedCommands"] if "cleanup_worktrees" in command] == [
+        cleanup,
+        f"{cleanup} --dry-run",
+    ]
+    assert [command for command in sandbox["excludedCommands"] if not command.endswith(" *")] == [
+        cleanup,
+        f"{cleanup} --dry-run",
+    ]
 
 
 def test_sandbox_paths_use_the_home_prefix_the_sandbox_expands() -> None:
@@ -107,7 +115,7 @@ def test_dev_servers_and_end_to_end_tests_can_listen_on_local_ports() -> None:
 
 def test_codex_plugin_companion_reaches_codex_outside_the_sandbox() -> None:
     sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
-    companion = '"/Users/kaito/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs"'
+    companion = '"~/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs"'
     assert f"node {companion} *" in sandbox["excludedCommands"]
 
 

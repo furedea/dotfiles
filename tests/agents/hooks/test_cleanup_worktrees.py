@@ -1,100 +1,44 @@
 """Merged task worktrees and branches are removed only when nothing unmerged would be lost."""
 
 import json
-import os
 from pathlib import Path
+import shlex
+import shutil
 import subprocess
 import sys
 
 import pytest
 
-from tests.runtime import REPO_ROOT
+from tests.agents.hooks.cleanup_worktrees_runtime import SCRIPT, branches, cleanup, git, task_worktree
 
-
-SCRIPT = REPO_ROOT / "agents/hooks/cleanup_worktrees.py"
-
-
-def git(*arguments: str, cwd: Path) -> str:
-    return subprocess.run(["git", *arguments], cwd=cwd, check=True, capture_output=True, text=True).stdout.strip()
-
-
-@pytest.fixture
-def primary(tmp_path: Path) -> Path:
-    root = tmp_path / "repo"
-    root.mkdir()
-    git("init", "--quiet", "--initial-branch=main", cwd=root)
-    git("config", "user.email", "test@example.com", cwd=root)
-    git("config", "user.name", "Test", cwd=root)
-    git("config", "commit.gpgsign", "false", cwd=root)
-    (root / "README.md").write_text("base\n")
-    git("add", "README.md", cwd=root)
-    git("commit", "--quiet", "-m", "base", cwd=root)
-    return root
-
-
-@pytest.fixture
-def merged(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
-    """Fake gh and Herdr: merged PR heads come from this dict; Herdr records removals."""
-    directory = tmp_path / "bin"
-    directory.mkdir()
-    state = tmp_path / "merged.json"
-    removed = tmp_path / "herdr_removed.txt"
-    (directory / "gh").write_text(f"#!/bin/sh\ncat {state}\n")
-    listing = tmp_path / "herdr_worktrees.json"
-    listing.write_text('{"result":{"worktrees":[]}}')
-    (tmp_path / "herdr_workspaces.json").write_text('{"result":{"workspaces":[]}}')
-    (tmp_path / "herdr_agents.json").write_text('{"result":{"agents":[]}}')
-    (directory / "herdr").write_text(
-        "#!/bin/sh\n"
-        f'if [ "$1 $2" = "workspace list" ]; then cat {tmp_path / "herdr_workspaces.json"}; exit 0; fi\n'
-        f'if [ "$1 $2" = "agent list" ]; then cat {tmp_path / "herdr_agents.json"}; exit 0; fi\n'
-        f'if [ "$1 $2" = "workspace close" ]; then echo "$@" >> {removed}; exit 0; fi\n'
-        f'if [ "$2" = list ]; then cat {listing}; exit 0; fi\n'
-        f'echo "$@" >> {removed}\n'
-        f'git worktree remove "$(cat {tmp_path / "herdr_path.txt"})"\n'
-    )
-    for name in ("gh", "herdr"):
-        (directory / name).chmod(0o755)
-    monkeypatch.setenv("PATH", f"{directory}{os.pathsep}{os.environ['PATH']}")
-
-    class Heads(dict):
-        def __setitem__(self, branch: str, oid: str) -> None:
-            super().__setitem__(branch, oid)
-            state.write_text(json.dumps([{"headRefName": b, "headRefOid": o} for b, o in self.items()]))
-
-    heads = Heads()
-    state.write_text("[]")
-    return heads
-
-
-def task_worktree(primary: Path, branch: str) -> Path:
-    path = primary.parent / branch.replace("/", "-")
-    git("worktree", "add", "--quiet", "-b", branch, str(path), cwd=primary)
-    (path / f"{branch.replace('/', '-')}.txt").write_text("work\n")
-    git("add", ".", cwd=path)
-    git("commit", "--quiet", "-m", branch, cwd=path)
-    return path
-
-
-def cleanup(cwd: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        [sys.executable, "-I", "-B", str(SCRIPT), *arguments],
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=30,
-    )
-
-
-def branches(primary: Path) -> set[str]:
-    return set(git("for-each-ref", "--format=%(refname:short)", "refs/heads", cwd=primary).splitlines())
+import herdr_ownership
+import session_store
 
 
 def test_a_merged_clean_worktree_and_its_branch_are_removed(primary: Path, merged: dict[str, str]) -> None:
     path = task_worktree(primary, "feat/done")
     merged["feat/done"] = git("rev-parse", "HEAD", cwd=path)
     assert cleanup(primary).returncode == 0
+    assert not path.exists()
+    assert branches(primary) == {"main"}
+
+
+def test_removal_does_not_repeat_gits_cleanliness_check(primary: Path, merged: dict[str, str], tmp_path: Path) -> None:
+    path = task_worktree(primary, "feat/done")
+    merged["feat/done"] = git("rev-parse", "HEAD", cwd=path)
+    executable = shutil.which("git")
+    assert executable
+    wrapper = tmp_path / "bin/git"
+    wrapper.write_text(
+        '#!/bin/sh\ncase " $* " in *" worktree remove "*)\n'
+        'case " $* " in *" --force "*) ;; *) exit 99;; esac;; esac\n'
+        f'exec {shlex.quote(executable)} "$@"\n'
+    )
+    wrapper.chmod(0o755)
+
+    result = cleanup(primary)
+
+    assert result.returncode == 0
     assert not path.exists()
     assert branches(primary) == {"main"}
 
@@ -124,16 +68,6 @@ def test_work_a_merge_does_not_cover_is_kept(primary: Path, merged: dict[str, st
     cleanup(primary)
     assert path.exists()
     assert "feat/busy" in branches(primary)
-
-
-def test_the_primary_and_current_checkouts_are_never_removed(primary: Path, merged: dict[str, str]) -> None:
-    path = task_worktree(primary, "feat/here")
-    merged["feat/here"] = git("rev-parse", "HEAD", cwd=path)
-    merged["main"] = git("rev-parse", "HEAD", cwd=primary)
-    cleanup(path)
-    assert path.exists()
-    assert primary.exists()
-    assert {"main", "feat/here"} <= branches(primary)
 
 
 def test_dry_run_reports_without_removing(primary: Path, merged: dict[str, str]) -> None:
@@ -166,7 +100,7 @@ def test_an_open_herdr_workspace_is_closed_with_its_worktree(
         json.dumps({"result": {"worktrees": [{"path": str(path), "open_workspace_id": "w9"}]}})
     )
     cleanup(primary)
-    assert (tmp_path / "herdr_removed.txt").read_text().split() == ["worktree", "remove", "--workspace", "w9"]
+    assert (tmp_path / "herdr_removed.txt").read_text().split() == ["workspace", "close", "w9"]
     assert not path.exists()
     assert branches(primary) == {"main"}
 
@@ -244,23 +178,160 @@ def test_main_stays_when_pulling_could_disturb_work_or_nothing_merged(
     assert git("rev-parse", "main", cwd=primary) == before
 
 
-def test_a_recorded_primary_is_never_closed_by_the_sweep(
-    primary: Path, merged: dict[str, str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Records belong to their own session, so the session-start sweep neither reads nor acts on them."""
-    path = task_worktree(primary, "feat/lane")
-    merged["feat/lane"] = git("rev-parse", "HEAD", cwd=path)
-    (tmp_path / "herdr_path.txt").write_text(str(path))
-    (tmp_path / "herdr_worktrees.json").write_text(
-        json.dumps({"result": {"worktrees": [{"path": str(path), "open_workspace_id": "w9"}]}})
+@pytest.fixture
+def recorded_primary(primary: Path, merged: dict[str, str], tmp_path: Path) -> None:
+    record = session_store.register(primary, "codex", "parent-session")
+    response = {
+        "result": {
+            "type": "workspace_created",
+            "workspace": {"workspace_id": "w3", "label": "repo"},
+            "root_pane": {"cwd": str(primary), "terminal_id": "term_primary"},
+        }
+    }
+    herdr_ownership.confirm(
+        record, f"herdr workspace create --cwd {primary} --label repo --no-focus", json.dumps(response)
     )
-    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
-    directory = tmp_path / "state/agent-harness/verification/worktree/codex-session"
-    directory.mkdir(parents=True)
-    record = {"primaries": {"w3": {"path": str(primary), "label": "repo", "server": "s"}}}
-    (directory / "herdr_agents.json").write_text(json.dumps(record))
     row = {"workspace_id": "w3", "label": "repo", "worktree": {"checkout_path": str(primary)}}
     (tmp_path / "herdr_workspaces.json").write_text(json.dumps({"result": {"workspaces": [row]}}))
-    cleanup(primary)
-    cleanup(primary)
-    assert (tmp_path / "herdr_removed.txt").read_text().split() == ["worktree", "remove", "--workspace", "w9"]
+
+
+@pytest.mark.usefixtures("recorded_primary")
+@pytest.mark.parametrize("dry_run", [False, True])
+def test_an_idle_primary_stays_open_when_no_merged_worktrees_are_removed(
+    primary: Path, tmp_path: Path, dry_run: bool
+) -> None:
+    result = cleanup(primary, *(["--dry-run"] if dry_run else []))
+    assert result.returncode == 0
+    assert "close primary workspace" not in result.stdout
+    assert not (tmp_path / "herdr_removed.txt").exists()
+
+
+@pytest.mark.usefixtures("recorded_primary")
+def test_a_failed_primary_close_preserves_completed_removal_reports(
+    primary: Path, merged: dict[str, str], tmp_path: Path
+) -> None:
+    path = task_worktree(primary, "feat/lane")
+    merged["feat/lane"] = git("rev-parse", "HEAD", cwd=path)
+    herdr = tmp_path / "bin/herdr"
+    herdr.write_text(herdr.read_text().replace('echo "$@" >>', 'exit 1; echo "$@" >>', 1))
+    result = cleanup(primary)
+    assert result.returncode == 0
+    assert not path.exists()
+    assert branches(primary) == {"main"}
+    assert f"remove worktree {path} and branch feat/lane" in result.stdout
+    assert "failed to close primary workspace w3" in result.stdout
+    assert not any(line.startswith("close primary workspace") for line in result.stdout.splitlines())
+
+
+@pytest.mark.usefixtures("recorded_primary")
+@pytest.mark.parametrize("dry_run", [False, True])
+def test_an_agent_created_primary_closes_after_its_last_lane_is_removed(
+    primary: Path, merged: dict[str, str], tmp_path: Path, dry_run: bool
+) -> None:
+    path = task_worktree(primary, "feat/lane")
+    merged["feat/lane"] = git("rev-parse", "HEAD", cwd=path)
+    result = cleanup(primary, *(["--dry-run"] if dry_run else []))
+    assert result.returncode == 0
+    assert "close primary workspace w3" in result.stdout
+    if dry_run:
+        assert path.exists()
+        assert not (tmp_path / "herdr_removed.txt").exists()
+    else:
+        assert not path.exists()
+        assert (tmp_path / "herdr_removed.txt").read_text().splitlines() == ["workspace close w3"]
+
+
+@pytest.mark.usefixtures("recorded_primary")
+@pytest.mark.parametrize("remaining", ["unmerged", "dirty", "current", "detached"])
+def test_a_primary_stays_open_while_any_linked_checkout_remains(
+    primary: Path, merged: dict[str, str], tmp_path: Path, remaining: str
+) -> None:
+    path = task_worktree(primary, "feat/remaining")
+    if remaining != "unmerged":
+        merged["feat/remaining"] = git("rev-parse", "HEAD", cwd=path)
+    if remaining == "dirty":
+        (path / "untracked.txt").write_text("work")
+    if remaining == "detached":
+        git("checkout", "--detach", cwd=path)
+    for arguments in [[], ["--dry-run"]]:
+        assert cleanup(path if remaining == "current" else primary, *arguments).returncode == 0
+        assert path.exists()
+        assert not (tmp_path / "herdr_removed.txt").exists()
+
+
+@pytest.mark.usefixtures("recorded_primary")
+@pytest.mark.parametrize("location", ["workspace", "terminal", "pane"])
+def test_a_primary_with_an_agent_in_any_pane_stays_open(
+    primary: Path, merged: dict[str, str], tmp_path: Path, location: str
+) -> None:
+    path = task_worktree(primary, "feat/lane")
+    merged["feat/lane"] = git("rev-parse", "HEAD", cwd=path)
+    agent = {
+        "name": "busy",
+        "workspace_id": "w3" if location == "workspace" else "",
+        "terminal_id": "term_second" if location == "terminal" else "other",
+        "pane_id": "p2" if location == "pane" else "other",
+    }
+    panes = [{"pane_id": "p1", "terminal_id": "term_primary"}, {"pane_id": "p2", "terminal_id": "term_second"}]
+    (tmp_path / "herdr_panes.json").write_text(json.dumps({"result": {"panes": panes}}))
+    (tmp_path / "herdr_agents.json").write_text(json.dumps({"result": {"agents": [agent]}}))
+    assert cleanup(primary).returncode == 0
+    assert not (tmp_path / "herdr_removed.txt").exists()
+
+
+@pytest.mark.usefixtures("recorded_primary")
+@pytest.mark.parametrize("mismatch", ["unrecorded", "label", "path", "terminal", "invalid record"])
+def test_user_owned_or_replaced_primary_workspaces_stay_open(
+    primary: Path, merged: dict[str, str], tmp_path: Path, mismatch: str
+) -> None:
+    path = task_worktree(primary, "feat/lane")
+    merged["feat/lane"] = git("rev-parse", "HEAD", cwd=path)
+    listing = tmp_path / "herdr_workspaces.json"
+    value = json.loads(listing.read_text())
+    row = value["result"]["workspaces"][0]
+    if mismatch == "label":
+        row["label"] = "user workspace"
+    if mismatch == "path":
+        row["worktree"]["checkout_path"] = str(tmp_path)
+    if mismatch == "terminal":
+        (tmp_path / "herdr_panes.json").write_text('{"result":{"panes":[]}}')
+    if mismatch in {"unrecorded", "invalid record"}:
+        record = session_store.session_directory(session_store.SessionKey(primary, "codex", "parent-session"))
+        (record / ("herdr_agents.json" if mismatch == "unrecorded" else "baseline.json")).unlink()
+    listing.write_text(json.dumps(value))
+    assert cleanup(primary).returncode == 0
+    assert not (tmp_path / "herdr_removed.txt").exists()
+
+
+@pytest.mark.usefixtures("recorded_primary")
+@pytest.mark.parametrize("listing", ["agents", "workspaces", "panes"])
+@pytest.mark.parametrize("content", ["unavailable", '{"result":{}}', '{"result":{"agents":null}}'])
+def test_a_primary_stays_open_when_live_state_cannot_be_verified(
+    primary: Path, merged: dict[str, str], tmp_path: Path, listing: str, content: str
+) -> None:
+    path = task_worktree(primary, "feat/lane")
+    merged["feat/lane"] = git("rev-parse", "HEAD", cwd=path)
+    (tmp_path / f"herdr_{listing}.json").write_text(content)
+    assert cleanup(primary).returncode == 0
+    assert not (tmp_path / "herdr_removed.txt").exists()
+
+
+@pytest.mark.usefixtures("recorded_primary")
+@pytest.mark.parametrize("listing", ["panes", "agents"])
+@pytest.mark.parametrize("field", ["terminal_id", "pane_id"])
+@pytest.mark.parametrize("value", [["invalid"], {"invalid": "value"}])
+def test_a_primary_stays_open_when_live_state_has_unhashable_values(
+    primary: Path, merged: dict[str, str], tmp_path: Path, listing: str, field: str, value: object
+) -> None:
+    path = task_worktree(primary, "feat/lane")
+    merged["feat/lane"] = git("rev-parse", "HEAD", cwd=path)
+    rows = (
+        [{"pane_id": "p1", "terminal_id": "term_primary"}, {field: value}] if listing == "panes" else [{field: value}]
+    )
+    (tmp_path / f"herdr_{listing}.json").write_text(json.dumps({"result": {listing: rows}}))
+    result = cleanup(primary)
+    assert result.returncode == 0
+    assert not path.exists()
+    assert f"remove worktree {path}" in result.stdout
+    assert "close primary workspace" not in result.stdout
+    assert not (tmp_path / "herdr_removed.txt").exists()
