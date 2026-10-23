@@ -94,7 +94,7 @@
       "docker *",
       "gh *",
       "herdr *",
-      "node \"~/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs\" *",
+      "node \"~/.claude/plugins/cache/openai-codex/codex/*/scripts/codex-companion.mjs\" *",
       "watchman *"
     ]
   },

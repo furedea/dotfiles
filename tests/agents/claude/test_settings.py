@@ -115,13 +115,15 @@ def test_dev_servers_and_end_to_end_tests_can_listen_on_local_ports() -> None:
 
 def test_codex_plugin_companion_reaches_codex_outside_the_sandbox() -> None:
     sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
-    companion = '"~/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs"'
+    companion = '"~/.claude/plugins/cache/openai-codex/codex/*/scripts/codex-companion.mjs"'
     assert f"node {companion} *" in sandbox["excludedCommands"]
 
 
-def test_excluded_commands_cannot_be_redirected_to_another_program_path() -> None:
+def test_only_the_guarded_companion_path_has_an_internal_wildcard() -> None:
     sandbox = json.loads((REPO_ROOT / "agents/claude/settings.json").read_text())["sandbox"]
-    assert [command for command in sandbox["excludedCommands"] if "*" in command.removesuffix(" *")] == []
+    assert [command for command in sandbox["excludedCommands"] if "*" in command.removesuffix(" *")] == [
+        'node "~/.claude/plugins/cache/openai-codex/codex/*/scripts/codex-companion.mjs" *'
+    ]
 
 
 def test_sandboxed_commands_cannot_read_the_codex_login() -> None:

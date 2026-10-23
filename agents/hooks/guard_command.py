@@ -237,11 +237,16 @@ def cleanup_objection(command: str, commands: tuple[shell_syntax.Command, ...]) 
 
 def companion_objection(command: str, commands: tuple[shell_syntax.Command, ...]) -> Verdict:
     """Keep companion execution in the single-call form matched by its sandbox exclusion."""
+    cache = "/.claude/plugins/cache/openai-codex/codex/"
+    roots = tuple(root + cache for root in ("~", str(Path.home())))
     companion = any(
         Path(item.arguments[0]).name == "codex-companion.mjs"
         or (
             Path(item.arguments[0]).name == "node"
-            and any(Path(argument).name == "codex-companion.mjs" for argument in item.arguments[1:])
+            and any(
+                Path(argument).name == "codex-companion.mjs" or argument.startswith(roots)
+                for argument in item.arguments[1:]
+            )
         )
         for item in commands
     )
@@ -258,7 +263,14 @@ def companion_objection(command: str, commands: tuple[shell_syntax.Command, ...]
     except shell_syntax.UnsupportedSyntax:
         simple = False
     if simple:
-        return hook_decision.ALLOW
+        arguments = commands[0].arguments
+        script = re.escape(str(Path.home()) + cache) + r"[0-9]+\.[0-9]+\.[0-9]+/scripts/codex-companion\.mjs"
+        if len(arguments) >= 2 and arguments[0] == "node" and re.fullmatch(script, arguments[1]):
+            return hook_decision.ALLOW
+        return hook_decision.deny(
+            "BLOCKED: forbidden command: expected node followed by the exact plugin cache script "
+            "at codex/<digits>.<digits>.<digits>/scripts/codex-companion.mjs."
+        )
     return hook_decision.deny(
         'BLOCKED: forbidden command: run it as one command starting with node "<plugin path>/codex-companion.mjs", '
         "pass --cwd <dir> instead of cd, and no pipes, redirects, &&, or assignments, "

@@ -16,14 +16,14 @@ pytestmark = pytest.mark.usefixtures("isolated_project")
 @pytest.mark.parametrize(
     "command",
     [
-        'cd /tmp/project && node "/plugin path/codex-companion.mjs" --task review',
-        'node "/plugin path/codex-companion.mjs" --task review; echo done',
-        'node "/plugin path/codex-companion.mjs" --task review | tee /tmp/log',
-        'node "/plugin path/codex-companion.mjs" --task review > /tmp/log',
-        'env A=1 node "/plugin path/codex-companion.mjs" --task review',
-        'A=1 node "/plugin path/codex-companion.mjs" --task review',
-        'cd /tmp/project && "/plugin path/codex-companion.mjs" --task review',
-        'echo ready; timeout 30 node "/plugin path/codex-companion.mjs" --task review',
+        'cd /tmp/project && node "~/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" --task review',
+        'node "~/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" --task review; echo done',
+        'node "~/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" --task review | tee /tmp/log',
+        'node "~/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" --task review > /tmp/log',
+        'env A=1 node "~/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" --task review',
+        'A=1 node "~/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" --task review',
+        'cd /tmp/project && "~/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" --task review',
+        'echo ready; timeout 30 node "~/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" --task review',
     ],
 )
 def test_companion_requires_one_simple_command(command: str) -> None:
@@ -38,10 +38,10 @@ def test_companion_requires_one_simple_command(command: str) -> None:
 @pytest.mark.parametrize(
     "command",
     [
-        'node "/plugin path/codex-companion.mjs" --task "review $HOME"',
-        'node "/plugin path/codex-companion.mjs" --task $TASK',
-        'node "/plugin path/codex-companion.mjs" --focus "review `pwd`"',
-        'node "/plugin path/codex-companion.mjs" --task "review $(pwd)"',
+        'node "~/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" --task "review $HOME"',
+        'node "~/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" --task $TASK',
+        'node "~/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" --focus "review `pwd`"',
+        'node "~/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" --task "review $(pwd)"',
     ],
 )
 def test_companion_rejects_expansions_outside_single_quotes(command: str) -> None:
@@ -58,7 +58,7 @@ def test_companion_is_denied_when_its_simple_command_shape_cannot_be_parsed(mock
         autospec=True,
         side_effect=guard.shell_syntax.UnsupportedSyntax("parser unavailable"),
     )
-    command = 'node "/plugin path/codex-companion.mjs" --cwd /tmp/project --task "確認"'
+    command = 'node "~/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" --cwd /tmp/project --task "確認"'
     assert guard.decide("forbidden", {"tool_input": {"command": command}}).decision == "deny"
 
 
@@ -66,16 +66,82 @@ def test_companion_is_denied_when_its_simple_command_shape_cannot_be_parsed(mock
 @pytest.mark.parametrize(
     "command",
     [
-        'node "/plugin path/codex-companion.mjs" --task review',
-        'node "/plugin path/codex-companion.mjs" --cwd /tmp/project --task "日本語のタスクを確認"',
-        "node \"/plugin path/codex-companion.mjs\" --task 'review $HOME'",
-        'node "/plugin path/codex-companion.mjs" --cwd /tmp/project --task "引用符と && | > は本文" --background',
-        'echo "/plugin path/codex-companion.mjs" | tee /tmp/log',
+        f'node "{Path.home()}/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" --task review',
+        f'node "{Path.home()}/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" --cwd /tmp/project --task "日本語のタスクを確認"',
+        f"node \"{Path.home()}/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs\" --task 'review $HOME'",
+        f'node "{Path.home()}/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" --cwd /tmp/project --task "引用符と && | > は本文" --background',
+        'echo "~/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" | tee /tmp/log',
         'node "/plugin path/other.mjs" > /tmp/log',
     ],
 )
 def test_simple_companion_calls_and_unrelated_commands_stay_allowed(kind: str, command: str) -> None:
     assert guard.decide(kind, {"tool_input": {"command": command}}).decision == "allow"
+
+
+@pytest.mark.parametrize("quote", ['"', "'"])
+def test_companion_rejects_quoted_literal_tilde_paths(quote: str) -> None:
+    script = "~/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs"
+    command = f"node {quote}{script}{quote} task --cwd /tmp/project review"
+    assert guard.decide("forbidden", {"tool_input": {"command": command}}).decision == "deny"
+
+
+@pytest.mark.parametrize("quote", ['"', "'"])
+@pytest.mark.parametrize("version", ["0.0.0", "1.0.3", "12.345.6789"])
+def test_companion_accepts_numeric_versions_in_the_plugin_cache(quote: str, version: str) -> None:
+    script = f"{Path.home()}/.claude/plugins/cache/openai-codex/codex/{version}/scripts/codex-companion.mjs"
+    command = f'node {quote}{script}{quote} task --cwd /tmp/project "review"'
+    assert guard.decide("forbidden", {"tool_input": {"command": command}}).decision == "allow"
+
+
+def test_companion_uses_the_current_home_directory(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    home = tmp_path / "home.with[pattern]"
+    monkeypatch.setenv("HOME", str(home))
+    script = f"{home}/.claude/plugins/cache/openai-codex/codex/1.2.3/scripts/codex-companion.mjs"
+    command = f'node "{script}" task "review"'
+    assert guard.decide("forbidden", {"tool_input": {"command": command}}).decision == "allow"
+    other_home = str(home).replace("home.with[pattern]", "homeXwithp")
+    command = command.replace(str(home), other_home)
+    assert guard.decide("forbidden", {"tool_input": {"command": command}}).decision == "deny"
+
+
+@pytest.mark.parametrize("root", ["~", str(Path.home())])
+@pytest.mark.parametrize(
+    "suffix",
+    [
+        "../1.0.3/scripts/codex-companion.mjs",
+        "1.0.3/../1.0.3/scripts/codex-companion.mjs",
+        "1.0.3/scripts/../../codex-companion.mjs",
+        "1.0.3/other/codex-companion.mjs",
+        "1.0.3/scripts/other.mjs",
+        "1.0.3/scripts/nested/codex-companion.mjs",
+        "v1.0.3/scripts/codex-companion.mjs",
+        "1.0.3-beta/scripts/codex-companion.mjs",
+        "1.0/scripts/codex-companion.mjs",
+        "1.0.3.4/scripts/codex-companion.mjs",
+        "1x0x3/scripts/codex-companion.mjs",
+        "\uff11.\uff10.\uff13/scripts/codex-companion.mjs",
+        "*/scripts/codex-companion.mjs",
+        "1.0.3//scripts/codex-companion.mjs",
+        "1.0.3/scripts/./codex-companion.mjs",
+        "1.0.3/scripts/codex-companion.mjs/",
+    ],
+)
+def test_companion_rejects_paths_outside_the_exact_versioned_script(root: str, suffix: str) -> None:
+    command = f'node "{root}/.claude/plugins/cache/openai-codex/codex/{suffix}" task "review"'
+    assert guard.decide("forbidden", {"tool_input": {"command": command}}).decision == "deny"
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        'node "/tmp/codex-companion.mjs" task "review"',
+        'node "~/.claude/plugins/cache/other/codex/1.0.3/scripts/codex-companion.mjs" task "review"',
+        'node --require /tmp/inject.js "~/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs"',
+        '"~/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs" task "review"',
+    ],
+)
+def test_companion_requires_node_followed_by_the_real_plugin_script(command: str) -> None:
+    assert guard.decide("forbidden", {"tool_input": {"command": command}}).decision == "deny"
 
 
 @pytest.mark.parametrize(
