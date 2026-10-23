@@ -50,7 +50,9 @@ alias cat="bat --paging=never"
 alias grep="rg"
 alias find="fd"
 alias du="dust"
-alias cd="j"
+if [[ ! -v CLAUDECODE && ! -v AI_AGENT ]]; then
+  alias cd="j"
+fi
 alias vi="nvim"
 alias vim="nvim"
 alias view="nvim -R"

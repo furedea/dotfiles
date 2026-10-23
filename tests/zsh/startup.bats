@@ -43,6 +43,39 @@ EOF
   export TEST_HOME
 }
 
+@test "agent startup keeps cd as the shell builtin when either agent variable is set" {
+  local _agent _value
+  for _agent in CLAUDECODE AI_AGENT; do
+    for _value in 1 ''; do
+      run --separate-stderr env -u CLAUDECODE -u AI_AGENT \
+        "$_agent=$_value" \
+        HOME="$TEST_HOME" \
+        XDG_CACHE_HOME="$TEST_HOME/.cache" \
+        FPATH="$BATS_TEST_TMPDIR/functions" \
+        PATH="$TEST_BIN:$PATH" \
+        zsh -dfi -c "source '$REPO_ROOT/zsh/.zshenv'; source '$REPO_ROOT/zsh/.zshrc'; whence -w cd"
+
+      [ "$status" -eq 0 ]
+      [ "$output" = "cd: builtin" ] || {
+        printf 'unexpected cd resolution with %s=%s: %s\n' "$_agent" "$_value" "$output" >&2
+        return 1
+      }
+    done
+  done
+}
+
+@test "human startup aliases cd to j when neither agent variable is set" {
+  run --separate-stderr env -u CLAUDECODE -u AI_AGENT \
+    HOME="$TEST_HOME" \
+    XDG_CACHE_HOME="$TEST_HOME/.cache" \
+    FPATH="$BATS_TEST_TMPDIR/functions" \
+    PATH="$TEST_BIN:$PATH" \
+    zsh -dfi -c "source '$REPO_ROOT/zsh/.zshenv'; source '$REPO_ROOT/zsh/.zshrc'; alias cd"
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "cd=j" ]
+}
+
 @test "hl expands to the local main Herdr session" {
   run env \
     HOME="$TEST_HOME" \
