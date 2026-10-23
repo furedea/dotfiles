@@ -16,6 +16,7 @@ sys.path.insert(0, str(REPO_ROOT / "agents/hooks"))
 sys.path.insert(0, str(REPO_ROOT / "agents/hooks/lib"))
 from tests.agents.hooks.cleanup_worktrees_runtime import git
 
+import cleanup_worktrees
 import session_store
 
 
@@ -104,6 +105,11 @@ def merged(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
     (home / ".claude/settings.json").write_text('{"sandbox":{"filesystem":{"allowWrite":[]}}}')
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setenv("TMPDIR", str(tmp_path / "sandbox-tmp"))
+    monkeypatch.setattr(
+        cleanup_worktrees,
+        "untrusted_locations",
+        lambda: {tmp_path / "writable", Path(os.environ["TMPDIR"]), Path.home() / cleanup_worktrees.HERDR_WORKTREES},
+    )
     directory = tmp_path / "bin"
     directory.mkdir()
     state = tmp_path / "merged.json"

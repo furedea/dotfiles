@@ -24,7 +24,7 @@ def test_lane_status_never_runs_a_filter_from_raced_admin_configuration(
     worktree = next(tree for tree in cleanup_worktrees.linked_worktrees(primary) if tree.path == path)
     admin = worktree.admin_dir
     assert admin is not None
-    fake = tmp_path / "fake.git"
+    fake = tmp_path / "writable/fake.git"
     shutil.copytree(primary / ".git", fake)
     git("config", "--file", str(fake / "config"), "extensions.worktreeConfig", "true", cwd=primary)
     marker = tmp_path / "clean-filter-ran"
@@ -173,7 +173,8 @@ def test_a_gitlink_worktree_is_skipped_without_running_submodule_git(
 def test_a_worktree_with_a_replaced_git_file_is_skipped(primary: Path, merged: dict[str, str], tmp_path: Path) -> None:
     path = task_worktree(primary, "feat/planted")
     merged["feat/planted"] = git("rev-parse", "HEAD", cwd=path)
-    fake = tmp_path / "fake"
+    fake = tmp_path / "writable/fake"
+    fake.parent.mkdir()
     git("clone", "--quiet", "--no-checkout", str(primary), str(fake), cwd=primary)
     git(f"--git-dir={fake / '.git'}", "read-tree", merged["feat/planted"], cwd=primary)
     (path / ".git").write_text(f"gitdir: {fake / '.git'}\n")
@@ -194,7 +195,7 @@ def test_a_worktree_with_untrusted_admin_configuration_is_skipped(
     merged["feat/planted"] = git("rev-parse", "HEAD", cwd=path)
     admin = Path(git("rev-parse", "--absolute-git-dir", cwd=path))
     if planted == "commondir":
-        fake = tmp_path / "fake.git"
+        fake = tmp_path / "writable/fake.git"
         shutil.copytree(primary / ".git", fake)
         (admin / "commondir").write_text(str(fake))
     else:
@@ -313,5 +314,4 @@ def test_a_planted_git_entry_inside_a_lane_is_neither_current_nor_primary(
     assert path.exists()
     assert not other.exists()
     assert branches(primary) == {"main", "feat/here"}
-    monkeypatch.setattr(cleanup_worktrees, "sandbox_writable_paths", set)
     assert cleanup_worktrees.toplevel(nested) == path

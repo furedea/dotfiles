@@ -31,13 +31,9 @@ def temporary(tmp_path: Path, merged: dict[str, str], location: str) -> Iterator
     sandbox_tmp = tmp_path / "sandbox-tmp"
     sandbox_tmp.mkdir()
     candidates = [Path("/tmp"), Path("/private/tmp"), Path("/tmp/claude"), Path("/private/tmp/claude")]
-    candidates.extend(Path(value) for name in ("TMPDIR", "TMP", "TEMP") if (value := os.environ.get(name)))
-    writable = cleanup_worktrees.sandbox_writable_paths()
-    assert writable is not None
+    candidates.append(Path(os.environ["TMPDIR"]))
     failures = []
     for candidate in dict.fromkeys(candidates):
-        if not any(candidate.resolve().is_relative_to(root.resolve()) for root in writable):
-            continue
         try:
             directory = tempfile.TemporaryDirectory(dir=candidate)
         except OSError as error:
@@ -46,7 +42,7 @@ def temporary(tmp_path: Path, merged: dict[str, str], location: str) -> Iterator
         with directory:
             yield Path(directory.name)
         return
-    pytest.skip("No writable temporary directory inside the checked writable set: " + "; ".join(failures))
+    pytest.skip("No writable temporary directory inside the production writable locations: " + "; ".join(failures))
 
 
 def herdr_lane(primary: Path) -> Path:
@@ -161,9 +157,9 @@ def test_unknown_writable_paths_skip_lane_primaries_but_clean_the_callers_reposi
         path.write_text("not json" if settings == "invalid" else '{"sandbox":null}')
     marker = record_commands(tmp_path, other)
 
-    assert cleanup_with_real_policy(lane).returncode == 0
+    assert cleanup(lane).returncode == 0
     assert not marker.exists()
-    result = cleanup_with_real_policy(primary)
+    result = cleanup(primary)
 
     assert result.returncode == 0
     assert not marker.exists()
@@ -234,3 +230,53 @@ def test_git_removal_is_isolated_and_herdr_only_closes_the_workspace(
 
     assert not lane.exists()
     assert (tmp_path / "herdr_removed.txt").read_text().splitlines() == ["workspace close w9"]
+
+
+def test_production_writable_paths_include_all_untrusted_locations(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home = tmp_path / "home"
+    (home / ".claude").mkdir(parents=True)
+    alias = tmp_path / "alias"
+    target = tmp_path / "target"
+    target.mkdir()
+    alias.symlink_to(target, target_is_directory=True)
+    entries = [str(alias), "relative", "~/tilde"]
+    (home / ".claude/settings.json").write_text(json.dumps({"sandbox": {"filesystem": {"allowWrite": entries}}}))
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("TMPDIR", str(tmp_path / "temporary"))
+
+    writable = cleanup_worktrees.sandbox_writable_paths()
+
+    expected = {
+        Path("/tmp"),
+        Path("/private/tmp"),
+        Path("/tmp/claude"),
+        Path("/private/tmp/claude"),
+        home / ".herdr/worktrees",
+        tmp_path / "temporary",
+        alias,
+        home / "relative",
+        home / "tilde",
+    }
+    assert writable is not None
+    assert expected | {path.resolve() for path in expected} <= writable
+
+
+@pytest.mark.parametrize("entry", ["sweep", "caller"])
+def test_fixture_policy_still_rejects_a_planted_writable_primary(
+    primary: Path, merged: dict[str, str], tmp_path: Path, entry: str
+) -> None:
+    fake = tmp_path / "writable/fake"
+    fake.parent.mkdir()
+    git("clone", "--quiet", str(primary), str(fake), cwd=primary)
+    lane = herdr_lane(fake)
+    merged["feat/done"] = git("rev-parse", "HEAD", cwd=lane)
+    marker = record_commands(tmp_path, fake)
+
+    result = cleanup(tmp_path if entry == "sweep" else fake)
+
+    assert result.returncode == 0
+    assert not marker.exists()
+    assert not (tmp_path / "commands").exists()
+    assert lane.exists()

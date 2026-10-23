@@ -142,20 +142,24 @@ def sandbox_writable_paths() -> set[Path] | None:
         paths = {
             home / entry.removeprefix("~").lstrip("/") if entry.startswith("~") else home / entry for entry in entries
         }
-        paths.update(
-            {
-                Path("/tmp"),
-                Path("/private/tmp"),
-                Path("/tmp/claude"),
-                Path("/private/tmp/claude"),
-                home / HERDR_WORKTREES,
-            }
-        )
-        if temporary := os.environ.get("TMPDIR"):
-            paths.add(Path(temporary))
+        paths.update(untrusted_locations())
         return paths | {path.resolve() for path in paths}
     except OSError, ValueError, KeyError, TypeError:
         return None
+
+
+def untrusted_locations() -> set[Path]:
+    """Return locations writable by lanes independently of rendered allowWrite entries."""
+    paths = {
+        Path("/tmp"),
+        Path("/private/tmp"),
+        Path("/tmp/claude"),
+        Path("/private/tmp/claude"),
+        Path.home().resolve() / HERDR_WORKTREES,
+    }
+    if temporary := os.environ.get("TMPDIR"):
+        paths.add(Path(temporary))
+    return paths
 
 
 def cleanup(primary: Path, current: Path | None, *, dry_run: bool) -> list[str]:
