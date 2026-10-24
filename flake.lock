@@ -1,5 +1,31 @@
 {
   "nodes": {
+    "agent-config": {
+      "inputs": {
+        "agent-harness": [
+          "agent-harness"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "nixpkgs-unstable": [
+          "nixpkgs-unstable"
+        ]
+      },
+      "locked": {
+        "lastModified": 1792816759,
+        "narHash": "sha256-i7wbBp3RXXH+7xmvddljviWgV2sXrR/e7abNee4nXsA=",
+        "owner": "furedea",
+        "repo": "agent-config",
+        "rev": "dd5963428deebd05124bba647a3f9e952af66880",
+        "type": "github"
+      },
+      "original": {
+        "owner": "furedea",
+        "repo": "agent-config",
+        "type": "github"
+      }
+    },
     "agent-harness": {
       "inputs": {
         "home-manager": [
@@ -508,6 +534,7 @@
     },
     "root": {
       "inputs": {
+        "agent-config": "agent-config",
         "agent-harness": "agent-harness",
         "apple-mail-cli": "apple-mail-cli",
         "google-workspace-cli": "google-workspace-cli",

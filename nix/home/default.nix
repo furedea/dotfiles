@@ -13,6 +13,7 @@
   histerPackage,
   histerServerUrl,
   agent-harness,
+  agent-config,
   system,
   enableMoshiService,
   ...
@@ -50,11 +51,7 @@ let
     SLEEP_BIN = lib.getExe' pkgs.coreutils "sleep";
   };
   automationPython = lib.getExe pkgs.python314;
-  agentSource = pkgs.runCommand "dotfiles-agent-source" { buildInputs = [ pkgs.python314 ]; } ''
-    cp -R ${../../agents}/. "$out"
-    chmod -R u+w "$out"
-    patchShebangs --host "$out"
-  '';
+  agentSource = agent-config.packages.${system}.default;
   repoCommand = pkgs.writeShellScriptBin "repo" ''
     exec ${automationPython} -I -B "${dotfilesDir}/github/repo.py" "$@"
   '';
