@@ -469,9 +469,11 @@ in
 
     yazi = {
       enable = true;
+      extraPackages = [ pkgs.glow ];
       plugins = with pkgs.yaziPlugins; {
         inherit
           git
+          piper
           smart-enter
           smart-filter
           vcs-files
@@ -482,6 +484,12 @@ in
       '';
       settings = {
         mgr.show_hidden = true;
+        plugin.prepend_previewers = [
+          {
+            url = "*.md";
+            run = ''piper -- CLICOLOR_FORCE=1 glow -w=$w -s=dark "$1"'';
+          }
+        ];
         plugin.prepend_fetchers = [
           {
             group = "git";
