@@ -41,7 +41,9 @@ setup() {
   grep -Fq 'sync-claude-settings' "$_activation"
   grep -Fq -- "--source $_claude_settings" "$_activation"
   grep -Fq -- "--target \"\$HOME/.claude/settings.json\"" "$_activation"
-  cmp "$REPO_ROOT/agents/AGENTS.md" "$_rendered/.claude/CLAUDE.md"
+  local _source
+  _source=$(nix build --no-link --print-out-paths --inputs-from "$REPO_ROOT" agent-config#default)
+  cmp "$_source/AGENTS.md" "$_rendered/.claude/CLAUDE.md"
   # shellcheck disable=SC2016
   grep -Fq -- \
     'bash \"$HOME/.codex/hooks/external/herdr/herdr-agent-state.sh\" session' \
