@@ -33,6 +33,14 @@
       inputs.home-manager.follows = "home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    agent-config = {
+      url = "github:furedea/agent-config";
+      inputs = {
+        agent-harness.follows = "agent-harness";
+        nixpkgs.follows = "nixpkgs";
+        nixpkgs-unstable.follows = "nixpkgs-unstable";
+      };
+    };
     hister.url = "github:asciimoo/hister";
   };
 
@@ -49,6 +57,7 @@
       google-workspace-cli,
       apple-mail-cli,
       agent-harness,
+      agent-config,
       hister,
       ...
     }:
@@ -110,6 +119,7 @@
           histerPackage
           histerServerUrl
           agent-harness
+          agent-config
           system
           ;
       };

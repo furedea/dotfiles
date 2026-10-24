@@ -1,6 +1,6 @@
 # ADR-0016: Own personal agent source in dotfiles
 
-- Status: Accepted
+- Status: Superseded by [furedea/agent-config ADR-0012](https://github.com/furedea/agent-config/blob/main/docs/adr/0012_keep_the_personal_agent_source_in_its_own_repository.md)
 - Date: 2026-08-28
 
 In the context of managing one user's machines with Nix while also deploying the same Claude Code

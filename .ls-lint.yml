@@ -4,7 +4,7 @@ ls:
   .py: regex:[a-z0-9]*([._][a-z0-9]+)* | regex:__[a-z0-9]+__
   .toml: regex:[a-z0-9]*([._][a-z0-9]+)* | regex:Cargo
   .lock: regex:[a-z0-9]*([._][a-z0-9]+)* | regex:Cargo
-  .json: regex:[a-z0-9]*([._][a-z0-9]+)* | regex:(package-lock|lazy-lock)
+  .json: regex:[a-z0-9]*([._][a-z0-9]+)* | regex:lazy-lock
   .*: regex:[a-z0-9]*([._][a-z0-9]+)*
 
 ignore:
