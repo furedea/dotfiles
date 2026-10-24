@@ -15,6 +15,5 @@ cannot reasonably satisfy; development-only verification tools remain separate d
 
 Shell remains appropriate for parent-shell state, thin executable adapters, and lifecycle
 launchers whose main contract is process execution. Existing command names remain stable.
-The supplementary command guards inspect shfmt's syntax tree, reject unsupported dynamic
-syntax, and preserve existing POSIX ERE and PCRE2 policy dialects through grep and ripgrep.
-They do not replace the provider's permissions or sandbox boundary.
+The supplementary command guards moved with the agent source; see
+[agent-config ADR-0016](https://github.com/furedea/agent-config/blob/main/docs/adr/0016_inspect_shell_syntax_in_the_supplementary_command_guards.md).
