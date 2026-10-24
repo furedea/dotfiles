@@ -50,7 +50,8 @@ let
     MOSHI_HOOK_BIN = moshiHookRuntime;
     SLEEP_BIN = lib.getExe' pkgs.coreutils "sleep";
   };
-  automationPython = lib.getExe pkgs.python314;
+  pythonPackage = pkgs.callPackage ../packages/python_315.nix { };
+  automationPython = lib.getExe pythonPackage;
   agentSource = agent-config.packages.${system}.default;
   repoCommand = pkgs.writeShellScriptBin "repo" ''
     exec ${automationPython} -I -B "${dotfilesDir}/github/repo.py" "$@"
@@ -233,7 +234,7 @@ in
     shfmt
 
     # Python tooling
-    python314
+    pythonPackage
 
     # Rust tooling
     cargo
@@ -638,7 +639,7 @@ in
     "lazygit/config.yml".source =
       config.home.file."Library/Application Support/lazygit/config.yml".source;
     # Automation must not inherit a project's virtualenv interpreter or user site packages.
-    "dotfiles/bin/python3".source = lib.getExe pkgs.python314;
+    "dotfiles/bin/python3".source = automationPython;
     # Packages unpack into the shared virtual store outside the project, where the agent sandbox
     # allows the .idea and .vscode directories some packages ship; node_modules holds only links.
     # pnpm 11 reads its own settings only from this YAML file, no longer from rc.

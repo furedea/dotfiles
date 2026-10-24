@@ -3,7 +3,7 @@ name = "project"
 version = "0.1.0"
 description = ""
 readme = "README.md"
-requires-python = ">= 3.14"
+requires-python = ">= 3.15"
 dependencies = []
 
 [tool.hatch.build.targets.wheel]
@@ -27,7 +27,7 @@ dev = [
 ]
 
 [tool.ruff]
-target-version = "py314"
+target-version = "py315"
 src = ["src", "tests"]
 line-length = 119
 
@@ -112,7 +112,7 @@ stubPath = "stubs"
 venvPath = ".venv"
 # venv = "venv_name"
 
-pythonVersion = "3.14"
+pythonVersion = "3.15"
 # pythonPlatform = "linux"
 
 executionEnvironments = [{ root = "src/", extraPaths = ["src/"] }]

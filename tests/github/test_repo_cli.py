@@ -237,11 +237,11 @@ def test_sync_protects_non_git_path_and_reports_totals(run_cli: CliRunner, remot
     owner = remote / "ghq/github.com/furedea"
     (owner / "alpha/.git").mkdir(parents=True)
     (owner / "gamma").mkdir()
-    sentinel = owner / "gamma/sentinel"
-    sentinel.write_text("keep\n")
+    marker = owner / "gamma/sentinel"
+    marker.write_text("keep\n")
     result = run_cli(SCRIPT, "sync", env={"GH_REPOSITORIES": "furedea/alpha\nfuredea/beta\nfuredea/gamma"})
     assert result.returncode == 1
-    assert sentinel.read_text() == "keep\n"
+    assert marker.read_text() == "keep\n"
     assert "[summary] cloned=1 pulled=1 failed=1" in result.stdout
     assert not any("/gamma" in " ".join(row) for row in calls(remote, "git"))
     assert not any(row[:3] == ["repo", "clone", "furedea/gamma"] for row in calls(remote))
