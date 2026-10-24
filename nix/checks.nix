@@ -103,7 +103,8 @@ in
       && !(home.home.activation ? rustupInit)
       && !(home.home.activation ? uvPythonInstall);
     managed-automation-python =
-      toString home.xdg.configFile."dotfiles/bin/python3".source == lib.getExe pkgs.python314;
+      toString home.xdg.configFile."dotfiles/bin/python3".source
+      == lib.getExe (pkgs.callPackage ./packages/python_315.nix { });
     agent-packages =
       builtins.filter (
         name:

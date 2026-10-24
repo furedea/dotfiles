@@ -44,7 +44,7 @@ audit = [
 ]
 
 [tool.ruff]
-target-version = "py314"
+target-version = "py315"
 src = ["github", "herdr", "zsh", "tests"]
 line-length = 119
 
