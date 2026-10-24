@@ -452,7 +452,10 @@ in
       enable = true;
       package = agentHarnessPackage;
       source = agentSource;
-      skills.herdr = herdrSkill;
+      skills = {
+        herdr = herdrSkill;
+        nix-dotfiles = ../../skills/nix-dotfiles;
+      };
       hooks = {
         herdr = herdrHookBundle;
         moshi = moshiHookBundle;
