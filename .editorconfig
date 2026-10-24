@@ -13,5 +13,11 @@ indent_style = space
 indent_size = 2
 switch_case_indent = true
 
+[*.{py,pyi}]
+indent_size = 4
+
+[*.rs]
+indent_size = 4
+
 [Makefile]
 indent_style = tab
