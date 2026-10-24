@@ -33,6 +33,14 @@
       inputs.home-manager.follows = "home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    agent-config = {
+      url = "github:furedea/agent-config";
+      inputs = {
+        agent-harness.follows = "agent-harness";
+        nixpkgs.follows = "nixpkgs";
+        nixpkgs-unstable.follows = "nixpkgs-unstable";
+      };
+    };
     hister.url = "github:asciimoo/hister";
   };
 
@@ -49,6 +57,7 @@
       google-workspace-cli,
       apple-mail-cli,
       agent-harness,
+      agent-config,
       hister,
       ...
     }:
@@ -110,6 +119,7 @@
           histerPackage
           histerServerUrl
           agent-harness
+          agent-config
           system
           ;
       };
@@ -192,21 +202,6 @@
         )
       ) hosts;
 
-      # Re-export codex CLI per system so local users can `nix shell .#codex`
-      # without hard-coding the upstream flake URL. Versions stay pinned via
-      # flake.lock.
-      packages =
-        nixpkgs.lib.genAttrs
-          [
-            "aarch64-darwin"
-            "x86_64-darwin"
-            "aarch64-linux"
-            "x86_64-linux"
-          ]
-          (sys: {
-            inherit (llm-agents.packages.${sys}) codex;
-          });
-
       # Dev shell for local work, consumed by direnv (`use flake`).
       devShells =
         nixpkgs.lib.genAttrs
@@ -224,6 +219,7 @@
             {
               default = shellPkgs.mkShell {
                 packages = [
+                  shellPkgs.actionlint
                   shellPkgs.commitlint
                   # lefthook before 2.1.6 runs hooks under a pty, which agent sandboxes deny.
                   nixpkgs-unstable.legacyPackages.${sys}.lefthook

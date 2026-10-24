@@ -39,22 +39,19 @@ pre-commit:
       run: actionlint {all_files}
     ruff-format:
       glob: "*.py"
-      run: uv run --frozen ruff format --check agents github herdr zsh tests
+      run: uv run --frozen ruff format --check github herdr zsh tests
     ruff-check:
       glob: "*.py"
-      run: uv run --frozen ruff check agents github herdr zsh tests
+      run: uv run --frozen ruff check github herdr zsh tests
     ty:
       glob: "*.py"
       run: uv run --frozen ty check
-    oxlint:
-      glob: "*.{js,ts,jsx,tsx}"
-      run: oxlint {all_files}
     ls-lint:
       run: ls_lint
     # Same 500-line budget as template-python, applied to hand-written code.
     # Nix modules, data files, and docs are excluded.
     file-length:
-      glob: "*.{py,sh,bash,bats,zsh,lua,js,ts}"
+      glob: "*.{py,sh,bash,bats,zsh,lua}"
       run: |
         for f in {staged_files}; do
           n=$(wc -l < "$f")

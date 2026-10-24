@@ -1,10 +1,10 @@
 ls:
   .dir: regex:\.?[a-z0-9]+(-[a-z0-9]+)*
-  .md: regex:[a-z0-9]*([._][a-z0-9]+)* | regex:(README|CONTRIBUTING|CHANGELOG|AGENTS|CLAUDE|SKILL|SOUL)
+  .md: regex:[a-z0-9]*([._][a-z0-9]+)* | regex:(README|CONTRIBUTING|CHANGELOG|SKILL|SOUL)
   .py: regex:[a-z0-9]*([._][a-z0-9]+)* | regex:__[a-z0-9]+__
   .toml: regex:[a-z0-9]*([._][a-z0-9]+)* | regex:Cargo
   .lock: regex:[a-z0-9]*([._][a-z0-9]+)* | regex:Cargo
-  .json: regex:[a-z0-9]*([._][a-z0-9]+)* | regex:(package-lock|lazy-lock)
+  .json: regex:[a-z0-9]*([._][a-z0-9]+)* | regex:lazy-lock
   .*: regex:[a-z0-9]*([._][a-z0-9]+)*
 
 ignore:
@@ -14,8 +14,6 @@ ignore:
   - result-*
   - "{.venv,.uv-cache,.ruff_cache,.pytest_cache,.ipynb_checkpoints,__pycache__,node_modules,target}"
   - "**/{.venv,.uv-cache,.ruff_cache,.pytest_cache,.ipynb_checkpoints,__pycache__,node_modules,target}"
-  - docs/logs
-  - "**/docs/logs"
   # Agent-local workspaces are ignored by Git and are not part of the repository layout.
   - "*-workspace"
 

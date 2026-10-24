@@ -10,6 +10,9 @@ if [[ "$OSTYPE" == darwin* && -z "${SSH_AUTH_SOCK:-}" ]]; then
   }
 fi
 
+# Global tools remain fallbacks without changing inherited tool precedence.
+_insert_fallback_paths /opt/homebrew/bin /Library/TeX/texbin
+
 # Completion
 ZSH_COMPDUMP="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/.zcompdump"
 autoload -Uz compinit
@@ -47,7 +50,9 @@ alias cat="bat --paging=never"
 alias grep="rg"
 alias find="fd"
 alias du="dust"
-alias cd="j"
+if [[ ! -v CLAUDECODE && ! -v AI_AGENT ]]; then
+  alias cd="j"
+fi
 alias vi="nvim"
 alias vim="nvim"
 alias view="nvim -R"
@@ -75,11 +80,7 @@ function command_not_found_handler() {
 
 DOTFILES="$HOME/ghq/github.com/furedea/dotfiles"
 
-export PATH="/usr/bin:$PATH"
-export PATH="/opt/homebrew/bin:$PATH"
 export XDG_CONFIG_HOME="$HOME/.config"
-export PATH="/Library/TeX/texbin:$PATH"
-export PATH="$HOME/.local/bin:$PATH"
 
 # Plugins
 source "$XDG_CONFIG_HOME/zsh/nix-plugins.zsh"

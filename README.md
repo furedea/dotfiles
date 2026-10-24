@@ -20,14 +20,13 @@ The primary outputs are:
 - `darwinConfigurations.mba`: the complete MacBook Air configuration
 - `homeConfigurations."kaito@mbp"` and `homeConfigurations."kaito@mba"`: each
   host's user environment for faster iteration
-- `packages.<system>.codex`: the pinned Codex CLI exposed by this flake
 - `devShells.<system>.default`: commitlint and lefthook for repository work
 
 The repository currently assumes:
 
 - `aarch64-darwin`
 - macOS user `kaito`
-- checkout path `/Users/kaito/ghq/github.com/furedea/dotfiles`
+- checkout path `~/ghq/github.com/furedea/dotfiles`
 
 The username and checkout path are defined together in [`flake.nix`](flake.nix).
 Change them there before applying the configuration for another user or path.
@@ -62,15 +61,16 @@ for later updates.
 
 ### Bootstrap a Linux Server without Nix
 
-On an x86_64 Linux server without Nix or root access, clone this repository and
-run the server bootstrap script:
+On an x86_64 Linux server without Nix or root access, clone
+[furedea/agent-config](https://github.com/furedea/agent-config) and run its server
+bootstrap script:
 
 ```sh
 mkdir -p "$HOME/ghq/github.com/furedea"
-git clone https://github.com/furedea/dotfiles \
-  "$HOME/ghq/github.com/furedea/dotfiles"
-cd "$HOME/ghq/github.com/furedea/dotfiles"
-bash scripts/agents/bootstrap_server.sh
+git clone https://github.com/furedea/agent-config \
+  "$HOME/ghq/github.com/furedea/agent-config"
+cd "$HOME/ghq/github.com/furedea/agent-config"
+bash scripts/bootstrap_server.sh
 . "$HOME/.config/dotfiles/agent_env.sh"
 ```
 
@@ -79,14 +79,14 @@ The final command updates the current shell's `PATH`. Add the same line to
 existing server after changing the repository, run:
 
 ```sh
-cd "$HOME/ghq/github.com/furedea/dotfiles"
+cd "$HOME/ghq/github.com/furedea/agent-config"
 git pull --ff-only
-bash scripts/agents/bootstrap_server.sh
+bash scripts/bootstrap_server.sh
 ```
 
 The bootstrap script currently supports x86_64 Linux release binaries only. It
 exits before installing anything on other architectures; see
-[`scripts/agents/bootstrap_server.sh`](scripts/agents/bootstrap_server.sh) for
+[`scripts/bootstrap_server.sh`](https://github.com/furedea/agent-config/blob/main/scripts/bootstrap_server.sh) for
 the source-build guidance.
 
 ## Apply Changes
@@ -184,63 +184,35 @@ The cask list in `nix/darwin/default.nix` is authoritative.
   zoxide, ghq, roots, git-wt, fzf, eza, bat, fd, ripgrep, and Yazi
 - Git, Delta, GitHub CLI, Lazygit, Neovim, Tree-sitter, and Vim configuration
 - Nix, Bash, Python, Rust, TypeScript, Lua, LaTeX, formatting, and linting tools
-- Claude Code, Codex, OpenCode, and Herdr
+- Claude Code, Codex, Devin, Hermes Agent, pi, and Herdr
 - `programs.git`, `programs.delta`, `programs.gh`, `programs.lazygit`,
   `programs.direnv`, `programs.atuin`, `programs.agent-harness`, and
   `programs.yazi`
 
-Activation also installs the stable Rust toolchain, installs the default Python
-requested by uv, creates the SSH signing key when absent, and reconciles the
-commit-pinned Herdr plugin set.
+Activation also creates the Hermes secretary profile when absent, rebuilds the
+Zsh completion cache, reports how to create or protect the SSH signing key when
+it is missing or has no passphrase, and reconciles the commit-pinned Herdr plugin
+set.
 
 ### AI Agent Environment
 
-The [`agents/`](agents) directory owns the personal cross-provider agent source:
-instructions, policies, hooks, skills, and provider settings for Claude Code,
+The [agent-config](https://github.com/furedea/agent-config) repository owns the personal
+cross-provider agent source: instructions, policies, hooks, skills, and provider settings for Claude Code,
 Codex, Devin, Hermes Agent, and pi. The
 [agent-harness](https://github.com/furedea/agent-harness) flake renders and deploys
 that source for each provider. This repository also builds release-matched Herdr
 and Moshi hook bundles and composes them through the module's generic `hooks`
-boundary. Herdr comes from the pinned flake input. Moshi Hook 0.2.87 is pinned in
-Nix for deterministic hook generation, while the Homebrew installation remains the
-runtime daemon used by generated hooks. Pairing tokens and mutable Moshi state are
-never added to the Nix store.
+boundary. Herdr comes from the pinned flake input. Moshi Hook is pinned in
+[`nix/packages/moshi_hook.nix`](nix/packages/moshi_hook.nix); on the MacBook Pro, a
+Home Manager LaunchAgent runs that same binary as the daemon used by generated hooks.
+Pairing tokens and mutable Moshi state are never added to the Nix store.
 
-Servers without Nix use
-[`scripts/agents/bootstrap_server.sh`](scripts/agents/bootstrap_server.sh) instead of
-the Home Manager module. It downloads pinned x86_64 Linux release binaries
-(`agent-harness`, `shfmt`, `rg`, `jq`, `bats`, and `uv`) into `~/.local/bin`,
-installs Python 3.14 through uv, renders `agents/` into the home directory with the
-same `agent-harness` CLI, pins the hook shebangs to that interpreter, keeps settings
-that Claude Code wrote at runtime, and writes `~/.config/dotfiles/agent_env.sh`
-for the login shell to source. Host-specific locations (`BIN_DIR`,
-`UV_PYTHON_INSTALL_DIR`, `UV_CACHE_DIR`, `XDG_STATE_HOME`, `XDG_CACHE_HOME`) come
-from `~/.config/dotfiles/bootstrap_server.env`, and
-`~/.config/dotfiles/claude_settings_override.json` is merged into the rendered
-Claude Code settings; both stay outside the repository. See
-[ADR-0030](docs/adr/0030_bootstrap_the_agent_harness_on_servers_without_nix.md).
-
-Native provider lifecycle hooks register the session's worktree and
-verify changes automatically. State is stored under
-`${XDG_STATE_HOME:-~/.local/state}/agent-harness/verification/<worktree>/<session>/`;
-`results.json` identifies the provider session and its latest check results.
-To verify a recorded session again, run
-`~/.claude/hooks/verification_session.py verify <session-directory>`; add
-`--force` to rerun checks whose receipts are still valid.
-Ended or inactive records expire after seven days; failure logs are capped at
-1 MiB each and 100 MiB in total. See
-[ADR-0029](docs/adr/0029_register_verification_in_native_hooks.md) for the design rationale.
-
-Hook denials are reserved for deny prefixes, forbidden patterns, dangerous Git operations,
-secret policies, and missing verification registration. A command inside an approved family
-whose form the precise rules do not list, a command the static inspection cannot decode, or a
-tool target outside both the worktree and the session temp directories is escalated to the
-provider's permission prompt instead; see
-[ADR-0033](docs/adr/0033_escalate_unrecognized_command_forms_to_the_provider_prompt.md).
-Commands whose effects the sandbox contains, such as script execution, in-place edits, and
-read-only inspection with any argument, run without a prompt; only effects that escape the
-sandbox or cannot be undone ask; see
-[ADR-0034](docs/adr/0034_ask_only_for_effects_that_escape_the_sandbox.md).
+Servers without Nix use the bootstrap script in agent-config instead of the Home
+Manager module; it still reads host-specific settings from `~/.config/dotfiles/`.
+Verification state, hook decisions, and the other behavior of the source are
+documented in agent-config's README and
+[ADRs](https://github.com/furedea/agent-config/tree/main/docs/adr), such as
+[ADR-0012](https://github.com/furedea/agent-config/blob/main/docs/adr/0012_keep_the_personal_agent_source_in_its_own_repository.md).
 
 Herdr is pinned as a flake input and replaces tmux for local and managed remote
 terminal sessions. The local configuration uses `ctrl+a` as its prefix and adds
@@ -257,6 +229,63 @@ The `persiyanov.reviewr` plugin revision is declared in
 [`nix/home/default.nix`](nix/home/default.nix), synchronized during Home Manager
 activation by [`herdr/plugin_sync.py`](herdr/plugin_sync.py), and justified by
 [`ADR-0002`](docs/adr/0002_manage_herdr_plugins_through_home_manager_activation.md).
+
+#### Development Cycle
+
+How work flows from a request to a merged pull request, which session owns each step, and which skill the agent follows there. The cycle is the same wherever the session is opened.
+
+```mermaid
+flowchart LR
+  P[Parent: Issue and plan] --> A{User approves}
+  A --> L[Parent: open lanes]
+  L --> I[Lane: Codex implements]
+  I --> V[Lane: verify, commit, PR]
+  V --> RV[Lane: start reviewer]
+  RV -->|findings| I
+  RV --> R[Lane: LANE-READY]
+  R --> W[Parent: check and report]
+  W --> M[User merges]
+  M --> C[Parent: clean up]
+```
+
+| Step                  | Owner         | Starts                                                                                 | Skills                                                         |
+| --------------------- | ------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| 1. Issue and plan     | Parent        | —                                                                                      | `issue-workflow`                                               |
+| 2. Approve            | User          | —                                                                                      | —                                                              |
+| 3. Open lanes         | Parent        | a Herdr worktree and a Sonnet lane per lane, with a brief                              | `git-workflow` (branches), `herdr-delegation`                  |
+| 4. Implement          | Lane          | Codex (tests first, no commits)                                                        | `tsdd`, the language style skills, `domain-modeling`           |
+| 5. Verify and deliver | Lane          | —                                                                                      | `git-workflow` (commits, delivery)                             |
+| 6. Review and fix     | Lane          | an Opus subagent for Codex's code, or Codex for Claude's; Codex fixes findings         | `herdr-delegation`                                             |
+| 7. Report             | Lane → Parent | the lane ends with `LANE-READY`; the parent waits with `herdr agent wait` and reads it | `herdr-delegation`                                             |
+| 8. Check and report   | Parent        | —                                                                                      | —                                                              |
+| 9. Merge              | User          | — (run `switch` after merging dotfiles changes)                                        | —                                                              |
+| 10. Clean up          | Parent        | after the user merges: run `cleanup_worktrees.py` by its absolute path with the home directory expanded, as shown in the rendered `excludedCommands` entry; never remove lane worktrees by hand with `herdr worktree remove` | `git-workflow` (branches), `issue-workflow`, `source-of-truth` |
+
+| Who                   | Does                                                                            | Never does                                              |
+| --------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| User                  | approves plans, merges, pushes workflow files, deletes or archives repositories | —                                                       |
+| Parent session (Opus) | Issues, plans, lanes, final check, cleanup                                      | edits files, merges                                     |
+| Lane (Sonnet)         | runs Codex and the reviewer, verifies, commits, opens PRs                       | writes the implementation, types into the parent's pane |
+| Codex                 | implements and fixes findings                                                   | commits or pushes (it cannot write `.git`)              |
+
+The lane reports by ending its last message with `LANE-READY`, and the parent reads it. The lane never types into the parent's pane, because the parent cannot tell that text from the user's.
+
+##### Run Only Merged Changes
+
+The sandbox limits where an agent writes; it does not stop what you later run outside it. Run agent changes yourself only after they are reviewed and merged: a lane that rewrote `lefthook.yml` in its worktree runs that code with your permissions if you commit there, and `switch` on a lane branch runs unreviewed Nix as root. Run `switch` on `main` after merging.
+
+##### Where to Open the Session
+
+Open the session in a repository: the one you work on, or dotfiles for work across repositories. A session outside a Git work tree cannot register its SessionStart hook and stops. Do not open it in the home directory: the sandbox lets a session write everywhere under its working directory, so from `~` it could write `~/.gitconfig`, LaunchAgents, shell startup files, or directories on `PATH`, none of which show up in any pull request.
+
+##### Constraints
+
+- The parent cannot write another repository's `.git`; lanes fetch, commit, and push there.
+- No session writes any repository's `.git/hooks` or `.git/config`, so lanes push without `-u`.
+- Run each `herdr` command and each Codex plugin call as one command: no `cd`, pipe, redirect, or `$`.
+- Codex cannot reach the network or the Nix daemon; the lane updates dependencies and computes Nix hashes.
+- The agent's GitHub App cannot push workflow files; the user pushes them.
+- Dependencies younger than seven days are not installed (pnpm `minimumReleaseAge`, uv `exclude-newer`).
 
 ### Editable Symlinks
 
@@ -294,11 +323,13 @@ These tracked files are not applied by Home Manager or nix-darwin:
 .
 ├── flake.nix                  # Flake inputs and outputs
 ├── nix/                       # nix-darwin, Home Manager, and local packages
-├── agents/                    # Personal cross-provider agent source
 ├── docs/adr/                  # Durable architecture decisions
 ├── zsh/ and bash/             # Interactive shell configuration
 ├── nvim/ and vim/             # Editor configuration
 ├── herdr/                     # Herdr UI and plugin synchronization
+├── hermes/                    # Editable Hermes secretary profile sources
+├── scripts/                   # Shell launchers for Git signing, Hister, and Moshi
+├── .agents/                   # Repository rules for the agent harness hooks
 ├── ghostty/                   # Terminal configuration
 ├── karabiner/                 # Keyboard remapping
 ├── starship/                  # Shell prompt
@@ -356,10 +387,8 @@ by Python unit and CLI integration tests under `tests/github/`.
 Automation logic uses Python's standard library, without runtime pip packages.
 The project environment supplies development tools such as pytest, Ruff, and ty.
 Nix pins the interpreter in deployed hook and statusline shebangs; the server
-bootstrap pins them to its uv-managed interpreter. Codex adapters
-call shared Python functions directly. The `repo` and Herdr launchers use Nix's
-fixed Python with editable source files; hook source changes require Home Manager
-activation. Python entry points use isolated mode to ignore project import paths.
+bootstrap in agent-config pins them to its uv-managed interpreter. The `repo` and
+Herdr launchers use Nix's fixed Python with editable source files. Python entry points use isolated mode to ignore project import paths.
 For development or CI, run a source command with `python3 -I -B path/to/command.py`.
 The Zsh esa helper still uses `$XDG_CONFIG_HOME/dotfiles/bin/python3` (`~/.config`
 when unset), because it updates parent-shell state. See
@@ -375,11 +404,12 @@ they do not add Hermes dependencies to the dotfiles Python environment.
 
 Tests are grouped by the feature they verify, not by implementation language.
 Python and Bats tests live together under directories such as `tests/herdr/`
-and `tests/hermes/`. Agent tests separate shared hooks, provider-specific behavior,
-and skills under `tests/agents/`; cross-provider contracts live at that directory's
-root. `tests/nix/` only bridges the repository-wide native configuration checks.
-Shared pytest fixtures live in `tests/conftest.py`, agent-specific fixtures in
-`tests/agents/conftest.py`, and importable test support in `tests/runtime.py`.
+and `tests/hermes/`. Agent hook and skill tests live with their source in
+[furedea/agent-config](https://github.com/furedea/agent-config). `tests/nix/` bridges the
+repository-wide native configuration checks, including the Home Manager rendering of the
+agent source and the repository's related-test mapping.
+Shared pytest fixtures live in `tests/conftest.py` and importable test support in
+`tests/runtime.py`.
 
 The verification hook allows 300 seconds per check.
 `RUN_RELATED_TESTS_TIMEOUT_SECONDS` overrides this budget when explicitly set.
@@ -400,9 +430,9 @@ uv run --frozen pytest
 nix flake check
 ```
 
-CI checks shell integration with Bats and checks Python automation and provider
-integration with Ruff, ty, and pytest. Tests marked `integration` use the shared
-toolchain job; other pytest tests run separately without duplicating those cases.
+CI checks shell integration with Bats and checks Python automation with Ruff, ty,
+and pytest. Tests marked `integration` run in the Bats job; other pytest tests run
+separately without duplicating those cases.
 CI checks all tracked `.sh` files with ShellCheck and shfmt, failing if no scripts
 are selected. Zsh files are not passed to these Bash checks. CI checks Lua with
 Selene and StyLua, checks Nix with Statix, deadnix, and nixfmt, checks JSON/TOML
@@ -419,6 +449,8 @@ The repository cannot automate credentials or settings protected by macOS TCC.
 After the first switch, configure as needed:
 
 - sign in to GUI applications and iCloud
+- create the SSH signing key with a passphrase, using the commands the Home Manager
+  activation prints, and store the passphrase in the macOS Keychain
 - run `gh auth login`
 - run `esa auth login --scopes "read:post write:post"`
 - configure Atuin synchronization credentials if history sync is wanted

@@ -1,5 +1,5 @@
 [project]
-name = "dotfiles-agent-tools"
+name = "dotfiles"
 version = "0.1.0"
 description = "Standard-library automation and tests for personal dotfiles."
 requires-python = "==3.15.1"
@@ -9,43 +9,13 @@ dependencies = []
 pythonpath = ["."]
 testpaths = ["tests"]
 addopts = ["-n", "auto"]
-markers = ["integration: requires installed toolchains, provider CLIs, or the managed macOS profile"]
+markers = ["integration: requires the installed macOS Home Manager profile or Nix-built packages"]
 
 [tool.deptry]
 ignore_notebooks = true
-# Standalone hooks import these adjacent repository modules after trusted path setup.
-known_first_party = [
-  "audit_log",
-  "check_evidence",
-  "check_execution",
-  "check_selection",
-  "cleanup_worktrees",
-  "command_policy",
-  "git_safety",
-  "guard_command",
-  "guard_file",
-  "guard_git",
-  "guard_suppression",
-  "herdr_grammar",
-  "herdr_ownership",
-  "hook_decision",
-  "hook_dispatch",
-  "hook_input",
-  "lib",
-  "lint_format",
-  "patch_input",
-  "provider_adapter",
-  "replay_commands",
-  "secret_path_policy",
-  "shell_syntax",
-  "session_gate",
-  "session_snapshot",
-  "session_store",
-  "verification_session",
-]
 
 [tool.vulture]
-paths = ["agents", "github", "herdr", "zsh", "tests"]
+paths = ["github", "herdr", "zsh", "tests"]
 min_confidence = 100
 sort_by_size = true
 exclude = [".venv", "build", "dist"]
@@ -75,7 +45,7 @@ audit = [
 
 [tool.ruff]
 target-version = "py314"
-src = ["agents", "github", "herdr", "zsh", "tests"]
+src = ["github", "herdr", "zsh", "tests"]
 line-length = 119
 
 [tool.ruff.format]
@@ -167,10 +137,7 @@ max-args = 3
 max-nested-blocks = 2
 
 [tool.ty.src]
-include = ["agents", "github", "herdr", "zsh", "tests"]
-
-[tool.ty.environment]
-extra-paths = ["agents/hooks", "agents/hooks/lib"]
+include = ["github", "herdr", "zsh", "tests"]
 
 [tool.ty.analysis]
 respect-type-ignore-comments = true

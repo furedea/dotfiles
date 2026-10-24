@@ -1,5 +1,31 @@
 {
   "nodes": {
+    "agent-config": {
+      "inputs": {
+        "agent-harness": [
+          "agent-harness"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "nixpkgs-unstable": [
+          "nixpkgs-unstable"
+        ]
+      },
+      "locked": {
+        "lastModified": 1792816759,
+        "narHash": "sha256-i7wbBp3RXXH+7xmvddljviWgV2sXrR/e7abNee4nXsA=",
+        "owner": "furedea",
+        "repo": "agent-config",
+        "rev": "dd5963428deebd05124bba647a3f9e952af66880",
+        "type": "github"
+      },
+      "original": {
+        "owner": "furedea",
+        "repo": "agent-config",
+        "type": "github"
+      }
+    },
     "agent-harness": {
       "inputs": {
         "home-manager": [
@@ -11,11 +37,11 @@
         "nixpkgs-unstable": "nixpkgs-unstable"
       },
       "locked": {
-        "lastModified": 1792559061,
-        "narHash": "sha256-hm02yZ4chcCN0hUtiAVCgqfY1/YsavbzgFN01oN1lOo=",
+        "lastModified": 1792689304,
+        "narHash": "sha256-u1O7QjhgutReH1msiQ/XtX5pgjzLmacgPsF8+32R5mg=",
         "owner": "furedea",
         "repo": "agent-harness",
-        "rev": "4057e01e47ebb68a7d5c3e3c0e742f0290ea8962",
+        "rev": "c3103784ef35faeeea4d44d6fa3aafb27b6c490a",
         "type": "github"
       },
       "original": {
@@ -271,11 +297,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1792577217,
-        "narHash": "sha256-YRvnXVnyZGr6+v118Lb4pTtzLzeJet2Y69qf00katjQ=",
+        "lastModified": 1792835552,
+        "narHash": "sha256-0EthGjCBH0UEPrU78omXpEbvRqKjCBZeC8fi+kIBy+o=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "4c0e549dab7167b1fe7433af15adf892a299fb83",
+        "rev": "53a2d94ce3b88753200be9a0549d8978b031fa60",
         "type": "github"
       },
       "original": {
@@ -508,6 +534,7 @@
     },
     "root": {
       "inputs": {
+        "agent-config": "agent-config",
         "agent-harness": "agent-harness",
         "apple-mail-cli": "apple-mail-cli",
         "google-workspace-cli": "google-workspace-cli",

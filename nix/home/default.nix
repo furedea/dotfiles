@@ -13,6 +13,7 @@
   histerPackage,
   histerServerUrl,
   agent-harness,
+  agent-config,
   system,
   enableMoshiService,
   ...
@@ -32,7 +33,7 @@ let
   nodejsPackage = pkgs.callPackage ../packages/nodejs_bin.nix { };
   uvPackage = pkgs.callPackage ../packages/uv_bin.nix { };
   dprintPackage = pkgs.callPackage ../packages/dprint_bin.nix { };
-  codexPackage = pkgs.callPackage ../packages/codex_bin.nix { };
+  codexPackage = llm-agents.packages.${system}.codex;
   claudePackage = llm-agents.packages.${system}.claude-code;
   agentHarnessPackage = agent-harness.packages.${system}.default;
   moshiHookPackage = pkgs.callPackage ../packages/moshi_hook.nix { };
@@ -50,11 +51,7 @@ let
     SLEEP_BIN = lib.getExe' pkgs.coreutils "sleep";
   };
   automationPython = lib.getExe pkgs.python314;
-  agentSource = pkgs.runCommand "dotfiles-agent-source" { buildInputs = [ pkgs.python314 ]; } ''
-    cp -R ${../../agents}/. "$out"
-    chmod -R u+w "$out"
-    patchShebangs --host "$out"
-  '';
+  agentSource = agent-config.packages.${system}.default;
   repoCommand = pkgs.writeShellScriptBin "repo" ''
     exec ${automationPython} -I -B "${dotfilesDir}/github/repo.py" "$@"
   '';
@@ -130,8 +127,6 @@ let
     ${lib.getExe herdrPackage} completion zsh >| "$out/share/zsh/site-functions/_herdr"
   '';
   herdrCompatibleCodex = pkgs.writeShellScriptBin "codex" ''
-    export CODEX_EXECUTABLE_PATH="$HOME/.local/bin/codex"
-    export DISABLE_AUTOUPDATER=1
     if [ "''${HERDR_ENV:-}" = "1" ]; then
       set -- -c tui.notifications=false "$@"
     fi
@@ -197,6 +192,7 @@ in
 
     # Code quality
     actionlint
+    zizmor
     autocorrect
     commitlint
     dprintPackage
@@ -473,9 +469,11 @@ in
 
     yazi = {
       enable = true;
+      extraPackages = [ pkgs.glow ];
       plugins = with pkgs.yaziPlugins; {
         inherit
           git
+          piper
           smart-enter
           smart-filter
           vcs-files
@@ -486,6 +484,12 @@ in
       '';
       settings = {
         mgr.show_hidden = true;
+        plugin.prepend_previewers = [
+          {
+            url = "*.md";
+            run = ''piper -- CLICOLOR_FORCE=1 glow -w=$w -s=dark "$1"'';
+          }
+        ];
         plugin.prepend_fetchers = [
           {
             group = "git";
