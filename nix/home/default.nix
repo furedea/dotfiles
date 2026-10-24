@@ -32,7 +32,7 @@ let
   devinCliPackage = pkgs.callPackage ../packages/devin_cli.nix { };
   nodejsPackage = pkgs.callPackage ../packages/nodejs_bin.nix { };
   uvPackage = unstable.uv;
-  dprintPackage = pkgs.callPackage ../packages/dprint_bin.nix { };
+  dprintPackage = unstable.dprint;
   codexPackage = llm-agents.packages.${system}.codex;
   claudePackage = llm-agents.packages.${system}.claude-code;
   agentHarnessPackage = agent-harness.packages.${system}.default;
