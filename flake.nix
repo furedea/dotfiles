@@ -151,6 +151,7 @@
               enableHisterService
               enableMoshiService
               histerServerUrl
+              agent-config
               ;
           };
           modules = [

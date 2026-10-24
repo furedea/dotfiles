@@ -5,6 +5,7 @@
   enableHisterService,
   histerServerUrl,
   username,
+  agent-config,
   ...
 }:
 let
@@ -46,8 +47,9 @@ in
 
   environment.variables = {
     # Devin CLI has no config key for the default permission mode; the
-    # documented mechanisms are --permission-mode and this env var.
-    DEVIN_PERMISSION_MODE = "smart";
+    # documented mechanisms are --permission-mode and this env var. The value
+    # is shared with the server bootstrap through agent-config.
+    inherit (agent-config.lib.agentEnvironment) DEVIN_PERMISSION_MODE;
     # Tools that ship no CA bundle of their own (uv-managed Python, for one)
     # read this, the store filtered below, instead; requests reads only its own
     # variable and otherwise uses each venv's certifi.
