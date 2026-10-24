@@ -127,8 +127,6 @@ let
     ${lib.getExe herdrPackage} completion zsh >| "$out/share/zsh/site-functions/_herdr"
   '';
   herdrCompatibleCodex = pkgs.writeShellScriptBin "codex" ''
-    export CODEX_EXECUTABLE_PATH="$HOME/.local/bin/codex"
-    export DISABLE_AUTOUPDATER=1
     if [ "''${HERDR_ENV:-}" = "1" ]; then
       set -- -c tui.notifications=false "$@"
     fi
