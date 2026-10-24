@@ -1,5 +1,5 @@
 [project]
-name = "dotfiles-agent-tools"
+name = "dotfiles"
 version = "0.1.0"
 description = "Standard-library automation and tests for personal dotfiles."
 requires-python = "==3.14.6"
@@ -9,7 +9,7 @@ dependencies = []
 pythonpath = ["."]
 testpaths = ["tests"]
 addopts = ["-n", "auto"]
-markers = ["integration: requires installed toolchains, provider CLIs, or the managed macOS profile"]
+markers = ["integration: requires the installed macOS Home Manager profile or Nix-built packages"]
 
 [tool.deptry]
 ignore_notebooks = true

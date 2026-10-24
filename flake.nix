@@ -202,21 +202,6 @@
         )
       ) hosts;
 
-      # Re-export codex CLI per system so local users can `nix shell .#codex`
-      # without hard-coding the upstream flake URL. Versions stay pinned via
-      # flake.lock.
-      packages =
-        nixpkgs.lib.genAttrs
-          [
-            "aarch64-darwin"
-            "x86_64-darwin"
-            "aarch64-linux"
-            "x86_64-linux"
-          ]
-          (sys: {
-            inherit (llm-agents.packages.${sys}) codex;
-          });
-
       # Dev shell for local work, consumed by direnv (`use flake`).
       devShells =
         nixpkgs.lib.genAttrs

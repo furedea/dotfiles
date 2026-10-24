@@ -20,7 +20,6 @@ The primary outputs are:
 - `darwinConfigurations.mba`: the complete MacBook Air configuration
 - `homeConfigurations."kaito@mbp"` and `homeConfigurations."kaito@mba"`: each
   host's user environment for faster iteration
-- `packages.<system>.codex`: the pinned Codex CLI exposed by this flake
 - `devShells.<system>.default`: commitlint and lefthook for repository work
 
 The repository currently assumes:
@@ -185,14 +184,15 @@ The cask list in `nix/darwin/default.nix` is authoritative.
   zoxide, ghq, roots, git-wt, fzf, eza, bat, fd, ripgrep, and Yazi
 - Git, Delta, GitHub CLI, Lazygit, Neovim, Tree-sitter, and Vim configuration
 - Nix, Bash, Python, Rust, TypeScript, Lua, LaTeX, formatting, and linting tools
-- Claude Code, Codex, OpenCode, and Herdr
+- Claude Code, Codex, Devin, Hermes Agent, pi, and Herdr
 - `programs.git`, `programs.delta`, `programs.gh`, `programs.lazygit`,
   `programs.direnv`, `programs.atuin`, `programs.agent-harness`, and
   `programs.yazi`
 
-Activation also installs the stable Rust toolchain, installs the default Python
-requested by uv, creates the SSH signing key when absent, and reconciles the
-commit-pinned Herdr plugin set.
+Activation also creates the Hermes secretary profile when absent, rebuilds the
+Zsh completion cache, reports how to create or protect the SSH signing key when
+it is missing or has no passphrase, and reconciles the commit-pinned Herdr plugin
+set.
 
 ### AI Agent Environment
 
@@ -202,10 +202,10 @@ Codex, Devin, Hermes Agent, and pi. The
 [agent-harness](https://github.com/furedea/agent-harness) flake renders and deploys
 that source for each provider. This repository also builds release-matched Herdr
 and Moshi hook bundles and composes them through the module's generic `hooks`
-boundary. Herdr comes from the pinned flake input. Moshi Hook 0.2.87 is pinned in
-Nix for deterministic hook generation, while the Homebrew installation remains the
-runtime daemon used by generated hooks. Pairing tokens and mutable Moshi state are
-never added to the Nix store.
+boundary. Herdr comes from the pinned flake input. Moshi Hook is pinned in
+[`nix/packages/moshi_hook.nix`](nix/packages/moshi_hook.nix); on the MacBook Pro, a
+Home Manager LaunchAgent runs that same binary as the daemon used by generated hooks.
+Pairing tokens and mutable Moshi state are never added to the Nix store.
 
 Servers without Nix use the bootstrap script in agent-config instead of the Home
 Manager module; it still reads host-specific settings from `~/.config/dotfiles/`.
@@ -327,6 +327,9 @@ These tracked files are not applied by Home Manager or nix-darwin:
 ├── zsh/ and bash/             # Interactive shell configuration
 ├── nvim/ and vim/             # Editor configuration
 ├── herdr/                     # Herdr UI and plugin synchronization
+├── hermes/                    # Editable Hermes secretary profile sources
+├── scripts/                   # Shell launchers for Git signing, Hister, and Moshi
+├── .agents/                   # Repository rules for the agent harness hooks
 ├── ghostty/                   # Terminal configuration
 ├── karabiner/                 # Keyboard remapping
 ├── starship/                  # Shell prompt
@@ -427,9 +430,9 @@ uv run --frozen pytest
 nix flake check
 ```
 
-CI checks shell integration with Bats and checks Python automation and provider
-integration with Ruff, ty, and pytest. Tests marked `integration` use the shared
-toolchain job; other pytest tests run separately without duplicating those cases.
+CI checks shell integration with Bats and checks Python automation with Ruff, ty,
+and pytest. Tests marked `integration` run in the Bats job; other pytest tests run
+separately without duplicating those cases.
 CI checks all tracked `.sh` files with ShellCheck and shfmt, failing if no scripts
 are selected. Zsh files are not passed to these Bash checks. CI checks Lua with
 Selene and StyLua, checks Nix with Statix, deadnix, and nixfmt, checks JSON/TOML
@@ -446,6 +449,8 @@ The repository cannot automate credentials or settings protected by macOS TCC.
 After the first switch, configure as needed:
 
 - sign in to GUI applications and iCloud
+- create the SSH signing key with a passphrase, using the commands the Home Manager
+  activation prints, and store the passphrase in the macOS Keychain
 - run `gh auth login`
 - run `esa auth login --scopes "read:post write:post"`
 - configure Atuin synchronization credentials if history sync is wanted

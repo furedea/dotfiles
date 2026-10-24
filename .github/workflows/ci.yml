@@ -36,11 +36,6 @@ jobs:
           enable-cache: true
           cache-python: true
 
-      - name: Setup shfmt
-        uses: mfinelli/setup-shfmt@a25fda4c1fe115aec0f85e04126610841bc3141d # v4.0.1
-        with:
-          shfmt-version: "3.13.1"
-
       - name: Install Bats
         uses: bats-core/bats-action@77d6fb60505b4d0d1d73e48bd035b55074bbfb43 # 4.0.0
         with:
@@ -50,12 +45,10 @@ jobs:
           detik-install: "false"
           file-install: "false"
 
-      - name: Install test tools
+      - name: Install zsh
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends jq ripgrep shellcheck zsh
-          uv tool install --python 3.14.6 ruff==0.16.3
-          uv tool dir --bin >> "$GITHUB_PATH"
+          sudo apt-get install -y --no-install-recommends zsh
 
       - name: Run Bats tests
         run: uv run --frozen bats --print-output-on-failure tests/esa/zsh.bats tests/moshi/update_moshi_hook.bats
@@ -108,16 +101,6 @@ jobs:
           python-version: "3.14.6"
           enable-cache: true
           cache-python: true
-
-      - name: Setup shfmt
-        uses: mfinelli/setup-shfmt@a25fda4c1fe115aec0f85e04126610841bc3141d # v4.0.1
-        with:
-          shfmt-version: "3.13.1"
-
-      - name: Install content scanner dependency
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ripgrep
 
       - name: Run Python automation tests
         run: uv run --python 3.14.6 --frozen pytest -m 'not integration'
