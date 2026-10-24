@@ -1,38 +1,10 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended",
-    "schedule:weekly",
-    ":pinAllExceptPeerDependencies",
-    "helpers:pinGitHubActionDigests"
-  ],
-  "mode": "full",
-  "dependencyDashboard": true,
+  "extends": ["github>furedea/renovate-config"],
   "github-actions": {
     "managerFilePatterns": ["/^templates/.*\\.ya?ml$/"]
   },
-  "vulnerabilityAlerts": {
-    "enabled": true,
-    "labels": ["security"],
-    "dependencyDashboardApproval": false,
-    "rangeStrategy": "update-lockfile",
-    "prCreation": "immediate",
-    "minimumReleaseAge": null,
-    "vulnerabilityFixStrategy": "lowest"
-  },
-  "lockFileMaintenance": {
-    "enabled": true
-  },
-  "nix": {
-    "enabled": true
-  },
   "packageRules": [
-    {
-      "description": "Wait for PyPI packages to satisfy uv exclude-newer.",
-      "matchDatasources": ["pypi"],
-      "minimumReleaseAge": "7 days",
-      "internalChecksFilter": "strict"
-    },
     {
       "description": "hermes-agent stays pinned while nix/patches/hermes_gateway_service_resources.patch backports NousResearch/hermes-agent#85365; remove this rule with the pin.",
       "matchManagers": ["nix"],
