@@ -248,17 +248,17 @@ flowchart LR
   M --> C[Parent: clean up]
 ```
 
-| Step                  | Owner         | Starts                                                                                                                                                                                                                       | Skills                                                         |
-| --------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| 1. Issue and plan     | Parent        | —                                                                                                                                                                                                                            | `issue-workflow`                                               |
-| 2. Approve            | User          | —                                                                                                                                                                                                                            | —                                                              |
-| 3. Open lanes         | Parent        | a Herdr worktree and a Sonnet lane per lane, with a brief                                                                                                                                                                    | `git-workflow` (branches), `herdr-delegation`                  |
-| 4. Implement          | Lane          | Codex (tests first, no commits)                                                                                                                                                                                              | `tsdd`, the language style skills, `domain-modeling`           |
-| 5. Verify and deliver | Lane          | —                                                                                                                                                                                                                            | `git-workflow` (commits, delivery)                             |
-| 6. Review and fix     | Lane          | an Opus subagent for Codex's code, or Codex for Claude's; Codex fixes findings                                                                                                                                               | `herdr-delegation`                                             |
-| 7. Report             | Lane → Parent | the lane ends with `LANE-READY`; the parent waits with `herdr agent wait` and reads it                                                                                                                                       | `herdr-delegation`                                             |
-| 8. Check and report   | Parent        | —                                                                                                                                                                                                                            | —                                                              |
-| 9. Merge              | User          | — (run `switch` after merging dotfiles changes)                                                                                                                                                                              | —                                                              |
+| Step                  | Owner         | Starts                                                                                 | Skills                                                         |
+| --------------------- | ------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| 1. Issue and plan     | Parent        | —                                                                                      | `issue-workflow`                                               |
+| 2. Approve            | User          | —                                                                                      | —                                                              |
+| 3. Open lanes         | Parent        | a Herdr worktree and a Sonnet lane per lane, with a brief                              | `git-workflow` (branches), `herdr-delegation`                  |
+| 4. Implement          | Lane          | Codex (tests first, no commits)                                                        | `tsdd`, the language style skills, `domain-modeling`           |
+| 5. Verify and deliver | Lane          | —                                                                                      | `git-workflow` (commits, delivery)                             |
+| 6. Review and fix     | Lane          | an Opus subagent for Codex's code, or Codex for Claude's; Codex fixes findings         | `herdr-delegation`                                             |
+| 7. Report             | Lane → Parent | the lane ends with `LANE-READY`; the parent waits with `herdr agent wait` and reads it | `herdr-delegation`                                             |
+| 8. Check and report   | Parent        | —                                                                                      | —                                                              |
+| 9. Merge              | User          | — (run `switch` after merging dotfiles changes)                                        | —                                                              |
 | 10. Clean up          | Parent        | after the user merges: run `cleanup_worktrees.py` by its absolute path with the home directory expanded, as shown in the rendered `excludedCommands` entry; never remove lane worktrees by hand with `herdr worktree remove` | `git-workflow` (branches), `issue-workflow`, `source-of-truth` |
 
 | Who                   | Does                                                                            | Never does                                              |
@@ -401,8 +401,7 @@ they do not add Hermes dependencies to the dotfiles Python environment.
 
 Tests are grouped by the feature they verify, not by implementation language.
 Python and Bats tests live together under directories such as `tests/herdr/`
-and `tests/hermes/`. Agent tests separate shared hooks, provider-specific behavior,
-and skills live with their source in
+and `tests/hermes/`. Agent hook and skill tests live with their source in
 [furedea/agent-config](https://github.com/furedea/agent-config). `tests/nix/` bridges the
 repository-wide native configuration checks, including the Home Manager rendering of the
 agent source and the repository's related-test mapping.
