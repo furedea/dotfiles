@@ -9,6 +9,9 @@ on:
 
 permissions: {}
 
+env:
+  UV_LOCKED: "1"
+
 defaults:
   run:
     shell: bash
@@ -50,11 +53,11 @@ jobs:
           sudo apt-get install -y --no-install-recommends zsh
 
       - name: Run Bats tests
-        run: uv run --frozen bats --print-output-on-failure tests/esa/zsh.bats tests/moshi/update_moshi_hook.bats
+        run: uv run bats --print-output-on-failure tests/esa/zsh.bats tests/moshi/update_moshi_hook.bats
 
       - name: Run Python integration tests
         # The installed macOS popup profile is checked locally; static TOML checks run on Linux.
-        run: uv run --frozen pytest -m integration
+        run: uv run pytest -m integration
 
   lint-python:
     runs-on: ubuntu-latest
@@ -74,13 +77,13 @@ jobs:
           cache-python: true
 
       - name: Run ruff format
-        run: uv run --frozen ruff format --check github herdr zsh tests
+        run: uv run ruff format --check github herdr zsh tests
 
       - name: Run ruff check
-        run: uv run --frozen ruff check github herdr zsh tests
+        run: uv run ruff check github herdr zsh tests
 
       - name: Run ty
-        run: uv run --frozen ty check
+        run: uv run ty check
 
   test-python:
     runs-on: ubuntu-latest
@@ -100,7 +103,7 @@ jobs:
           cache-python: true
 
       - name: Run Python automation tests
-        run: uv run --frozen pytest -m 'not integration'
+        run: uv run pytest -m 'not integration'
 
   audit-python:
     runs-on: ubuntu-latest
