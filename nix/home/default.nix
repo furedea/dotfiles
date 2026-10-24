@@ -31,8 +31,8 @@ let
   terminalBrowserPackage = pkgs.callPackage ../packages/terminal_browser.nix { };
   devinCliPackage = pkgs.callPackage ../packages/devin_cli.nix { };
   nodejsPackage = pkgs.callPackage ../packages/nodejs_bin.nix { };
-  uvPackage = pkgs.callPackage ../packages/uv_bin.nix { };
-  dprintPackage = pkgs.callPackage ../packages/dprint_bin.nix { };
+  uvPackage = unstable.uv;
+  dprintPackage = unstable.dprint;
   codexPackage = llm-agents.packages.${system}.codex;
   claudePackage = llm-agents.packages.${system}.claude-code;
   agentHarnessPackage = agent-harness.packages.${system}.default;
