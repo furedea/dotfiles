@@ -87,7 +87,7 @@ wheels = [
 ]
 
 [[package]]
-name = "dotfiles-agent-tools"
+name = "dotfiles"
 version = "0.1.0"
 source = { virtual = "." }
 default-groups = ["lint", "test", "typecheck"]

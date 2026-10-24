@@ -29,21 +29,6 @@ def executable(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> StubWriter:
 
 
 @pytest.fixture
-def git_project(isolated_project: Path) -> Path:
-    """Create a disposable repository with a predictable branch and local identity."""
-    for arguments in (
-        ["init", "--quiet", "-b", "main"],
-        ["config", "user.email", "test@example.invalid"],
-        ["config", "user.name", "Test"],
-        ["config", "commit.gpgsign", "false"],
-        ["config", "core.fsmonitor", "false"],
-        ["commit", "--quiet", "--allow-empty", "-m", "test fixture"],
-    ):
-        subprocess.run(["git", *arguments], cwd=isolated_project, check=True, capture_output=True)
-    return isolated_project
-
-
-@pytest.fixture
 def isolated_project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Keep working files and state writes inside the test's project."""
     monkeypatch.chdir(tmp_path)
