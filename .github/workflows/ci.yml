@@ -32,7 +32,6 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
-          python-version: "3.14.6"
           enable-cache: true
           cache-python: true
 
@@ -71,18 +70,17 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
-          python-version: "3.14.6"
           enable-cache: true
           cache-python: true
 
       - name: Run ruff format
-        run: uv run --python 3.14.6 --frozen ruff format --check github herdr zsh tests
+        run: uv run --frozen ruff format --check github herdr zsh tests
 
       - name: Run ruff check
-        run: uv run --python 3.14.6 --frozen ruff check github herdr zsh tests
+        run: uv run --frozen ruff check github herdr zsh tests
 
       - name: Run ty
-        run: uv run --python 3.14.6 --frozen ty check
+        run: uv run --frozen ty check
 
   test-python:
     runs-on: ubuntu-latest
@@ -98,12 +96,11 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
-          python-version: "3.14.6"
           enable-cache: true
           cache-python: true
 
       - name: Run Python automation tests
-        run: uv run --python 3.14.6 --frozen pytest -m 'not integration'
+        run: uv run --frozen pytest -m 'not integration'
 
   audit-python:
     runs-on: ubuntu-latest
@@ -119,15 +116,14 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
-          python-version: "3.14.6"
           enable-cache: true
           cache-python: true
 
       - name: Run deptry
-        run: uv run --python 3.14.6 --group audit deptry .
+        run: uv run --group audit deptry .
 
       - name: Run vulture
-        run: uv run --python 3.14.6 --group audit vulture
+        run: uv run --group audit vulture
 
   shell-lint:
     runs-on: ubuntu-latest
