@@ -463,6 +463,7 @@ in
       };
       # Sandboxed Neovim cannot write ~/.local/state/nvim, so log into the writable hook state directory.
       claude.settings.env.NVIM_LOG_FILE = nvimLogFile;
+      codex.settings.shell_environment_policy.set.NVIM_LOG_FILE = nvimLogFile;
       # gh runs sandboxed with a one-hour token minted from this GitHub App; the key stays unreadable.
       github.agentToken = {
         enable = true;

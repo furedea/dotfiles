@@ -58,6 +58,7 @@ let
     '';
   nvimLogFile = "${home.xdg.stateHome}/agent-harness/nvim.log";
   claudeSettingsSync = home.home.activation.agentHarnessClaudeSettings.data;
+  codexConfigSync = home.home.activation.agentHarnessCodexConfig.data;
 in
 {
   # The activation script names the rendered settings.json, so the check reads what is installed.
@@ -72,6 +73,25 @@ in
         rendered=$(grep -o '/nix/store/[^ ]*/\.claude/settings\.json' <<<"$claudeSettingsSync")
         jq -e --arg nvim "$nvimLogFile" --arg gh "$ghConfigDir" \
           '.env.NVIM_LOG_FILE == $nvim and .env.GH_CONFIG_DIR == $gh' "$rendered"
+        touch "$out"
+      '';
+
+  agent-codex-rendered-config =
+    pkgs.runCommand "agent-codex-rendered-config"
+      {
+        inherit codexConfigSync nvimLogFile;
+        ghConfigDir = home.programs.agent-harness.github.agentToken.configDir;
+        nativeBuildInputs = [ pkgs.python3 ];
+      }
+      ''
+        rendered=$(grep -o '/nix/store/[^ ]*/\.codex/config\.toml' <<<"$codexConfigSync")
+        python3 -I - "$rendered" <<'PY'
+        import os, sys, tomllib
+        with open(sys.argv[1], "rb") as f:
+            env = tomllib.load(f)["shell_environment_policy"]["set"]
+        assert env["NVIM_LOG_FILE"] == os.environ["nvimLogFile"], env
+        assert env["GH_CONFIG_DIR"] == os.environ["ghConfigDir"], env
+        PY
         touch "$out"
       '';
 
