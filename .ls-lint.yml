@@ -12,6 +12,8 @@ ignore:
   - .direnv
   - result
   - result-*
+  # Runtime logs are ignored by Git and are not part of the repository layout.
+  - "**/logs"
   - "{.venv,.uv-cache,.ruff_cache,.pytest_cache,.ipynb_checkpoints,__pycache__,node_modules,target}"
   - "**/{.venv,.uv-cache,.ruff_cache,.pytest_cache,.ipynb_checkpoints,__pycache__,node_modules,target}"
   # Agent-local workspaces are ignored by Git and are not part of the repository layout.
