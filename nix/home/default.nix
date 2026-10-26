@@ -36,6 +36,7 @@ let
   codexPackage = llm-agents.packages.${system}.codex;
   claudePackage = llm-agents.packages.${system}.claude-code;
   agentHarnessPackage = agent-harness.packages.${system}.default;
+  nvimLogFile = "${config.xdg.stateHome}/agent-harness/nvim.log";
   moshiHookPackage = pkgs.callPackage ../packages/moshi_hook.nix { };
   moshiHookRuntime = lib.getExe moshiHookPackage;
   moshiLifecycle = pkgs.writeTextFile {
@@ -460,6 +461,8 @@ in
         herdr = herdrHookBundle;
         moshi = moshiHookBundle;
       };
+      # Sandboxed Neovim cannot write ~/.local/state/nvim, so log into the writable hook state directory.
+      claude.settings.env.NVIM_LOG_FILE = nvimLogFile;
       # gh runs sandboxed with a one-hour token minted from this GitHub App; the key stays unreadable.
       github.agentToken = {
         enable = true;
