@@ -56,14 +56,38 @@ let
     pkgs.runCommand name { passthru = { inherit contracts; }; } ''
       touch "$out"
     '';
+  nvimLogFile = "${home.xdg.stateHome}/agent-harness/nvim.log";
+  claudeSettingsSync = home.home.activation.agentHarnessClaudeSettings.data;
 in
 {
+  # The activation script names the rendered settings.json, so the check reads what is installed.
+  agent-claude-rendered-settings =
+    pkgs.runCommand "agent-claude-rendered-settings"
+      {
+        inherit claudeSettingsSync nvimLogFile;
+        ghConfigDir = home.programs.agent-harness.github.agentToken.configDir;
+        nativeBuildInputs = [ pkgs.jq ];
+      }
+      ''
+        rendered=$(grep -o '/nix/store/[^ ]*/\.claude/settings\.json' <<<"$claudeSettingsSync")
+        jq -e --arg nvim "$nvimLogFile" --arg gh "$ghConfigDir" \
+          '.env.NVIM_LOG_FILE == $nvim and .env.GH_CONFIG_DIR == $gh' "$rendered"
+        touch "$out"
+      '';
+
   home-configuration = check "home-configuration" {
     hooks-compose-herdr-and-moshi =
       builtins.attrNames home.programs.agent-harness.hooks == [
         "herdr"
         "moshi"
       ];
+    # Sandboxed agents cannot write ~/.local/state/nvim, so Neovim would drop nvim.log in the workspace.
+    agent-nvim-log-in-writable-state =
+      let
+        claude = home.programs.agent-harness.claude.composedSettings;
+      in
+      claude.env.NVIM_LOG_FILE == nvimLogFile
+      && builtins.elem "~/.local/state/agent-harness" claude.sandbox.filesystem.allowWrite;
     github-stacked-pr-extension = names home.programs.gh.extensions == [ "gh-stack" ];
     neovim-nix-managed-plugin-loader = names home.programs.neovim.plugins == [ "lazy.nvim" ];
     yazi-bats-icon =
