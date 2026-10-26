@@ -15,8 +15,14 @@ return {
     opts = {
       target_language = "ja",
       translate_service = "google",
-      hover = { enabled = true, delay = 500, auto = true },
+      hover = { enabled = true, delay = 500, auto = false },
       targets = { comment = true, string = true },
+      keymaps = {
+        hover = false,
+        hover_manual = "<leader>cc",
+        replace = false,
+        toggle = false,
+      },
     },
   },
 
@@ -83,12 +89,14 @@ return {
     event = "VeryLazy",
     opts = {
       spec = {
+        { "<leader>b", group = "Buffer" },
         { "<leader>f", group = "Find" },
         { "<leader>h", group = "Git Hunk" },
         { "<leader>x", group = "Trouble" },
         { "<leader>d", group = "Diff" },
-        { "<leader>p", group = "Peek" },
         { "<leader>t", group = "Test" },
+        { "<leader>c", group = "Code" },
+        { "<leader>cc", desc = "Translate comment under cursor" },
       },
     },
   },

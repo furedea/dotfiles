@@ -85,6 +85,11 @@ return {
         vim.g.auto_hover = not vim.g.auto_hover
         vim.notify("Auto hover: " .. (vim.g.auto_hover and "ON" or "OFF"))
       end, { desc = "Toggle auto hover" })
+      -- noice.nvim focuses an open hover instead of reopening it, so never call hover() then
+      local function is_hover_open()
+        local docs = package.loaded["noice.lsp.docs"]
+        return docs ~= nil and docs.get("hover"):win() ~= nil
+      end
       vim.api.nvim_create_autocmd("CursorHold", {
         callback = function()
           if not vim.g.auto_hover then
@@ -96,6 +101,9 @@ return {
             vim.diagnostic.open_float({ focusable = false })
           end
           vim.schedule(function()
+            if is_hover_open() then
+              return
+            end
             local clients = vim.lsp.get_clients({ bufnr = 0 })
             for _, client in ipairs(clients) do
               if client:supports_method("textDocument/hover") then

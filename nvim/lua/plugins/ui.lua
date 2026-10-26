@@ -35,7 +35,7 @@ return {
       { "<C-8>", "<cmd>BufferGoto 8<cr>", desc = "Buffer 8" },
       { "<C-9>", "<cmd>BufferGoto 9<cr>", desc = "Buffer 9" },
       { "<C-0>", "<cmd>BufferLast<cr>", desc = "Last buffer" },
-      { "<C-c>", "<cmd>BufferClose<cr>", desc = "Close buffer" },
+      { "<leader>bd", "<cmd>BufferClose<cr>", desc = "Close buffer" },
     },
   },
 
