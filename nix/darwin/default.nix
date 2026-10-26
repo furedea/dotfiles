@@ -386,6 +386,7 @@ in
     brews = [ omlxFormula ];
 
     casks = [
+      "1password"
       "bitwarden"
       "blender"
       "chatgpt"
