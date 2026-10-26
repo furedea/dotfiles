@@ -86,6 +86,23 @@ return {
         "nix",
         "vim",
         "vimdoc",
+        "rust",
+        "toml",
+        "tsx",
+        "markdown_inline",
+        "regex",
+      })
+
+      vim.api.nvim_create_autocmd("FileType", {
+        callback = function(ev)
+          if vim.tbl_contains({ "tex", "plaintex" }, ev.match) then
+            return
+          end
+          if not pcall(vim.treesitter.start, ev.buf) then
+            return
+          end
+          vim.bo[ev.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+        end,
       })
     end,
   },
