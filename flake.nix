@@ -73,6 +73,7 @@
           "claude-code"
           "devin-cli"
           "moshi-hook"
+          "1password-cli"
         ];
       pkgs = import nixpkgs {
         inherit system;
@@ -167,6 +168,7 @@
               #   claude-code      : Anthropic proprietary (via numtide/llm-agents.nix)
               #   devin-cli        : Cognition proprietary binary release
               #   moshi-hook       : upstream binary release without a declared license
+              #   1password-cli    : AgileBits proprietary CLI
               nixpkgs.config.allowUnfreePredicate = allowUnfreePredicate;
 
               home-manager = {
