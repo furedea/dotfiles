@@ -139,7 +139,7 @@ wait for the old instance to expire or restart the service before reconnecting.
 The current cask set is:
 
 ```text
-bitwarden              chatgpt                deepl
+chatgpt                deepl
 discord                firefox                font-jetbrains-mono
 ghostty                google-chrome         homerow
 karabiner-elements     mactex                microsoft-excel

@@ -387,7 +387,6 @@ in
 
     casks = [
       "1password"
-      "bitwarden"
       "blender"
       "chatgpt"
       "deepl"
