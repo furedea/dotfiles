@@ -117,13 +117,17 @@ in
           text = "";
         }
       ];
-    ssh-identities-from-keychain =
-      home.launchd.agents.ssh-agent-loader.config.ProgramArguments == [
-        "/usr/bin/ssh-add"
-        "--apple-load-keychain"
-      ];
-    ssh-identities-loaded-at-login = home.launchd.agents.ssh-agent-loader.config.RunAtLoad;
-    ssh-client-config-unmanaged = !(home.home.file ? ".ssh/config");
+    ssh-no-keychain-loader = !(home.launchd.agents ? ssh-agent-loader);
+    ssh-uses-onepassword-agent =
+      let
+        sshConfig = home.home.file.".ssh/config".text;
+      in
+      lib.hasInfix ''IdentityAgent "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"'' sshConfig
+      && lib.hasInfix "IdentityFile ~/.ssh/id_ed25519.pub" sshConfig
+      && lib.hasInfix "IdentitiesOnly yes" sshConfig;
+    git-signs-with-ssh-public-key =
+      home.programs.git.settings.user.signingkey == "~/.ssh/id_ed25519.pub"
+      && home.programs.git.settings.gpg.format == "ssh";
     ssh-identity-creation-left-to-user = !(home.home.activation ? sshKeyGen);
     zsh-cache-after-startup-links = home.home.activation.zshCache.after == [ "linkGeneration" ];
     global-language-toolchains = hasAll [

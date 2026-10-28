@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# Executable specifications for restoring SSH signing identities after login.
+# Executable specifications for the SSH directory and public key that 1Password-backed signing relies on.
 
 bats_require_minimum_version 1.5.0
 
@@ -37,7 +37,7 @@ evaluate_ssh_directory_permissions() {
   [ "$output" = "700" ]
 }
 
-@test "home activation reports a missing SSH identity" {
+@test "home activation reports a missing SSH public key" {
   run --separate-stderr evaluate_ssh_identity_check
 
   [ "$status" -eq 0 ]
@@ -46,10 +46,11 @@ evaluate_ssh_directory_permissions() {
   run env HOME="$BATS_TEST_TMPDIR/home" /bin/bash -c "$activation_script"
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *"SSH identity is missing."* ]]
+  [[ "$output" == *"SSH public key is missing."* ]]
+  [[ "$output" == *"Export it from 1Password"* ]]
 }
 
-@test "home activation reports an SSH identity without a passphrase" {
+@test "home activation stays quiet when the SSH public key exists" {
   run --separate-stderr evaluate_ssh_identity_check
 
   [ "$status" -eq 0 ]
@@ -57,21 +58,7 @@ evaluate_ssh_directory_permissions() {
   mkdir -p "$BATS_TEST_TMPDIR/home/.ssh"
   /usr/bin/ssh-keygen -q -t ed25519 -N "" \
     -f "$BATS_TEST_TMPDIR/home/.ssh/id_ed25519"
-
-  run env HOME="$BATS_TEST_TMPDIR/home" /bin/bash -c "$activation_script"
-
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"SSH identity has no passphrase."* ]]
-}
-
-@test "home activation stays quiet for a passphrase-protected SSH identity" {
-  run --separate-stderr evaluate_ssh_identity_check
-
-  [ "$status" -eq 0 ]
-  activation_script="$output"
-  mkdir -p "$BATS_TEST_TMPDIR/home/.ssh"
-  /usr/bin/ssh-keygen -q -t ed25519 -N "test-passphrase" \
-    -f "$BATS_TEST_TMPDIR/home/.ssh/id_ed25519"
+  rm "$BATS_TEST_TMPDIR/home/.ssh/id_ed25519"
 
   run env HOME="$BATS_TEST_TMPDIR/home" /bin/bash -c "$activation_script"
 

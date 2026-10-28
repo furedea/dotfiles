@@ -165,9 +165,8 @@ The cask list in `nix/darwin/default.nix` is authoritative.
   `programs.yazi`
 
 Activation also creates the Hermes secretary profile when absent, rebuilds the
-Zsh completion cache, reports how to create or protect the SSH signing key when
-it is missing or has no passphrase, and reconciles the commit-pinned Herdr plugin
-set.
+Zsh completion cache, reports how to export the SSH public key from 1Password when
+it is missing, and reconciles the commit-pinned Herdr plugin set.
 
 ### AI Agent Environment
 
@@ -374,8 +373,8 @@ The repository cannot automate credentials or settings protected by macOS TCC.
 After the first switch, configure as needed:
 
 - sign in to GUI applications and iCloud
-- create the SSH signing key with a passphrase, using the commands the Home Manager
-  activation prints, and store the passphrase in the macOS Keychain
+- import the SSH key into 1Password, enable its SSH agent, and export the public key
+  to `~/.ssh/id_ed25519.pub` as the Home Manager activation message describes
 - run `gh auth login`
 - run `esa auth login --scopes "read:post write:post"`
 - configure Atuin synchronization credentials if history sync is wanted

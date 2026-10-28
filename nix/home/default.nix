@@ -24,6 +24,7 @@ let
     export PATH=/usr/bin:/bin
     ${builtins.readFile ../../scripts/git/sign_ssh.sh}
   '';
+  onePasswordAgentSocket = "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock";
   esaCliPackage = pkgs.callPackage ../packages/esa_cli.nix { };
   ghStackPackage = unstable.gh-stack;
   gitWtPackage = unstable.callPackage ../packages/git_wt.nix { gitWt = unstable.git-wt; };
@@ -356,6 +357,17 @@ in
       };
     };
 
+    # 1Password holds the private key; ssh offers only the key named by the public key file.
+    ssh = {
+      enable = true;
+      enableDefaultConfig = false;
+      settings."*" = {
+        IdentityAgent = ''"${onePasswordAgentSocket}"'';
+        IdentityFile = "~/.ssh/id_ed25519.pub";
+        IdentitiesOnly = true;
+      };
+    };
+
     delta = {
       enable = true;
       enableGitIntegration = true;
@@ -569,17 +581,6 @@ in
         StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/lspmux.log";
       };
     };
-    ssh-agent-loader = {
-      enable = true;
-      config = {
-        ProgramArguments = [
-          "/usr/bin/ssh-add"
-          "--apple-load-keychain"
-        ];
-        ProcessType = "Background";
-        RunAtLoad = true;
-      };
-    };
   }
   // lib.optionalAttrs enableMoshiService {
     moshi-hook = {
@@ -617,16 +618,11 @@ in
       fi
     '';
     sshIdentityCheck = lib.hm.dag.entryAfter [ "sshDirectoryPermissions" ] ''
-      if [ ! -f "$HOME/.ssh/id_ed25519" ]; then
+      if [ ! -f "$HOME/.ssh/id_ed25519.pub" ]; then
         printf '%s\n' \
-          'SSH identity is missing. Create it interactively with a non-empty passphrase:' \
-          '  /usr/bin/ssh-keygen -t ed25519 -f "$HOME/.ssh/id_ed25519"' \
-          '  /usr/bin/ssh-add --apple-use-keychain "$HOME/.ssh/id_ed25519"'
-      elif /usr/bin/ssh-keygen -y -P "" -f "$HOME/.ssh/id_ed25519" >/dev/null 2>&1; then
-        printf '%s\n' \
-          'SSH identity has no passphrase. Protect it and store the passphrase in the macOS Keychain:' \
-          '  /usr/bin/ssh-keygen -p -f "$HOME/.ssh/id_ed25519"' \
-          '  /usr/bin/ssh-add --apple-use-keychain "$HOME/.ssh/id_ed25519"'
+          'SSH public key is missing. Export it from 1Password (the private key stays in the vault):' \
+          '  1Password > the SSH key item > "..." > Copy Public Key, then:' \
+          '  pbpaste >| "$HOME/.ssh/id_ed25519.pub"'
       fi
     '';
     herdrPlugins = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
