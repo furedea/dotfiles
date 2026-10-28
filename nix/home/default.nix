@@ -191,6 +191,7 @@ in
     secretaryCli
     terminalBrowserPackage
     moshiHookPackage
+    unstable._1password-cli
 
     # Code quality
     actionlint
