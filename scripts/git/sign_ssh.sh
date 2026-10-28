@@ -4,7 +4,7 @@ set -euCo pipefail
 function usage() {
   cat <<EOF >&2
 Description:
-    Run Git's SSH signer with a local macOS agent fallback.
+    Run Git's SSH signer against the local 1Password SSH agent.
 
 Usage:
     $0 <ssh-keygen arguments>
@@ -14,20 +14,17 @@ EOF
 
 function main() {
   [[ "$#" -gt 0 && "$1" != --help && "$1" != -h ]] || usage
-  if [[ "${1:-}" == -Y && "${2:-}" == sign && -z "${SSH_AUTH_SOCK:-}" ]]; then
-    restore_agent_socket || :
+  if [[ "${1:-}" == -Y && "${2:-}" == sign ]]; then
+    attach_onepassword_agent || :
   fi
   exec ssh-keygen "$@"
 }
 
-function restore_agent_socket() {
-  local _uid _socket
-  _uid=$(id -u)
-  # Query only this user's Apple-managed agent; never scan arbitrary sockets.
-  _socket=$(launchctl print "gui/$_uid/com.openssh.ssh-agent" 2>/dev/null |
-    awk '$1 == "path" && $2 == "=" && $3 ~ /\/Listeners$/ { print $3 }') || return 1
+function attach_onepassword_agent() {
+  local _socket="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
+  # Attach only this user's own socket; never scan arbitrary sockets.
   [[ -S "$_socket" && ! -L "$_socket" ]] || return 1
-  [[ "$(stat -f '%u' "$_socket")" == "$_uid" ]] || return 1
+  [[ "$(stat -f '%u' "$_socket")" == "$(id -u)" ]] || return 1
   export SSH_AUTH_SOCK="$_socket"
 }
 

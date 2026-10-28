@@ -1,9 +1,7 @@
-# Remote terminal sessions may not inherit the macOS login agent socket.
-if [[ "$OSTYPE" == darwin* && -z "${SSH_AUTH_SOCK:-}" ]]; then
+# 1Password is the only SSH agent; a forwarded agent in a remote session is kept.
+if [[ "$OSTYPE" == darwin* && -z "${SSH_CONNECTION:-}" ]]; then
   () {
-    local _socket
-    _socket=$(launchctl print "gui/$UID/com.openssh.ssh-agent" 2>/dev/null |
-      awk '$1 == "path" && $2 == "=" && $3 ~ /\/Listeners$/ { print $3 }')
+    local _socket="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
     if [[ -S "$_socket" && -O "$_socket" && ! -L "$_socket" ]]; then
       export SSH_AUTH_SOCK="$_socket"
     fi
