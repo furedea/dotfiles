@@ -24,7 +24,6 @@ let
     export PATH=/usr/bin:/bin
     ${builtins.readFile ../../scripts/git/sign_ssh.sh}
   '';
-  onePasswordAgentSocket = "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock";
   esaCliPackage = pkgs.callPackage ../packages/esa_cli.nix { };
   ghStackPackage = unstable.gh-stack;
   gitWtPackage = unstable.callPackage ../packages/git_wt.nix { gitWt = unstable.git-wt; };
@@ -354,17 +353,6 @@ in
         status.branch = true;
         alias.cc = "!f() { tmpf=$(mktemp) && codex exec -s read-only -o \"$tmpf\" 'Review the staged diff and generate a Conventional Commits message. Output ONLY the commit message, nothing else.' && git commit -F \"$tmpf\"; rm -f \"$tmpf\"; }; f";
         alias.wtd = "wt -D";
-      };
-    };
-
-    # 1Password holds the private key; ssh offers only the key named by the public key file.
-    ssh = {
-      enable = true;
-      enableDefaultConfig = false;
-      settings."*" = {
-        IdentityAgent = ''"${onePasswordAgentSocket}"'';
-        IdentityFile = "~/.ssh/id_ed25519.pub";
-        IdentitiesOnly = true;
       };
     };
 

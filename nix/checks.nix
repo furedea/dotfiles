@@ -118,13 +118,8 @@ in
         }
       ];
     ssh-no-keychain-loader = !(home.launchd.agents ? ssh-agent-loader);
-    ssh-uses-onepassword-agent =
-      let
-        sshConfig = home.home.file.".ssh/config".text;
-      in
-      lib.hasInfix ''IdentityAgent "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"'' sshConfig
-      && lib.hasInfix "IdentityFile ~/.ssh/id_ed25519.pub" sshConfig
-      && lib.hasInfix "IdentitiesOnly yes" sshConfig;
+    # ~/.ssh/config holds private host details and stays out of this public repository.
+    ssh-client-config-unmanaged = !(home.home.file ? ".ssh/config");
     git-signs-with-ssh-public-key =
       home.programs.git.settings.user.signingkey == "~/.ssh/id_ed25519.pub"
       && home.programs.git.settings.gpg.format == "ssh";
