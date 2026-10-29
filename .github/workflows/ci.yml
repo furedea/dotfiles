@@ -233,3 +233,22 @@ jobs:
 
       - name: Run autocorrect
         uses: huacnlee/autocorrect-action@bf91ab3904c2908dd8e71312a8a83ed1eb632997 # v2.13.3
+
+  all-green:
+    if: always()
+    needs:
+      - bats-tests
+      - lint-python
+      - test-python
+      - audit-python
+      - shell-lint
+      - lua-lint
+      - nix-lint
+      - format-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    permissions: {}
+    steps:
+      - name: Fail if any prerequisite did not succeed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: exit 1
