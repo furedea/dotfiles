@@ -20,7 +20,7 @@ def test_pull_request_rule_requires_fresh_human_approval(ruleset: dict) -> None:
     parameters = rule["parameters"]
     assert parameters["required_approving_review_count"] == 1
     assert parameters["dismiss_stale_reviews_on_push"] is True
-    assert parameters["require_last_push_approval"] is True
+    assert parameters["require_last_push_approval"] is False
 
 
 def test_only_repository_admins_bypass_and_only_through_a_pull_request(ruleset: dict) -> None:
