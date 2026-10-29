@@ -302,6 +302,11 @@ an existing repository:
 repo configure <name-or-owner/name>
 ```
 
+The ruleset requires a pull request, the `all-green` check, and one approving
+review that is dismissed by a later push. Only repository admins may bypass it,
+and only when merging a pull request. See
+[ADR-0039](docs/adr/0039_require_human_approval_on_main.md).
+
 A name without an owner defaults to the authenticated GitHub user. Run
 `repo --help` or `repo -h` for the command overview. The commands are covered
 by Python unit and CLI integration tests under `tests/github/`.
