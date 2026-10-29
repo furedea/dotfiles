@@ -1,4 +1,4 @@
-"""Merge confirmation and failure visibility at the actual stdin/process boundary."""
+"""Approve-and-merge confirmation and failure visibility at the actual stdin/process boundary."""
 
 import json
 from pathlib import Path
@@ -10,6 +10,9 @@ from tests.runtime import CliRunner, StubWriter
 
 SCRIPT = "herdr/merge_pull_request.py"
 HEAD = "0123456789abcdef0123456789abcdef01234567"
+OTHER_HEAD = "fedcba9876543210fedcba9876543210fedcba98"
+MERGE = ["pr", "merge", "--squash", "--delete-branch", "--match-head-commit", HEAD]
+APPROVE = ["pr", "review", "42", "--approve"]
 
 
 @pytest.fixture
@@ -25,14 +28,34 @@ def merge_remote(tmp_path: Path, executable: StubWriter, monkeypatch: pytest.Mon
         args = sys.argv[1:]
         with (root / "gh.jsonl").open("a") as stream:
             stream.write(json.dumps(args) + "\\n")
-        assert args[:2] in (["pr", "view"], ["pr", "merge"])
-        kind = "VIEW" if args[1] == "view" else "MERGE"
+        kinds = {"view": "VIEW", "merge": "MERGE", "review": "REVIEW", "user": "USER"}
+        assert args[:2] in (["pr", "view"], ["pr", "merge"], ["pr", "review"], ["api", "user"])
+        kind = kinds[args[1]]
         status = int(os.environ.get(f"GH_{kind}_EXIT_CODE", "0"))
         if status:
             print(os.environ[f"GH_{kind}_ERROR"], file=sys.stderr)
             sys.exit(status)
+        if kind == "USER":
+            print("furedea")
         if kind == "VIEW":
-            print("42\\tMerge helper\\tmain\\tfeature/test")
+            head = os.environ.get("PR_HEAD", os.environ["GIT_HEAD"])
+            check = {
+                "success": {"status": "COMPLETED", "conclusion": "SUCCESS"},
+                "failure": {"status": "COMPLETED", "conclusion": "FAILURE"},
+                "pending": {"status": "IN_PROGRESS", "conclusion": ""},
+            }[os.environ.get("PR_CHECKS", "success")]
+            approved = os.environ.get("PR_APPROVED_OID")
+            reviews = [{"author": {"login": "furedea"}, "state": "APPROVED", "commit": {"oid": approved}}] if approved else []
+            print(json.dumps({
+                "number": 42,
+                "title": "Merge helper",
+                "baseRefName": "main",
+                "headRefName": "feature/test",
+                "headRefOid": head,
+                "author": {"login": os.environ.get("PR_AUTHOR", "furedea-agent")},
+                "latestReviews": reviews,
+                "statusCheckRollup": [check, {"status": "COMPLETED", "conclusion": "SKIPPED"}],
+            }))
     """,
     )
     git = executable(
@@ -69,24 +92,100 @@ def gh_calls(root: Path) -> list[list[str]]:
     return [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
 
 
+def mutations(root: Path) -> list[list[str]]:
+    return [row for row in gh_calls(root) if row[:2] in (["pr", "merge"], ["pr", "review"])]
+
+
 @pytest.mark.parametrize(
     "key,confirm", [("\n", True), ("\r\n", True), ("\x1b\n", False), ("\x03\n", False), ("", False), ("x\n", False)]
 )
 def test_confirmation_keys(run_cli: CliRunner, merge_remote: Path, key: str, confirm: bool) -> None:
     result = run_cli(SCRIPT, str(merge_remote), payload=key)
     assert result.returncode == 0, result.stderr
-    logged = gh_calls(merge_remote)
     if confirm:
-        assert ["pr", "merge", "--squash", "--delete-branch", "--match-head-commit", HEAD] in logged
-        assert not any("--auto" in row for row in logged)
+        assert mutations(merge_remote) == [APPROVE, MERGE]
+        assert not any("--auto" in row or "--admin" in row for row in gh_calls(merge_remote))
     else:
         assert "Cancelled." in result.stdout
-        assert not any(row[:2] == ["pr", "merge"] for row in logged)
+        assert not mutations(merge_remote)
     assert "PR #42: Merge helper" in result.stdout
     assert "feature/test -> main" in result.stdout
-    assert "Enter / Ctrl+M  Squash and merge now" in result.stdout
+    assert "Enter / Ctrl+M  Approve and squash-merge now" in result.stdout
     if key == "x\n":
         assert "Press Enter or Esc to close" in result.stdout
+
+
+def test_summary_shows_author_checks_and_approval(run_cli: CliRunner, merge_remote: Path) -> None:
+    result = run_cli(SCRIPT, str(merge_remote), payload="\x1b")
+    assert "Author: furedea-agent" in result.stdout
+    assert "Checks: passed" in result.stdout
+    assert "Approval: not yet approved" in result.stdout
+
+
+def test_current_head_approval_is_not_repeated(run_cli: CliRunner, merge_remote: Path) -> None:
+    result = run_cli(SCRIPT, str(merge_remote), payload="\n", env={"PR_APPROVED_OID": HEAD})
+    assert result.returncode == 0, result.stderr
+    assert mutations(merge_remote) == [MERGE]
+    assert "Approval: approved by you" in result.stdout
+
+
+def test_stale_approval_is_renewed(run_cli: CliRunner, merge_remote: Path) -> None:
+    result = run_cli(SCRIPT, str(merge_remote), payload="\n", env={"PR_APPROVED_OID": OTHER_HEAD})
+    assert result.returncode == 0, result.stderr
+    assert mutations(merge_remote) == [APPROVE, MERGE]
+
+
+def test_failed_approval_prevents_merge(run_cli: CliRunner, merge_remote: Path) -> None:
+    result = run_cli(
+        SCRIPT,
+        str(merge_remote),
+        payload="\n\n",
+        env={"GH_REVIEW_EXIT_CODE": "1", "GH_REVIEW_ERROR": "approve not permitted"},
+    )
+    assert result.returncode == 1
+    assert "approve not permitted" in result.stderr
+    assert mutations(merge_remote) == [APPROVE]
+    assert "Press Enter or Esc to close" in result.stdout
+
+
+@pytest.mark.parametrize(
+    "env,reason",
+    [
+        ({"PR_HEAD": OTHER_HEAD}, "local HEAD does not match the pull request head"),
+        ({"PR_CHECKS": "failure"}, "required checks have not all succeeded"),
+        ({"PR_CHECKS": "pending"}, "required checks have not all succeeded"),
+    ],
+)
+@pytest.mark.parametrize("key", ["\n", "A"])
+def test_unsafe_state_is_refused(
+    run_cli: CliRunner, merge_remote: Path, env: dict[str, str], reason: str, key: str
+) -> None:
+    result = run_cli(SCRIPT, str(merge_remote), payload=key + "\n", env={**env, "PR_AUTHOR": "furedea"})
+    assert result.returncode == 1
+    assert f"Cannot merge: {reason}" in result.stdout
+    assert "Press Enter or Esc to close" in result.stdout
+    assert not mutations(merge_remote)
+
+
+def test_own_pull_request_is_not_approved_or_bypassed_by_enter(run_cli: CliRunner, merge_remote: Path) -> None:
+    result = run_cli(SCRIPT, str(merge_remote), payload="\n\n", env={"PR_AUTHOR": "furedea"})
+    assert result.returncode == 0, result.stderr
+    assert "admin bypass" in result.stdout
+    assert "A               Merge with admin bypass" in result.stdout
+    assert "Enter / Ctrl+M  Approve" not in result.stdout
+    assert not mutations(merge_remote)
+
+
+def test_own_pull_request_merges_with_admin_on_explicit_key(run_cli: CliRunner, merge_remote: Path) -> None:
+    result = run_cli(SCRIPT, str(merge_remote), payload="A", env={"PR_AUTHOR": "furedea"})
+    assert result.returncode == 0, result.stderr
+    assert mutations(merge_remote) == [[*MERGE, "--admin"]]
+
+
+def test_admin_key_is_ignored_for_other_authors(run_cli: CliRunner, merge_remote: Path) -> None:
+    result = run_cli(SCRIPT, str(merge_remote), payload="A\n")
+    assert not mutations(merge_remote)
+    assert "Cancelled." in result.stdout
 
 
 def test_dirty_tree_prevents_merge(run_cli: CliRunner, merge_remote: Path) -> None:
@@ -110,6 +209,7 @@ def test_linked_base_preserves_local_branch(run_cli: CliRunner, merge_remote: Pa
     [
         ("GH_MERGE", 1, "required checks have not passed"),
         ("GH_VIEW", 1, "no pull requests found for branch"),
+        ("GH_USER", 1, "not logged in"),
         ("GIT_HEAD", 128, "unable to resolve HEAD"),
         ("GIT_ROOT", 128, "not a git repository"),
     ],

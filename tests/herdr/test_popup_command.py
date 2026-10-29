@@ -74,7 +74,7 @@ def test_reviewr_starts_with_branch_changes() -> None:
 
 
 def test_pull_request_merge_uses_the_standard_popup_and_managed_helper() -> None:
-    command = command_for("squash-merge current PR")
+    command = command_for("approve and squash-merge current PR")
     assert command["key"] == "prefix+ctrl+p"
     assert command["type"] == "popup"
     assert command["width"] == command["height"] == "85%"
