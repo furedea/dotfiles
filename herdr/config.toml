@@ -50,7 +50,7 @@ BASH_XTRACEFD=9 \
   exec "$HOME/.local/libexec/herdr_merge_pull_request.sh" \
     "${HERDR_ACTIVE_PANE_CWD:-$PWD}" 9>/dev/null
 '''
-description = "squash-merge current PR"
+description = "approve and squash-merge current PR"
 width = "85%"
 height = "85%"
 
