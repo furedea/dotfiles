@@ -53,7 +53,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends zsh
 
       - name: Run Bats tests
-        run: uv run bats --print-output-on-failure tests/esa/zsh.bats tests/moshi/update_moshi_hook.bats
+        run: uv run bats --print-output-on-failure tests/esa/zsh.bats tests/moshi/update_moshi_hook.bats tests/codex/update_codex.bats
 
       - name: Run Python integration tests
         # The installed macOS popup profile is checked locally; static TOML checks run on Linux.

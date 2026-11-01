@@ -1,0 +1,70 @@
+name: Update Codex
+
+on:
+  schedule:
+    - cron: "41 3 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: write # dispatch CI, which GITHUB_TOKEN-created PRs do not trigger
+      contents: write # push the update branch
+      pull-requests: write # open the update PR
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check for a newer release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          status=0
+          version="$(scripts/codex/update_codex.sh)" || status=$?
+          case "$status" in
+            0) echo "version=$version" >> "$GITHUB_OUTPUT" ;;
+            3) echo "Codex is already up to date." ;;
+            *) exit "$status" ;;
+          esac
+
+      - name: Open the update pull request
+        if: steps.release.outputs.version != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          branch="chore/update-codex-$VERSION"
+          open_prs="$(gh pr list --head "$branch" --state open --json number --jq length)"
+          if ((open_prs > 0)); then
+            echo "A pull request for $branch is already open."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch --create "$branch"
+          git commit --all --message "build(nix): update codex to $VERSION"
+          gh auth setup-git
+          git push --force origin "HEAD:refs/heads/$branch"
+
+          gh pr create \
+            --base "$GITHUB_REF_NAME" \
+            --head "$branch" \
+            --title "build(nix): update codex to $VERSION" \
+            --body "Pins \`codex\` to rust-v$VERSION. The hash comes from the \`digest\` of the \`codex-package-aarch64-apple-darwin.tar.gz\` asset in the GitHub release API; the binaries keep OpenAI's Developer ID signature, which the package install check verifies."
+          gh workflow run ci.yml --ref "$branch"
