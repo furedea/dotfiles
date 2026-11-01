@@ -7,11 +7,11 @@
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "moshi-hook";
-  version = "0.4.40";
+  version = "0.4.44";
 
   src = fetchurl {
     url = "https://cdn.getmoshi.app/hook/v${finalAttrs.version}/moshi-hook_Darwin_arm64.tar.gz";
-    hash = "sha256-ZX6l1tUV1xh6PMXoDzV4Xntza3V/Ti472yzGPJFBTDE=";
+    hash = "sha256-SV9TfDPtOtC8Ds1YJkUsMYQOXqv/Gp+/1B0aG0shMKE=";
   };
 
   sourceRoot = ".";
