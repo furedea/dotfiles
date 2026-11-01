@@ -33,7 +33,7 @@ let
   nodejsPackage = pkgs.callPackage ../packages/nodejs_bin.nix { };
   uvPackage = unstable.uv;
   dprintPackage = unstable.dprint;
-  codexPackage = llm-agents.packages.${system}.codex;
+  codexPackage = pkgs.callPackage ../packages/codex.nix { };
   claudePackage = llm-agents.packages.${system}.claude-code;
   agentHarnessPackage = agent-harness.packages.${system}.default;
   nvimLogFile = "${config.xdg.stateHome}/agent-harness/nvim.log";

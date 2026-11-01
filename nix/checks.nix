@@ -19,6 +19,10 @@ let
   mbaHome = mba.home-manager.users.kaito;
   moshi = mbpHome.launchd.agents.moshi-hook.config;
   moshiVersion = (pkgs.callPackage ./packages/moshi_hook.nix { }).version;
+  codexPackage = pkgs.callPackage ./packages/codex.nix { };
+  codexWrapperText =
+    (builtins.head (builtins.filter (package: (package.name or "") == "codex") home.home.packages))
+    .text;
   hister = mbp.launchd.user.agents.hister.serviceConfig;
   lsp = home.launchd.agents.lspmux;
   lspSettings =
@@ -95,6 +99,8 @@ in
         touch "$out"
       '';
 
+  codex-official-signed = codexPackage;
+
   home-configuration = check "home-configuration" {
     hooks-compose-herdr-and-moshi =
       builtins.attrNames home.programs.agent-harness.hooks == [
@@ -163,6 +169,11 @@ in
         "devin-cli"
         "codex"
       ];
+    # Building codexPackage runs its install check: the vendor Developer ID signature must survive.
+    codex-official-signed-release =
+      lib.hasInfix "/releases/download/rust-v${codexPackage.version}/" codexPackage.src.url
+      && lib.hasInfix (builtins.unsafeDiscardStringContext "${codexPackage}/bin/codex") codexWrapperText
+      && !(lib.hasInfix "llm-agents" codexWrapperText);
     no-unguarded-agent-packages = !(builtins.elem "opencode" homeNames);
     # lefthook before 2.1.6 runs hook commands under a pty, which agent sandboxes deny.
     sandbox-compatible-git-hooks =
