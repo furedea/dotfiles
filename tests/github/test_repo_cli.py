@@ -43,6 +43,7 @@ def remote(tmp_path: Path, executable: StubWriter, monkeypatch: pytest.MonkeyPat
             (destination / ".git").mkdir(parents=True)
             (destination / "src").mkdir()
             (destination / "Cargo.toml").write_text('[package]\\nname = "template-rust"\\nversion = "0.1.0"\\nedition = "2024"\\n')
+            (destination / "go.mod").write_text("module github.com/furedea/template-go\\n\\ngo 1.24\\n")
             for name in ("flake.nix", ".envrc", "src/main.rs"):
                 (destination / name).touch()
         elif args[0] == "api" and "/git/ref/heads/" in args[1]:
@@ -147,6 +148,7 @@ def test_create_output_and_template_readiness(run_cli: CliRunner, remote: Path, 
     assert ["repo", "create", "agent-harness", "--private", *options] in logged
     assert ["repo", "clone", "furedea/agent-harness", str(destination)] in logged
     assert 'name = "agent-harness"' in (destination / "Cargo.toml").read_text()
+    assert "module github.com/furedea/agent-harness\n" in (destination / "go.mod").read_text()
     if template:
         assert ["api", "repos/furedea/agent-harness", "--jq", ".default_branch // empty"] in logged
         assert logged.count(["api", "repos/furedea/agent-harness/git/ref/heads/main", "--jq", ".ref // empty"]) == (

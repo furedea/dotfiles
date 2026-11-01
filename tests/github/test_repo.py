@@ -40,6 +40,18 @@ def test_template_rename_preserves_unrelated_manifest_fields(tmp_path: Path) -> 
     manifest.write_text('[package]\nname = "template-rust"\nversion = "0.1.0"\n')
     package = tmp_path / "package.json"
     package.write_text('{"name":"template-node","private":true}')
-    repo.apply_template(tmp_path, "new-project")
+    repo.apply_template(tmp_path, "owner/new-project")
     assert manifest.read_text() == '[package]\nname = "new-project"\nversion = "0.1.0"\n'
     assert json.loads(package.read_text()) == {"name": "new-project", "private": True}
+
+
+def test_template_rename_rewrites_go_module_path_only(tmp_path: Path) -> None:
+    manifest = tmp_path / "go.mod"
+    manifest.write_text("module github.com/furedea/template-go\n\ngo 1.24\n\nrequire example.com/dep v1.0.0\n")
+    source = tmp_path / "main.go"
+    source.write_text('package main\n\nimport _ "example.com/dep"\n')
+    repo.apply_template(tmp_path, "someone/new-project")
+    assert manifest.read_text() == (
+        "module github.com/someone/new-project\n\ngo 1.24\n\nrequire example.com/dep v1.0.0\n"
+    )
+    assert source.read_text() == 'package main\n\nimport _ "example.com/dep"\n'

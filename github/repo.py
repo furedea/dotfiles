@@ -92,8 +92,9 @@ def default_branch_ready(repository: str) -> bool:
     return reference == f"refs/heads/{branch}"
 
 
-def apply_template(destination: Path, name: str) -> None:
-    """Rename template packages while retaining unrelated manifest content."""
+def apply_template(destination: Path, repository: str) -> None:
+    """Rename template packages and the Go module while retaining unrelated manifest content."""
+    owner, name = repository.split("/", 1)
     for filename in ("pyproject.toml", "Cargo.toml"):
         path = destination / filename
         if path.is_file():
@@ -108,6 +109,17 @@ def apply_template(destination: Path, name: str) -> None:
         data = json.loads(package.read_text())
         data["name"] = name
         package.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+    go_module = destination / "go.mod"
+    if go_module.is_file():
+        go_module.write_text(
+            re.sub(
+                r"^module .*$",
+                lambda _: f"module github.com/{owner}/{name}",
+                go_module.read_text(),
+                count=1,
+                flags=re.MULTILINE,
+            )
+        )
 
 
 def configure(repository: str) -> None:
@@ -154,7 +166,7 @@ def create(arguments: list[str]) -> int:
     print(f"→ cloning into {destination}", file=sys.stderr)
     destination.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run(["gh", "repo", "clone", repository, str(destination)], stdout=sys.stderr, check=True)
-    apply_template(destination, name.rsplit("/", 1)[-1])
+    apply_template(destination, repository)
     with contextlib.redirect_stdout(sys.stderr):
         configure(repository)
     if (destination / "lefthook.yml").is_file() and shutil.which("lefthook"):
