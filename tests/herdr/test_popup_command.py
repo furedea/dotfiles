@@ -80,3 +80,9 @@ def test_pull_request_merge_uses_the_standard_popup_and_managed_helper() -> None
     assert command["width"] == command["height"] == "85%"
     assert ".local/libexec/herdr_merge_pull_request.sh" in command["command"]
     assert "gh pr merge" not in command["command"]
+
+
+def test_pull_request_merge_popup_does_not_set_a_stale_xtrace_fd() -> None:
+    command = command_for("approve and squash-merge current PR")["command"]
+    assert "BASH_XTRACEFD" not in command
+    assert "9>" not in command
