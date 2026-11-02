@@ -622,6 +622,11 @@ in
         "${dotfilesDir}/herdr/plugin_sync.py" \
         ${herdrPluginArgs}
     '';
+    # The config link targets the working tree, so a running server keeps its old config until reloaded.
+    herdrConfigReload = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+      run ${lib.getExe herdrPackage} --session main server reload-config >/dev/null 2>&1 \
+        || echo "herdr: config reload skipped (server not running?)"
+    '';
   };
 
   # lazygit reads XDG_CONFIG_HOME/lazygit/config.yml first when XDG_CONFIG_HOME is set
