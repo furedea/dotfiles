@@ -1,5 +1,5 @@
 #!/usr/bin/env -S python3 -IB
-"""Apply the linked Herdr config to a running server; never fail Home Manager activation."""
+"""Apply the linked Herdr config to every running session; never fail Home Manager activation."""
 
 import json
 import subprocess
@@ -14,29 +14,56 @@ class HerdrCommandError(Exception):
 
 
 def main(arguments: list[str]) -> int:
-    """Reload the running server's config, reporting problems without a failing exit status."""
+    """Reload each running session's config, reporting problems without a failing exit status."""
     if len(arguments) != 1 or arguments[0] in {"-h", "--help"}:
         print("Usage: config_reload.py <HERDR_EXECUTABLE>", file=sys.stderr)
         return 0
     executable = arguments[0]
     try:
-        server = query(executable, "status", "server", "--json")
+        sessions = running_sessions(executable)
     except HerdrCommandError as error:
-        print(f"Skipping Herdr config reload: server status unavailable ({error}).")
+        print(f"Skipping Herdr config reload: session list unavailable ({error}).")
         return 0
-    if server.get("running") is not True:
-        print("Skipping Herdr config reload: no Herdr server is running.")
-        return 0
-    if server.get("compatible") is not True:
-        print("Skipping Herdr config reload: the running Herdr server is incompatible; restart it.")
-        return 0
-    try:
-        result = query(executable, "server", "reload-config").get("result")
-    except HerdrCommandError as error:
-        warn(f"Herdr config reload failed ({error}); run `herdr server reload-config` manually.")
-        return 0
-    report(result if isinstance(result, dict) else {})
+    if not sessions:
+        print("Skipping Herdr config reload: no Herdr session is running.")
+    for session in sessions:
+        reload_session(executable, session)
     return 0
+
+
+def running_sessions(executable: str) -> list[str]:
+    """Name every session whose server is running; each has its own socket and config state."""
+    listed = query(executable, "session", "list", "--json").get("sessions")
+    entries = listed if isinstance(listed, list) else []
+    return [
+        entry["name"]
+        for entry in entries
+        if isinstance(entry, dict) and entry.get("running") is True and isinstance(entry.get("name"), str)
+    ]
+
+
+def reload_session(executable: str, session: str) -> None:
+    """Reload one session's server when it is running and compatible with this client."""
+    try:
+        server = query(executable, "--session", session, "status", "server", "--json")
+    except HerdrCommandError as error:
+        print(f"Skipping Herdr config reload for session {session!r}: status unavailable ({error}).")
+        return
+    if server.get("running") is not True:
+        print(f"Skipping Herdr config reload for session {session!r}: server is not running.")
+        return
+    if server.get("compatible") is not True:
+        print(f"Skipping Herdr config reload for session {session!r}: server is incompatible; restart it.")
+        return
+    try:
+        result = query(executable, "--session", session, "server", "reload-config").get("result")
+    except HerdrCommandError as error:
+        warn(
+            f"Herdr config reload failed for session {session!r} ({error}); "
+            f"run `herdr --session {session} server reload-config` manually."
+        )
+        return
+    report(session, result if isinstance(result, dict) else {})
 
 
 def query(executable: str, *arguments: str) -> dict:
@@ -59,14 +86,14 @@ def query(executable: str, *arguments: str) -> dict:
     return payload
 
 
-def report(result: dict) -> None:
+def report(session: str, result: dict) -> None:
     """Warn about diagnostics or an unapplied reload so a broken config is noticed."""
     status = result.get("status")
     diagnostics = result.get("diagnostics") or []
     if status == "applied" and not diagnostics:
-        print("Reloaded Herdr config in the running server.")
+        print(f"Reloaded Herdr config in session {session!r}.")
         return
-    warn(f"Herdr config reload finished with status {status!r}.")
+    warn(f"Herdr config reload for session {session!r} finished with status {status!r}.")
     for diagnostic in diagnostics:
         warn(f"  {json.dumps(diagnostic, ensure_ascii=False)}")
 
