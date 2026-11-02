@@ -200,6 +200,18 @@ in
     plugin-sync-has-git =
       lib.hasInfix "-git-" home.home.activation.herdrPlugins.data
       && lib.hasInfix "/bin:/usr/bin:/bin" home.home.activation.herdrPlugins.data;
+    # The out-of-store config link changes no generation file, so every switch reloads the server.
+    herdr-config-reload-after-links =
+      let
+        reload = home.home.activation.herdrConfigReload;
+        herdr = builtins.head (
+          builtins.filter (package: (package.pname or "") == "herdr") home.home.packages
+        );
+      in
+      reload.after == [ "linkGeneration" ]
+      && lib.hasPrefix "run " (lib.trim reload.data)
+      && lib.hasInfix (builtins.unsafeDiscardStringContext "/herdr/config_reload.py\" \"${lib.getExe herdr}\"") reload.data
+      && !(lib.hasInfix "|| true" reload.data);
     lspmux-persistent = lsp.enable && lsp.config.RunAtLoad && lsp.config.KeepAlive;
     lspmux-server =
       lib.hasPrefix "/nix/store/" (builtins.head lsp.config.ProgramArguments)

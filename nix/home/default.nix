@@ -622,6 +622,10 @@ in
         "${dotfilesDir}/herdr/plugin_sync.py" \
         ${herdrPluginArgs}
     '';
+    # The config link targets the working tree, so no generation diff reveals edits; always reload.
+    herdrConfigReload = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+      run ${automationPython} -I -B "${dotfilesDir}/herdr/config_reload.py" "${lib.getExe herdrPackage}"
+    '';
   };
 
   # lazygit reads XDG_CONFIG_HOME/lazygit/config.yml first when XDG_CONFIG_HOME is set
