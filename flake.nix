@@ -15,11 +15,6 @@
     # python@3.11, and `brew install` then exited non-zero.
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
     llm-agents.url = "github:numtide/llm-agents.nix";
-    # Pinned: nix/patches/hermes_gateway_service_resources.patch backports
-    # NousResearch/hermes-agent#85365 and no longer applies to newer revisions, so
-    # neither lock file maintenance nor Renovate's digest updates may move this input
-    # (renovate.json disables it). Unpin, and drop that rule, once #85365 is merged.
-    hermes-agent.url = "github:NousResearch/hermes-agent/56a41715dc3b8bf6f50a740ff9416c4036ef4259";
     google-workspace-cli = {
       url = "github:googleworkspace/cli";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -53,7 +48,6 @@
       home-manager,
       nix-homebrew,
       llm-agents,
-      hermes-agent,
       google-workspace-cli,
       apple-mail-cli,
       agent-harness,
@@ -71,7 +65,6 @@
         builtins.elem pkg.pname [
           "zsh-abbr"
           "claude-code"
-          "devin-cli"
           "moshi-hook"
           "1password-cli"
         ];
@@ -84,26 +77,6 @@
         config = { inherit allowUnfreePredicate; };
       };
       herdrPackage = llm-agents.packages.${system}.herdr;
-      hermesPkgs = import hermes-agent.inputs.nixpkgs { inherit system; };
-      hermesAgentBasePackage = hermes-agent.packages.${system}.messaging;
-      # Remove this backport when the pinned Hermes revision contains
-      # NousResearch/hermes-agent#85365.
-      hermesAgentPatchedSource = pkgs.applyPatches {
-        name = "hermes-agent-python-source";
-        src = hermesAgentBasePackage.hermesNpmLib.pythonSrc;
-        patches = [ ./nix/patches/hermes_gateway_service_resources.patch ];
-      };
-      hermesAgentCallPackage =
-        path: overrides:
-        hermesPkgs.callPackage path (
-          overrides
-          // nixpkgs.lib.optionalAttrs (builtins.baseNameOf path == "python.nix") {
-            pythonSrc = hermesAgentPatchedSource;
-          }
-        );
-      hermesAgentPackage = hermesAgentBasePackage.override {
-        callPackage = hermesAgentCallPackage;
-      };
       gwsPackage = google-workspace-cli.packages.${system}.default;
       appleMailCliPackage = apple-mail-cli.packages.${system}.default;
       histerPackage = hister.packages.${system}.default;
@@ -115,7 +88,6 @@
           llm-agents
           appleMailCliPackage
           gwsPackage
-          hermesAgentPackage
           herdrPackage
           histerPackage
           histerServerUrl
@@ -166,7 +138,6 @@
               # accidentally permitting other proprietary packages.
               #   zsh-abbr         : CC-BY-NC-SA-4.0 + Hippocratic License v3.0 (both free=false)
               #   claude-code      : Anthropic proprietary (via numtide/llm-agents.nix)
-              #   devin-cli        : Cognition proprietary binary release
               #   moshi-hook       : upstream binary release without a declared license
               #   1password-cli    : AgileBits proprietary CLI
               nixpkgs.config.allowUnfreePredicate = allowUnfreePredicate;

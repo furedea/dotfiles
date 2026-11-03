@@ -13,27 +13,21 @@
     "tests/nix/agent_hook.bats",
     "tests/nix/codex_notification.bats",
     "tests/herdr/herdr_command.bats",
-    "tests/hermes/hermes_secretary.bats",
-    "tests/terminal-browser/terminal_browser.bats",
-    "tests/hermes/test_hermes_gateway.py"
+    "tests/terminal-browser/terminal_browser.bats"
   ],
   "flake.lock": [
     "tests/nix/configuration.bats",
     "tests/nix/agent_hook.bats",
     "tests/nix/codex_notification.bats",
     "tests/herdr/herdr_command.bats",
-    "tests/hermes/hermes_secretary.bats",
-    "tests/terminal-browser/terminal_browser.bats",
-    "tests/hermes/test_hermes_gateway.py"
+    "tests/terminal-browser/terminal_browser.bats"
   ],
   "nix/**": [
     "tests/nix/configuration.bats",
     "tests/nix/agent_hook.bats",
     "tests/nix/codex_notification.bats",
     "tests/herdr/herdr_command.bats",
-    "tests/hermes/hermes_secretary.bats",
-    "tests/terminal-browser/terminal_browser.bats",
-    "tests/hermes/test_hermes_gateway.py"
+    "tests/terminal-browser/terminal_browser.bats"
   ],
   "github/repo.py": [
     "tests/github/test_repo.py",
@@ -74,8 +68,5 @@
   ],
   "hermes/secretary/skills/secretary/**": [
     "tests/hermes/test_secretary_skill.py"
-  ],
-  "tests/hermes/gateway_probe.py": [
-    "tests/hermes/test_hermes_gateway.py"
   ]
 }

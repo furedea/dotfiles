@@ -8,7 +8,6 @@
   llm-agents,
   appleMailCliPackage,
   gwsPackage,
-  hermesAgentPackage,
   herdrPackage,
   histerPackage,
   histerServerUrl,
@@ -29,7 +28,6 @@ let
   gitWtPackage = unstable.callPackage ../packages/git_wt.nix { gitWt = unstable.git-wt; };
   rootsPackage = pkgs.callPackage ../packages/roots.nix { };
   terminalBrowserPackage = pkgs.callPackage ../packages/terminal_browser.nix { };
-  devinCliPackage = pkgs.callPackage ../packages/devin_cli.nix { };
   nodejsPackage = pkgs.callPackage ../packages/nodejs_bin.nix { };
   uvPackage = unstable.uv;
   dprintPackage = unstable.dprint;
@@ -60,13 +58,6 @@ let
   herdrMergeCommand = pkgs.writeShellScript "herdr_merge_pull_request" ''
     exec ${automationPython} -I -B "${dotfilesDir}/herdr/merge_pull_request.py" "$@"
   '';
-  secretaryCli = pkgs.writeShellApplication {
-    name = "secretary";
-    runtimeInputs = [ hermesAgentPackage ];
-    text = ''
-      exec hermes -p secretary "$@"
-    '';
-  };
   zshCacheBuilder = pkgs.writeText "build_cache.zsh" (builtins.readFile ../../zsh/build_cache.zsh);
   herdrSkill = pkgs.runCommand "herdr-skill" { } ''
     set -euxCo pipefail
@@ -188,7 +179,6 @@ in
     mosh
     repoCommand
     rootsPackage
-    secretaryCli
     terminalBrowserPackage
     moshiHookPackage
     unstable._1password-cli
@@ -216,9 +206,7 @@ in
 
     # AI coding agents
     claudePackage
-    devinCliPackage
     herdrCompatibleCodex
-    hermesAgentPackage
     unstable.pi-coding-agent
 
     # Nix tooling
@@ -452,6 +440,8 @@ in
 
     agent-harness = {
       enable = true;
+      devin.enable = false;
+      hermes.enable = false;
       package = agentHarnessPackage;
       source = agentSource;
       skills = {
@@ -588,12 +578,6 @@ in
   };
 
   home.activation = {
-    initializeHermesSecretary = lib.hm.dag.entryBetween [ "linkGeneration" ] [ "writeBoundary" ] ''
-      if [ ! -d "$HOME/.hermes/profiles/secretary" ]; then
-        ${lib.getExe hermesAgentPackage} profile create secretary --no-skills --no-alias
-        /bin/rm -f "$HOME/.hermes/profiles/secretary/SOUL.md"
-      fi
-    '';
     zshCache = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
       "${pkgs.zsh}/bin/zsh" -f \
         "${zshCacheBuilder}" \
@@ -732,9 +716,5 @@ in
     ".config/herdr/config.toml".source = link "herdr/config.toml";
     ".config/herdr/plugins/config/persiyanov.reviewr/config.toml".source = link "herdr/reviewr.toml";
     ".local/libexec/herdr_merge_pull_request.sh".source = herdrMergeCommand;
-
-    # Hermes secretary files remain editable by Hermes and visible to Git.
-    ".hermes/profiles/secretary/SOUL.md".source = link "hermes/secretary/SOUL.md";
-    ".hermes/profiles/secretary/skills/secretary".source = link "hermes/secretary/skills/secretary";
   };
 }
