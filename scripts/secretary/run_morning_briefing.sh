@@ -43,6 +43,7 @@ function run_briefing() {
     cd "$SECRETARY_DIR"
     "$CLAUDE_BIN" -p "$BRIEFING_PROMPT" \
       --settings "$SECRETARY_DIR/.claude/settings.json" \
+      --setting-sources project \
       --permission-mode dontAsk \
       --output-format text
   )
@@ -71,6 +72,7 @@ function publish_artifact() {
     cd "$ARTIFACT_DIR"
     "$CLAUDE_BIN" -p "$(publish_prompt)" \
       --settings "$SECRETARY_DIR/publish.settings.json" \
+      --setting-sources project \
       --permission-mode dontAsk \
       --output-format text
   )" || return 1

@@ -93,6 +93,7 @@ run_launcher() {
   [[ "$_first" == "$SECRETARY_DIR|"* ]]
   [[ "$_first" == *"--settings $SECRETARY_DIR/.claude/settings.json"* ]]
   [[ "$_first" == *"--permission-mode dontAsk"* ]]
+  [[ "$_first" == *"--setting-sources project"* ]]
 }
 
 @test "the report is saved by date and the day is recorded" {

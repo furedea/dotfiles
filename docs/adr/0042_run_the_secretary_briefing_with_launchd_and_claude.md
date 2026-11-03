@@ -26,6 +26,9 @@ Details that keep the decision testable:
   Artifact URL. A second `claude -p` publishes the saved report with separate settings, run outside
   `secretary/` so the read-only settings do not merge with it. If publishing fails, the Markdown
   stays local and the reminder reports the failure.
+- Both `claude -p` calls pass `--setting-sources project` with `--settings`, so the broad allow rules
+  of the user settings do not merge into the read-only policy. File writes are granted with
+  `Edit(path)` rules, which cover the `Write` tool as well.
 - Reminder text carries the Artifact URL or a failure notice, never mail contents. The previous
   reminders are completed on the next run.
 - Retrieval keeps ADR-0022's primary-source priority and fixed host boundary, but is no longer

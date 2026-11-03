@@ -75,18 +75,20 @@ def test_briefing_settings_deny_provider_mutations() -> None:
         "Bash(apple-mail mark-read *)",
         "Bash(apple-mail move *)",
         "Bash(apple-mail get *--include-body*)",
-        "Edit",
+        "Edit(~/ghq/**)",
         "Artifact",
     } <= deny
+    assert "Edit" not in deny
     assert permissions["defaultMode"] == "dontAsk"
 
 
 def test_briefing_settings_allow_only_digest_state_writes() -> None:
     allow = load_settings(".claude/settings.json")["allow"]
-    writes = [rule for rule in allow if rule.startswith(("Write(", "Edit("))]
+    assert not [rule for rule in allow if rule.startswith("Write(")]
+    writes = [rule for rule in allow if rule.startswith("Edit(")]
     assert sorted(writes) == [
-        "Write(~/.local/state/secretary/research-digest.json.tmp)",
-        "Write(~/.local/state/secretary/tech-digest.json.tmp)",
+        "Edit(~/.local/state/secretary/research-digest.json.tmp)",
+        "Edit(~/.local/state/secretary/tech-digest.json.tmp)",
     ]
     moves = [rule for rule in allow if rule.startswith("Bash(mv ")]
     assert len(moves) == 2
@@ -102,6 +104,6 @@ def test_briefing_settings_never_allow_mail_mutation() -> None:
 def test_publish_settings_write_only_the_artifact_page() -> None:
     permissions = load_settings("publish.settings.json")
     assert "Artifact" in permissions["allow"]
-    writes = [rule for rule in permissions["allow"] if rule.startswith("Write(")]
-    assert writes == ["Write(~/.local/state/secretary/artifact/briefing.html)"]
+    writes = [rule for rule in permissions["allow"] if rule.startswith("Edit(")]
+    assert writes == ["Edit(~/.local/state/secretary/artifact/briefing.html)"]
     assert "Bash" in permissions["deny"]

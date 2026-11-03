@@ -21,8 +21,8 @@
       "Bash(curl --fail-with-body --silent --show-error *)",
       "Bash(jq *)",
       "Bash(date *)",
-      "Write(~/.local/state/secretary/research-digest.json.tmp)",
-      "Write(~/.local/state/secretary/tech-digest.json.tmp)",
+      "Edit(~/.local/state/secretary/research-digest.json.tmp)",
+      "Edit(~/.local/state/secretary/tech-digest.json.tmp)",
       "Bash(mv ~/.local/state/secretary/research-digest.json.tmp ~/.local/state/secretary/research-digest.json)",
       "Bash(mv ~/.local/state/secretary/tech-digest.json.tmp ~/.local/state/secretary/tech-digest.json)"
     ],
@@ -54,9 +54,8 @@
       "Bash(git *)",
       "Bash(nix *)",
       "Bash(osascript *)",
-      "Edit",
       "NotebookEdit",
-      "Write(~/ghq/**)",
+      "Edit(~/ghq/**)",
       "Artifact",
       "Agent"
     ]
