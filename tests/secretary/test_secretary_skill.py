@@ -14,7 +14,6 @@ SKILL_NAMES = [
     "ai-research-digest",
     "apple-mail",
     "calendar-briefing",
-    "google-calendar",
     "mail-triage",
     "morning-briefing",
     "toolchain-digest",
@@ -118,3 +117,23 @@ def test_briefing_settings_use_read_only_web_tools_instead_of_curl() -> None:
     assert not [rule for rule in permissions["allow"] if "curl" in rule or "wget" in rule]
     assert {"WebFetch", "WebSearch"} <= set(permissions["allow"])
     assert {"Bash(curl *)", "Bash(wget *)"} <= set(permissions["deny"])
+
+
+def test_briefing_settings_read_calendar_json_and_drop_gws() -> None:
+    permissions = load_settings(".claude/settings.json")
+    assert "Read(~/.local/state/secretary/**)" in permissions["allow"]
+    assert not [rule for rule in permissions["allow"] if "gws" in rule]
+    assert not (SKILL_DIRECTORY / "google-calendar").exists()
+
+
+def test_calendar_briefing_reads_the_exported_json_only() -> None:
+    source = (SKILL_DIRECTORY / "calendar-briefing/SKILL.md").read_text()
+    assert "~/.local/state/secretary/calendar/" in source
+    assert "gws" not in source
+    assert "google-calendar" not in source
+
+
+def test_morning_briefing_emits_the_coverage_marker_first() -> None:
+    source = (SKILL_DIRECTORY / "morning-briefing/SKILL.md").read_text()
+    assert "coverage: complete" in source
+    assert "coverage: partial" in source

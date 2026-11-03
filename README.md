@@ -270,9 +270,14 @@ The Home Manager launchd agent `morning-briefing` runs `claude -p` in `secretary
 read-only. The launcher saves the report under `~/.local/state/secretary/briefings/` and mails it
 from Apple Mail to the address in `~/.local/state/secretary/briefing_address` (subject
 `[briefing] YYYY-MM-DD`). Logs go to `~/Library/Logs/morning-briefing.log`. Setup needs
-`briefing_address` and `calendar_id` (the primary Google Calendar ID) in the same directory, approval
-of the macOS Automation prompt for Mail, and a manual run with
-`launchctl kickstart -k gui/$(id -u)/org.nix-community.home.morning-briefing`. See ADR-0042.
+`briefing_address` in the same directory, approval of full Calendar access and of the macOS
+Automation prompt for Mail on the first manual run
+(`run_morning_briefing --force`), or
+`launchctl kickstart -k gui/$(id -u)/org.nix-community.home.morning-briefing`. Today's events are
+exported from macOS Calendar (EventKit) to `~/.local/state/secretary/calendar/YYYY-MM-DD.json`
+before Claude runs; the subject gets `（一部取得失敗）` when the calendar or any source was not
+covered. `run_morning_briefing --resend` mails the saved report of the day again. See ADR-0042 and
+ADR-0043.
 
 ## Shell Behavior
 
