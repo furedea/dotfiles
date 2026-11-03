@@ -579,7 +579,7 @@ in
           CLAUDE_BIN = lib.getExe claudePackage;
           SECRETARY_DIR = "${dotfilesDir}/secretary";
         };
-        # Apple Mail and Reminders are scripted through Apple Events, which need the GUI session.
+        # Apple Mail is scripted through Apple Events, which need the GUI session.
         LimitLoadToSessionType = "Aqua";
         ProcessType = "Background";
         StartCalendarInterval = [

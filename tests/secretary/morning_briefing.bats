@@ -11,6 +11,7 @@ setup() {
   STATE_DIR="$TEST_ROOT/state"
   CLAUDE_LOG="$TEST_ROOT/claude.log"
   OSASCRIPT_LOG="$TEST_ROOT/osascript.log"
+  OSASCRIPT_SOURCE="$TEST_ROOT/osascript.source"
   mkdir -p "$SECRETARY_DIR" "$STATE_DIR"
   printf 'me@example.test\n' >|"$STATE_DIR/briefing_address"
   create_claude_stub
@@ -34,6 +35,7 @@ create_osascript_stub() {
 #!/bin/bash
 [ "${OSASCRIPT_STATUS:-0}" -eq 0 ] || exit "$OSASCRIPT_STATUS"
 printf 'ARGS: %s\n' "$*" >>"$OSASCRIPT_LOG"
+cat >|"$OSASCRIPT_SOURCE"
 STUB
   chmod +x "$OSASCRIPT_STUB"
 }
@@ -44,6 +46,7 @@ run_launcher() {
     CLAUDE_LOG="$CLAUDE_LOG" \
     OSASCRIPT_BIN="$OSASCRIPT_STUB" \
     OSASCRIPT_LOG="$OSASCRIPT_LOG" \
+    OSASCRIPT_SOURCE="$OSASCRIPT_SOURCE" \
     SECRETARY_DIR="$SECRETARY_DIR" \
     SECRETARY_STATE_DIR="$STATE_DIR" \
     SECRETARY_TODAY=2026-11-05 \
@@ -116,6 +119,14 @@ run_launcher() {
   [ -s "$STATE_DIR/briefings/2026-11-05.md" ]
   [ ! -e "$OSASCRIPT_LOG" ]
   [[ "$output" == *"briefing_address is missing or empty"* ]]
+}
+
+@test "the AppleScript raises an error when Mail reports a failed send" {
+  run_launcher
+
+  [ "$status" -eq 0 ]
+  grep -q 'set sent to send' "$OSASCRIPT_SOURCE"
+  grep -q 'if sent is false then error' "$OSASCRIPT_SOURCE"
 }
 
 @test "a failed send keeps the report and exits non-zero" {

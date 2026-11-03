@@ -77,8 +77,9 @@ on run argv
     tell msg
       set sender to addr
       make new to recipient at end of to recipients with properties {address:addr}
-      send
+      set sent to send
     end tell
+    if sent is false then error "Apple Mail failed to send the briefing"
   end tell
 end run
 APPLESCRIPT

@@ -45,7 +45,7 @@ Skills.
 - Hiding a failed account, calendar, or source query behind a partial summary.
 - Filling a failed or quiet research source with general news.
 - Mixing benchmark research into product and tool release updates.
-- Writing the report or an Artifact yourself; the launcher publishes it.
+- Writing or sending the report yourself; the launcher saves it and mails it.
 
 ## Verification
 
