@@ -139,14 +139,14 @@ function main() {
   complete_previous_reminders || log "previous reminders were not completed"
 
   local _report
-  _report="$(run_briefing)" || fail "ブリーフィングの生成に失敗しました．ログ: $LOG_HINT"
-  [ -n "$_report" ] || fail "ブリーフィングが空でした．ログ: $LOG_HINT"
+  _report="$(run_briefing)" || fail "ブリーフィングの生成に失敗しました．ログ：$LOG_HINT"
+  [ -n "$_report" ] || fail "ブリーフィングが空でした．ログ：$LOG_HINT"
   printf '%s\n' "$_report" >|"$REPORT_FILE"
   log "saved $REPORT_FILE"
 
   local _url
   _url="$(publish_artifact)" || _url=""
-  [ -n "$_url" ] || fail "Artifact の公開に失敗しました．ローカル保存: $REPORT_FILE"
+  [ -n "$_url" ] || fail "Artifact の公開に失敗しました．ローカル保存：$REPORT_FILE"
   printf '%s\n' "$_url" >|"$ARTIFACT_URL_FILE"
   log "published $_url"
   notify "$_url"

@@ -151,7 +151,7 @@ run_launcher() {
   [ "$status" -eq 1 ]
   [ -s "$STATE_DIR/briefings/2026-11-05.md" ]
   [ ! -e "$STATE_DIR/artifact_url" ]
-  grep -q "Artifact の公開に失敗しました．ローカル保存: $STATE_DIR/briefings/2026-11-05.md" "$OSASCRIPT_LOG"
+  grep -q "Artifact の公開に失敗しました．ローカル保存：$STATE_DIR/briefings/2026-11-05.md" "$OSASCRIPT_LOG"
 }
 
 @test "an unknown option is rejected with usage" {
