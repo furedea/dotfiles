@@ -1,37 +1,18 @@
 ---
 name: morning-briefing
 description: Summarize today's calendar, mail, research, and technology changes.
-version: 0.4.1
-author: furedea
-license: MIT
-platforms: [macos]
-metadata:
-    hermes:
-        tags: [secretary, morning, briefing, research, technology]
-        related_skills:
-            [
-                calendar-briefing,
-                mail-triage,
-                ai-research-digest,
-                toolchain-digest,
-            ]
-        blueprint:
-            schedule: "0 8 * * *"
-            deliver: origin
-            prompt: Prepare today's briefing. Keep providers read-only; only local digest state may change.
-            enabled_toolsets: [terminal, skills]
 ---
 
 # Morning Briefing
 
 Combine calendar, mail, research, and technology workflows into one concise
-report. The blueprint is a versioned routine definition; instantiated cron and
-digest state remain local.
+report. The report is the final assistant message; the launcher script that runs
+this Skill owns saving and delivering it.
 
 ## When to Use
 
 - The user manually requests a morning briefing.
-- The `morning-briefing` blueprint runs on its configured schedule.
+- The `morning-briefing` launchd agent runs `claude -p` from `secretary/`.
 
 ## Procedure
 
@@ -55,7 +36,7 @@ digest state remain local.
 
 Provider access remains read-only. A scheduled run cannot change calendar,
 mail, dotfiles, dependencies, packages, or external accounts. The only allowed
-writes are the two profile-local digest state files defined by the related
+writes are the two local digest state files defined by the related
 Skills.
 
 ## Pitfalls
@@ -64,11 +45,11 @@ Skills.
 - Hiding a failed account, calendar, or source query behind a partial summary.
 - Filling a failed or quiet research source with general news.
 - Mixing benchmark research into product and tool release updates.
-- Reading cron memory for settings owned by a Skill.
+- Writing or sending the report yourself; the launcher saves it and mails it.
 
 ## Verification
 
 - All four related workflows completed or their failures are named.
 - Calendar and mail provider access remained read-only.
 - Only the two local digest state files may have changed.
-- The report was delivered by local Hermes cron state, not written to dotfiles.
+- The report is the final message and was not written to dotfiles.

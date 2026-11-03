@@ -1,7 +1,8 @@
 # ADR-0022: Collect secretary digests from primary sources
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-08-31
+- Superseded by: ADR-0042
 
 In the context of replacing X with useful unattended research and technology
 briefings, facing unavailable broad web-search tooling, paid social APIs, and

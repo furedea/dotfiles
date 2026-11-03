@@ -1,14 +1,6 @@
 ---
 name: calendar-briefing
 description: Summarize Google Calendar events for a bounded range.
-version: 0.4.1
-author: furedea
-license: MIT
-platforms: [macos]
-metadata:
-    hermes:
-        tags: [calendar, google-calendar, briefing]
-        related_skills: [google-calendar, morning-briefing]
 ---
 
 # Calendar Briefing

@@ -66,7 +66,10 @@
   "git/ignore": [
     "tests/nvim/test_nvim_plugin_lock.py"
   ],
-  "hermes/secretary/skills/secretary/**": [
-    "tests/hermes/test_secretary_skill.py"
+  "secretary/**": [
+    "tests/secretary/test_secretary_skill.py"
+  ],
+  "scripts/secretary/**": [
+    "tests/secretary/morning_briefing.bats"
   ]
 }

@@ -250,7 +250,7 @@ These tracked files are not applied by Home Manager or nix-darwin:
 ├── zsh/ and bash/             # Interactive shell configuration
 ├── nvim/ and vim/             # Editor configuration
 ├── herdr/                     # Herdr UI and plugin synchronization
-├── hermes/                    # Retained secretary Skill sources pending migration
+├── secretary/                 # Morning briefing Skills and read-only settings for `claude -p`
 ├── scripts/                   # Shell launchers for Git signing, Hister, and Moshi
 ├── .agents/                   # Repository rules for the agent harness hooks
 ├── ghostty/                   # Terminal configuration
@@ -262,6 +262,17 @@ These tracked files are not applied by Home Manager or nix-darwin:
 ├── tinycast/                 # Manual settings export
 └── templates/                 # Manually copied reference templates
 ```
+
+## Morning Briefing
+
+The Home Manager launchd agent `morning-briefing` runs `claude -p` in `secretary/` once a day at
+08:00 (a missed run starts once after wake). `secretary/.claude/settings.json` keeps providers
+read-only. The launcher saves the report under `~/.local/state/secretary/briefings/` and mails it
+from Apple Mail to the address in `~/.local/state/secretary/briefing_address` (subject
+`[briefing] YYYY-MM-DD`). Logs go to `~/Library/Logs/morning-briefing.log`. Setup needs
+`briefing_address` and `calendar_id` (the primary Google Calendar ID) in the same directory, approval
+of the macOS Automation prompt for Mail, and a manual run with
+`launchctl kickstart -k gui/$(id -u)/org.nix-community.home.morning-briefing`. See ADR-0042.
 
 ## Shell Behavior
 
@@ -331,7 +342,7 @@ Declarative Home Manager and host contracts also have native flake checks in
 
 Tests are grouped by the feature they verify, not by implementation language.
 Python and Bats tests live together under directories such as `tests/herdr/`
-and `tests/hermes/`. Agent hook and skill tests live with their source in
+and `tests/secretary/`. Agent hook and skill tests live with their source in
 [furedea/agent-config](https://github.com/furedea/agent-config). `tests/nix/` bridges the
 repository-wide native configuration checks, including the Home Manager rendering of the
 agent source and the repository's related-test mapping.
