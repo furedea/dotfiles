@@ -21,3 +21,5 @@ _insert_fallback_paths "$HOME/.local/bin" "$HOME/.cargo/bin" "$HOME/.gem/bin"
 # (e.g. a long-running herdr server snapshot) cannot override it.
 export EDITOR=nvim
 export VISUAL=nvim
+# agent-browser bundles no browser on Darwin; use the Homebrew cask Chrome.
+export AGENT_BROWSER_EXECUTABLE_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"

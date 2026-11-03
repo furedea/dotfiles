@@ -20,6 +20,8 @@ let
   moshi = mbpHome.launchd.agents.moshi-hook.config;
   moshiVersion = (pkgs.callPackage ./packages/moshi_hook.nix { }).version;
   codexPackage = pkgs.callPackage ./packages/codex.nix { };
+  agentDesktopPackage = pkgs.callPackage ./packages/agent_desktop.nix { };
+  chromeExecutable = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
   codexWrapperText =
     (builtins.head (builtins.filter (package: (package.name or "") == "codex") home.home.packages))
     .text;
@@ -102,6 +104,24 @@ in
 
   codex-official-signed = codexPackage;
 
+  # Building the package runs versionCheckHook against agent-desktop --version.
+  agent-desktop-release = agentDesktopPackage;
+
+  # Skills are generated from the installed CLIs, so a build proves the bundled text is extractable.
+  automation-cli-skills =
+    pkgs.runCommand "automation-cli-skills"
+      {
+        browserSkill = home.programs.agent-harness.skills.agent-browser;
+        desktopSkill = home.programs.agent-harness.skills.agent-desktop;
+      }
+      ''
+        grep -qx 'name: agent-browser' "$browserSkill/SKILL.md"
+        grep -q 'agent-browser snapshot' "$browserSkill/SKILL.md"
+        grep -qx 'name: agent-desktop' "$desktopSkill/SKILL.md"
+        grep -q 'agent-desktop snapshot' "$desktopSkill/SKILL.md"
+        touch "$out"
+      '';
+
   home-configuration = check "home-configuration" {
     hooks-compose-herdr-and-moshi =
       builtins.attrNames home.programs.agent-harness.hooks == [
@@ -168,6 +188,19 @@ in
         "claude-code"
         "codex"
       ];
+    automation-cli-packages =
+      versions "agent-browser" home.home.packages != [ ]
+      && versions "agent-desktop" home.home.packages == [ agentDesktopPackage.version ];
+    automation-cli-skills = hasAll [
+      "agent-browser"
+      "agent-desktop"
+    ] (builtins.attrNames home.programs.agent-harness.skills);
+    # agent-browser on Darwin bundles no browser; it must point at the cask-installed Chrome.
+    agent-browser-uses-cask-chrome =
+      lib.hasInfix ''export AGENT_BROWSER_EXECUTABLE_PATH="${chromeExecutable}"'' (
+        builtins.readFile ../zsh/.zshenv
+      )
+      && lib.hasInfix ''"google-chrome"'' mbp.homebrew.brewfile;
     # Building codexPackage runs its install check: the vendor Developer ID signature must survive.
     codex-official-signed-release =
       lib.hasInfix "/releases/download/rust-v${codexPackage.version}/" codexPackage.src.url
