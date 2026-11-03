@@ -22,8 +22,8 @@ create_claude_stub() {
   cat >|"$CLAUDE_STUB" <<'STUB'
 #!/bin/bash
 printf '%s|%s\n' "$PWD" "$*" >>"$CLAUDE_LOG"
-[ "${BRIEFING_STATUS:-0}" -eq 0 ] || exit "$BRIEFING_STATUS"
 printf '%s\n' "${BRIEFING_OUTPUT:-# 朝のブリーフィング}"
+exit "${BRIEFING_STATUS:-0}"
 STUB
   chmod +x "$CLAUDE_STUB"
 }
@@ -99,11 +99,11 @@ run_launcher() {
   grep -qF 'ARGS: - me@example.test [briefing] 2026-11-05 # 朝のブリーフィング' "$OSASCRIPT_LOG"
 }
 
-@test "a failed briefing mails a failure notice and still exits non-zero" {
-  run_launcher env BRIEFING_STATUS=3
+@test "a failed briefing mails a failure notice and keeps any partial output" {
+  run_launcher env BRIEFING_STATUS=3 BRIEFING_OUTPUT="partial report"
 
   [ "$status" -eq 1 ]
-  [ ! -e "$STATE_DIR/briefings/2026-11-05.md" ]
+  [ "$(<"$STATE_DIR/briefings/2026-11-05.md")" = "partial report" ]
   grep -qF 'ARGS: - me@example.test [briefing] 2026-11-05 失敗 ブリーフィングの生成に失敗しました' "$OSASCRIPT_LOG"
 }
 

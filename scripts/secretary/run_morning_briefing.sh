@@ -112,8 +112,11 @@ function main() {
   fi
   printf '%s\n' "$TODAY" >|"$LAST_RUN_FILE"
 
-  local _report
-  _report="$(run_briefing)" || fail "ブリーフィングの生成に失敗しました．ログ：$LOG_HINT"
+  local _report=""
+  if ! _report="$(run_briefing)"; then
+    [ -z "$_report" ] || printf '%s\n' "$_report" >|"$REPORT_FILE"
+    fail "ブリーフィングの生成に失敗しました．ログ：$LOG_HINT"
+  fi
   [ -n "$_report" ] || fail "ブリーフィングが空でした．ログ：$LOG_HINT"
   printf '%s\n' "$_report" >|"$REPORT_FILE"
   log "saved $REPORT_FILE"
