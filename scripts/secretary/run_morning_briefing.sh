@@ -20,7 +20,7 @@ EOF
 
 readonly CLAUDE_BIN="${CLAUDE_BIN:-claude}"
 readonly OSASCRIPT_BIN="${OSASCRIPT_BIN:-/usr/bin/osascript}"
-readonly SECRETARY_DIR="${SECRETARY_DIR:?SECRETARY_DIR is required}"
+readonly CALENDAR_TIMEOUT_SECONDS="${SECRETARY_CALENDAR_TIMEOUT_SECONDS:-120}"
 readonly STATE_DIR="${SECRETARY_STATE_DIR:-$HOME/.local/state/secretary}"
 readonly TODAY="${SECRETARY_TODAY:-$(date +%Y-%m-%d)}"
 readonly LAST_RUN_FILE="$STATE_DIR/last_run_date"
@@ -48,7 +48,7 @@ function already_started_today() {
 function export_calendar() {
   local _json=""
   mkdir -p "$(dirname "$CALENDAR_FILE")"
-  if _json="$(run_calendar_script)" && [[ "$_json" == '{"ok":true,'* ]]; then
+  if _json="$(run_calendar_script_with_timeout)" && [[ "$_json" == '{"ok":true,'* ]]; then
     printf '%s\n' "$_json" >|"$CALENDAR_FILE"
     log "exported calendar to $CALENDAR_FILE"
     return 0
@@ -64,6 +64,29 @@ function json_string() {
   _text="${_text//$'\n'/ }"
   _text="${_text//$'\t'/ }"
   printf '"%s"' "$_text"
+}
+
+# A hung EventKit query must not block the briefing; kill it and record the failure.
+function run_calendar_script_with_timeout() {
+  local _output_file="$CALENDAR_FILE.$$.tmp"
+  run_calendar_script >|"$_output_file" &
+  local _pid=$!
+  local _waited=0
+  while kill -0 "$_pid" 2>/dev/null; do
+    if [ "$_waited" -ge "$CALENDAR_TIMEOUT_SECONDS" ]; then
+      kill "$_pid" 2>/dev/null || true
+      rm -f "$_output_file"
+      printf 'calendar export timed out after %ss\n' "$CALENDAR_TIMEOUT_SECONDS"
+      return 1
+    fi
+    sleep 1
+    _waited=$((_waited + 1))
+  done
+  local _status=0
+  wait "$_pid" || _status=$?
+  cat "$_output_file"
+  rm -f "$_output_file"
+  return "$_status"
 }
 
 function run_calendar_script() {
@@ -88,7 +111,7 @@ function toDate(nsDate) {
 
 function hasAccess(store) {
   const status = $.EKEventStore.authorizationStatusForEntityType($.EKEntityTypeEvent);
-  if (status === 3 || status === 2) return true;
+  if (status === 3) return true;
   if (status !== 0) return false;
   let granted = false;
   let done = false;
@@ -142,7 +165,7 @@ JXA
 
 function run_briefing() {
   (
-    cd "$SECRETARY_DIR"
+    cd "${SECRETARY_DIR:?SECRETARY_DIR is required to generate the briefing}"
     "$CLAUDE_BIN" -p "$BRIEFING_PROMPT" \
       --settings "$SECRETARY_DIR/.claude/settings.json" \
       --setting-sources project \

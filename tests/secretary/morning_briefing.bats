@@ -40,6 +40,7 @@ if [ "${1:-}" = "-l" ]; then
   printf '%s\n' "$*" >>"$CALENDAR_ARGS_LOG"
   cat >|"$CALENDAR_SOURCE"
   default='{"ok":true,"events":[]}'
+  [ -z "${CALENDAR_HANG:-}" ] || sleep 30
   printf '%s\n' "${CALENDAR_OUTPUT-$default}"
   exit "${CALENDAR_STATUS:-0}"
 fi
@@ -59,6 +60,7 @@ run_launcher() {
     OSASCRIPT_SOURCE="$OSASCRIPT_SOURCE" \
     CALENDAR_SOURCE="$CALENDAR_SOURCE" \
     CALENDAR_ARGS_LOG="$CALENDAR_ARGS_LOG" \
+    SECRETARY_CALENDAR_TIMEOUT_SECONDS="${CALENDAR_TIMEOUT:-5}" \
     SECRETARY_RETRY_DELAY_SECONDS=0 \
     SECRETARY_DIR="$SECRETARY_DIR" \
     SECRETARY_STATE_DIR="$STATE_DIR" \
@@ -251,4 +253,25 @@ run_launcher() {
 
   [ "$status" -eq 1 ]
   [[ "$stderr" == *"Usage:"* ]]
+}
+
+@test "a hung calendar export is stopped and recorded as a failure" {
+  CALENDAR_TIMEOUT=1
+
+  run_launcher env CALENDAR_HANG=1
+
+  [ "$status" -eq 0 ]
+  grep -q '^{"ok":false,"error":"calendar export timed out' "$STATE_DIR/calendar/2026-11-05.json"
+  [ -s "$STATE_DIR/briefings/2026-11-05.md" ]
+}
+
+@test "--resend needs neither SECRETARY_DIR nor claude" {
+  mkdir -p "$STATE_DIR/briefings"
+  printf 'coverage: partial\n# 保存済み\n' >|"$STATE_DIR/briefings/2026-11-05.md"
+  LAUNCHER_ARGS="--resend"
+
+  run_launcher env -u SECRETARY_DIR
+
+  [ "$status" -eq 0 ]
+  grep -qF '[briefing] 2026-11-05（一部取得失敗） # 保存済み' "$OSASCRIPT_LOG"
 }
