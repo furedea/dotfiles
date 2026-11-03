@@ -31,7 +31,8 @@ Details that keep the decision testable:
   `Edit(path)` rules, which cover the `Write` tool as well.
 - Reminder text carries the Artifact URL or a failure notice, never mail contents. The previous
   reminders are completed on the next run.
-- Retrieval keeps ADR-0022's primary-source priority and fixed host boundary, but is no longer
-  limited to `curl`: `WebFetch` may read primary pages and `WebSearch` may only locate them.
+- Retrieval keeps ADR-0022's primary-source priority and fixed host boundary, but uses the
+  read-only `WebFetch` instead of `curl`, because a `curl` allow rule cannot exclude every
+  state-changing option (such as `--json`). `WebSearch` may only locate primary sources.
 - ADR-0019 (Apple Mail) and ADR-0021 (`gws`) still define the provider clients; only their
   Hermes wording is obsolete. ADR-0010 to ADR-0014 and ADR-0020 were already superseded.

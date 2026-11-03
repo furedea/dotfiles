@@ -18,7 +18,6 @@
       "Bash(apple-mail unread *)",
       "Bash(apple-mail search *)",
       "Bash(apple-mail get *)",
-      "Bash(curl --fail-with-body --silent --show-error *)",
       "Bash(jq *)",
       "Bash(date *)",
       "Edit(~/.local/state/secretary/research-digest.json.tmp)",
@@ -39,16 +38,6 @@
       "Bash(gws * insert *)",
       "Bash(gws * import *)",
       "Bash(gws * move *)",
-      "Bash(curl *-X *)",
-      "Bash(curl *--request*)",
-      "Bash(curl * -d *)",
-      "Bash(curl *--data *)",
-      "Bash(curl *--data-binary*)",
-      "Bash(curl *--form*)",
-      "Bash(curl *--upload-file*)",
-      "Bash(curl * -o *)",
-      "Bash(curl * -O*)",
-      "Bash(curl *--output*)",
       "Bash(*>*)",
       "Bash(*tee *)",
       "Bash(git *)",
@@ -57,7 +46,9 @@
       "NotebookEdit",
       "Edit(~/ghq/**)",
       "Artifact",
-      "Agent"
+      "Agent",
+      "Bash(curl *)",
+      "Bash(wget *)"
     ]
   }
 }

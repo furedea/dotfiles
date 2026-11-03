@@ -72,9 +72,9 @@ or unapproved provider.
 
 ## Retrieval Boundary
 
-Use `curl --fail-with-body --silent --show-error` and JSON responses whenever
-the source offers them. `curl` is the default, not the only, retrieval
-method. Use `--get` with `--data-urlencode` for query values.
+Use `WebFetch` (a read-only GET) with the source's JSON or feed URL whenever the
+source offers one; put query values in the URL query string. `curl` is not
+allowed because it can send requests that change remote state.
 Only contact these fixed hosts and exact primary links returned by them:
 
 - `api.openalex.org`

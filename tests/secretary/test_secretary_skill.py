@@ -107,3 +107,10 @@ def test_publish_settings_write_only_the_artifact_page() -> None:
     writes = [rule for rule in permissions["allow"] if rule.startswith("Edit(")]
     assert writes == ["Edit(~/.local/state/secretary/artifact/briefing.html)"]
     assert "Bash" in permissions["deny"]
+
+
+def test_briefing_settings_use_read_only_web_tools_instead_of_curl() -> None:
+    permissions = load_settings(".claude/settings.json")
+    assert not [rule for rule in permissions["allow"] if "curl" in rule or "wget" in rule]
+    assert {"WebFetch", "WebSearch"} <= set(permissions["allow"])
+    assert {"Bash(curl *)", "Bash(wget *)"} <= set(permissions["deny"])
