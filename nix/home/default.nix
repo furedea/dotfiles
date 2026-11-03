@@ -33,6 +33,8 @@ let
   dprintPackage = unstable.dprint;
   codexPackage = pkgs.callPackage ../packages/codex.nix { };
   claudePackage = llm-agents.packages.${system}.claude-code;
+  agentBrowserPackage = llm-agents.packages.${system}.agent-browser;
+  agentDesktopPackage = pkgs.callPackage ../packages/agent_desktop.nix { };
   agentHarnessPackage = agent-harness.packages.${system}.default;
   nvimLogFile = "${config.xdg.stateHome}/agent-harness/nvim.log";
   moshiHookPackage = pkgs.callPackage ../packages/moshi_hook.nix { };
@@ -71,6 +73,21 @@ let
     set -euxCo pipefail
     mkdir -p "$out"
     ${lib.getExe herdrPackage} --skill >| "$out/SKILL.md"
+  '';
+  # The bundled core guide is named "core"; rename it so the installed skill matches its directory.
+  agentBrowserSkill = pkgs.runCommand "agent-browser-skill" { } ''
+    set -euxCo pipefail
+    mkdir -p "$out"
+    ${lib.getExe agentBrowserPackage} skills get core \
+      | sed '2s/^name: core$/name: agent-browser/' >| "$out/SKILL.md"
+    grep -qx 'name: agent-browser' "$out/SKILL.md"
+  '';
+  agentDesktopSkill = pkgs.runCommand "agent-desktop-skill" { } ''
+    set -euxCo pipefail
+    mkdir -p "$out"
+    ${lib.getExe agentDesktopPackage} skills get desktop \
+      | ${lib.getExe pkgs.jq} -er '.data.content' >| "$out/SKILL.md"
+    grep -qx 'name: agent-desktop' "$out/SKILL.md"
   '';
   generateHookBundle =
     name: spec:
@@ -213,6 +230,8 @@ in
     gwsPackage
 
     # AI coding agents
+    agentBrowserPackage
+    agentDesktopPackage
     claudePackage
     herdrCompatibleCodex
     unstable.pi-coding-agent
@@ -453,6 +472,8 @@ in
       package = agentHarnessPackage;
       source = agentSource;
       skills = {
+        agent-browser = agentBrowserSkill;
+        agent-desktop = agentDesktopSkill;
         herdr = herdrSkill;
         nix-dotfiles = ../../skills/nix-dotfiles;
       };
