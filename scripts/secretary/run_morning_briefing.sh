@@ -197,36 +197,45 @@ function send_mail() {
 }
 
 function send_mail_once() {
-  "$OSASCRIPT_BIN" - "$1" "$2" "$3" <<'APPLESCRIPT'
+  local _error=""
+  _error="$(
+    "$OSASCRIPT_BIN" - "$1" "$2" "$3" 2>&1 <<'APPLESCRIPT'
 on run argv
   set addr to item 1 of argv
-  tell application "Mail" to launch
-  with timeout of 300 seconds
-    tell application "Mail"
-      repeat 60 times
-        try
-          count of accounts
-          exit repeat
-        on error
-          delay 1
-        end try
-      end repeat
-      set hasAccount to false
-      repeat with acct in accounts
-        if (email addresses of acct) contains addr then set hasAccount to true
-      end repeat
-      if not hasAccount then error "No Apple Mail account has the address " & addr
-      set msg to make new outgoing message with properties {subject:item 2 of argv, content:item 3 of argv, visible:false}
-      tell msg
-        set sender to addr
-        make new to recipient at end of to recipients with properties {address:addr}
-        set sent to send
+  set stepName to "launch Mail"
+  try
+    with timeout of 300 seconds
+      tell application "Mail" to launch
+      set stepName to "wait for Mail"
+      tell application "Mail"
+        repeat 60 times
+          try
+            get name
+            exit repeat
+          on error
+            delay 1
+          end try
+        end repeat
+        set stepName to "compose message"
+        set msg to make new outgoing message with properties {subject:item 2 of argv, content:item 3 of argv, visible:false}
+        tell msg
+          set sender to addr
+          make new to recipient at end of to recipients with properties {address:addr}
+          set stepName to "send message"
+          set sent to send
+        end tell
+        if sent is false then error "Mail reported that the message was not sent"
       end tell
-      if sent is false then error "Apple Mail failed to send the briefing"
-    end tell
-  end timeout
+    end timeout
+  on error errMsg number errNum
+    error "step '" & stepName & "' failed: " & errMsg & " (" & errNum & ")"
+  end try
 end run
 APPLESCRIPT
+  )" || {
+    log "mail attempt failed: $_error"
+    return 1
+  }
 }
 
 # The first line of the report states Claude's coverage; a missing marker counts as partial.

@@ -46,7 +46,10 @@ if [ "${1:-}" = "-l" ]; then
 fi
 printf 'ARGS: %s\n' "$*" >>"$OSASCRIPT_LOG"
 cat >|"$OSASCRIPT_SOURCE"
-[ "${OSASCRIPT_STATUS:-0}" -eq 0 ] || exit "$OSASCRIPT_STATUS"
+if [ "${OSASCRIPT_STATUS:-0}" -ne 0 ]; then
+  echo "step 'send message' failed: stub error" >&2
+  exit "$OSASCRIPT_STATUS"
+fi
 STUB
   chmod +x "$OSASCRIPT_STUB"
 }
@@ -274,4 +277,32 @@ run_launcher() {
 
   [ "$status" -eq 0 ]
   grep -qF '[briefing] 2026-11-05（一部取得失敗） # 保存済み' "$OSASCRIPT_LOG"
+}
+
+@test "the AppleScript does not enumerate accounts and sets the sender directly" {
+  run_launcher
+
+  [ "$status" -eq 0 ]
+  ! grep -q 'repeat with acct' "$OSASCRIPT_SOURCE"
+  ! grep -q 'email addresses' "$OSASCRIPT_SOURCE"
+  grep -q 'set sender to addr' "$OSASCRIPT_SOURCE"
+}
+
+@test "all Mail commands run inside the extended timeout after launching Mail" {
+  run_launcher
+
+  [ "$status" -eq 0 ]
+  local _launch _timeout _tell
+  _launch="$(grep -n 'to launch' "$OSASCRIPT_SOURCE" | head -1 | cut -d: -f1)"
+  _timeout="$(grep -n 'with timeout of 300 seconds' "$OSASCRIPT_SOURCE" | head -1 | cut -d: -f1)"
+  _tell="$(grep -n 'make new outgoing message' "$OSASCRIPT_SOURCE" | head -1 | cut -d: -f1)"
+  [ "$_timeout" -lt "$_launch" ]
+  [ "$_launch" -lt "$_tell" ]
+}
+
+@test "a failed mail attempt logs the failing step" {
+  run_launcher env OSASCRIPT_STATUS=1
+
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"mail attempt failed: step 'send message' failed: stub error"* ]]
 }

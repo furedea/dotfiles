@@ -26,7 +26,9 @@ Details that keep the decision testable:
 - The report's first line is `coverage: complete` or `coverage: partial`. The launcher strips it
   from the mail body and uses `[briefing] YYYY-MM-DD（一部取得失敗）` as the subject when the line
   is not `complete` (a missing line counts as partial) or the calendar JSON is not `ok`.
-- Mail is launched before sending, the AppleScript uses `with timeout of 300 seconds`, and a failed
-  send is retried once. `--resend` mails the saved report of the day without generating it.
+- Mail is launched before sending and every Mail command runs inside `with timeout of 300 seconds`.
+  The AppleScript no longer loops over accounts reading `email addresses` (it timed out with -1712 in
+  the second real run); it sets the sender to the address directly and reports the failing step. A
+  failed send is retried once. `--resend` mails the saved report of the day without generating it.
 - `gws`, `~/.config/gws`, `calendar_id`, the GCP project, and the contents of ADR-0013 and
   ADR-0021 stay until the new path is confirmed to deliver; their removal is a separate Issue.
