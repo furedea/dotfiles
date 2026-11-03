@@ -45,7 +45,6 @@
       "Bash(osascript *)",
       "NotebookEdit",
       "Edit(~/ghq/**)",
-      "Artifact",
       "Agent",
       "Bash(curl *)",
       "Bash(wget *)"

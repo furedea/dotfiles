@@ -76,7 +76,6 @@ def test_briefing_settings_deny_provider_mutations() -> None:
         "Bash(apple-mail move *)",
         "Bash(apple-mail get *--include-body*)",
         "Edit(~/ghq/**)",
-        "Artifact",
     } <= deny
     assert "Edit" not in deny
     assert permissions["defaultMode"] == "dontAsk"
@@ -101,12 +100,17 @@ def test_briefing_settings_never_allow_mail_mutation() -> None:
     assert "Bash(apple-mail get *)" in allow
 
 
-def test_publish_settings_write_only_the_artifact_page() -> None:
-    permissions = load_settings("publish.settings.json")
-    assert "Artifact" in permissions["allow"]
-    writes = [rule for rule in permissions["allow"] if rule.startswith("Edit(")]
-    assert writes == ["Edit(~/.local/state/secretary/artifact/briefing.html)"]
-    assert "Bash" in permissions["deny"]
+def test_briefing_settings_cannot_send_mail_or_run_osascript() -> None:
+    permissions = load_settings(".claude/settings.json")
+    assert "Bash(osascript *)" in permissions["deny"]
+    assert not [rule for rule in permissions["allow"] if "osascript" in rule]
+    assert not (SECRETARY_DIRECTORY / "publish.settings.json").exists()
+
+
+def test_mail_triage_excludes_the_briefing_self_mail() -> None:
+    source = (SKILL_DIRECTORY / "mail-triage/SKILL.md").read_text()
+    assert "`[briefing]`" in source
+    assert "Exclude self-addressed mail" in source
 
 
 def test_briefing_settings_use_read_only_web_tools_instead_of_curl() -> None:

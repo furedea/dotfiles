@@ -11,41 +11,30 @@ setup() {
   STATE_DIR="$TEST_ROOT/state"
   CLAUDE_LOG="$TEST_ROOT/claude.log"
   OSASCRIPT_LOG="$TEST_ROOT/osascript.log"
-  mkdir -p "$SECRETARY_DIR"
+  mkdir -p "$SECRETARY_DIR" "$STATE_DIR"
+  printf 'me@example.test\n' >|"$STATE_DIR/briefing_address"
   create_claude_stub
   create_osascript_stub
 }
 
 create_claude_stub() {
   CLAUDE_STUB="$TEST_ROOT/claude"
-  cat >|"$CLAUDE_STUB" <<'EOF'
+  cat >|"$CLAUDE_STUB" <<'STUB'
 #!/bin/bash
 printf '%s|%s\n' "$PWD" "$*" >>"$CLAUDE_LOG"
-case "$*" in
-  *publish.settings.json*)
-    [ "${PUBLISH_STATUS:-0}" -eq 0 ] || exit "$PUBLISH_STATUS"
-    printf '%s\n' "${PUBLISH_OUTPUT:-ARTIFACT_URL=https://claude.ai/artifact/abc}"
-    ;;
-  *)
-    [ "${BRIEFING_STATUS:-0}" -eq 0 ] || exit "$BRIEFING_STATUS"
-    printf '%s\n' "${BRIEFING_OUTPUT:-# 朝のブリーフィング}"
-    ;;
-esac
-EOF
+[ "${BRIEFING_STATUS:-0}" -eq 0 ] || exit "$BRIEFING_STATUS"
+printf '%s\n' "${BRIEFING_OUTPUT:-# 朝のブリーフィング}"
+STUB
   chmod +x "$CLAUDE_STUB"
 }
 
 create_osascript_stub() {
   OSASCRIPT_STUB="$TEST_ROOT/osascript"
-  cat >|"$OSASCRIPT_STUB" <<'EOF'
+  cat >|"$OSASCRIPT_STUB" <<'STUB'
 #!/bin/bash
+[ "${OSASCRIPT_STATUS:-0}" -eq 0 ] || exit "$OSASCRIPT_STATUS"
 printf 'ARGS: %s\n' "$*" >>"$OSASCRIPT_LOG"
-if grep -q 'make new reminder' -; then
-  printf 'KIND: create\n' >>"$OSASCRIPT_LOG"
-else
-  printf 'KIND: complete\n' >>"$OSASCRIPT_LOG"
-fi
-EOF
+STUB
   chmod +x "$OSASCRIPT_STUB"
 }
 
@@ -62,8 +51,7 @@ run_launcher() {
     "$@" /bin/bash "$SCRIPT" ${LAUNCHER_ARGS:+"$LAUNCHER_ARGS"}
 }
 
-@test "a day that already started is skipped without calling claude" {
-  mkdir -p "$STATE_DIR"
+@test "a day that already started is skipped without calling claude or Mail" {
   printf '2026-11-05\n' >|"$STATE_DIR/last_run_date"
 
   run_launcher
@@ -74,7 +62,6 @@ run_launcher() {
 }
 
 @test "--force runs even when the day already started" {
-  mkdir -p "$STATE_DIR"
   printf '2026-11-05\n' >|"$STATE_DIR/last_run_date"
   LAUNCHER_ARGS="--force"
 
@@ -104,54 +91,39 @@ run_launcher() {
   [ "$(<"$STATE_DIR/last_run_date")" = "2026-11-05" ]
 }
 
-@test "publishing stores the Artifact URL and puts it in the reminder" {
+@test "the report is mailed to the briefing address with the dated subject" {
   run_launcher
 
   [ "$status" -eq 0 ]
-  [ "$(<"$STATE_DIR/artifact_url")" = "https://claude.ai/artifact/abc" ]
-  grep -q 'ARGS: - 朝のブリーフィング 2026-11-05 https://claude.ai/artifact/abc' "$OSASCRIPT_LOG"
+  [ "$(wc -l <"$OSASCRIPT_LOG" | tr -d ' ')" = "1" ]
+  grep -qF 'ARGS: - me@example.test [briefing] 2026-11-05 # 朝のブリーフィング' "$OSASCRIPT_LOG"
 }
 
-@test "a known Artifact URL is updated in place" {
-  mkdir -p "$STATE_DIR"
-  printf 'https://claude.ai/artifact/known\n' >|"$STATE_DIR/artifact_url"
-
-  run_launcher
-
-  [ "$status" -eq 0 ]
-  grep -q 'Update the existing Artifact https://claude.ai/artifact/known' "$CLAUDE_LOG"
-}
-
-@test "publishing runs outside the secretary directory with its own settings" {
-  run_launcher
-
-  grep -q "^$STATE_DIR/artifact|" "$CLAUDE_LOG"
-  grep -q -- "--settings $SECRETARY_DIR/publish.settings.json" "$CLAUDE_LOG"
-}
-
-@test "previous reminders are completed before the new one is created" {
-  run_launcher
-
-  [ "$status" -eq 0 ]
-  [ "$(grep '^KIND:' "$OSASCRIPT_LOG" | tr '\n' ' ')" = "KIND: complete KIND: create " ]
-  grep -q 'ARGS: - 朝のブリーフィング$' "$OSASCRIPT_LOG"
-}
-
-@test "a failed briefing notifies the failure and saves nothing" {
+@test "a failed briefing mails a failure notice and still exits non-zero" {
   run_launcher env BRIEFING_STATUS=3
 
   [ "$status" -eq 1 ]
   [ ! -e "$STATE_DIR/briefings/2026-11-05.md" ]
-  grep -q 'ARGS: - 朝のブリーフィング 2026-11-05 ブリーフィングの生成に失敗しました' "$OSASCRIPT_LOG"
+  grep -qF 'ARGS: - me@example.test [briefing] 2026-11-05 失敗 ブリーフィングの生成に失敗しました' "$OSASCRIPT_LOG"
 }
 
-@test "a failed publish keeps the local report and notifies the failure" {
-  run_launcher env PUBLISH_STATUS=1
+@test "a missing address file fails after saving the report" {
+  rm "$STATE_DIR/briefing_address"
+
+  run_launcher
 
   [ "$status" -eq 1 ]
   [ -s "$STATE_DIR/briefings/2026-11-05.md" ]
-  [ ! -e "$STATE_DIR/artifact_url" ]
-  grep -q "Artifact の公開に失敗しました．ローカル保存：$STATE_DIR/briefings/2026-11-05.md" "$OSASCRIPT_LOG"
+  [ ! -e "$OSASCRIPT_LOG" ]
+  [[ "$output" == *"briefing_address is missing or empty"* ]]
+}
+
+@test "a failed send keeps the report and exits non-zero" {
+  run_launcher env OSASCRIPT_STATUS=1
+
+  [ "$status" -eq 1 ]
+  [ -s "$STATE_DIR/briefings/2026-11-05.md" ]
+  [[ "$output" == *"delivery failed"* ]]
 }
 
 @test "an unknown option is rejected with usage" {

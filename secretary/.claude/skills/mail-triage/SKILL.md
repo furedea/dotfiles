@@ -21,6 +21,9 @@ Turn all Apple Mail inboxes into one bounded queue of decisions. Load
    actions. A morning briefing is read-only.
 2. Load `apple-mail`, enumerate the configured accounts, and report any
    coverage failure.
+   Exclude self-addressed mail whose subject starts with `[briefing]`: it is
+   this briefing's own delivery, not mail to triage. Do not count it as coverage
+   or as a surfaced item.
 3. Request the minimum mail facts needed through `apple-mail`. That connector
    owns data disclosure, untrusted-content handling, authorization, and
    provider verification; do not bypass its policy. If the permitted facts are
