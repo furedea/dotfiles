@@ -1,14 +1,6 @@
 ---
 name: mail-triage
 description: Prioritize and clean mail across every configured account.
-version: 0.5.0
-author: furedea
-license: MIT
-platforms: [macos]
-metadata:
-    hermes:
-        tags: [email, triage, cleanup]
-        related_skills: [apple-mail, morning-briefing]
 ---
 
 # Mail Triage

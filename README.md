@@ -250,7 +250,7 @@ These tracked files are not applied by Home Manager or nix-darwin:
 ├── zsh/ and bash/             # Interactive shell configuration
 ├── nvim/ and vim/             # Editor configuration
 ├── herdr/                     # Herdr UI and plugin synchronization
-├── hermes/                    # Retained secretary Skill sources pending migration
+├── secretary/                 # Morning briefing Skills and read-only settings for `claude -p`
 ├── scripts/                   # Shell launchers for Git signing, Hister, and Moshi
 ├── .agents/                   # Repository rules for the agent harness hooks
 ├── ghostty/                   # Terminal configuration
@@ -331,7 +331,7 @@ Declarative Home Manager and host contracts also have native flake checks in
 
 Tests are grouped by the feature they verify, not by implementation language.
 Python and Bats tests live together under directories such as `tests/herdr/`
-and `tests/hermes/`. Agent hook and skill tests live with their source in
+and `tests/secretary/`. Agent hook and skill tests live with their source in
 [furedea/agent-config](https://github.com/furedea/agent-config). `tests/nix/` bridges the
 repository-wide native configuration checks, including the Home Manager rendering of the
 agent source and the repository's related-test mapping.

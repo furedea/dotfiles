@@ -56,7 +56,8 @@ def test_nix_changes_select_configuration_and_packaged_runtime_contracts(
         ("nvim/lazy-lock.json", {"test_nvim_plugin_lock.py"}),
         (".gitignore", {"test_nvim_plugin_lock.py"}),
         ("git/ignore", {"test_nvim_plugin_lock.py"}),
-        ("hermes/secretary/skills/secretary/**", {"test_secretary_skill.py"}),
+        ("secretary/**", {"test_secretary_skill.py"}),
+        ("scripts/secretary/**", {"morning_briefing.bats"}),
         (".agents/hooks/rules/related_test_extensions.json", {"test_related_test_extensions.py"}),
     ],
 )

@@ -35,3 +35,6 @@ nvim/.undo/
 
 # Neovim falls back to a log in the working directory when its state directory is not writable
 /nvim.log
+
+# The secretary briefing project carries its own Claude Code skills and settings.
+!secretary/.claude/

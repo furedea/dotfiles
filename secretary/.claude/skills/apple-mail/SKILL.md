@@ -1,16 +1,6 @@
 ---
 name: apple-mail
 description: Operate every account configured in Apple Mail through a bounded JSON CLI.
-version: 0.2.0
-author: furedea
-license: MIT
-platforms: [macos]
-prerequisites:
-    commands: [apple-mail]
-metadata:
-    hermes:
-        tags: [email, apple-mail, multi-account]
-        related_skills: [mail-triage, morning-briefing]
 ---
 
 # Apple Mail

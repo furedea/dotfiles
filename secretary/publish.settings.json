@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "defaultMode": "dontAsk",
+    "allow": [
+      "Read(~/.local/state/secretary/briefings/**)",
+      "Write(~/.local/state/secretary/artifact/briefing.html)",
+      "Artifact"
+    ],
+    "deny": [
+      "Bash",
+      "Edit",
+      "Write(~/ghq/**)",
+      "Write(~/.local/state/secretary/*.json)",
+      "WebFetch",
+      "WebSearch"
+    ]
+  }
+}
