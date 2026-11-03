@@ -1,6 +1,6 @@
 # ADR-0011: Separate Hermes profile sources from runtime state
 
-- Status: Accepted
+- Status: Deprecated
 - Date: 2026-08-24
 - Supersedes: ADR-0010
 

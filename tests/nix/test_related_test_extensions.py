@@ -41,9 +41,7 @@ def test_nix_changes_select_configuration_and_packaged_runtime_contracts(
         "tests/nix/agent_hook.bats",
         "tests/nix/codex_notification.bats",
         "tests/herdr/herdr_command.bats",
-        "tests/hermes/hermes_secretary.bats",
         "tests/terminal-browser/terminal_browser.bats",
-        "tests/hermes/test_hermes_gateway.py",
     } <= set(extension[source])
 
 
@@ -59,7 +57,6 @@ def test_nix_changes_select_configuration_and_packaged_runtime_contracts(
         (".gitignore", {"test_nvim_plugin_lock.py"}),
         ("git/ignore", {"test_nvim_plugin_lock.py"}),
         ("hermes/secretary/skills/secretary/**", {"test_secretary_skill.py"}),
-        ("tests/hermes/gateway_probe.py", {"test_hermes_gateway.py"}),
         (".agents/hooks/rules/related_test_extensions.json", {"test_related_test_extensions.py"}),
     ],
 )

@@ -45,9 +45,6 @@ in
   environment.systemPackages = [ pkgs.vim ];
 
   environment.variables = {
-    # Devin CLI has no config key for the default permission mode; the
-    # documented mechanisms are --permission-mode and this env var.
-    DEVIN_PERMISSION_MODE = "smart";
     # Tools that ship no CA bundle of their own (uv-managed Python, for one)
     # read this, the store filtered below, instead; requests reads only its own
     # variable and otherwise uses each venv's certifi.

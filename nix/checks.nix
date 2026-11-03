@@ -160,13 +160,11 @@ in
         builtins.elem name [
           "claude-code"
           "codex"
-          "devin-cli"
           "herdr"
         ]
       ) homeNames == [
         "herdr"
         "claude-code"
-        "devin-cli"
         "codex"
       ];
     # Building codexPackage runs its install check: the vendor Developer ID signature must survive.
@@ -190,12 +188,6 @@ in
       && !(inputs ? codex-cli-nix)
       && !(inputs ? herdr);
     terminal-browser-version = versions "terminal-browser" home.home.packages == [ "0.6.0" ];
-    hermes-mutable-state-unmanaged = builtins.all (path: !(builtins.hasAttr path home.home.file)) [
-      ".hermes/profiles/secretary/cron"
-      ".hermes/profiles/secretary/state"
-      ".hermes/profiles/secretary/.env"
-      ".hermes/profiles/secretary/config.yaml"
-    ];
     plugin-sync-failures-propagate = !(lib.hasInfix "|| true" home.home.activation.herdrPlugins.data);
     plugin-sync-has-git =
       lib.hasInfix "-git-" home.home.activation.herdrPlugins.data
@@ -221,9 +213,6 @@ in
 
   host-configuration = check "host-configuration" {
     binary-cache-trust = cacheTrusted mbp && cacheTrusted mba;
-    devin-smart-permission-mode =
-      mbp.environment.variables.DEVIN_PERMISSION_MODE == "smart"
-      && mba.environment.variables.DEVIN_PERMISSION_MODE == "smart";
     no-shell-specific-editor-defaults = builtins.all (
       source: builtins.all (definition: !(lib.hasInfix definition source)) shellEditorDefinitions
     ) shellConfigs;

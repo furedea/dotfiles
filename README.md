@@ -159,20 +159,19 @@ The cask list in `nix/darwin/default.nix` is authoritative.
   zoxide, ghq, roots, git-wt, fzf, eza, bat, fd, ripgrep, and Yazi
 - Git, Delta, GitHub CLI, Lazygit, Neovim, Tree-sitter, and Vim configuration
 - Nix, Bash, Python, Rust, TypeScript, Lua, LaTeX, formatting, and linting tools
-- Claude Code, Codex, Devin, Hermes Agent, pi, and Herdr
+- Claude Code, Codex, pi, and Herdr
 - `programs.git`, `programs.delta`, `programs.gh`, `programs.lazygit`,
   `programs.direnv`, `programs.atuin`, `programs.agent-harness`, and
   `programs.yazi`
 
-Activation also creates the Hermes secretary profile when absent, rebuilds the
-Zsh completion cache, reports how to export the SSH public key from 1Password when
-it is missing, and reconciles the commit-pinned Herdr plugin set.
+Activation rebuilds the Zsh completion cache, reports how to export the SSH public key
+from 1Password when it is missing, and reconciles the commit-pinned Herdr plugin set.
 
 ### AI Agent Environment
 
 The [agent-config](https://github.com/furedea/agent-config) repository owns the personal
 cross-provider agent source: instructions, policies, hooks, skills, and provider settings for Claude Code,
-Codex, Devin, Hermes Agent, and pi. The
+Codex, and pi. The
 [agent-harness](https://github.com/furedea/agent-harness) flake renders and deploys
 that source for each provider. This repository also builds release-matched Herdr
 and Moshi hook bundles and composes them through the module's generic `hooks`
@@ -251,7 +250,7 @@ These tracked files are not applied by Home Manager or nix-darwin:
 ├── zsh/ and bash/             # Interactive shell configuration
 ├── nvim/ and vim/             # Editor configuration
 ├── herdr/                     # Herdr UI and plugin synchronization
-├── hermes/                    # Editable Hermes secretary profile sources
+├── hermes/                    # Retained secretary Skill sources pending migration
 ├── scripts/                   # Shell launchers for Git signing, Hister, and Moshi
 ├── .agents/                   # Repository rules for the agent harness hooks
 ├── ghostty/                   # Terminal configuration
@@ -329,8 +328,6 @@ provider payloads, subprocess failures, disposable Git state, and configuration
 contracts. Bats checks shell, editor, and Nix-managed launcher integration.
 Declarative Home Manager and host contracts also have native flake checks in
 `nix/checks.nix`.
-Hermes gateway tests run on macOS with the Nix-built Hermes Python environment;
-they do not add Hermes dependencies to the dotfiles Python environment.
 
 Tests are grouped by the feature they verify, not by implementation language.
 Python and Bats tests live together under directories such as `tests/herdr/`
