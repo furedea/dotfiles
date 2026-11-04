@@ -110,7 +110,7 @@ let
       `move-window`, `focus-window`, `minimize`, `maximize`, `restore`) must name the app with
       `--app <name>`; element actions take an `@ref` from a snapshot.
     - Every path argument must resolve, with symlinks followed, inside the current Git worktree or
-      `$TMPDIR`; anything else asks.
+      the session's temporary directories, such as `$TMPDIR`; anything else asks.
     - Options this setup does not list for a subcommand (such as `--window-id` or `--headed`),
       keyboard or pointer input to the focused window or a screen position, `batch`, and `launch`
       ask.
