@@ -74,19 +74,62 @@ let
     mkdir -p "$out"
     ${lib.getExe herdrPackage} --skill >| "$out/SKILL.md"
   '';
+  # The agent-config hooks and the sandbox exclusion accept only plain single calls, which the
+  # upstream guides do not follow; these rules go right after the frontmatter so agents read them first.
+  insertLocalRules =
+    rules:
+    "awk -v rules=${rules} '{ print } /^---$/ && ++fences == 2 "
+    + "{ print \"\"; while ((getline line < rules) > 0) print line }'";
+  agentBrowserLocalRules = pkgs.writeText "agent-browser-local-rules.md" ''
+    ## Local rules
+
+    These rules override any conflicting instruction below.
+
+    - Run exactly one agent-browser command per Bash call, as a plain invocation: no `export`, `&&`,
+      `;`, pipes, redirects, or `$(...)`. In Claude Code only such a call runs outside the sandbox
+      without a confirmation prompt; any other form runs inside the sandbox, where the browser daemon
+      cannot start, and asks.
+    - To separate sessions, pass `--session <name>`, for example
+      `agent-browser --session task open https://example.com`. Do not use the
+      `AGENT_BROWSER_SESSION` variable or `agent-browser session id`.
+    - The only file outputs that run without a prompt are `agent-browser screenshot` and
+      `agent-browser screenshot --full`, which save under `~/.agent-browser/tmp/screenshots` and
+      print the path. Other file outputs (a screenshot path, `pdf`, `trace stop`, `profiler stop`,
+      `network har stop`) and options this setup does not list ask.
+  '';
+  agentDesktopLocalRules = pkgs.writeText "agent-desktop-local-rules.md" ''
+    ## Local rules
+
+    These rules override any conflicting instruction below.
+
+    - Run exactly one agent-desktop command per Bash call, as a plain invocation: no `export`, `&&`,
+      `;`, pipes, redirects, or `$(...)`. In Claude Code only such a call runs outside the sandbox
+      without a confirmation prompt; any other form runs inside the sandbox, where agent-desktop
+      cannot operate apps, and asks.
+    - Window-targeting commands (`snapshot`, `find`, `screenshot`, `list-surfaces`, `resize-window`,
+      `move-window`, `focus-window`, `minimize`, `maximize`, `restore`) must name the app with
+      `--app <name>`; element actions take an `@ref` from a snapshot.
+    - Every path argument must resolve, with symlinks followed, inside the current Git worktree or
+      `$TMPDIR`; anything else asks.
+    - Options this setup does not list for a subcommand (such as `--window-id` or `--headed`),
+      keyboard or pointer input to the focused window or a screen position, `batch`, and `launch`
+      ask.
+  '';
   # The bundled core guide is named "core"; rename it so the installed skill matches its directory.
   agentBrowserSkill = pkgs.runCommand "agent-browser-skill" { } ''
     set -euxCo pipefail
     mkdir -p "$out"
     ${lib.getExe agentBrowserPackage} skills get core \
-      | sed '2s/^name: core$/name: agent-browser/' >| "$out/SKILL.md"
+      | sed '2s/^name: core$/name: agent-browser/' \
+      | ${insertLocalRules agentBrowserLocalRules} >| "$out/SKILL.md"
     grep -qx 'name: agent-browser' "$out/SKILL.md"
   '';
   agentDesktopSkill = pkgs.runCommand "agent-desktop-skill" { } ''
     set -euxCo pipefail
     mkdir -p "$out"
     ${lib.getExe agentDesktopPackage} skills get desktop \
-      | ${lib.getExe pkgs.jq} -er '.data.content' >| "$out/SKILL.md"
+      | ${lib.getExe pkgs.jq} -er '.data.content' \
+      | ${insertLocalRules agentDesktopLocalRules} >| "$out/SKILL.md"
     grep -qx 'name: agent-desktop' "$out/SKILL.md"
   '';
   generateHookBundle =

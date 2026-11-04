@@ -119,6 +119,16 @@ in
         grep -q 'agent-browser snapshot' "$browserSkill/SKILL.md"
         grep -qx 'name: agent-desktop' "$desktopSkill/SKILL.md"
         grep -q 'agent-desktop snapshot' "$desktopSkill/SKILL.md"
+        # Only a plain single call escapes the sandbox, so the local rules must precede the upstream body.
+        for skill in "$browserSkill" "$desktopSkill"; do
+          awk '
+            /^---$/ { fences++; next }
+            fences == 2 && NF { print; exit }
+          ' "$skill/SKILL.md" | grep -qx '## Local rules'
+          grep -q 'one .* command per Bash call' "$skill/SKILL.md"
+        done
+        grep -q -- '--session <name>' "$browserSkill/SKILL.md"
+        grep -q -- '--app <name>' "$desktopSkill/SKILL.md"
         touch "$out"
       '';
 
