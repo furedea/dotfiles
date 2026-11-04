@@ -15,14 +15,6 @@
     # python@3.11, and `brew install` then exited non-zero.
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
     llm-agents.url = "github:numtide/llm-agents.nix";
-    google-workspace-cli = {
-      url = "github:googleworkspace/cli";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    apple-mail-cli = {
-      url = "github:furedea/apple-mail-cli";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     agent-harness = {
       url = "github:furedea/agent-harness";
       inputs.home-manager.follows = "home-manager";
@@ -48,8 +40,6 @@
       home-manager,
       nix-homebrew,
       llm-agents,
-      google-workspace-cli,
-      apple-mail-cli,
       agent-harness,
       agent-config,
       hister,
@@ -77,8 +67,6 @@
         config = { inherit allowUnfreePredicate; };
       };
       herdrPackage = llm-agents.packages.${system}.herdr;
-      gwsPackage = google-workspace-cli.packages.${system}.default;
-      appleMailCliPackage = apple-mail-cli.packages.${system}.default;
       histerPackage = hister.packages.${system}.default;
       homeSpecialArgs = {
         inherit
@@ -86,8 +74,6 @@
           dotfilesDir
           unstable
           llm-agents
-          appleMailCliPackage
-          gwsPackage
           herdrPackage
           histerPackage
           histerServerUrl

@@ -1,8 +1,9 @@
 # ADR-0043: Read the secretary calendar from macOS Calendar
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-11-04
 - Supersedes: ADR-0021
+- Superseded by: ADR-0044
 
 In the context of the morning briefing needing today's events after the first launchd run
 (ADR-0042) returned `gws` 401 because its credentials were lost with `~/.hermes`, facing a
