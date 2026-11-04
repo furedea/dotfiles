@@ -173,6 +173,7 @@ in
   };
 
   home.packages = with pkgs; [
+    morningBriefing
     # Shell and environment
     carapace
     direnv
