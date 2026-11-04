@@ -27,7 +27,6 @@ let
     .text;
   hister = mbp.launchd.user.agents.hister.serviceConfig;
   lsp = home.launchd.agents.lspmux;
-  briefing = home.launchd.agents.morning-briefing;
   lspSettings =
     builtins.fromTOML
       home.home.file."Library/Application Support/lspmux/config.toml".text;
@@ -245,22 +244,6 @@ in
       toString home.home.file.".local/bin/rust-analyzer".source
     );
     lspmux-timeout = lspSettings.instance_timeout == 300;
-    morning-briefing-daily =
-      briefing.enable
-      && builtins.length briefing.config.StartCalendarInterval == 1
-      && (builtins.head briefing.config.StartCalendarInterval).Hour == 8
-      && (builtins.head briefing.config.StartCalendarInterval).Minute == 0
-      && (builtins.head briefing.config.StartCalendarInterval).Weekday == null
-      && briefing.config.RunAtLoad == null
-      && briefing.config.KeepAlive == null;
-    morning-briefing-logs-to-library =
-      lib.hasSuffix "/Library/Logs/morning-briefing.log" briefing.config.StandardOutPath
-      && briefing.config.StandardErrorPath == briefing.config.StandardOutPath;
-    morning-briefing-runs-claude-from-secretary =
-      lib.hasSuffix "/secretary" briefing.config.EnvironmentVariables.SECRETARY_DIR
-      && lib.hasSuffix "/bin/claude" briefing.config.EnvironmentVariables.CLAUDE_BIN
-      && builtins.elem "gws" homeNames
-      && builtins.elem "apple-mail-cli" homeNames;
     lspmux-project-environment = hasAll [
       "PATH"
       "RUSTUP_TOOLCHAIN"

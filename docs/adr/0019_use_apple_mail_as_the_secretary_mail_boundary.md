@@ -1,6 +1,6 @@
 # ADR-0019: Use Apple Mail as the secretary mail boundary
 
-- Status: Accepted
+- Status: Deprecated
 - Date: 2026-08-30
 - Supersedes: ADR-0014
 

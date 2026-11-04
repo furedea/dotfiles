@@ -6,8 +6,6 @@
   dotfilesDir,
   unstable,
   llm-agents,
-  appleMailCliPackage,
-  gwsPackage,
   herdrPackage,
   histerPackage,
   histerServerUrl,
@@ -46,14 +44,6 @@ let
     text = builtins.readFile ../../scripts/moshi/manage_moshi_hook.sh;
   };
   moshiLifecycleBin = "${moshiLifecycle}/bin/manage_moshi_hook";
-  morningBriefing = pkgs.writeTextFile {
-    name = "run-morning-briefing";
-    destination = "/bin/run_morning_briefing";
-    executable = true;
-    text = builtins.readFile ../../scripts/secretary/run_morning_briefing.sh;
-  };
-  morningBriefingBin = "${morningBriefing}/bin/run_morning_briefing";
-  morningBriefingLog = "${config.home.homeDirectory}/Library/Logs/morning-briefing.log";
   moshiLifecycleEnvironment = {
     JQ_BIN = lib.getExe pkgs.jq;
     MOSHI_HOOK_BIN = moshiHookRuntime;
@@ -216,7 +206,6 @@ in
   };
 
   home.packages = with pkgs; [
-    morningBriefing
     # Shell and environment
     carapace
     direnv
@@ -268,10 +257,6 @@ in
     # Content and media
     esaCliPackage
     ffmpeg
-
-    # Personal secretary integrations
-    appleMailCliPackage
-    gwsPackage
 
     # AI coding agents
     agentBrowserPackage
@@ -630,31 +615,6 @@ in
         ProcessType = "Background";
         RunAtLoad = true;
         StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/lspmux.log";
-      };
-    };
-  }
-  // {
-    # Once a day, never resident: no RunAtLoad or KeepAlive. A missed 08:00 runs once after wake.
-    morning-briefing = {
-      enable = true;
-      config = {
-        ProgramArguments = [ morningBriefingBin ];
-        EnvironmentVariables = {
-          PATH = "${config.home.profileDirectory}/bin:/usr/bin:/bin:/usr/sbin:/sbin";
-          CLAUDE_BIN = lib.getExe claudePackage;
-          SECRETARY_DIR = "${dotfilesDir}/secretary";
-        };
-        # Apple Mail is scripted through Apple Events, which need the GUI session.
-        LimitLoadToSessionType = "Aqua";
-        ProcessType = "Background";
-        StartCalendarInterval = [
-          {
-            Hour = 8;
-            Minute = 0;
-          }
-        ];
-        StandardOutPath = morningBriefingLog;
-        StandardErrorPath = morningBriefingLog;
       };
     };
   }
