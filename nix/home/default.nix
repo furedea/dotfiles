@@ -32,6 +32,7 @@ let
   codexPackage = pkgs.callPackage ../packages/codex.nix { };
   claudePackage = llm-agents.packages.${system}.claude-code;
   agentBrowserPackage = llm-agents.packages.${system}.agent-browser;
+  dshPackage = llm-agents.packages.${system}.dsh;
   agentDesktopPackage = pkgs.callPackage ../packages/agent_desktop.nix { };
   agentHarnessPackage = agent-harness.packages.${system}.default;
   nvimLogFile = "${config.xdg.stateHome}/agent-harness/nvim.log";
@@ -262,6 +263,7 @@ in
     agentBrowserPackage
     agentDesktopPackage
     claudePackage
+    dshPackage
     herdrCompatibleCodex
     unstable.pi-coding-agent
 
