@@ -234,6 +234,14 @@ jobs:
       - name: Run autocorrect
         uses: huacnlee/autocorrect-action@bf91ab3904c2908dd8e71312a8a83ed1eb632997 # v2.13.3
 
+  claude-review:
+    uses: furedea/reusable-workflows/.github/workflows/claude-review.yml@fc0cba95e88e0cdad9837bf8212d324f3cad50a5 # main
+    permissions:
+      contents: read
+      pull-requests: write
+    secrets:
+      claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
   all-green:
     if: always()
     needs:
@@ -245,6 +253,7 @@ jobs:
       - lua-lint
       - nix-lint
       - format-check
+      - claude-review
     runs-on: ubuntu-latest
     timeout-minutes: 1
     permissions: {}
