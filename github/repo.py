@@ -18,6 +18,7 @@ ACTIONS_ENTRY_NAME = "CLAUDE_CODE_OAUTH_TOKEN"
 ONE_PASSWORD_TITLE = "Claude review token"
 KEYCHAIN_SERVICE = "claude-review-token"
 KEYCHAIN_ACCOUNT = ACTIONS_ENTRY_NAME
+KEYCHAIN_ITEM_NOT_FOUND = 44
 KEYCHAIN_SAFE_TOKEN = re.compile(r"[A-Za-z0-9._~+/=-]+")
 
 
@@ -257,37 +258,54 @@ def stored_review_token() -> str | None:
     return read_secret_output(["op", "item", "get", ONE_PASSWORD_TITLE, "--fields", "label=credential", "--reveal"])
 
 
-def existing_one_password_item_id() -> str | None:
-    """Return the id of the current 1Password item, if any."""
-    described = read_secret_output(["op", "item", "get", ONE_PASSWORD_TITLE, "--format", "json"])
-    return json.loads(described)["id"] if described else None
+def existing_one_password_item_ids() -> list[str]:
+    """Return the ids of every 1Password item with the token's title, including duplicates."""
+    listing = read_secret_output(["op", "item", "list", "--format", "json"])
+    items = json.loads(listing) if listing else []
+    return [item["id"] for item in items if item["title"] == ONE_PASSWORD_TITLE]
 
 
 def store_in_one_password(token: str) -> None:
-    """Create the new item from a JSON template on stdin, then remove the previous one by id."""
-    previous_id = existing_one_password_item_id()
+    """Create the new item from a JSON template on stdin, then remove the previous ones by id."""
+    previous_ids = existing_one_password_item_ids()
     template = {
         "title": ONE_PASSWORD_TITLE,
         "category": "API_CREDENTIAL",
         "fields": [{"id": "credential", "type": "CONCEALED", "label": "credential", "value": token}],
     }
-    subprocess.run(
-        ["op", "item", "create"], input=json.dumps(template), stdout=subprocess.DEVNULL, text=True, check=True
+    created = subprocess.run(
+        ["op", "item", "create", "--format", "json"],
+        input=json.dumps(template),
+        stdout=subprocess.PIPE,
+        text=True,
+        check=True,
     )
-    if previous_id:
-        subprocess.run(["op", "item", "delete", previous_id], stdout=subprocess.DEVNULL, check=True)
+    try:
+        for previous_id in previous_ids:
+            subprocess.run(["op", "item", "delete", previous_id], stdout=subprocess.DEVNULL, check=True)
+    except subprocess.CalledProcessError as error:
+        subprocess.run(
+            ["op", "item", "delete", json.loads(created.stdout)["id"]], stdout=subprocess.DEVNULL, check=False
+        )
+        raise ValueError(
+            "repo review-token: could not remove the previous 1Password item; nothing was changed"
+        ) from error
     clear_keychain_item()
 
 
 def clear_keychain_item() -> None:
     """Remove a Keychain item that would otherwise outrank a fresher 1Password item."""
-    with contextlib.suppress(OSError):
-        subprocess.run(
+    try:
+        result = subprocess.run(
             ["security", "delete-generic-password", "-a", KEYCHAIN_ACCOUNT, "-s", KEYCHAIN_SERVICE],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             check=False,
         )
+    except OSError:
+        return
+    if result.returncode not in (0, KEYCHAIN_ITEM_NOT_FOUND):
+        raise ValueError("repo review-token: could not remove the older Keychain item; delete it, then rotate again")
 
 
 def store_in_keychain(token: str) -> None:

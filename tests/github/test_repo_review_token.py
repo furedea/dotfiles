@@ -64,21 +64,21 @@ record()
 item = root / "op_item"
 if args[0] == "whoami":
     sys.exit(0 if os.environ.get("OP_SIGNED_IN") == "1" else 1)
-elif args[:2] == ["item", "get"] and "--format" in args:
-    if not item.exists():
-        sys.exit(1)
-    print(json.dumps({"id": "old-item-id"}))
+elif args[:2] == ["item", "list"]:
+    print(json.dumps([{"id": "old-item-id", "title": "Claude review token"}] if item.exists() else []))
 elif args[:2] == ["item", "get"]:
     if not item.exists():
         sys.exit(1)
     print(item.read_text())
 elif args[:2] == ["item", "delete"]:
-    assert args[2] == "old-item-id"
+    if os.environ.get("OP_DELETE_OLD_FAILS") == "1" and args[2] == "old-item-id":
+        sys.exit(1)
 elif args[:2] == ["item", "create"]:
     if os.environ.get("OP_CREATE_FAILS") == "1":
         sys.exit(1)
     fields = json.loads(stdin)["fields"]
     item.write_text(next(field["value"] for field in fields if field["id"] == "credential"))
+    print(json.dumps({"id": "new-item-id"}))
 else:
     sys.exit("unexpected op arguments: " + repr(args))
 """
@@ -95,6 +95,8 @@ if args == ["-i"]:
     assert words[0] == "add-generic-password"
     stored.write_text(words[words.index("-w") + 1])
 elif args[0] == "delete-generic-password":
+    if os.environ.get("SECURITY_DELETE_FAILS") == "1":
+        sys.exit(1)
     stored.unlink(missing_ok=True)
 elif args[0] == "find-generic-password":
     if not stored.exists():
@@ -361,3 +363,29 @@ def test_configure_without_stored_token_warns_and_applies_other_settings(run_cli
     assert "review-token rotate" in result.stderr
     assert not secret_sets(review)
     assert "Created ruleset on furedea/alpha" in result.stdout
+
+
+def test_failed_removal_of_the_previous_one_password_item_rolls_back_the_new_one(
+    run_cli: CliRunner, review: Path, executable: StubWriter
+) -> None:
+    executable("op", OP_STUB)
+    (review / "op_item").write_text(OLD_TOKEN)
+    result = rotate(run_cli, env={"OP_SIGNED_IN": "1", "OP_DELETE_OLD_FAILS": "1"})
+    assert result.returncode == 1
+    deletes = [row["args"] for row in calls(review, "op") if row["args"][:2] == ["item", "delete"]]
+    assert deletes[-1] == ["item", "delete", "new-item-id"]
+    assert not secret_sets(review)
+    assert_token_never_exposed(review, result)
+
+
+def test_failed_keychain_cleanup_stops_before_registering_any_repository(
+    run_cli: CliRunner, review: Path, executable: StubWriter
+) -> None:
+    executable("op", OP_STUB)
+    executable("security", SECURITY_STUB)
+    (review / "keychain_item").write_text(OLD_TOKEN)
+    result = rotate(run_cli, env={"OP_SIGNED_IN": "1", "SECURITY_DELETE_FAILS": "1"})
+    assert result.returncode == 1
+    assert "Keychain" in result.stderr
+    assert not secret_sets(review)
+    assert_token_never_exposed(review, result)
