@@ -18,7 +18,6 @@ ACTIONS_ENTRY_NAME = "CLAUDE_CODE_OAUTH_TOKEN"
 ONE_PASSWORD_TITLE = "Claude review token"
 KEYCHAIN_SERVICE = "claude-review-token"
 KEYCHAIN_ACCOUNT = ACTIONS_ENTRY_NAME
-KEYCHAIN_ITEM_NOT_FOUND = 44
 KEYCHAIN_SAFE_TOKEN = re.compile(r"[A-Za-z0-9._~+/=-]+")
 
 
@@ -227,12 +226,17 @@ def sync(arguments: list[str]) -> int:
     return int(counts["failed"] != 0)
 
 
-def one_password_ready() -> bool:
-    """Report whether the 1Password CLI is installed and signed in."""
+def uses_one_password() -> bool:
+    """Choose the backend: 1Password when `op` is installed, Keychain when it is not.
+
+    An installed but signed-out `op` is an error, never a reason to switch backends.
+    """
     if shutil.which("op") is None:
         return False
     probe = subprocess.run(["op", "whoami"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
-    return probe.returncode == 0
+    if probe.returncode != 0:
+        raise ValueError("repo review-token: 1Password is not signed in; run `op signin` and retry")
+    return True
 
 
 def read_secret_output(arguments: list[str]) -> str | None:
@@ -245,17 +249,14 @@ def read_secret_output(arguments: list[str]) -> str | None:
 
 
 def stored_review_token() -> str | None:
-    """Read the newest stored token.
-
-    Storing in 1Password clears the Keychain item, so a Keychain item exists only when it was
-    stored after the 1Password item (for example while 1Password was signed out) and is newer.
-    """
-    keychain_token = read_secret_output(
+    """Read the token from the one backend that the environment selects."""
+    if uses_one_password():
+        return read_secret_output(
+            ["op", "item", "get", ONE_PASSWORD_TITLE, "--fields", "label=credential", "--reveal"]
+        )
+    return read_secret_output(
         ["security", "find-generic-password", "-a", KEYCHAIN_ACCOUNT, "-s", KEYCHAIN_SERVICE, "-w"]
     )
-    if keychain_token or not one_password_ready():
-        return keychain_token
-    return read_secret_output(["op", "item", "get", ONE_PASSWORD_TITLE, "--fields", "label=credential", "--reveal"])
 
 
 def existing_one_password_item_ids() -> list[str]:
@@ -290,22 +291,6 @@ def store_in_one_password(token: str) -> None:
         raise ValueError(
             "repo review-token: could not remove the previous 1Password item; nothing was changed"
         ) from error
-    clear_keychain_item()
-
-
-def clear_keychain_item() -> None:
-    """Remove a Keychain item that would otherwise outrank a fresher 1Password item."""
-    try:
-        result = subprocess.run(
-            ["security", "delete-generic-password", "-a", KEYCHAIN_ACCOUNT, "-s", KEYCHAIN_SERVICE],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=False,
-        )
-    except OSError:
-        return
-    if result.returncode not in (0, KEYCHAIN_ITEM_NOT_FOUND):
-        raise ValueError("repo review-token: could not remove the older Keychain item; delete it, then rotate again")
 
 
 def store_in_keychain(token: str) -> None:
@@ -316,9 +301,9 @@ def store_in_keychain(token: str) -> None:
     subprocess.run(["security", "-i"], input=command, stdout=subprocess.DEVNULL, text=True, check=True)
 
 
-def store_review_token(token: str) -> str:
-    """Store the token in the preferred backend and name the one used."""
-    if one_password_ready():
+def store_review_token(token: str, one_password: bool) -> str:
+    """Store the token in the selected backend and name the one used."""
+    if one_password:
         store_in_one_password(token)
         return "1Password"
     store_in_keychain(token)
@@ -384,9 +369,10 @@ def read_pasted_token() -> str:
 
 def rotate_review_token() -> int:
     """Issue a new token, store it, and register it on every target repository."""
+    one_password = uses_one_password()
     subprocess.run(["claude", "setup-token"], check=True)
     token = read_pasted_token()
-    print(f"Stored the review token in {store_review_token(token)}")
+    print(f"Stored the review token in {store_review_token(token, one_password)}")
     counts = {"registered": 0, "failed": 0}
     for repository in review_token_targets():
         try:
