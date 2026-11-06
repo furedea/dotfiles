@@ -2,6 +2,7 @@
 """Run the personal GitHub workflow without shell-based data processing."""
 
 import contextlib
+import getpass
 import json
 from pathlib import Path
 import re
@@ -13,6 +14,11 @@ import sys
 ROOT = Path(__file__).resolve().parent
 VISIBILITIES = {"--public", "--private", "--internal"}
 LOCAL_OPTIONS = {"--clone", "-c", "--source", "-s", "--push", "--remote", "-r"}
+SECRET_NAME = "CLAUDE_CODE_OAUTH_TOKEN"
+ONE_PASSWORD_TITLE = "Claude review token"
+KEYCHAIN_SERVICE = "claude-review-token"
+KEYCHAIN_ACCOUNT = SECRET_NAME
+KEYCHAIN_SAFE_TOKEN = re.compile(r"[A-Za-z0-9._~+/=-]+")
 
 
 def output(*arguments: str) -> str:
@@ -33,10 +39,11 @@ def usage(command: str = "") -> int:
         "create": "repo create <name-or-owner/name> <visibility> [options]",
         "configure": "repo configure <name-or-owner/name>",
         "sync": "repo sync [--dry-run]",
+        "review-token": "repo review-token rotate",
     }
     print(f"Usage: {descriptions.get(command, 'repo <command> [arguments]')}", file=sys.stderr)
     if not command:
-        print("Commands: create, configure, sync", file=sys.stderr)
+        print("Commands: create, configure, sync, review-token", file=sys.stderr)
     print("Options: --help, -h", file=sys.stderr)
     if command == "create":
         print("Visibility: set exactly one of --public, --private, or --internal.", file=sys.stderr)
@@ -48,6 +55,10 @@ def usage(command: str = "") -> int:
             file=sys.stderr,
         )
         print("Example: repo create agent-harness --private --template furedea/template-rust", file=sys.stderr)
+    if command == "review-token":
+        print("rotate issues a Claude review token with `claude setup-token`, stores it in", file=sys.stderr)
+        print("1Password (or the macOS Keychain) and registers it as the Actions secret", file=sys.stderr)
+        print(f"{SECRET_NAME} on every owned, non-archived, non-fork repository.", file=sys.stderr)
     return 1
 
 
@@ -146,6 +157,7 @@ def configure(repository: str) -> None:
         check=True,
     )
     print(f"Updated ruleset {identifier} on {repository}" if identifier else f"Created ruleset on {repository}")
+    register_stored_review_token(repository)
 
 
 def create(arguments: list[str]) -> int:
@@ -214,6 +226,151 @@ def sync(arguments: list[str]) -> int:
     return int(counts["failed"] != 0)
 
 
+def one_password_ready() -> bool:
+    """Report whether the 1Password CLI is installed and signed in."""
+    if shutil.which("op") is None:
+        return False
+    probe = subprocess.run(["op", "whoami"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+    return probe.returncode == 0
+
+
+def read_secret_output(arguments: list[str]) -> str | None:
+    """Return a command's trimmed stdout, or None when the command is missing or fails."""
+    try:
+        result = subprocess.run(arguments, capture_output=True, text=True, check=False)
+    except OSError:
+        return None
+    return result.stdout.strip() or None if result.returncode == 0 else None
+
+
+def stored_review_token() -> str | None:
+    """Read the token from 1Password first, then the macOS Keychain."""
+    if one_password_ready():
+        token = read_secret_output(
+            ["op", "item", "get", ONE_PASSWORD_TITLE, "--fields", "label=credential", "--reveal"]
+        )
+        if token:
+            return token
+    return read_secret_output(
+        ["security", "find-generic-password", "-a", KEYCHAIN_ACCOUNT, "-s", KEYCHAIN_SERVICE, "-w"]
+    )
+
+
+def store_in_one_password(token: str) -> None:
+    """Replace the 1Password item, sending the token inside a JSON template on stdin."""
+    existing = subprocess.run(
+        ["op", "item", "get", ONE_PASSWORD_TITLE], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False
+    )
+    if existing.returncode == 0:
+        subprocess.run(["op", "item", "delete", ONE_PASSWORD_TITLE], stdout=subprocess.DEVNULL, check=True)
+    template = {
+        "title": ONE_PASSWORD_TITLE,
+        "category": "API_CREDENTIAL",
+        "fields": [{"id": "credential", "type": "CONCEALED", "label": "credential", "value": token}],
+    }
+    subprocess.run(
+        ["op", "item", "create"], input=json.dumps(template), stdout=subprocess.DEVNULL, text=True, check=True
+    )
+
+
+def store_in_keychain(token: str) -> None:
+    """Update the Keychain item through `security -i`, so the token travels on stdin only."""
+    if not KEYCHAIN_SAFE_TOKEN.fullmatch(token):
+        raise ValueError("repo review-token: the token contains characters the Keychain command cannot carry safely")
+    command = f"add-generic-password -U -a {KEYCHAIN_ACCOUNT} -s {KEYCHAIN_SERVICE} -w {token}\n"
+    subprocess.run(["security", "-i"], input=command, stdout=subprocess.DEVNULL, text=True, check=True)
+
+
+def store_review_token(token: str) -> str:
+    """Store the token in the preferred backend and name the one used."""
+    if one_password_ready():
+        store_in_one_password(token)
+        return "1Password"
+    store_in_keychain(token)
+    return "macOS Keychain"
+
+
+def set_review_secret(repository: str, token: str) -> None:
+    """Register the token as the repository's Actions secret, passing it on stdin only."""
+    subprocess.run(
+        ["gh", "secret", "set", SECRET_NAME, "--repo", repository],
+        input=token,
+        stdout=subprocess.DEVNULL,
+        text=True,
+        check=True,
+    )
+
+
+def register_stored_review_token(repository: str) -> None:
+    """Register the stored token on one repository, or warn when none has been stored."""
+    token = stored_review_token()
+    if token is None:
+        print(
+            f"warning: no stored review token; run `repo review-token rotate` to register {SECRET_NAME}",
+            file=sys.stderr,
+        )
+        return
+    set_review_secret(repository, token)
+    print(f"Registered {SECRET_NAME} on {repository}")
+
+
+def review_token_targets() -> list[str]:
+    """List the owner's active, non-fork repositories that are not excluded."""
+    owner = output("gh", "api", "user", "--jq", ".login")
+    excluded = set(json.loads((ROOT / "review_exclusions.json").read_text()))
+    names = output(
+        "gh",
+        "repo",
+        "list",
+        owner,
+        "--limit",
+        "10000",
+        "--no-archived",
+        "--source",
+        "--json",
+        "name",
+        "--jq",
+        ".[].name",
+    )
+    return [f"{owner}/{name}" for name in names.splitlines() if name and name not in excluded]
+
+
+def read_pasted_token() -> str:
+    """Read the token without echoing it when interactive, or from stdin otherwise."""
+    if sys.stdin.isatty():
+        token = getpass.getpass("Paste the token from `claude setup-token`: ")
+    else:
+        token = sys.stdin.readline()
+    token = token.strip()
+    if not token:
+        raise ValueError("repo review-token: no token was provided")
+    return token
+
+
+def rotate_review_token() -> int:
+    """Issue a new token, store it, and register it on every target repository."""
+    subprocess.run(["claude", "setup-token"], check=True)
+    token = read_pasted_token()
+    print(f"Stored the review token in {store_review_token(token)}")
+    counts = {"registered": 0, "failed": 0}
+    for repository in review_token_targets():
+        try:
+            set_review_secret(repository, token)
+            counts["registered"] += 1
+        except subprocess.CalledProcessError:
+            print(f"Failed to register {SECRET_NAME} on {repository}", file=sys.stderr)
+            counts["failed"] += 1
+    print("[summary] " + " ".join(f"{key}={value}" for key, value in counts.items()))
+    return int(counts["failed"] != 0)
+
+
+def review_token_command(arguments: list[str]) -> int:
+    """Dispatch the review-token subcommands."""
+    if arguments != ["rotate"]:
+        return usage("review-token")
+    return rotate_review_token()
+
+
 def configure_command(arguments: list[str]) -> int:
     """Configure exactly one named repository."""
     if len(arguments) != 1 or arguments[0].startswith("-"):
@@ -222,7 +379,7 @@ def configure_command(arguments: list[str]) -> int:
     return 0
 
 
-COMMANDS = {"create": create, "sync": sync, "configure": configure_command}
+COMMANDS = {"create": create, "sync": sync, "configure": configure_command, "review-token": review_token_command}
 
 
 def main(arguments: list[str]) -> int:

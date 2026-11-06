@@ -16,6 +16,7 @@ SCRIPT = "github/repo.py"
 @pytest.fixture
 def remote(tmp_path: Path, executable: StubWriter, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("REPO_FIXTURE", str(tmp_path))
+    monkeypatch.setenv("PATH", str(tmp_path / "bin"))
     executable(
         "ghq",
         """
