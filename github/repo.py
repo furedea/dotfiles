@@ -244,25 +244,28 @@ def read_secret_output(arguments: list[str]) -> str | None:
 
 
 def stored_review_token() -> str | None:
-    """Read the token from 1Password first, then the macOS Keychain."""
-    if one_password_ready():
-        token = read_secret_output(
-            ["op", "item", "get", ONE_PASSWORD_TITLE, "--fields", "label=credential", "--reveal"]
-        )
-        if token:
-            return token
-    return read_secret_output(
+    """Read the newest stored token.
+
+    Storing in 1Password clears the Keychain item, so a Keychain item exists only when it was
+    stored after the 1Password item (for example while 1Password was signed out) and is newer.
+    """
+    keychain_token = read_secret_output(
         ["security", "find-generic-password", "-a", KEYCHAIN_ACCOUNT, "-s", KEYCHAIN_SERVICE, "-w"]
     )
+    if keychain_token or not one_password_ready():
+        return keychain_token
+    return read_secret_output(["op", "item", "get", ONE_PASSWORD_TITLE, "--fields", "label=credential", "--reveal"])
+
+
+def existing_one_password_item_id() -> str | None:
+    """Return the id of the current 1Password item, if any."""
+    described = read_secret_output(["op", "item", "get", ONE_PASSWORD_TITLE, "--format", "json"])
+    return json.loads(described)["id"] if described else None
 
 
 def store_in_one_password(token: str) -> None:
-    """Replace the 1Password item, sending the token inside a JSON template on stdin."""
-    existing = subprocess.run(
-        ["op", "item", "get", ONE_PASSWORD_TITLE], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False
-    )
-    if existing.returncode == 0:
-        subprocess.run(["op", "item", "delete", ONE_PASSWORD_TITLE], stdout=subprocess.DEVNULL, check=True)
+    """Create the new item from a JSON template on stdin, then remove the previous one by id."""
+    previous_id = existing_one_password_item_id()
     template = {
         "title": ONE_PASSWORD_TITLE,
         "category": "API_CREDENTIAL",
@@ -271,6 +274,20 @@ def store_in_one_password(token: str) -> None:
     subprocess.run(
         ["op", "item", "create"], input=json.dumps(template), stdout=subprocess.DEVNULL, text=True, check=True
     )
+    if previous_id:
+        subprocess.run(["op", "item", "delete", previous_id], stdout=subprocess.DEVNULL, check=True)
+    clear_keychain_item()
+
+
+def clear_keychain_item() -> None:
+    """Remove a Keychain item that would otherwise outrank a fresher 1Password item."""
+    with contextlib.suppress(OSError):
+        subprocess.run(
+            ["security", "delete-generic-password", "-a", KEYCHAIN_ACCOUNT, "-s", KEYCHAIN_SERVICE],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
 
 
 def store_in_keychain(token: str) -> None:

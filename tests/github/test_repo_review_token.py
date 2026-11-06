@@ -64,13 +64,19 @@ record()
 item = root / "op_item"
 if args[0] == "whoami":
     sys.exit(0 if os.environ.get("OP_SIGNED_IN") == "1" else 1)
+elif args[:2] == ["item", "get"] and "--format" in args:
+    if not item.exists():
+        sys.exit(1)
+    print(json.dumps({"id": "old-item-id"}))
 elif args[:2] == ["item", "get"]:
     if not item.exists():
         sys.exit(1)
     print(item.read_text())
 elif args[:2] == ["item", "delete"]:
-    item.unlink()
+    assert args[2] == "old-item-id"
 elif args[:2] == ["item", "create"]:
+    if os.environ.get("OP_CREATE_FAILS") == "1":
+        sys.exit(1)
     fields = json.loads(stdin)["fields"]
     item.write_text(next(field["value"] for field in fields if field["id"] == "credential"))
 else:
@@ -88,6 +94,8 @@ if args == ["-i"]:
     words = stdin.split()
     assert words[0] == "add-generic-password"
     stored.write_text(words[words.index("-w") + 1])
+elif args[0] == "delete-generic-password":
+    stored.unlink(missing_ok=True)
 elif args[0] == "find-generic-password":
     if not stored.exists():
         sys.exit(44)
@@ -164,7 +172,7 @@ def test_rotate_stores_in_one_password_when_signed_in(
     assert result.returncode == 0, result.stderr
     assert "1Password" in result.stdout
     assert (review / "op_item").read_text() == TOKEN
-    assert not calls(review, "security")
+    assert not any(row["args"] == ["-i"] for row in calls(review, "security"))
     assert_token_never_exposed(review, result)
 
 
@@ -270,18 +278,53 @@ def test_rotate_registers_nothing_when_the_token_cannot_be_stored(run_cli: CliRu
     assert_token_never_exposed(review, result)
 
 
-def test_stored_token_prefers_one_password_over_keychain(
+def test_stored_token_comes_from_one_password_when_keychain_is_empty(
     run_cli: CliRunner, review: Path, executable: StubWriter
 ) -> None:
     executable("op", OP_STUB)
     executable("security", SECURITY_STUB)
     (review / "op_item").write_text(TOKEN)
-    (review / "keychain_item").write_text(OLD_TOKEN)
     result = run_cli(SCRIPT, "configure", "furedea/alpha", env={"OP_SIGNED_IN": "1"})
     assert result.returncode == 0, result.stderr
     [row] = secret_sets(review)
     assert row["stdin"].strip() == TOKEN
-    assert not calls(review, "security")
+
+
+def test_keychain_token_stored_while_signed_out_outranks_the_stale_one_password_item(
+    run_cli: CliRunner, review: Path, executable: StubWriter
+) -> None:
+    executable("op", OP_STUB)
+    executable("security", SECURITY_STUB)
+    (review / "op_item").write_text(OLD_TOKEN)
+    assert rotate(run_cli, env={"OP_SIGNED_IN": "0"}).returncode == 0
+    result = run_cli(SCRIPT, "configure", "furedea/alpha", env={"OP_SIGNED_IN": "1"})
+    assert result.returncode == 0, result.stderr
+    assert secret_sets(review)[-1]["stdin"].strip() == TOKEN
+
+
+def test_storing_in_one_password_clears_an_older_keychain_item(
+    run_cli: CliRunner, review: Path, executable: StubWriter
+) -> None:
+    executable("op", OP_STUB)
+    executable("security", SECURITY_STUB)
+    (review / "keychain_item").write_text(OLD_TOKEN)
+    assert rotate(run_cli, env={"OP_SIGNED_IN": "1"}).returncode == 0
+    assert not (review / "keychain_item").exists()
+    result = run_cli(SCRIPT, "configure", "furedea/alpha", env={"OP_SIGNED_IN": "1"})
+    assert secret_sets(review)[-1]["stdin"].strip() == TOKEN
+    assert result.returncode == 0, result.stderr
+
+
+def test_failed_one_password_create_keeps_the_previous_item(
+    run_cli: CliRunner, review: Path, executable: StubWriter
+) -> None:
+    executable("op", OP_STUB)
+    (review / "op_item").write_text(OLD_TOKEN)
+    result = rotate(run_cli, env={"OP_SIGNED_IN": "1", "OP_CREATE_FAILS": "1"})
+    assert result.returncode == 1
+    assert (review / "op_item").read_text() == OLD_TOKEN
+    assert not any(row["args"][:2] == ["item", "delete"] for row in calls(review, "op"))
+    assert not secret_sets(review)
 
 
 @pytest.mark.parametrize("op_state", ["missing", "signed-out", "no-item"])
