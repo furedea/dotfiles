@@ -14,10 +14,10 @@ import sys
 ROOT = Path(__file__).resolve().parent
 VISIBILITIES = {"--public", "--private", "--internal"}
 LOCAL_OPTIONS = {"--clone", "-c", "--source", "-s", "--push", "--remote", "-r"}
-SECRET_NAME = "CLAUDE_CODE_OAUTH_TOKEN"
+ACTIONS_ENTRY_NAME = "CLAUDE_CODE_OAUTH_TOKEN"
 ONE_PASSWORD_TITLE = "Claude review token"
 KEYCHAIN_SERVICE = "claude-review-token"
-KEYCHAIN_ACCOUNT = SECRET_NAME
+KEYCHAIN_ACCOUNT = ACTIONS_ENTRY_NAME
 KEYCHAIN_SAFE_TOKEN = re.compile(r"[A-Za-z0-9._~+/=-]+")
 
 
@@ -58,7 +58,7 @@ def usage(command: str = "") -> int:
     if command == "review-token":
         print("rotate issues a Claude review token with `claude setup-token`, stores it in", file=sys.stderr)
         print("1Password (or the macOS Keychain) and registers it as the Actions secret", file=sys.stderr)
-        print(f"{SECRET_NAME} on every owned, non-archived, non-fork repository.", file=sys.stderr)
+        print(f"{ACTIONS_ENTRY_NAME} on every owned, non-archived, non-fork repository.", file=sys.stderr)
     return 1
 
 
@@ -310,7 +310,7 @@ def store_review_token(token: str) -> str:
 def set_review_secret(repository: str, token: str) -> None:
     """Register the token as the repository's Actions secret, passing it on stdin only."""
     subprocess.run(
-        ["gh", "secret", "set", SECRET_NAME, "--repo", repository],
+        ["gh", "secret", "set", ACTIONS_ENTRY_NAME, "--repo", repository],
         input=token,
         stdout=subprocess.DEVNULL,
         text=True,
@@ -323,12 +323,12 @@ def register_stored_review_token(repository: str) -> None:
     token = stored_review_token()
     if token is None:
         print(
-            f"warning: no stored review token; run `repo review-token rotate` to register {SECRET_NAME}",
+            f"warning: no stored review token; run `repo review-token rotate` to register {ACTIONS_ENTRY_NAME}",
             file=sys.stderr,
         )
         return
     set_review_secret(repository, token)
-    print(f"Registered {SECRET_NAME} on {repository}")
+    print(f"Registered {ACTIONS_ENTRY_NAME} on {repository}")
 
 
 def review_token_targets() -> list[str]:
@@ -375,7 +375,7 @@ def rotate_review_token() -> int:
             set_review_secret(repository, token)
             counts["registered"] += 1
         except subprocess.CalledProcessError:
-            print(f"Failed to register {SECRET_NAME} on {repository}", file=sys.stderr)
+            print(f"Failed to register {ACTIONS_ENTRY_NAME} on {repository}", file=sys.stderr)
             counts["failed"] += 1
     print("[summary] " + " ".join(f"{key}={value}" for key, value in counts.items()))
     return int(counts["failed"] != 0)
