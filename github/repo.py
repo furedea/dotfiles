@@ -2,6 +2,7 @@
 """Run the personal GitHub workflow without shell-based data processing."""
 
 import contextlib
+from dataclasses import dataclass
 import getpass
 import json
 from pathlib import Path
@@ -14,11 +15,49 @@ import sys
 ROOT = Path(__file__).resolve().parent
 VISIBILITIES = {"--public", "--private", "--internal"}
 LOCAL_OPTIONS = {"--clone", "-c", "--source", "-s", "--push", "--remote", "-r"}
-ACTIONS_ENTRY_NAME = "CLAUDE_CODE_OAUTH_TOKEN"
-ONE_PASSWORD_TITLE = "Claude review token"
-KEYCHAIN_SERVICE = "claude-review-token"
-KEYCHAIN_ACCOUNT = ACTIONS_ENTRY_NAME
 KEYCHAIN_SAFE_TOKEN = re.compile(r"[A-Za-z0-9._~+/=-]+")
+
+
+@dataclass(frozen=True)
+class ReviewToken:
+    """A credential a review workflow reads: how it is issued, where it is stored, and its Actions secret."""
+
+    kind: str
+    secret_name: str
+    one_password_title: str
+    keychain_service: str
+    setup_command: tuple[str, ...]
+    instructions: str
+
+    def issue(self) -> None:
+        """Start issuing a new token; the user then pastes it."""
+        if self.instructions:
+            print(self.instructions, file=sys.stderr)
+        if self.setup_command:
+            subprocess.run(list(self.setup_command), check=True)
+
+
+CLAUDE_REVIEW_TOKEN = ReviewToken(
+    kind="claude",
+    secret_name="CLAUDE_CODE_OAUTH_TOKEN",
+    one_password_title="Claude review token",
+    keychain_service="claude-review-token",
+    setup_command=("claude", "setup-token"),
+    instructions="",
+)
+CODEX_REVIEW_TOKEN = ReviewToken(
+    kind="codex",
+    secret_name="CODEX_REVIEW_TOKEN",
+    one_password_title="Codex review token",
+    keychain_service="codex-review-token",
+    setup_command=(),
+    instructions=(
+        "Create a fine-grained token at https://github.com/settings/personal-access-tokens/new\n"
+        "Resource owner: your account; Repository access: All repositories;\n"
+        "Permissions: Pull requests read and write only; Expiration: one year."
+    ),
+)
+REVIEW_TOKENS = {token.kind: token for token in (CLAUDE_REVIEW_TOKEN, CODEX_REVIEW_TOKEN)}
 
 
 def output(*arguments: str) -> str:
@@ -39,7 +78,7 @@ def usage(command: str = "") -> int:
         "create": "repo create <name-or-owner/name> <visibility> [options]",
         "configure": "repo configure <name-or-owner/name>",
         "sync": "repo sync [--dry-run]",
-        "review-token": "repo review-token rotate",
+        "review-token": "repo review-token rotate [claude|codex]",
     }
     print(f"Usage: {descriptions.get(command, 'repo <command> [arguments]')}", file=sys.stderr)
     if not command:
@@ -56,9 +95,15 @@ def usage(command: str = "") -> int:
         )
         print("Example: repo create agent-harness --private --template furedea/template-rust", file=sys.stderr)
     if command == "review-token":
-        print("rotate issues a Claude review token with `claude setup-token`, stores it in", file=sys.stderr)
-        print("1Password (or the macOS Keychain) and registers it as the Actions secret", file=sys.stderr)
-        print(f"{ACTIONS_ENTRY_NAME} on every owned, non-archived, non-fork repository.", file=sys.stderr)
+        print("rotate issues a review token, stores it in 1Password (or the macOS Keychain) and", file=sys.stderr)
+        print("registers it as an Actions secret on every owned, non-archived, non-fork repository:", file=sys.stderr)
+        print(
+            "claude runs `claude setup-token` (CLAUDE_CODE_OAUTH_TOKEN); codex asks for a fine-grained",
+            file=sys.stderr,
+        )
+        print(
+            "token that posts `@codex review` (CODEX_REVIEW_TOKEN). Without a kind, both are rotated.", file=sys.stderr
+        )
     return 1
 
 
@@ -157,7 +202,8 @@ def configure(repository: str) -> None:
         check=True,
     )
     print(f"Updated ruleset {identifier} on {repository}" if identifier else f"Created ruleset on {repository}")
-    register_stored_review_token(repository)
+    for token in REVIEW_TOKENS.values():
+        register_stored_review_token(repository, token)
 
 
 def create(arguments: list[str]) -> int:
@@ -248,70 +294,74 @@ def read_secret_output(arguments: list[str]) -> str | None:
     return result.stdout.strip() or None if result.returncode == 0 else None
 
 
-def stored_review_token() -> str | None:
+def stored_review_token(token: ReviewToken) -> str | None:
     """Read the token from the one backend that the environment selects."""
     if uses_one_password():
         return read_secret_output(
-            ["op", "item", "get", ONE_PASSWORD_TITLE, "--fields", "label=credential", "--reveal"]
+            ["op", "item", "get", token.one_password_title, "--fields", "label=credential", "--reveal"]
         )
     return read_secret_output(
-        ["security", "find-generic-password", "-a", KEYCHAIN_ACCOUNT, "-s", KEYCHAIN_SERVICE, "-w"]
+        ["security", "find-generic-password", "-a", token.secret_name, "-s", token.keychain_service, "-w"]
     )
 
 
-def store_in_one_password(token: str) -> None:
+def store_in_one_password(token: ReviewToken, value: str) -> None:
     """Update the item in place, or create it, with the JSON item on stdin."""
     template = {
-        "title": ONE_PASSWORD_TITLE,
+        "title": token.one_password_title,
         "category": "API_CREDENTIAL",
-        "fields": [{"id": "credential", "type": "CONCEALED", "label": "credential", "value": token}],
+        "fields": [{"id": "credential", "type": "CONCEALED", "label": "credential", "value": value}],
     }
     exists = subprocess.run(
-        ["op", "item", "get", ONE_PASSWORD_TITLE], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False
+        ["op", "item", "get", token.one_password_title],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
     )
-    verb = ["edit", ONE_PASSWORD_TITLE] if exists.returncode == 0 else ["create"]
+    verb = ["edit", token.one_password_title] if exists.returncode == 0 else ["create"]
     subprocess.run(["op", "item", *verb], input=json.dumps(template), stdout=subprocess.DEVNULL, text=True, check=True)
 
 
-def store_in_keychain(token: str) -> None:
+def store_in_keychain(token: ReviewToken, value: str) -> None:
     """Update the Keychain item through `security -i`, so the token travels on stdin only."""
-    if not KEYCHAIN_SAFE_TOKEN.fullmatch(token):
+    if not KEYCHAIN_SAFE_TOKEN.fullmatch(value):
         raise ValueError("repo review-token: the token contains characters the Keychain command cannot carry safely")
-    command = f"add-generic-password -U -a {KEYCHAIN_ACCOUNT} -s {KEYCHAIN_SERVICE} -w {token}\n"
+    command = f"add-generic-password -U -a {token.secret_name} -s {token.keychain_service} -w {value}\n"
     subprocess.run(["security", "-i"], input=command, stdout=subprocess.DEVNULL, text=True, check=True)
 
 
-def store_review_token(token: str, one_password: bool) -> str:
+def store_review_token(token: ReviewToken, value: str, one_password: bool) -> str:
     """Store the token in the selected backend and name the one used."""
     if one_password:
-        store_in_one_password(token)
+        store_in_one_password(token, value)
         return "1Password"
-    store_in_keychain(token)
+    store_in_keychain(token, value)
     return "macOS Keychain"
 
 
-def set_review_secret(repository: str, token: str) -> None:
+def set_review_secret(repository: str, token: ReviewToken, value: str) -> None:
     """Register the token as the repository's Actions secret, passing it on stdin only."""
     subprocess.run(
-        ["gh", "secret", "set", ACTIONS_ENTRY_NAME, "--repo", repository],
-        input=token,
+        ["gh", "secret", "set", token.secret_name, "--repo", repository],
+        input=value,
         stdout=subprocess.DEVNULL,
         text=True,
         check=True,
     )
 
 
-def register_stored_review_token(repository: str) -> None:
+def register_stored_review_token(repository: str, token: ReviewToken) -> None:
     """Register the stored token on one repository, or warn when none has been stored."""
-    token = stored_review_token()
-    if token is None:
+    value = stored_review_token(token)
+    if value is None:
         print(
-            f"warning: no stored review token; run `repo review-token rotate` to register {ACTIONS_ENTRY_NAME}",
+            f"warning: no stored {token.kind} review token; "
+            f"run `repo review-token rotate {token.kind}` to register {token.secret_name}",
             file=sys.stderr,
         )
         return
-    set_review_secret(repository, token)
-    print(f"Registered {ACTIONS_ENTRY_NAME} on {repository}")
+    set_review_secret(repository, token, value)
+    print(f"Registered {token.secret_name} on {repository}")
 
 
 def review_token_targets() -> list[str]:
@@ -335,41 +385,44 @@ def review_token_targets() -> list[str]:
     return [f"{owner}/{name}" for name in names.splitlines() if name and name not in excluded]
 
 
-def read_pasted_token() -> str:
-    """Read the token without echoing it when interactive, or from stdin otherwise."""
+def read_pasted_token(token: ReviewToken) -> str:
+    """Read the token without echoing it when interactive, or one line of stdin otherwise."""
     if sys.stdin.isatty():
-        token = getpass.getpass("Paste the token from `claude setup-token`: ")
+        value = getpass.getpass(f"Paste the {token.kind} review token: ")
     else:
-        token = sys.stdin.readline()
-    token = token.strip()
-    if not token:
+        value = sys.stdin.readline()
+    value = value.strip()
+    if not value:
         raise ValueError("repo review-token: no token was provided")
-    return token
+    return value
 
 
-def rotate_review_token() -> int:
+def rotate_review_token(token: ReviewToken, one_password: bool) -> int:
     """Issue a new token, store it, and register it on every target repository."""
-    one_password = uses_one_password()
-    subprocess.run(["claude", "setup-token"], check=True)
-    token = read_pasted_token()
-    print(f"Stored the review token in {store_review_token(token, one_password)}")
+    token.issue()
+    value = read_pasted_token(token)
+    print(f"Stored the {token.kind} review token in {store_review_token(token, value, one_password)}")
     counts = {"registered": 0, "failed": 0}
     for repository in review_token_targets():
         try:
-            set_review_secret(repository, token)
+            set_review_secret(repository, token, value)
             counts["registered"] += 1
         except subprocess.CalledProcessError:
-            print(f"Failed to register {ACTIONS_ENTRY_NAME} on {repository}", file=sys.stderr)
+            print(f"Failed to register {token.secret_name} on {repository}", file=sys.stderr)
             counts["failed"] += 1
-    print("[summary] " + " ".join(f"{key}={value}" for key, value in counts.items()))
+    print(f"[summary {token.kind}] " + " ".join(f"{key}={value}" for key, value in counts.items()))
     return int(counts["failed"] != 0)
 
 
 def review_token_command(arguments: list[str]) -> int:
-    """Dispatch the review-token subcommands."""
-    if arguments != ["rotate"]:
+    """Dispatch the review-token subcommands; without a kind, rotate every review token."""
+    if not arguments or arguments[0] != "rotate" or len(arguments) > 2:
         return usage("review-token")
-    return rotate_review_token()
+    kinds = arguments[1:] or list(REVIEW_TOKENS)
+    if any(kind not in REVIEW_TOKENS for kind in kinds):
+        return usage("review-token")
+    one_password = uses_one_password()
+    return max(rotate_review_token(REVIEW_TOKENS[kind], one_password) for kind in kinds)
 
 
 def configure_command(arguments: list[str]) -> int:

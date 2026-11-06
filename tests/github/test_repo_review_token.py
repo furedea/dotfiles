@@ -12,6 +12,11 @@ from tests.runtime import CliRunner, REPO_ROOT, StubWriter
 SCRIPT = "github/repo.py"
 TOKEN = "sk-ant-oat01-FAKE_token.value-123"
 OLD_TOKEN = "sk-ant-oat01-OLD_token.value-999"
+CODEX_TOKEN = "github_pat_11FAKE_codex_token_456"
+CLAUDE_ITEM = "op_Claude_review_token"
+CODEX_ITEM = "op_Codex_review_token"
+CLAUDE_KEYCHAIN = "keychain_claude-review-token"
+CODEX_KEYCHAIN = "keychain_codex-review-token"
 
 FAKE_RUNTIME = """
 import json, os, sys
@@ -63,18 +68,21 @@ OP_STUB = (
     + """
 TOOL = "op"
 record()
-item = root / "op_item"
+def item_path(title):
+    return root / ("op_" + title.replace(" ", "_"))
 if args[0] == "whoami":
     sys.exit(0 if os.environ.get("OP_SIGNED_IN") == "1" else 1)
 elif args[:2] == ["item", "get"]:
+    item = item_path(args[2])
     if not item.exists():
         sys.exit(1)
     print(item.read_text())
 elif args[:2] in (["item", "create"], ["item", "edit"]):
     if os.environ.get("OP_WRITE_FAILS") == "1":
         sys.exit(1)
-    fields = json.loads(stdin)["fields"]
-    item.write_text(next(field["value"] for field in fields if field["id"] == "credential"))
+    template = json.loads(stdin)
+    fields = template["fields"]
+    item_path(args[2] if args[1] == "edit" else template["title"]).write_text(next(field["value"] for field in fields if field["id"] == "credential"))
 else:
     sys.exit("unexpected op arguments: " + repr(args))
 """
@@ -85,12 +93,14 @@ SECURITY_STUB = (
     + """
 TOOL = "security"
 record()
-stored = root / "keychain_item"
+def stored(service):
+    return root / ("keychain_" + service)
 if args == ["-i"]:
     words = stdin.split()
     assert words[0] == "add-generic-password"
-    stored.write_text(words[words.index("-w") + 1])
+    stored(words[words.index("-s") + 1]).write_text(words[words.index("-w") + 1])
 elif args[0] == "find-generic-password":
+    stored = stored(args[args.index("-s") + 1])
     if not stored.exists():
         sys.exit(44)
     print(stored.read_text())
@@ -126,9 +136,9 @@ def registered(root: Path) -> list[str]:
 
 
 def rotate(
-    run_cli: CliRunner, token: str = TOKEN, env: dict[str, str] | None = None
+    run_cli: CliRunner, token: str = TOKEN, env: dict[str, str] | None = None, target: str = "claude"
 ) -> subprocess.CompletedProcess[str]:
-    return run_cli(SCRIPT, "review-token", "rotate", payload=token + "\n", env=env)
+    return run_cli(SCRIPT, "review-token", "rotate", target, payload=token + "\n", env=env)
 
 
 def assert_token_never_exposed(root: Path, result: subprocess.CompletedProcess[str], token: str = TOKEN) -> None:
@@ -146,8 +156,56 @@ def test_usage_lists_the_review_token_command(run_cli: CliRunner, review: Path) 
     assert "review-token" in result.stderr
     result = run_cli(SCRIPT, "review-token")
     assert result.returncode == 1
-    assert "repo review-token rotate" in result.stderr
+    assert "repo review-token rotate [claude|codex]" in result.stderr
     assert not calls(review)
+
+
+def test_rotate_rejects_an_unknown_token_kind(run_cli: CliRunner, review: Path) -> None:
+    result = run_cli(SCRIPT, "review-token", "rotate", "gemini", payload=TOKEN + "\n")
+    assert result.returncode == 1
+    assert "repo review-token rotate [claude|codex]" in result.stderr
+    assert not calls(review)
+
+
+def test_rotate_codex_asks_for_a_fine_grained_token_and_registers_it(
+    run_cli: CliRunner, review: Path, executable: StubWriter
+) -> None:
+    executable("security", SECURITY_STUB)
+    result = rotate(run_cli, token=CODEX_TOKEN, target="codex")
+    assert result.returncode == 0, result.stderr
+    assert "github.com/settings/personal-access-tokens/new" in result.stderr
+    assert "Pull requests" in result.stderr
+    assert not calls(review, "claude")
+    assert (review / CODEX_KEYCHAIN).read_text() == CODEX_TOKEN
+    assert not (review / CLAUDE_KEYCHAIN).exists()
+    assert registered(review) == ["furedea/alpha", "furedea/beta", "furedea/gamma"]
+    for row in secret_sets(review):
+        assert row["args"][:3] == ["secret", "set", "CODEX_REVIEW_TOKEN"]
+        assert row["stdin"].strip() == CODEX_TOKEN
+    assert_token_never_exposed(review, result, CODEX_TOKEN)
+
+
+def test_rotate_codex_keeps_its_own_one_password_item(
+    run_cli: CliRunner, review: Path, executable: StubWriter
+) -> None:
+    executable("op", OP_STUB)
+    (review / CLAUDE_ITEM).write_text(TOKEN)
+    result = rotate(run_cli, token=CODEX_TOKEN, target="codex", env={"OP_SIGNED_IN": "1"})
+    assert result.returncode == 0, result.stderr
+    assert (review / CODEX_ITEM).read_text() == CODEX_TOKEN
+    assert (review / CLAUDE_ITEM).read_text() == TOKEN
+
+
+def test_rotate_without_a_kind_rotates_claude_then_codex(
+    run_cli: CliRunner, review: Path, executable: StubWriter
+) -> None:
+    executable("security", SECURITY_STUB)
+    result = run_cli(SCRIPT, "review-token", "rotate", payload=f"{TOKEN}\n{CODEX_TOKEN}\n")
+    assert result.returncode == 0, result.stderr
+    assert (review / CLAUDE_KEYCHAIN).read_text() == TOKEN
+    assert (review / CODEX_KEYCHAIN).read_text() == CODEX_TOKEN
+    names = [row["args"][2] for row in secret_sets(review)]
+    assert names == ["CLAUDE_CODE_OAUTH_TOKEN"] * 3 + ["CODEX_REVIEW_TOKEN"] * 3
 
 
 def test_rotate_starts_claude_setup_token(run_cli: CliRunner, review: Path, executable: StubWriter) -> None:
@@ -165,7 +223,7 @@ def test_rotate_stores_in_one_password_when_signed_in(
     result = rotate(run_cli, env={"OP_SIGNED_IN": "1"})
     assert result.returncode == 0, result.stderr
     assert "1Password" in result.stdout
-    assert (review / "op_item").read_text() == TOKEN
+    assert (review / CLAUDE_ITEM).read_text() == TOKEN
     assert not any(row["args"] == ["-i"] for row in calls(review, "security"))
     assert_token_never_exposed(review, result)
 
@@ -188,10 +246,10 @@ def test_rotate_updates_the_existing_one_password_item_in_place(
     run_cli: CliRunner, review: Path, executable: StubWriter
 ) -> None:
     executable("op", OP_STUB)
-    (review / "op_item").write_text(OLD_TOKEN)
+    (review / CLAUDE_ITEM).write_text(OLD_TOKEN)
     result = rotate(run_cli, env={"OP_SIGNED_IN": "1"})
     assert result.returncode == 0, result.stderr
-    assert (review / "op_item").read_text() == TOKEN
+    assert (review / CLAUDE_ITEM).read_text() == TOKEN
     assert one_password_writes(review) == [["item", "edit", "Claude review token"]]
     assert not any(row["args"][:2] == ["item", "delete"] for row in calls(review, "op"))
     assert_token_never_exposed(review, result)
@@ -204,7 +262,7 @@ def test_rotate_stores_in_keychain_when_one_password_is_not_installed(
     result = rotate(run_cli)
     assert result.returncode == 0, result.stderr
     assert "Keychain" in result.stdout
-    assert (review / "keychain_item").read_text() == TOKEN
+    assert (review / CLAUDE_KEYCHAIN).read_text() == TOKEN
     assert_token_never_exposed(review, result)
 
 
@@ -217,7 +275,7 @@ def test_rotate_requires_signing_in_when_one_password_is_installed_but_signed_ou
     assert result.returncode == 1
     assert "op signin" in result.stderr
     assert not calls(review, "claude")
-    assert not (review / "keychain_item").exists()
+    assert not (review / CLAUDE_KEYCHAIN).exists()
     assert not any(row["args"][:2] == ["item", "create"] for row in calls(review, "op"))
     assert not secret_sets(review)
 
@@ -277,7 +335,7 @@ def test_rotate_rejects_an_empty_token_without_registering(
     result = rotate(run_cli, token="")
     assert result.returncode == 1
     assert not secret_sets(review)
-    assert not (review / "keychain_item").exists()
+    assert not (review / CLAUDE_KEYCHAIN).exists()
 
 
 def test_rotate_rejects_a_token_the_keychain_command_cannot_carry_safely(
@@ -303,8 +361,8 @@ def test_stored_token_is_read_from_one_password_only_when_it_is_usable(
 ) -> None:
     executable("op", OP_STUB)
     executable("security", SECURITY_STUB)
-    (review / "op_item").write_text(TOKEN)
-    (review / "keychain_item").write_text(OLD_TOKEN)
+    (review / CLAUDE_ITEM).write_text(TOKEN)
+    (review / CLAUDE_KEYCHAIN).write_text(OLD_TOKEN)
     result = run_cli(SCRIPT, "configure", "furedea/alpha", env={"OP_SIGNED_IN": "1"})
     assert result.returncode == 0, result.stderr
     [row] = secret_sets(review)
@@ -316,7 +374,7 @@ def test_stored_token_is_read_from_keychain_when_one_password_is_not_installed(
     run_cli: CliRunner, review: Path, executable: StubWriter
 ) -> None:
     executable("security", SECURITY_STUB)
-    (review / "keychain_item").write_text(TOKEN)
+    (review / CLAUDE_KEYCHAIN).write_text(TOKEN)
     result = run_cli(SCRIPT, "configure", "furedea/alpha")
     assert result.returncode == 0, result.stderr
     [row] = secret_sets(review)
@@ -329,7 +387,7 @@ def test_stored_token_never_falls_back_to_keychain_when_one_password_has_no_item
 ) -> None:
     executable("op", OP_STUB)
     executable("security", SECURITY_STUB)
-    (review / "keychain_item").write_text(OLD_TOKEN)
+    (review / CLAUDE_KEYCHAIN).write_text(OLD_TOKEN)
     result = run_cli(SCRIPT, "configure", "furedea/alpha", env={"OP_SIGNED_IN": "1"})
     assert result.returncode == 0, result.stderr
     assert "review-token rotate" in result.stderr
@@ -342,7 +400,7 @@ def test_configure_requires_signing_in_when_one_password_is_installed_but_signed
 ) -> None:
     executable("op", OP_STUB)
     executable("security", SECURITY_STUB)
-    (review / "keychain_item").write_text(OLD_TOKEN)
+    (review / CLAUDE_KEYCHAIN).write_text(OLD_TOKEN)
     result = run_cli(SCRIPT, "configure", "furedea/alpha", env={"OP_SIGNED_IN": "0"})
     assert result.returncode == 1
     assert "op signin" in result.stderr
@@ -354,10 +412,10 @@ def test_failed_one_password_write_keeps_the_previous_item_and_registers_nothing
     run_cli: CliRunner, review: Path, executable: StubWriter
 ) -> None:
     executable("op", OP_STUB)
-    (review / "op_item").write_text(OLD_TOKEN)
+    (review / CLAUDE_ITEM).write_text(OLD_TOKEN)
     result = rotate(run_cli, env={"OP_SIGNED_IN": "1", "OP_WRITE_FAILS": "1"})
     assert result.returncode == 1
-    assert (review / "op_item").read_text() == OLD_TOKEN
+    assert (review / CLAUDE_ITEM).read_text() == OLD_TOKEN
     assert not secret_sets(review)
 
 
@@ -365,11 +423,37 @@ def test_configure_registers_the_stored_token_on_that_repository_only(
     run_cli: CliRunner, review: Path, executable: StubWriter
 ) -> None:
     executable("security", SECURITY_STUB)
-    (review / "keychain_item").write_text(TOKEN)
+    (review / CLAUDE_KEYCHAIN).write_text(TOKEN)
     result = run_cli(SCRIPT, "configure", "furedea/alpha")
     assert result.returncode == 0, result.stderr
     assert registered(review) == ["furedea/alpha"]
     assert any(row["args"][:2] == ["api", "repos/furedea/alpha"] for row in calls(review, "gh"))
+
+
+def test_configure_registers_every_stored_review_token(
+    run_cli: CliRunner, review: Path, executable: StubWriter
+) -> None:
+    executable("security", SECURITY_STUB)
+    (review / CLAUDE_KEYCHAIN).write_text(TOKEN)
+    (review / CODEX_KEYCHAIN).write_text(CODEX_TOKEN)
+    result = run_cli(SCRIPT, "configure", "furedea/alpha")
+    assert result.returncode == 0, result.stderr
+    assert {(row["args"][2], row["stdin"].strip()) for row in secret_sets(review)} == {
+        ("CLAUDE_CODE_OAUTH_TOKEN", TOKEN),
+        ("CODEX_REVIEW_TOKEN", CODEX_TOKEN),
+    }
+
+
+def test_configure_warns_only_about_the_missing_review_token(
+    run_cli: CliRunner, review: Path, executable: StubWriter
+) -> None:
+    executable("security", SECURITY_STUB)
+    (review / CLAUDE_KEYCHAIN).write_text(TOKEN)
+    result = run_cli(SCRIPT, "configure", "furedea/alpha")
+    assert result.returncode == 0, result.stderr
+    assert registered(review) == ["furedea/alpha"]
+    assert "repo review-token rotate codex" in result.stderr
+    assert "CLAUDE_CODE_OAUTH_TOKEN" not in result.stderr
 
 
 def test_configure_without_stored_token_warns_and_applies_other_settings(run_cli: CliRunner, review: Path) -> None:
