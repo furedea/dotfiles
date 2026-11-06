@@ -19,11 +19,11 @@ KEYCHAIN_SAFE_TOKEN = re.compile(r"[A-Za-z0-9._~+/=-]+")
 
 
 @dataclass(frozen=True)
-class ReviewToken:
-    """A credential a review workflow reads: how it is issued, where it is stored, and its Actions secret."""
+class Reviewer:
+    """A review workflow's credential: how it is issued, where it is stored, and its Actions entry."""
 
     kind: str
-    secret_name: str
+    actions_entry: str
     one_password_title: str
     keychain_service: str
     setup_command: tuple[str, ...]
@@ -37,17 +37,17 @@ class ReviewToken:
             subprocess.run(list(self.setup_command), check=True)
 
 
-CLAUDE_REVIEW_TOKEN = ReviewToken(
+CLAUDE_REVIEWER = Reviewer(
     kind="claude",
-    secret_name="CLAUDE_CODE_OAUTH_TOKEN",
+    actions_entry="CLAUDE_CODE_OAUTH_TOKEN",
     one_password_title="Claude review token",
     keychain_service="claude-review-token",
     setup_command=("claude", "setup-token"),
     instructions="",
 )
-CODEX_REVIEW_TOKEN = ReviewToken(
+CODEX_REVIEWER = Reviewer(
     kind="codex",
-    secret_name="CODEX_REVIEW_TOKEN",
+    actions_entry="CODEX_REVIEW_TOKEN",
     one_password_title="Codex review token",
     keychain_service="codex-review-token",
     setup_command=(),
@@ -57,7 +57,7 @@ CODEX_REVIEW_TOKEN = ReviewToken(
         "Permissions: Pull requests read and write only; Expiration: one year."
     ),
 )
-REVIEW_TOKENS = {token.kind: token for token in (CLAUDE_REVIEW_TOKEN, CODEX_REVIEW_TOKEN)}
+REVIEWERS = {reviewer.kind: reviewer for reviewer in (CLAUDE_REVIEWER, CODEX_REVIEWER)}
 
 
 def output(*arguments: str) -> str:
@@ -202,8 +202,8 @@ def configure(repository: str) -> None:
         check=True,
     )
     print(f"Updated ruleset {identifier} on {repository}" if identifier else f"Created ruleset on {repository}")
-    for token in REVIEW_TOKENS.values():
-        register_stored_review_token(repository, token)
+    for reviewer in REVIEWERS.values():
+        register_stored_review_token(repository, reviewer)
 
 
 def create(arguments: list[str]) -> int:
@@ -268,7 +268,7 @@ def sync(arguments: list[str]) -> int:
         except (subprocess.CalledProcessError, OSError, ValueError) as error:
             print(error, file=sys.stderr)
             counts["failed"] += 1
-    print("[summary] " + " ".join(f"{key}={value}" for key, value in counts.items()))
+    print("[summary] " + " ".join(f"{key}={count}" for key, count in counts.items()))
     return int(counts["failed"] != 0)
 
 
@@ -294,55 +294,55 @@ def read_secret_output(arguments: list[str]) -> str | None:
     return result.stdout.strip() or None if result.returncode == 0 else None
 
 
-def stored_review_token(token: ReviewToken) -> str | None:
+def stored_review_token(reviewer: Reviewer) -> str | None:
     """Read the token from the one backend that the environment selects."""
     if uses_one_password():
         return read_secret_output(
-            ["op", "item", "get", token.one_password_title, "--fields", "label=credential", "--reveal"]
+            ["op", "item", "get", reviewer.one_password_title, "--fields", "label=credential", "--reveal"]
         )
     return read_secret_output(
-        ["security", "find-generic-password", "-a", token.secret_name, "-s", token.keychain_service, "-w"]
+        ["security", "find-generic-password", "-a", reviewer.actions_entry, "-s", reviewer.keychain_service, "-w"]
     )
 
 
-def store_in_one_password(token: ReviewToken, value: str) -> None:
+def store_in_one_password(reviewer: Reviewer, value: str) -> None:
     """Update the item in place, or create it, with the JSON item on stdin."""
     template = {
-        "title": token.one_password_title,
+        "title": reviewer.one_password_title,
         "category": "API_CREDENTIAL",
         "fields": [{"id": "credential", "type": "CONCEALED", "label": "credential", "value": value}],
     }
     exists = subprocess.run(
-        ["op", "item", "get", token.one_password_title],
+        ["op", "item", "get", reviewer.one_password_title],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         check=False,
     )
-    verb = ["edit", token.one_password_title] if exists.returncode == 0 else ["create"]
+    verb = ["edit", reviewer.one_password_title] if exists.returncode == 0 else ["create"]
     subprocess.run(["op", "item", *verb], input=json.dumps(template), stdout=subprocess.DEVNULL, text=True, check=True)
 
 
-def store_in_keychain(token: ReviewToken, value: str) -> None:
+def store_in_keychain(reviewer: Reviewer, value: str) -> None:
     """Update the Keychain item through `security -i`, so the token travels on stdin only."""
     if not KEYCHAIN_SAFE_TOKEN.fullmatch(value):
         raise ValueError("repo review-token: the token contains characters the Keychain command cannot carry safely")
-    command = f"add-generic-password -U -a {token.secret_name} -s {token.keychain_service} -w {value}\n"
+    command = f"add-generic-password -U -a {reviewer.actions_entry} -s {reviewer.keychain_service} -w {value}\n"
     subprocess.run(["security", "-i"], input=command, stdout=subprocess.DEVNULL, text=True, check=True)
 
 
-def store_review_token(token: ReviewToken, value: str, one_password: bool) -> str:
+def store_review_token(reviewer: Reviewer, value: str, one_password: bool) -> str:
     """Store the token in the selected backend and name the one used."""
     if one_password:
-        store_in_one_password(token, value)
+        store_in_one_password(reviewer, value)
         return "1Password"
-    store_in_keychain(token, value)
+    store_in_keychain(reviewer, value)
     return "macOS Keychain"
 
 
-def set_review_secret(repository: str, token: ReviewToken, value: str) -> None:
+def set_review_secret(repository: str, reviewer: Reviewer, value: str) -> None:
     """Register the token as the repository's Actions secret, passing it on stdin only."""
     subprocess.run(
-        ["gh", "secret", "set", token.secret_name, "--repo", repository],
+        ["gh", "secret", "set", reviewer.actions_entry, "--repo", repository],
         input=value,
         stdout=subprocess.DEVNULL,
         text=True,
@@ -350,18 +350,18 @@ def set_review_secret(repository: str, token: ReviewToken, value: str) -> None:
     )
 
 
-def register_stored_review_token(repository: str, token: ReviewToken) -> None:
+def register_stored_review_token(repository: str, reviewer: Reviewer) -> None:
     """Register the stored token on one repository, or warn when none has been stored."""
-    value = stored_review_token(token)
+    value = stored_review_token(reviewer)
     if value is None:
         print(
-            f"warning: no stored {token.kind} review token; "
-            f"run `repo review-token rotate {token.kind}` to register {token.secret_name}",
+            f"warning: no stored {reviewer.kind} review token; "
+            f"run `repo review-token rotate {reviewer.kind}` to register {reviewer.actions_entry}",
             file=sys.stderr,
         )
         return
-    set_review_secret(repository, token, value)
-    print(f"Registered {token.secret_name} on {repository}")
+    set_review_secret(repository, reviewer, value)
+    print(f"Registered {reviewer.actions_entry} on {repository}")
 
 
 def review_token_targets() -> list[str]:
@@ -385,10 +385,10 @@ def review_token_targets() -> list[str]:
     return [f"{owner}/{name}" for name in names.splitlines() if name and name not in excluded]
 
 
-def read_pasted_token(token: ReviewToken) -> str:
+def read_pasted_token(reviewer: Reviewer) -> str:
     """Read the token without echoing it when interactive, or one line of stdin otherwise."""
     if sys.stdin.isatty():
-        value = getpass.getpass(f"Paste the {token.kind} review token: ")
+        value = getpass.getpass(f"Paste the {reviewer.kind} review token: ")
     else:
         value = sys.stdin.readline()
     value = value.strip()
@@ -397,20 +397,20 @@ def read_pasted_token(token: ReviewToken) -> str:
     return value
 
 
-def rotate_review_token(token: ReviewToken, one_password: bool) -> int:
+def rotate_review_token(reviewer: Reviewer, one_password: bool) -> int:
     """Issue a new token, store it, and register it on every target repository."""
-    token.issue()
-    value = read_pasted_token(token)
-    print(f"Stored the {token.kind} review token in {store_review_token(token, value, one_password)}")
+    reviewer.issue()
+    value = read_pasted_token(reviewer)
+    print(f"Stored the {reviewer.kind} review token in {store_review_token(reviewer, value, one_password)}")
     counts = {"registered": 0, "failed": 0}
     for repository in review_token_targets():
         try:
-            set_review_secret(repository, token, value)
+            set_review_secret(repository, reviewer, value)
             counts["registered"] += 1
         except subprocess.CalledProcessError:
-            print(f"Failed to register {token.secret_name} on {repository}", file=sys.stderr)
+            print(f"Failed to register {reviewer.actions_entry} on {repository}", file=sys.stderr)
             counts["failed"] += 1
-    print(f"[summary {token.kind}] " + " ".join(f"{key}={value}" for key, value in counts.items()))
+    print(f"[summary {reviewer.kind}] " + " ".join(f"{key}={count}" for key, count in counts.items()))
     return int(counts["failed"] != 0)
 
 
@@ -418,11 +418,11 @@ def review_token_command(arguments: list[str]) -> int:
     """Dispatch the review-token subcommands; without a kind, rotate every review token."""
     if not arguments or arguments[0] != "rotate" or len(arguments) > 2:
         return usage("review-token")
-    kinds = arguments[1:] or list(REVIEW_TOKENS)
-    if any(kind not in REVIEW_TOKENS for kind in kinds):
+    kinds = arguments[1:] or list(REVIEWERS)
+    if any(kind not in REVIEWERS for kind in kinds):
         return usage("review-token")
     one_password = uses_one_password()
-    return max(rotate_review_token(REVIEW_TOKENS[kind], one_password) for kind in kinds)
+    return max(rotate_review_token(REVIEWERS[kind], one_password) for kind in kinds)
 
 
 def configure_command(arguments: list[str]) -> int:
