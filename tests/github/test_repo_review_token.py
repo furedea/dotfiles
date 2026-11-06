@@ -19,7 +19,7 @@ from pathlib import Path
 root = Path(os.environ["REVIEW_FIXTURE"])
 args = sys.argv[1:]
 tool_name = Path(sys.argv[0]).name
-takes_stdin = tool_name in {"gh", "security"} or args[:2] == ["item", "create"]
+takes_stdin = tool_name in {"gh", "security"} or args[:2] in (["item", "create"], ["item", "edit"])
 stdin = sys.stdin.read() if takes_stdin and not sys.stdin.isatty() else ""
 
 def record():
@@ -66,21 +66,15 @@ record()
 item = root / "op_item"
 if args[0] == "whoami":
     sys.exit(0 if os.environ.get("OP_SIGNED_IN") == "1" else 1)
-elif args[:2] == ["item", "list"]:
-    print(json.dumps([{"id": "old-item-id", "title": "Claude review token"}] if item.exists() else []))
 elif args[:2] == ["item", "get"]:
     if not item.exists():
         sys.exit(1)
     print(item.read_text())
-elif args[:2] == ["item", "delete"]:
-    if os.environ.get("OP_DELETE_OLD_FAILS") == "1" and args[2] == "old-item-id":
-        sys.exit(1)
-elif args[:2] == ["item", "create"]:
-    if os.environ.get("OP_CREATE_FAILS") == "1":
+elif args[:2] in (["item", "create"], ["item", "edit"]):
+    if os.environ.get("OP_WRITE_FAILS") == "1":
         sys.exit(1)
     fields = json.loads(stdin)["fields"]
     item.write_text(next(field["value"] for field in fields if field["id"] == "credential"))
-    print(json.dumps({"id": "new-item-id"}))
 else:
     sys.exit("unexpected op arguments: " + repr(args))
 """
@@ -176,7 +170,21 @@ def test_rotate_stores_in_one_password_when_signed_in(
     assert_token_never_exposed(review, result)
 
 
-def test_rotate_replaces_an_existing_one_password_item(
+def one_password_writes(root: Path) -> list[list[str]]:
+    return [row["args"] for row in calls(root, "op") if row["args"][:2] in (["item", "create"], ["item", "edit"])]
+
+
+def test_rotate_creates_the_one_password_item_when_none_exists(
+    run_cli: CliRunner, review: Path, executable: StubWriter
+) -> None:
+    executable("op", OP_STUB)
+    result = rotate(run_cli, env={"OP_SIGNED_IN": "1"})
+    assert result.returncode == 0, result.stderr
+    assert one_password_writes(review) == [["item", "create"]]
+    assert_token_never_exposed(review, result)
+
+
+def test_rotate_updates_the_existing_one_password_item_in_place(
     run_cli: CliRunner, review: Path, executable: StubWriter
 ) -> None:
     executable("op", OP_STUB)
@@ -184,6 +192,8 @@ def test_rotate_replaces_an_existing_one_password_item(
     result = rotate(run_cli, env={"OP_SIGNED_IN": "1"})
     assert result.returncode == 0, result.stderr
     assert (review / "op_item").read_text() == TOKEN
+    assert one_password_writes(review) == [["item", "edit", "Claude review token"]]
+    assert not any(row["args"][:2] == ["item", "delete"] for row in calls(review, "op"))
     assert_token_never_exposed(review, result)
 
 
@@ -340,15 +350,14 @@ def test_configure_requires_signing_in_when_one_password_is_installed_but_signed
     assert not calls(review, "security")
 
 
-def test_failed_one_password_create_keeps_the_previous_item(
+def test_failed_one_password_write_keeps_the_previous_item_and_registers_nothing(
     run_cli: CliRunner, review: Path, executable: StubWriter
 ) -> None:
     executable("op", OP_STUB)
     (review / "op_item").write_text(OLD_TOKEN)
-    result = rotate(run_cli, env={"OP_SIGNED_IN": "1", "OP_CREATE_FAILS": "1"})
+    result = rotate(run_cli, env={"OP_SIGNED_IN": "1", "OP_WRITE_FAILS": "1"})
     assert result.returncode == 1
     assert (review / "op_item").read_text() == OLD_TOKEN
-    assert not any(row["args"][:2] == ["item", "delete"] for row in calls(review, "op"))
     assert not secret_sets(review)
 
 
@@ -369,16 +378,3 @@ def test_configure_without_stored_token_warns_and_applies_other_settings(run_cli
     assert "review-token rotate" in result.stderr
     assert not secret_sets(review)
     assert "Created ruleset on furedea/alpha" in result.stdout
-
-
-def test_failed_removal_of_the_previous_one_password_item_rolls_back_the_new_one(
-    run_cli: CliRunner, review: Path, executable: StubWriter
-) -> None:
-    executable("op", OP_STUB)
-    (review / "op_item").write_text(OLD_TOKEN)
-    result = rotate(run_cli, env={"OP_SIGNED_IN": "1", "OP_DELETE_OLD_FAILS": "1"})
-    assert result.returncode == 1
-    deletes = [row["args"] for row in calls(review, "op") if row["args"][:2] == ["item", "delete"]]
-    assert deletes[-1] == ["item", "delete", "new-item-id"]
-    assert not secret_sets(review)
-    assert_token_never_exposed(review, result)

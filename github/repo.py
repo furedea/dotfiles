@@ -259,38 +259,18 @@ def stored_review_token() -> str | None:
     )
 
 
-def existing_one_password_item_ids() -> list[str]:
-    """Return the ids of every 1Password item with the token's title, including duplicates."""
-    listing = read_secret_output(["op", "item", "list", "--format", "json"])
-    items = json.loads(listing) if listing else []
-    return [item["id"] for item in items if item["title"] == ONE_PASSWORD_TITLE]
-
-
 def store_in_one_password(token: str) -> None:
-    """Create the new item from a JSON template on stdin, then remove the previous ones by id."""
-    previous_ids = existing_one_password_item_ids()
+    """Update the item in place, or create it, with the JSON item on stdin."""
     template = {
         "title": ONE_PASSWORD_TITLE,
         "category": "API_CREDENTIAL",
         "fields": [{"id": "credential", "type": "CONCEALED", "label": "credential", "value": token}],
     }
-    created = subprocess.run(
-        ["op", "item", "create", "--format", "json"],
-        input=json.dumps(template),
-        stdout=subprocess.PIPE,
-        text=True,
-        check=True,
+    exists = subprocess.run(
+        ["op", "item", "get", ONE_PASSWORD_TITLE], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False
     )
-    try:
-        for previous_id in previous_ids:
-            subprocess.run(["op", "item", "delete", previous_id], stdout=subprocess.DEVNULL, check=True)
-    except subprocess.CalledProcessError as error:
-        subprocess.run(
-            ["op", "item", "delete", json.loads(created.stdout)["id"]], stdout=subprocess.DEVNULL, check=False
-        )
-        raise ValueError(
-            "repo review-token: could not remove the previous 1Password item; nothing was changed"
-        ) from error
+    verb = ["edit", ONE_PASSWORD_TITLE] if exists.returncode == 0 else ["create"]
+    subprocess.run(["op", "item", *verb], input=json.dumps(template), stdout=subprocess.DEVNULL, text=True, check=True)
 
 
 def store_in_keychain(token: str) -> None:
