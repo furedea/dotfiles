@@ -233,13 +233,6 @@ Git, GitHub CLI, Lazygit, Atuin, Yazi, Zsh plugin paths, and rendered agent file
 are generated from Home Manager modules rather than linked from similarly named
 reference files.
 
-### Reference and Export Files
-
-These tracked files are not applied by Home Manager or nix-darwin:
-
-- [`templates/`](templates/README.md) contains reference files copied into other repositories,
-  including a complete release workflow with project-specific build steps
-
 ## Repository Map
 
 ```text
@@ -258,8 +251,7 @@ These tracked files are not applied by Home Manager or nix-darwin:
 ├── github/                    # Repository creation and policy scripts
 ├── tests/                     # Python contracts and Bats integration by domain
 ├── dprint/ and prettier/      # Global formatter configuration
-├── tinycast/                 # Manual settings export
-└── templates/                 # Manually copied reference templates
+└── tinycast/                 # Manual settings export
 ```
 
 ## Shell Behavior
