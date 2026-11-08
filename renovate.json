@@ -1,7 +1,4 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>furedea/renovate-config"],
-  "github-actions": {
-    "managerFilePatterns": ["/^templates/.*\\.ya?ml$/"]
-  }
+  "extends": ["github>furedea/renovate-config"]
 }
