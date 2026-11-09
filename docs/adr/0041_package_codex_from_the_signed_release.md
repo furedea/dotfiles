@@ -10,4 +10,4 @@ unmodified, Developer ID signed `codex-package` release of `openai/codex` pinned
 install check that keeps the OpenAI team identifier, and against the `llm-agents` Codex package, to
 let one "Always Allow" survive updates because a signed binary is matched by its designated
 requirement, accepting that Codex is no longer updated through `nix flake update` but through the
-`update_codex` workflow, and that the full package (including bundled voice resources) is installed.
+`update-codex` workflow, and that the full package (including bundled voice resources) is installed.
