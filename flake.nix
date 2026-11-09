@@ -184,6 +184,7 @@
             sys:
             let
               shellPkgs = nixpkgs.legacyPackages.${sys};
+              shellUnstable = nixpkgs-unstable.legacyPackages.${sys};
             in
             {
               default = shellPkgs.mkShell {
@@ -191,8 +192,12 @@
                   shellPkgs.actionlint
                   shellPkgs.commitlint
                   # lefthook before 2.1.6 runs hooks under a pty, which agent sandboxes deny.
-                  nixpkgs-unstable.legacyPackages.${sys}.lefthook
-                ];
+                  shellUnstable.lefthook
+                ]
+                ++ import ./nix/lint_tools.nix {
+                  pkgs = shellPkgs;
+                  unstable = shellUnstable;
+                };
               };
             }
           );
