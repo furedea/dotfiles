@@ -16,16 +16,40 @@ QUIET = ["--message", "[skip notice]"]
 
 
 def esa_json(arguments: list[str]) -> dict:
+    """Run `esa post` with the given arguments and parse its JSON output.
+
+    Raises:
+        subprocess.CalledProcessError: The esa command exited with a non-zero status.
+    """
     return json.loads(subprocess.check_output(["esa", "post", *arguments], text=True))
 
 
 def post_number(value: object) -> str:
+    """Validate an esa post number.
+
+    Returns:
+        The number as a string of digits.
+
+    Raises:
+        ValueError: The value is not a positive integer.
+    """
     if isinstance(value, bool) or not str(value).isdigit() or int(str(value)) <= 0:
         raise ValueError("esa: invalid post number")
     return str(value)
 
 
 def find_post(name: str) -> str:
+    """Look up a post by its full name.
+
+    Args:
+        name: Category and title joined by "/".
+
+    Returns:
+        The post number.
+
+    Raises:
+        ValueError: No post or more than one post has that full name.
+    """
     result = esa_json(
         [
             "search",
@@ -43,6 +67,11 @@ def find_post(name: str) -> str:
 
 
 def select_post() -> str:
+    """Let the user pick one of their recently updated personal posts with fzf.
+
+    Returns:
+        The chosen post number, or an empty string when nothing was chosen.
+    """
     result = esa_json(
         ["search", f'in:"{PERSONAL}" sort:updated-desc', "--per-page", "100", "--json", "number,full_name"]
     )
@@ -58,6 +87,16 @@ def select_post() -> str:
 
 
 def edit(number: str) -> str:
+    """Edit a post body in a temporary file and upload it when it changed.
+
+    Unsaved edits are kept on disk when the editor or the upload fails.
+
+    Args:
+        number: The post number.
+
+    Returns:
+        The validated post number.
+    """
     number = post_number(number)
     directory = Path(tempfile.mkdtemp(prefix="esa-edit."))
     path, synced = directory / "post.md", directory / "synced.md"
@@ -82,6 +121,13 @@ def edit(number: str) -> str:
 
 
 def edit_and_save(number: str, path: Path, synced: Path) -> None:
+    """Open the editor on the post file and update the post as WIP if the content differs from the synced copy.
+
+    Args:
+        number: The post number.
+        path: The file the editor opens.
+        synced: A copy of the content last known to be on esa.
+    """
     editor = os.environ.get("EDITOR", "nvim")
     print(f"editor: {editor}", flush=True)
     environment = dict(
@@ -93,6 +139,7 @@ def edit_and_save(number: str, path: Path, synced: Path) -> None:
 
 
 def remove_edit_files(directory: Path, path: Path, synced: Path) -> None:
+    """Delete the temporary edit files and their directory, keeping the directory if it holds other files."""
     path.unlink(missing_ok=True)
     synced.unlink(missing_ok=True)
     try:
@@ -102,6 +149,7 @@ def remove_edit_files(directory: Path, path: Path, synced: Path) -> None:
 
 
 def usage(kind: str) -> str:
+    """Return the `-h` text for a command kind, shared by the help output and the invalid-argument error."""
     arguments = {"en": " <title>", "ee": " [title]", "eep": "", "es": " [-q|--quiet]", "edit": " <number>"}
     descriptions = {
         "en": f"Create a WIP post under {PERSONAL} and edit it with $EDITOR.",
@@ -115,6 +163,11 @@ def usage(kind: str) -> str:
 
 
 def valid_arguments(kind: str, arguments: list[str]) -> bool:
+    """Check the arguments against what the command accepts.
+
+    `en` and `edit` take one non-empty value, `ee` at most one title, `eep` none, and `es` an optional quiet flag.
+    An empty string stands for an argument the Zsh wrapper left blank.
+    """
     if kind in {"en", "edit"}:
         return len(arguments) == 1 and bool(arguments[0])
     if kind == "ee":
@@ -125,12 +178,37 @@ def valid_arguments(kind: str, arguments: list[str]) -> bool:
 
 
 def execute(kind: str, arguments: list[str], previous: str) -> str | None:
+    """Run a validated command.
+
+    Returns:
+        The number for the Zsh wrapper to remember as the last post: the edited post, or an empty string after
+        shipping. None when no post was chosen and nothing changed.
+    """
     if kind == "es":
-        if not previous:
-            raise ValueError("es: no post to ship (edit something first)")
-        options = QUIET if arguments and arguments[0] else []
-        subprocess.run(["esa", "post", "update", post_number(previous), "--ship", *options], check=True)
+        ship(arguments, previous)
         return ""
+    number = target_post(kind, arguments)
+    return edit(number) if number else None
+
+
+def ship(arguments: list[str], previous: str) -> None:
+    """Publish the last edited post, notifying followers unless a quiet flag was given.
+
+    Raises:
+        ValueError: No post has been edited yet.
+    """
+    if not previous:
+        raise ValueError("es: no post to ship (edit something first)")
+    options = QUIET if arguments and arguments[0] else []
+    subprocess.run(["esa", "post", "update", post_number(previous), "--ship", *options], check=True)
+
+
+def target_post(kind: str, arguments: list[str]) -> str:
+    """Resolve the post to edit, creating it for `en` and asking fzf for `ee` without a title.
+
+    Returns:
+        The post number, or an empty string when the fzf selection was cancelled.
+    """
     if kind == "en":
         number = post_number(
             esa_json(["create", f"{PERSONAL}/{arguments[0]}", "--wip", *QUIET, "--json", "number"])["number"]
@@ -141,10 +219,15 @@ def execute(kind: str, arguments: list[str], previous: str) -> str | None:
         number = find_post(MINUTES)
     else:
         number = find_post(f"{PERSONAL}/{arguments[0]}") if arguments and arguments[0] else select_post()
-    return edit(number) if number else None
+    return number
 
 
 def main(arguments: list[str]) -> int:
+    """Run the command and convert expected failures to an exit status.
+
+    Returns:
+        0 on success, the failing command's status, 1 for invalid input, or 130 on interrupt.
+    """
     try:
         return run(arguments)
     except subprocess.CalledProcessError as error:
@@ -157,6 +240,14 @@ def main(arguments: list[str]) -> int:
 
 
 def run(arguments: list[str]) -> int:
+    """Parse the Zsh wrapper's arguments, execute the command and write the resulting post number to the result file.
+
+    Args:
+        arguments: The result file, the previous post number, the command kind and its arguments.
+
+    Returns:
+        0 on success, 1 on a usage error.
+    """
     if len(arguments) < 3 or arguments[2] not in {"en", "ee", "eep", "es", "edit"}:
         print("Usage: esa.py RESULT_FILE PREVIOUS_POST <en|ee|eep|es|edit> [arguments]", file=sys.stderr)
         return 1
