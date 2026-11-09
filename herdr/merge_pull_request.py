@@ -11,6 +11,11 @@ from dataclasses import dataclass
 
 
 def read_key() -> str:
+    """Read one key press, in raw mode when stdin is a terminal.
+
+    Returns:
+        The character read, or an empty string at end of input.
+    """
     if not sys.stdin.isatty():
         return sys.stdin.read(1)
     descriptor = sys.stdin.fileno()
@@ -23,6 +28,7 @@ def read_key() -> str:
 
 
 def wait_for_close() -> None:
+    """Block until Enter, Esc, Ctrl+C or end of input so the pane output stays readable."""
     print("\nPress Enter or Esc to close...", end="", flush=True)
     while read_key() not in {"", "\n", "\r", "\x1b", "\x03"}:
         pass
@@ -30,6 +36,14 @@ def wait_for_close() -> None:
 
 
 def confirm(accepted: set[str]) -> bool:
+    """Ask for one key press and report whether it is one of the accepted keys.
+
+    Args:
+        accepted: Keys that confirm the action.
+
+    Returns:
+        True when an accepted key was pressed; any other key cancels.
+    """
     answer = read_key()
     if answer in accepted:
         return True
@@ -40,15 +54,23 @@ def confirm(accepted: set[str]) -> bool:
 
 
 def checked_out(branch: str, worktrees: str) -> bool:
+    """Report whether any worktree in `git worktree list --porcelain` output has the branch checked out."""
     return f"branch refs/heads/{branch}" in worktrees.splitlines()
 
 
 def capture(arguments: list[str]) -> str:
+    """Run a command and return its stripped standard output.
+
+    Raises:
+        subprocess.CalledProcessError: The command exited with a non-zero status.
+    """
     return subprocess.check_output(arguments, text=True).strip()
 
 
 @dataclass(frozen=True)
 class PullRequest:
+    """Snapshot of the pull request fields needed to decide whether and how to merge."""
+
     number: int
     title: str
     base: str
@@ -60,6 +82,15 @@ class PullRequest:
 
     @classmethod
     def parse(cls, raw: str, viewer: str) -> PullRequest:
+        """Build a snapshot from `gh pr view --json` output.
+
+        Args:
+            raw: JSON text produced by `gh pr view`.
+            viewer: Login of the current user, whose approvals are collected.
+
+        Returns:
+            The parsed pull request.
+        """
         data = json.loads(raw)
         approved: set[str] = {
             review["commit"]["oid"]
@@ -78,16 +109,19 @@ class PullRequest:
         )
 
     def checks_state(self) -> str:
+        """Summarize all checks as "none", "failed", "pending" or "passed", with failure taking precedence."""
         if not self.checks:
             return "none"
         states = {check_state(check) for check in self.checks}
         return "failed" if "failed" in states else "pending" if "pending" in states else "passed"
 
     def approved_by(self, commit: str) -> bool:
+        """Report whether the viewer approved exactly this commit."""
         return commit in self.approved_commits
 
 
 def check_state(check: dict) -> str:
+    """Classify one status check from `statusCheckRollup` as "pending", "passed" or "failed"."""
     outcome = check.get("conclusion") or check.get("state") or ""
     if check.get("status", "COMPLETED") != "COMPLETED" or outcome in {"", "PENDING", "EXPECTED"}:
         return "pending"
@@ -95,6 +129,11 @@ def check_state(check: dict) -> str:
 
 
 def refusal(pull_request: PullRequest, commit: str) -> str:
+    """Explain why the merge must not proceed.
+
+    Returns:
+        The reason, or an empty string when the local HEAD matches the pull request head and all checks passed.
+    """
     if commit != pull_request.head_commit:
         return "local HEAD does not match the pull request head."
     if pull_request.checks_state() != "passed":
@@ -103,6 +142,14 @@ def refusal(pull_request: PullRequest, commit: str) -> str:
 
 
 def merge(repository: str) -> int:
+    """Show the pull request of the repository's current branch and merge it after confirmation.
+
+    Args:
+        repository: Directory inside the repository whose current branch has the pull request.
+
+    Returns:
+        The exit status: 0 on success or cancellation, non-zero on refusal or command failure.
+    """
     git = os.environ.get("GIT_BIN", "git")
     gh = os.environ.get("GH_BIN", "gh")
     root = capture([git, "-C", repository, "rev-parse", "--show-toplevel"])
@@ -140,6 +187,15 @@ def merge(repository: str) -> int:
 
 
 def approve_and_merge(approve: list[str], arguments: list[str]) -> int:
+    """Confirm, then approve (when needed) and squash-merge another author's pull request.
+
+    Args:
+        approve: The `gh pr review --approve` command, or an empty list when already approved.
+        arguments: The `gh pr merge` command.
+
+    Returns:
+        The exit status of the first failing command, or of the merge.
+    """
     print("Enter / Ctrl+M  Approve and squash-merge now\nEsc             Cancel", flush=True)
     if not confirm({"\n", "\r"}):
         return 0
@@ -152,6 +208,14 @@ def approve_and_merge(approve: list[str], arguments: list[str]) -> int:
 
 
 def merge_own(arguments: list[str]) -> int:
+    """Merge the user's own pull request with the admin bypass, only after an explicit "A" key press.
+
+    Args:
+        arguments: The `gh pr merge` command without `--admin`.
+
+    Returns:
+        0 when cancelled, otherwise the exit status of the merge.
+    """
     print("You authored this PR and cannot approve it; merging needs the admin bypass.")
     print("Enter does not bypass.\n")
     print("A               Merge with admin bypass\nEsc             Cancel", flush=True)
@@ -162,6 +226,14 @@ def merge_own(arguments: list[str]) -> int:
 
 
 def main(arguments: list[str]) -> int:
+    """Run the merge for one repository directory and keep the pane open on failure.
+
+    Args:
+        arguments: Exactly one repository directory.
+
+    Returns:
+        0 on success or cancellation, otherwise the failing status.
+    """
     if len(arguments) != 1 or arguments[0] in {"-h", "--help"}:
         print("Usage: merge_pull_request.py <REPOSITORY_DIRECTORY>", file=sys.stderr)
         return 1
