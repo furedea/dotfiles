@@ -138,14 +138,24 @@
             }
           ];
         };
+      # `runner` builds the trivial check derivations, so it must match the
+      # system that builds them; `pkgs` only supplies Darwin package metadata.
+      checkSetFor =
+        runner:
+        import ./nix/checks.nix {
+          inherit pkgs inputs runner;
+          inherit (nixpkgs) lib;
+          home = self.homeConfigurations."${username}@mbp".config;
+          inherit (self) homeConfigurations;
+          darwin = self.darwinConfigurations;
+        };
     in
     {
-      checks.${system} = import ./nix/checks.nix {
-        inherit pkgs inputs;
-        inherit (nixpkgs) lib;
-        home = self.homeConfigurations."${username}@mbp".config;
-        inherit (self) homeConfigurations;
-        darwin = self.darwinConfigurations;
+      # Evaluation checks run on both systems so Linux CI covers the Darwin
+      # configurations; checks that build Darwin binaries stay on Darwin.
+      checks = {
+        ${system} = with checkSetFor pkgs; evaluation // darwinOnly;
+        x86_64-linux = (checkSetFor nixpkgs.legacyPackages.x86_64-linux).evaluation;
       };
 
       darwinConfigurations = builtins.mapAttrs (_: mkDarwinConfiguration) hosts;
@@ -167,7 +177,6 @@
         nixpkgs.lib.genAttrs
           [
             "aarch64-darwin"
-            "x86_64-darwin"
             "aarch64-linux"
             "x86_64-linux"
           ]
