@@ -193,6 +193,11 @@ jobs:
     permissions:
       contents: read
 
+  nix-check:
+    uses: furedea/reusable-workflows/.github/workflows/nix-check.yml@ca7c5f2973a899e209bc60767f434aecbc186bc9 # v1.1.0
+    permissions:
+      contents: read
+
   format-check:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -249,6 +254,7 @@ jobs:
       - shell-lint
       - lua-lint
       - nix-lint
+      - nix-check
       - format-check
       - gha-lint
       - dependency-review
