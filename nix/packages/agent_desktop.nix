@@ -7,11 +7,11 @@
 
 stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "agent-desktop";
-  version = "1.1.0";
+  version = "1.2.0";
 
   src = fetchurl {
     url = "https://github.com/vercel-labs/agent-desktop/releases/download/v${finalAttrs.version}/agent-desktop-v${finalAttrs.version}-aarch64-apple-darwin.tar.gz";
-    hash = "sha256-MEjgCqB0G/Jf/gMm94yWZAi+RJDOE1E/P5Ts8qC1Jw0=";
+    hash = "sha256-IZgTQouxrY3srhcvrtBcWWSiQVFw30AuJ4bM+mRSuoI=";
   };
 
   sourceRoot = ".";
