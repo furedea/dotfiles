@@ -30,7 +30,7 @@ lint = [
   "ruff==0.17.2",
 ]
 typecheck = [
-  "ty==0.0.87",
+  "ty==0.0.95",
 ]
 test = [
   "pytest==9.0.3",
