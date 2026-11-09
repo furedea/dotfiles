@@ -185,18 +185,25 @@ def codeql_skip_reason(repository: str) -> str:
     endpoint = f"repos/{repository}/code-scanning/default-setup"
     if output("gh", "api", endpoint, "--jq", ".state") == "configured":
         return "already configured"
-    active = '[.workflows[] | select(.state == "active" and (.path | test("^\\\\.github/workflows/.*codeql"; "i")))] | length'
-    if output("gh", "api", f"repos/{repository}/actions/workflows?per_page=100", "--jq", active) != "0":
-        return "an advanced setup is in use"
-    return ""
+    return "an advanced setup is in use" if has_active_advanced_codeql_workflow(repository) else ""
+
+
+def has_active_advanced_codeql_workflow(repository: str) -> bool:
+    """Report whether a CodeQL analysis came from a workflow file that is still active (not default setup's dynamic/)."""
+    query = '.[] | select(.tool.name == "CodeQL") | .analysis_key'
+    command = ["gh", "api", f"repos/{repository}/code-scanning/analyses?per_page=100", "--jq", query]
+    analyses = subprocess.run(command, capture_output=True, text=True, check=False)
+    keys = analyses.stdout.splitlines() if analyses.returncode == 0 else []
+    paths = {key.split(":", 1)[0] for key in keys if key.startswith(".github/workflows/")}
+    if not paths:
+        return False
+    query = '.workflows[] | select(.state == "active") | .path'
+    active = output("gh", "api", f"repos/{repository}/actions/workflows?per_page=100", "--jq", query)
+    return not paths.isdisjoint(active.splitlines())
 
 
 def enable_codeql_default_setup(repository: str) -> None:
-    """Turn on CodeQL default setup for a public repository without replacing an existing setup.
-
-    Private repositories lack the entitlement and advanced setups would be disabled by the switch.
-    A failure only warns, so the repository keeps the settings applied before it.
-    """
+    """Enable default setup on public repositories lacking one; a failure only warns."""
     try:
         reason = codeql_skip_reason(repository)
         if reason:
@@ -205,10 +212,9 @@ def enable_codeql_default_setup(repository: str) -> None:
         endpoint = f"repos/{repository}/code-scanning/default-setup"
         command = ["gh", "api", endpoint, "-X", "PATCH", "-f", "state=configured", "-f", "query_suite=default"]
         subprocess.run(command, stdout=subprocess.DEVNULL, check=True)
+        print(f"Enabled CodeQL default setup on {repository}")
     except subprocess.CalledProcessError:
         print(f"warning: could not enable CodeQL default setup on {repository}", file=sys.stderr)
-        return
-    print(f"Enabled CodeQL default setup on {repository}")
 
 
 def configure(repository: str) -> None:

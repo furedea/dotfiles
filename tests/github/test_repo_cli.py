@@ -60,8 +60,13 @@ def remote(tmp_path: Path, executable: StubWriter, monkeypatch: pytest.MonkeyPat
             print(os.environ.get("GH_VISIBILITY", "public"))
         elif args[0] == "api" and args[1].endswith("/code-scanning/default-setup") and "-X" not in args:
             print(os.environ.get("GH_CODEQL_STATE", "not-configured"))
+        elif args[0] == "api" and "/code-scanning/analyses" in args[1]:
+            if os.environ.get("GH_ANALYSES_MISSING") == "1":
+                print('{"message":"no analysis found","status":"404"}')
+                sys.exit(1)
+            print(os.environ.get("GH_CODEQL_ANALYSIS_KEYS", ""))
         elif args[0] == "api" and "/actions/workflows" in args[1]:
-            print(os.environ.get("GH_CODEQL_WORKFLOWS", "0"))
+            print(os.environ.get("GH_ACTIVE_WORKFLOWS", ""))
         elif args[0] == "api" and args[1].endswith("/code-scanning/default-setup") and os.environ.get("GH_CODEQL_FAILURE") == "1":
             print("HTTP 422", file=sys.stderr)
             sys.exit(1)
@@ -237,11 +242,24 @@ def test_configure_skips_codeql_default_setup_for_non_public_repository(
     assert "Skipped CodeQL default setup on owner/myrepo" in result.stdout
 
 
+SECURITY_KEY = ".github/workflows/security.yml:analyze/language:python"
+DEFAULT_SETUP_KEY = "dynamic/github-code-scanning/codeql:analyze:python"
+CI_WORKFLOW = ".github/workflows/ci.yml"
+SECURITY_WORKFLOW = ".github/workflows/security.yml"
+DEFAULT_SETUP_WORKFLOW = "dynamic/github-code-scanning/codeql"
+
+
 @pytest.mark.parametrize(
     "environment,reason",
     [
         ({"GH_CODEQL_STATE": "configured"}, "already configured"),
-        ({"GH_CODEQL_WORKFLOWS": "1"}, "an advanced setup is in use"),
+        (
+            {
+                "GH_CODEQL_ANALYSIS_KEYS": SECURITY_KEY,
+                "GH_ACTIVE_WORKFLOWS": f"{CI_WORKFLOW}\n{SECURITY_WORKFLOW}",
+            },
+            "an advanced setup is in use",
+        ),
     ],
 )
 def test_configure_leaves_existing_codeql_setup_untouched(
@@ -251,6 +269,25 @@ def test_configure_leaves_existing_codeql_setup_untouched(
     assert result.returncode == 0, result.stderr
     assert not code_scanning_calls(remote, "owner/myrepo")
     assert f"Skipped CodeQL default setup on owner/myrepo: {reason}" in result.stdout
+
+
+@pytest.mark.parametrize(
+    "environment",
+    [
+        {"GH_CODEQL_ANALYSIS_KEYS": SECURITY_KEY, "GH_ACTIVE_WORKFLOWS": CI_WORKFLOW},
+        {"GH_CODEQL_ANALYSIS_KEYS": "", "GH_ACTIVE_WORKFLOWS": f"{CI_WORKFLOW}\n{SECURITY_WORKFLOW}"},
+        {"GH_ANALYSES_MISSING": "1", "GH_ACTIVE_WORKFLOWS": CI_WORKFLOW},
+        {"GH_CODEQL_ANALYSIS_KEYS": DEFAULT_SETUP_KEY, "GH_ACTIVE_WORKFLOWS": DEFAULT_SETUP_WORKFLOW},
+    ],
+    ids=["deleted-workflow-with-old-analyses", "no-analyses", "analyses-not-found", "default-setup-own-key"],
+)
+def test_configure_enables_codeql_default_setup_without_an_active_advanced_workflow(
+    run_cli: CliRunner, remote: Path, environment: dict[str, str]
+) -> None:
+    result = run_cli(SCRIPT, "configure", "owner/myrepo", env=environment)
+    assert result.returncode == 0, result.stderr
+    assert len(code_scanning_calls(remote, "owner/myrepo")) == 1
+    assert "Enabled CodeQL default setup on owner/myrepo" in result.stdout
 
 
 def test_configure_applies_ruleset_even_when_codeql_default_setup_fails(run_cli: CliRunner, remote: Path) -> None:
