@@ -185,27 +185,15 @@ def codeql_skip_reason(repository: str) -> str:
     endpoint = f"repos/{repository}/code-scanning/default-setup"
     if output("gh", "api", endpoint, "--jq", ".state") == "configured":
         return "already configured"
-    return "an advanced setup is in use" if has_active_advanced_codeql_workflow(repository) else ""
-
-
-def has_active_advanced_codeql_workflow(repository: str) -> bool:
-    """Report whether an active workflow file runs CodeQL, by its analyses or, before any, by its content."""
-    base = f"repos/{repository}"
-    query = '.workflows[] | select(.state == "active") | .path'
-    paths = output("gh", "api", f"{base}/actions/workflows?per_page=100", "--jq", query).splitlines()
-    active = {path for path in paths if path.startswith(".github/workflows/")}
-    query = '.[] | select(.tool.name == "CodeQL") | .analysis_key'
-    command = ["gh", "api", f"{base}/code-scanning/analyses?per_page=100", "--jq", query]
-    analyses = subprocess.run(command, capture_output=True, text=True, check=False)
-    keys = analyses.stdout.splitlines() if analyses.returncode == 0 else []
-    if active & {key.split(":", 1)[0] for key in keys}:
-        return True
-    raw = ["-H", "Accept: application/vnd.github.raw+json"]
-    return any("codeql" in output("gh", "api", f"{base}/contents/{path}", *raw).lower() for path in active)
+    return ""
 
 
 def enable_codeql_default_setup(repository: str) -> None:
-    """Enable default setup on public repositories lacking one; a failure only warns."""
+    """Enable default setup on public repositories; a failure only warns.
+
+    Policy: every repository uses default setup and no codeql.yml. Enabling it deliberately takes over from any
+    advanced workflow, whose upload is then rejected; turning default setup off reverses that.
+    """
     try:
         reason = codeql_skip_reason(repository)
         if reason:
