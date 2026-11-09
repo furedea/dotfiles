@@ -499,6 +499,7 @@ in
     agent-harness = {
       enable = true;
       devin.enable = false;
+      dsh.enable = true;
       hermes.enable = false;
       package = agentHarnessPackage;
       source = agentSource;
