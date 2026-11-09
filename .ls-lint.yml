@@ -6,6 +6,9 @@ ls:
   .lock: regex:[a-z0-9]*([._][a-z0-9]+)* | regex:Cargo
   .json: regex:[a-z0-9]*([._][a-z0-9]+)* | regex:lazy-lock
   .*: regex:[a-z0-9]*([._][a-z0-9]+)*
+  # GitHub Actions workflow files follow the ecosystem convention of kebab-case.
+  .github/workflows:
+    .yml: regex:[a-z0-9]+(-[a-z0-9]+)*
 
 ignore:
   - .git
