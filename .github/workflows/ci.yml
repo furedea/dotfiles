@@ -133,22 +133,18 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+    defaults:
+      run:
+        # Tool versions come from the flake dev shell, pinned by flake.lock.
+        shell: nix develop --command bash -eo pipefail {0}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Install ShellCheck
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends shellcheck
-
-      - name: Install shfmt
-        run: |
-          curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "https://github.com/mvdan/sh/releases/download/v3.13.1/shfmt_v3.13.1_linux_amd64" -o "$RUNNER_TEMP/shfmt"
-          echo "fb096c5d1ac6beabbdbaa2874d025badb03ee07929f0c9ff67563ce8c75398b1  $RUNNER_TEMP/shfmt" | sha256sum -c -
-          sudo install "$RUNNER_TEMP/shfmt" /usr/local/bin/
+      - name: Install Nix
+        uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
 
       - name: Check tracked Bash scripts
         run: |
@@ -165,28 +161,21 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+    defaults:
+      run:
+        # Tool versions come from the flake dev shell, pinned by flake.lock.
+        shell: nix develop --command bash -eo pipefail {0}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Install selene
-        run: |
-          curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "https://github.com/Kampfkarren/selene/releases/download/0.30.1/selene-0.30.1-linux.zip" -o "$RUNNER_TEMP/selene.zip"
-          echo "c8c0f2102cb37e5e3ee2c984b51946b8ea8cf7804b5ea067afdb42fd2b95ff6e  $RUNNER_TEMP/selene.zip" | sha256sum -c -
-          unzip -o "$RUNNER_TEMP/selene.zip" -d "$RUNNER_TEMP"
-          sudo install "$RUNNER_TEMP/selene" /usr/local/bin/
+      - name: Install Nix
+        uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
 
       - name: Run selene
         run: selene --config nvim/selene.toml nvim/
-
-      - name: Install stylua
-        run: |
-          curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "https://github.com/JohnnyMorganz/StyLua/releases/download/v2.3.1/stylua-linux-x86_64.zip" -o "$RUNNER_TEMP/stylua.zip"
-          echo "f0cfea40b3d72223497fa1650061f866e0d19a93a871aae22d3849f1bc9c2722  $RUNNER_TEMP/stylua.zip" | sha256sum -c -
-          unzip -o "$RUNNER_TEMP/stylua.zip" -d "$RUNNER_TEMP"
-          sudo install "$RUNNER_TEMP/stylua" /usr/local/bin/
 
       - name: Run stylua
         run: stylua --check nvim/
@@ -206,30 +195,24 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
-    env:
-      # nixpkgs revision that provides autocorrect; Renovate updates it.
-      NIXPKGS_REV: f9a75f41be3a74eab55d3a7679d34ad6cc0da977
+    defaults:
+      run:
+        # Tool versions come from the flake dev shell, pinned by flake.lock.
+        shell: nix develop --command bash -eo pipefail {0}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Install dprint
-        run: |
-          curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "https://github.com/dprint/dprint/releases/download/0.53.0/dprint-x86_64-unknown-linux-gnu.zip" -o "$RUNNER_TEMP/dprint.zip"
-          echo "987185f5f0db6205e5bca88aaab04a7b29bc18bf7a8c1a84f56eef08c9730df0  $RUNNER_TEMP/dprint.zip" | sha256sum -c -
-          unzip -o "$RUNNER_TEMP/dprint.zip" -d "$RUNNER_TEMP"
-          sudo install "$RUNNER_TEMP/dprint" /usr/local/bin/
+      - name: Install Nix
+        uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
 
       - name: Run dprint
         run: dprint check --config dprint/dprint.json --incremental=false
 
-      - name: Install Nix
-        uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
-
       - name: Run autocorrect
-        run: nix run "github:NixOS/nixpkgs/$NIXPKGS_REV#autocorrect" -- . --lint --no-diff-bg-color
+        run: autocorrect . --lint --no-diff-bg-color
 
   gha-lint:
     uses: furedea/reusable-workflows/.github/workflows/gha-lint.yml@ca7c5f2973a899e209bc60767f434aecbc186bc9 # v1.1.0
