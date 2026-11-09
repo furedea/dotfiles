@@ -46,6 +46,8 @@ elif args[:2] == ["secret", "set"]:
     if repository.split("/")[-1] in os.environ.get("GH_SECRET_FAILURES", "").split():
         print("HTTP 403", file=sys.stderr)
         sys.exit(1)
+elif args[0] == "api" and ".visibility" in args:
+    print("private")
 elif args[0] == "api" and args[1].endswith("/rulesets") and "--jq" in args:
     print("")
 elif args[0] == "api" and "-X" in args:

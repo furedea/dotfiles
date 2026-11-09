@@ -178,6 +178,35 @@ def apply_template(destination: Path, repository: str) -> None:
         )
 
 
+def codeql_skip_reason(repository: str) -> str:
+    """Name why default setup must not be applied, or return "" when it should be."""
+    if output("gh", "api", f"repos/{repository}", "--jq", ".visibility") != "public":
+        return "not a public repository"
+    endpoint = f"repos/{repository}/code-scanning/default-setup"
+    if output("gh", "api", endpoint, "--jq", ".state") == "configured":
+        return "already configured"
+    return ""
+
+
+def enable_codeql_default_setup(repository: str) -> None:
+    """Enable default setup on public repositories; a failure only warns.
+
+    Policy: every repository uses default setup and no codeql.yml. Enabling it deliberately takes over from any
+    advanced workflow, whose upload is then rejected; turning default setup off reverses that.
+    """
+    try:
+        reason = codeql_skip_reason(repository)
+        if reason:
+            print(f"Skipped CodeQL default setup on {repository}: {reason}")
+            return
+        endpoint = f"repos/{repository}/code-scanning/default-setup"
+        command = ["gh", "api", endpoint, "-X", "PATCH", "-f", "state=configured", "-f", "query_suite=default"]
+        subprocess.run(command, stdout=subprocess.DEVNULL, check=True)
+        print(f"Enabled CodeQL default setup on {repository}")
+    except subprocess.CalledProcessError:
+        print(f"warning: could not enable CodeQL default setup on {repository}", file=sys.stderr)
+
+
 def configure(repository: str) -> None:
     """Apply the source-controlled settings and upsert the named ruleset."""
     subprocess.run(
@@ -204,6 +233,7 @@ def configure(repository: str) -> None:
     print(f"Updated ruleset {identifier} on {repository}" if identifier else f"Created ruleset on {repository}")
     for reviewer in REVIEWERS.values():
         register_stored_review_token(repository, reviewer)
+    enable_codeql_default_setup(repository)
 
 
 def create(arguments: list[str]) -> int:
