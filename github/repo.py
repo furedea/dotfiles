@@ -207,6 +207,17 @@ def enable_codeql_default_setup(repository: str) -> None:
         print(f"warning: could not enable CodeQL default setup on {repository}", file=sys.stderr)
 
 
+def enable_immutable_releases(repository: str) -> None:
+    """Make published release tags and assets unchangeable; a failure only warns."""
+    command = ["gh", "api", f"repos/{repository}/immutable-releases", "-X", "PUT"]
+    try:
+        subprocess.run(command, stdout=subprocess.DEVNULL, check=True)
+    except subprocess.CalledProcessError:
+        print(f"warning: could not enable immutable releases on {repository}", file=sys.stderr)
+        return
+    print(f"Enabled immutable releases on {repository}")
+
+
 def configure(repository: str) -> None:
     """Apply the source-controlled settings and upsert the named ruleset."""
     subprocess.run(
@@ -233,6 +244,7 @@ def configure(repository: str) -> None:
     print(f"Updated ruleset {identifier} on {repository}" if identifier else f"Created ruleset on {repository}")
     for reviewer in REVIEWERS.values():
         register_stored_review_token(repository, reviewer)
+    enable_immutable_releases(repository)
     enable_codeql_default_setup(repository)
 
 
