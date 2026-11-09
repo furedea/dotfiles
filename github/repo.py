@@ -185,10 +185,8 @@ def codeql_skip_reason(repository: str) -> str:
     endpoint = f"repos/{repository}/code-scanning/default-setup"
     if output("gh", "api", endpoint, "--jq", ".state") == "configured":
         return "already configured"
-    count = '[.[] | select(.tool.name == "CodeQL")] | length'
-    command = ["gh", "api", f"repos/{repository}/code-scanning/analyses", "--jq", count]
-    analyses = subprocess.run(command, capture_output=True, text=True, check=False)
-    if analyses.returncode == 0 and analyses.stdout.strip() not in {"", "0"}:
+    active = '[.workflows[] | select(.state == "active" and (.path | test("^\\\\.github/workflows/.*codeql"; "i")))] | length'
+    if output("gh", "api", f"repos/{repository}/actions/workflows?per_page=100", "--jq", active) != "0":
         return "an advanced setup is in use"
     return ""
 

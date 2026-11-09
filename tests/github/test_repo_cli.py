@@ -60,8 +60,8 @@ def remote(tmp_path: Path, executable: StubWriter, monkeypatch: pytest.MonkeyPat
             print(os.environ.get("GH_VISIBILITY", "public"))
         elif args[0] == "api" and args[1].endswith("/code-scanning/default-setup") and "-X" not in args:
             print(os.environ.get("GH_CODEQL_STATE", "not-configured"))
-        elif args[0] == "api" and args[1].endswith("/code-scanning/analyses"):
-            print(os.environ.get("GH_CODEQL_ANALYSES", "0"))
+        elif args[0] == "api" and "/actions/workflows" in args[1]:
+            print(os.environ.get("GH_CODEQL_WORKFLOWS", "0"))
         elif args[0] == "api" and args[1].endswith("/code-scanning/default-setup") and os.environ.get("GH_CODEQL_FAILURE") == "1":
             print("HTTP 422", file=sys.stderr)
             sys.exit(1)
@@ -241,7 +241,7 @@ def test_configure_skips_codeql_default_setup_for_non_public_repository(
     "environment,reason",
     [
         ({"GH_CODEQL_STATE": "configured"}, "already configured"),
-        ({"GH_CODEQL_ANALYSES": "3"}, "an advanced setup is in use"),
+        ({"GH_CODEQL_WORKFLOWS": "1"}, "an advanced setup is in use"),
     ],
 )
 def test_configure_leaves_existing_codeql_setup_untouched(
