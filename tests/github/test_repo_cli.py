@@ -63,6 +63,9 @@ def remote(tmp_path: Path, executable: StubWriter, monkeypatch: pytest.MonkeyPat
         elif args[0] == "api" and args[1].endswith("/code-scanning/default-setup") and os.environ.get("GH_CODEQL_FAILURE") == "1":
             print("HTTP 422", file=sys.stderr)
             sys.exit(1)
+        elif args[0] == "api" and args[1].endswith("/immutable-releases") and os.environ.get("GH_IMMUTABLE_FAILURE") == "1":
+            print("HTTP 403", file=sys.stderr)
+            sys.exit(1)
         elif args[0] == "api" and args[1].endswith("/rulesets") and "--jq" in args:
             print(os.environ.get("GH_RULESET_ID", ""))
         elif args[:2] == ["repo", "create"] or (args[0] == "api" and "-X" in args):
@@ -248,6 +251,24 @@ def test_configure_applies_ruleset_even_when_codeql_default_setup_fails(run_cli:
     assert "warning: could not enable CodeQL default setup on owner/myrepo" in result.stderr
     assert "Created ruleset on owner/myrepo" in result.stdout
     assert any(row[:2] == ["api", "repos/owner/myrepo/rulesets"] for row in calls(remote))
+
+
+@pytest.mark.parametrize("visibility", ["public", "private", "internal"])
+def test_configure_enables_immutable_releases_for_every_visibility(
+    run_cli: CliRunner, remote: Path, visibility: str
+) -> None:
+    result = run_cli(SCRIPT, "configure", "owner/myrepo", env={"GH_VISIBILITY": visibility})
+    assert result.returncode == 0, result.stderr
+    assert ["api", "repos/owner/myrepo/immutable-releases", "-X", "PUT"] in calls(remote)
+    assert "Enabled immutable releases on owner/myrepo" in result.stdout
+
+
+def test_configure_continues_when_immutable_releases_fails(run_cli: CliRunner, remote: Path) -> None:
+    result = run_cli(SCRIPT, "configure", "owner/myrepo", env={"GH_IMMUTABLE_FAILURE": "1"})
+    assert result.returncode == 0, result.stderr
+    assert "warning: could not enable immutable releases on owner/myrepo" in result.stderr
+    assert "Enabled immutable releases" not in result.stdout
+    assert "Enabled CodeQL default setup on owner/myrepo" in result.stdout
 
 
 @pytest.mark.parametrize(

@@ -298,6 +298,10 @@ and only when merging a pull request. Approval of the last push is not
 required. See [ADR-0039](docs/adr/0039_require_human_approval_on_main.md) and
 [ADR-0040](docs/adr/0040_drop_last_push_approval_on_main.md).
 
+`repo configure` also enables immutable releases, so tags and assets of releases
+published from then on cannot change; releases published earlier stay mutable.
+A refused request only warns.
+
 A name without an owner defaults to the authenticated GitHub user. Run
 `repo --help` or `repo -h` for the command overview. The commands are covered
 by Python unit and CLI integration tests under `tests/github/`.
