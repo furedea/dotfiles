@@ -65,6 +65,8 @@ def remote(tmp_path: Path, executable: StubWriter, monkeypatch: pytest.MonkeyPat
                 print('{"message":"no analysis found","status":"404"}')
                 sys.exit(1)
             print(os.environ.get("GH_CODEQL_ANALYSIS_KEYS", ""))
+        elif args[0] == "api" and "/contents/.github/workflows/" in args[1]:
+            print(os.environ.get("GH_WORKFLOW_CONTENT", "name: ci"))
         elif args[0] == "api" and "/actions/workflows" in args[1]:
             print(os.environ.get("GH_ACTIVE_WORKFLOWS", ""))
         elif args[0] == "api" and args[1].endswith("/code-scanning/default-setup") and os.environ.get("GH_CODEQL_FAILURE") == "1":
@@ -260,7 +262,16 @@ DEFAULT_SETUP_WORKFLOW = "dynamic/github-code-scanning/codeql"
             },
             "an advanced setup is in use",
         ),
+        (
+            {
+                "GH_ANALYSES_MISSING": "1",
+                "GH_ACTIVE_WORKFLOWS": SECURITY_WORKFLOW,
+                "GH_WORKFLOW_CONTENT": "uses: github/codeql-action/analyze@v3",
+            },
+            "an advanced setup is in use",
+        ),
     ],
+    ids=["configured", "active-workflow-with-analyses", "active-workflow-before-first-analysis"],
 )
 def test_configure_leaves_existing_codeql_setup_untouched(
     run_cli: CliRunner, remote: Path, environment: dict[str, str], reason: str

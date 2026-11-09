@@ -189,17 +189,19 @@ def codeql_skip_reason(repository: str) -> str:
 
 
 def has_active_advanced_codeql_workflow(repository: str) -> bool:
-    """Report whether a CodeQL analysis came from a workflow file that is still active (not default setup's dynamic/)."""
+    """Report whether an active workflow file runs CodeQL, by its analyses or, before any, by its content."""
+    base = f"repos/{repository}"
+    query = '.workflows[] | select(.state == "active") | .path'
+    paths = output("gh", "api", f"{base}/actions/workflows?per_page=100", "--jq", query).splitlines()
+    active = {path for path in paths if path.startswith(".github/workflows/")}
     query = '.[] | select(.tool.name == "CodeQL") | .analysis_key'
-    command = ["gh", "api", f"repos/{repository}/code-scanning/analyses?per_page=100", "--jq", query]
+    command = ["gh", "api", f"{base}/code-scanning/analyses?per_page=100", "--jq", query]
     analyses = subprocess.run(command, capture_output=True, text=True, check=False)
     keys = analyses.stdout.splitlines() if analyses.returncode == 0 else []
-    paths = {key.split(":", 1)[0] for key in keys if key.startswith(".github/workflows/")}
-    if not paths:
-        return False
-    query = '.workflows[] | select(.state == "active") | .path'
-    active = output("gh", "api", f"repos/{repository}/actions/workflows?per_page=100", "--jq", query)
-    return not paths.isdisjoint(active.splitlines())
+    if active & {key.split(":", 1)[0] for key in keys}:
+        return True
+    raw = ["-H", "Accept: application/vnd.github.raw+json"]
+    return any("codeql" in output("gh", "api", f"{base}/contents/{path}", *raw).lower() for path in active)
 
 
 def enable_codeql_default_setup(repository: str) -> None:
