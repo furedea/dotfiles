@@ -208,7 +208,7 @@ def enable_codeql_default_setup(repository: str) -> None:
 
 
 def enable_immutable_releases(repository: str) -> None:
-    """Make published release tags and assets unchangeable; a failure only warns."""
+    """Lock future releases' tags and assets (existing releases stay mutable); a failure only warns."""
     command = ["gh", "api", f"repos/{repository}/immutable-releases", "-X", "PUT"]
     try:
         subprocess.run(command, stdout=subprocess.DEVNULL, check=True)
