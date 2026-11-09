@@ -56,6 +56,8 @@ def remote(tmp_path: Path, executable: StubWriter, monkeypatch: pytest.MonkeyPat
             print("refs/heads/main")
         elif args[0] == "api" and ".default_branch // empty" in args:
             print("main")
+        elif args[0] == "api" and ".visibility" in args:
+            print(os.environ.get("GH_VISIBILITY", "public"))
         elif args[0] == "api" and args[1].endswith("/rulesets") and "--jq" in args:
             print(os.environ.get("GH_RULESET_ID", ""))
         elif args[:2] == ["repo", "create"] or (args[0] == "api" and "-X" in args):
@@ -193,6 +195,38 @@ def test_configure_upserts_named_ruleset(run_cli: CliRunner, remote: Path, name:
     assert (f"Updated ruleset {identifier} on" if identifier else "Created ruleset on") in result.stdout
     if "/" not in name:
         assert ["api", "user", "--jq", ".login"] in logged
+
+
+def code_scanning_calls(root: Path, repository: str) -> list[list[str]]:
+    return [row for row in calls(root) if row[:2] == ["api", f"repos/{repository}/code-scanning/default-setup"]]
+
+
+def test_configure_enables_codeql_default_setup_for_public_repository(run_cli: CliRunner, remote: Path) -> None:
+    result = run_cli(SCRIPT, "configure", "owner/myrepo", env={"GH_VISIBILITY": "public"})
+    assert result.returncode == 0, result.stderr
+    assert code_scanning_calls(remote, "owner/myrepo") == [
+        [
+            "api",
+            "repos/owner/myrepo/code-scanning/default-setup",
+            "-X",
+            "PATCH",
+            "-f",
+            "state=configured",
+            "-f",
+            "query_suite=default",
+        ]
+    ]
+    assert "Enabled CodeQL default setup on owner/myrepo" in result.stdout
+
+
+@pytest.mark.parametrize("visibility", ["private", "internal"])
+def test_configure_skips_codeql_default_setup_for_non_public_repository(
+    run_cli: CliRunner, remote: Path, visibility: str
+) -> None:
+    result = run_cli(SCRIPT, "configure", "owner/myrepo", env={"GH_VISIBILITY": visibility})
+    assert result.returncode == 0, result.stderr
+    assert not code_scanning_calls(remote, "owner/myrepo")
+    assert "Skipped CodeQL default setup on owner/myrepo" in result.stdout
 
 
 @pytest.mark.parametrize(

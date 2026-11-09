@@ -178,6 +178,29 @@ def apply_template(destination: Path, repository: str) -> None:
         )
 
 
+def enable_codeql_default_setup(repository: str) -> None:
+    """Turn on CodeQL default setup for a public repository; other visibilities lack the entitlement."""
+    if output("gh", "api", f"repos/{repository}", "--jq", ".visibility") != "public":
+        print(f"Skipped CodeQL default setup on {repository}: not a public repository")
+        return
+    subprocess.run(
+        [
+            "gh",
+            "api",
+            f"repos/{repository}/code-scanning/default-setup",
+            "-X",
+            "PATCH",
+            "-f",
+            "state=configured",
+            "-f",
+            "query_suite=default",
+        ],
+        stdout=subprocess.DEVNULL,
+        check=True,
+    )
+    print(f"Enabled CodeQL default setup on {repository}")
+
+
 def configure(repository: str) -> None:
     """Apply the source-controlled settings and upsert the named ruleset."""
     subprocess.run(
@@ -190,6 +213,7 @@ def configure(repository: str) -> None:
         ["gh", "api", f"repos/{repository}/vulnerability-alerts", "-X", "PUT"], stdout=subprocess.DEVNULL, check=True
     )
     print(f"Enabled vulnerability alerts and dependency graph on {repository}")
+    enable_codeql_default_setup(repository)
     ruleset = ROOT / "ruleset.json"
     name = json.loads(ruleset.read_text())["name"]
     identifier = output(
