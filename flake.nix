@@ -190,6 +190,7 @@
               default = shellPkgs.mkShell {
                 packages = [
                   shellPkgs.actionlint
+                  shellPkgs.bats
                   shellPkgs.commitlint
                   # lefthook before 2.1.6 runs hooks under a pty, which agent sandboxes deny.
                   shellUnstable.lefthook

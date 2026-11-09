@@ -26,26 +26,24 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
+    defaults:
+      run:
+        # bats comes from the flake dev shell, pinned by flake.lock.
+        shell: nix develop --command bash -eo pipefail {0}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
+      - name: Install Nix
+        uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
+
       - name: Set up uv
         uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           enable-cache: true
           cache-python: true
-
-      - name: Install Bats
-        uses: bats-core/bats-action@77d6fb60505b4d0d1d73e48bd035b55074bbfb43 # 4.0.0
-        with:
-          bats-version: "1.13.0"
-          support-install: "false"
-          assert-install: "false"
-          detik-install: "false"
-          file-install: "false"
 
       - name: Install zsh
         run: |
