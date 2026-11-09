@@ -1,16 +1,4 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>furedea/renovate-config"],
-  "customManagers": [
-    {
-      "description": "Update the nixpkgs revision of the format-check autocorrect step to the head of nixos-unstable",
-      "customType": "regex",
-      "managerFilePatterns": ["/^\\.github/workflows/ci\\.yml$/"],
-      "matchStrings": ["NIXPKGS_REV: (?<currentDigest>[0-9a-f]{40})"],
-      "datasourceTemplate": "git-refs",
-      "depNameTemplate": "nixpkgs",
-      "packageNameTemplate": "https://github.com/NixOS/nixpkgs",
-      "currentValueTemplate": "nixos-unstable"
-    }
-  ]
+  "extends": ["github>furedea/renovate-config"]
 }
