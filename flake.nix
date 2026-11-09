@@ -188,14 +188,19 @@
             in
             {
               default = shellPkgs.mkShell {
+                env = {
+                  UV_PYTHON_DOWNLOADS = "never";
+                  UV_PYTHON_PREFERENCE = "only-system";
+                };
                 packages = [
                   shellPkgs.actionlint
                   shellPkgs.bats
                   shellPkgs.commitlint
                   # lefthook before 2.1.6 runs hooks under a pty, which agent sandboxes deny.
                   shellUnstable.lefthook
-                  # Same uv as the Home Manager profile; uv fetches the pinned Python itself.
+                  # Same uv and Python as the Home Manager profile; Nix owns the interpreter, uv owns dependencies.
                   shellUnstable.uv
+                  (shellPkgs.callPackage ./nix/packages/python_315.nix { })
                 ]
                 ++ import ./nix/lint_tools.nix {
                   pkgs = shellPkgs;
