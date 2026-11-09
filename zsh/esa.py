@@ -149,7 +149,7 @@ def remove_edit_files(directory: Path, path: Path, synced: Path) -> None:
 
 
 def usage(kind: str) -> str:
-    """Build the help text for one command kind (en, ee, eep, es or edit)."""
+    """Return the `-h` text for a command kind, shared by the help output and the invalid-argument error."""
     arguments = {"en": " <title>", "ee": " [title]", "eep": "", "es": " [-q|--quiet]", "edit": " <number>"}
     descriptions = {
         "en": f"Create a WIP post under {PERSONAL} and edit it with $EDITOR.",
@@ -163,7 +163,11 @@ def usage(kind: str) -> str:
 
 
 def valid_arguments(kind: str, arguments: list[str]) -> bool:
-    """Report whether the arguments fit the command kind's usage."""
+    """Check the arguments against what the command accepts.
+
+    `en` and `edit` take one non-empty value, `ee` at most one title, `eep` none, and `es` an optional quiet flag.
+    An empty string stands for an argument the Zsh wrapper left blank.
+    """
     if kind in {"en", "edit"}:
         return len(arguments) == 1 and bool(arguments[0])
     if kind == "ee":
@@ -174,25 +178,37 @@ def valid_arguments(kind: str, arguments: list[str]) -> bool:
 
 
 def execute(kind: str, arguments: list[str], previous: str) -> str | None:
-    """Run one command kind: create, open or select a post and edit it, or ship the previous post.
-
-    Args:
-        kind: The command kind.
-        arguments: Validated arguments for the kind.
-        previous: Number of the last edited post, empty if none.
+    """Run a validated command.
 
     Returns:
-        The edited post number, an empty string after shipping, or None when no post was selected.
-
-    Raises:
-        ValueError: Shipping was requested without a previous post.
+        The number for the Zsh wrapper to remember as the last post: the edited post, or an empty string after
+        shipping. None when no post was chosen and nothing changed.
     """
     if kind == "es":
-        if not previous:
-            raise ValueError("es: no post to ship (edit something first)")
-        options = QUIET if arguments and arguments[0] else []
-        subprocess.run(["esa", "post", "update", post_number(previous), "--ship", *options], check=True)
+        ship(arguments, previous)
         return ""
+    number = target_post(kind, arguments)
+    return edit(number) if number else None
+
+
+def ship(arguments: list[str], previous: str) -> None:
+    """Publish the last edited post, notifying followers unless a quiet flag was given.
+
+    Raises:
+        ValueError: No post has been edited yet.
+    """
+    if not previous:
+        raise ValueError("es: no post to ship (edit something first)")
+    options = QUIET if arguments and arguments[0] else []
+    subprocess.run(["esa", "post", "update", post_number(previous), "--ship", *options], check=True)
+
+
+def target_post(kind: str, arguments: list[str]) -> str:
+    """Resolve the post to edit, creating it for `en` and asking fzf for `ee` without a title.
+
+    Returns:
+        The post number, or an empty string when the fzf selection was cancelled.
+    """
     if kind == "en":
         number = post_number(
             esa_json(["create", f"{PERSONAL}/{arguments[0]}", "--wip", *QUIET, "--json", "number"])["number"]
@@ -203,7 +219,7 @@ def execute(kind: str, arguments: list[str], previous: str) -> str | None:
         number = find_post(MINUTES)
     else:
         number = find_post(f"{PERSONAL}/{arguments[0]}") if arguments and arguments[0] else select_post()
-    return edit(number) if number else None
+    return number
 
 
 def main(arguments: list[str]) -> int:
