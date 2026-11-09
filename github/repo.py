@@ -178,26 +178,38 @@ def apply_template(destination: Path, repository: str) -> None:
         )
 
 
-def enable_codeql_default_setup(repository: str) -> None:
-    """Turn on CodeQL default setup for a public repository; other visibilities lack the entitlement."""
+def codeql_skip_reason(repository: str) -> str:
+    """Name why default setup must not be applied, or return "" when it should be."""
     if output("gh", "api", f"repos/{repository}", "--jq", ".visibility") != "public":
-        print(f"Skipped CodeQL default setup on {repository}: not a public repository")
+        return "not a public repository"
+    endpoint = f"repos/{repository}/code-scanning/default-setup"
+    if output("gh", "api", endpoint, "--jq", ".state") == "configured":
+        return "already configured"
+    count = '[.[] | select(.tool.name == "CodeQL")] | length'
+    command = ["gh", "api", f"repos/{repository}/code-scanning/analyses", "--jq", count]
+    analyses = subprocess.run(command, capture_output=True, text=True, check=False)
+    if analyses.returncode == 0 and analyses.stdout.strip() not in {"", "0"}:
+        return "an advanced setup is in use"
+    return ""
+
+
+def enable_codeql_default_setup(repository: str) -> None:
+    """Turn on CodeQL default setup for a public repository without replacing an existing setup.
+
+    Private repositories lack the entitlement and advanced setups would be disabled by the switch.
+    A failure only warns, so the repository keeps the settings applied before it.
+    """
+    try:
+        reason = codeql_skip_reason(repository)
+        if reason:
+            print(f"Skipped CodeQL default setup on {repository}: {reason}")
+            return
+        endpoint = f"repos/{repository}/code-scanning/default-setup"
+        command = ["gh", "api", endpoint, "-X", "PATCH", "-f", "state=configured", "-f", "query_suite=default"]
+        subprocess.run(command, stdout=subprocess.DEVNULL, check=True)
+    except subprocess.CalledProcessError:
+        print(f"warning: could not enable CodeQL default setup on {repository}", file=sys.stderr)
         return
-    subprocess.run(
-        [
-            "gh",
-            "api",
-            f"repos/{repository}/code-scanning/default-setup",
-            "-X",
-            "PATCH",
-            "-f",
-            "state=configured",
-            "-f",
-            "query_suite=default",
-        ],
-        stdout=subprocess.DEVNULL,
-        check=True,
-    )
     print(f"Enabled CodeQL default setup on {repository}")
 
 
@@ -213,7 +225,6 @@ def configure(repository: str) -> None:
         ["gh", "api", f"repos/{repository}/vulnerability-alerts", "-X", "PUT"], stdout=subprocess.DEVNULL, check=True
     )
     print(f"Enabled vulnerability alerts and dependency graph on {repository}")
-    enable_codeql_default_setup(repository)
     ruleset = ROOT / "ruleset.json"
     name = json.loads(ruleset.read_text())["name"]
     identifier = output(
@@ -228,6 +239,7 @@ def configure(repository: str) -> None:
     print(f"Updated ruleset {identifier} on {repository}" if identifier else f"Created ruleset on {repository}")
     for reviewer in REVIEWERS.values():
         register_stored_review_token(repository, reviewer)
+    enable_codeql_default_setup(repository)
 
 
 def create(arguments: list[str]) -> int:

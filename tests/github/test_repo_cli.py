@@ -58,6 +58,13 @@ def remote(tmp_path: Path, executable: StubWriter, monkeypatch: pytest.MonkeyPat
             print("main")
         elif args[0] == "api" and ".visibility" in args:
             print(os.environ.get("GH_VISIBILITY", "public"))
+        elif args[0] == "api" and args[1].endswith("/code-scanning/default-setup") and "-X" not in args:
+            print(os.environ.get("GH_CODEQL_STATE", "not-configured"))
+        elif args[0] == "api" and args[1].endswith("/code-scanning/analyses"):
+            print(os.environ.get("GH_CODEQL_ANALYSES", "0"))
+        elif args[0] == "api" and args[1].endswith("/code-scanning/default-setup") and os.environ.get("GH_CODEQL_FAILURE") == "1":
+            print("HTTP 422", file=sys.stderr)
+            sys.exit(1)
         elif args[0] == "api" and args[1].endswith("/rulesets") and "--jq" in args:
             print(os.environ.get("GH_RULESET_ID", ""))
         elif args[:2] == ["repo", "create"] or (args[0] == "api" and "-X" in args):
@@ -198,7 +205,8 @@ def test_configure_upserts_named_ruleset(run_cli: CliRunner, remote: Path, name:
 
 
 def code_scanning_calls(root: Path, repository: str) -> list[list[str]]:
-    return [row for row in calls(root) if row[:2] == ["api", f"repos/{repository}/code-scanning/default-setup"]]
+    endpoint = f"repos/{repository}/code-scanning/default-setup"
+    return [row for row in calls(root) if row[:2] == ["api", endpoint] and "PATCH" in row]
 
 
 def test_configure_enables_codeql_default_setup_for_public_repository(run_cli: CliRunner, remote: Path) -> None:
@@ -227,6 +235,30 @@ def test_configure_skips_codeql_default_setup_for_non_public_repository(
     assert result.returncode == 0, result.stderr
     assert not code_scanning_calls(remote, "owner/myrepo")
     assert "Skipped CodeQL default setup on owner/myrepo" in result.stdout
+
+
+@pytest.mark.parametrize(
+    "environment,reason",
+    [
+        ({"GH_CODEQL_STATE": "configured"}, "already configured"),
+        ({"GH_CODEQL_ANALYSES": "3"}, "an advanced setup is in use"),
+    ],
+)
+def test_configure_leaves_existing_codeql_setup_untouched(
+    run_cli: CliRunner, remote: Path, environment: dict[str, str], reason: str
+) -> None:
+    result = run_cli(SCRIPT, "configure", "owner/myrepo", env=environment)
+    assert result.returncode == 0, result.stderr
+    assert not code_scanning_calls(remote, "owner/myrepo")
+    assert f"Skipped CodeQL default setup on owner/myrepo: {reason}" in result.stdout
+
+
+def test_configure_applies_ruleset_even_when_codeql_default_setup_fails(run_cli: CliRunner, remote: Path) -> None:
+    result = run_cli(SCRIPT, "configure", "owner/myrepo", env={"GH_CODEQL_FAILURE": "1"})
+    assert result.returncode == 0, result.stderr
+    assert "warning: could not enable CodeQL default setup on owner/myrepo" in result.stderr
+    assert "Created ruleset on owner/myrepo" in result.stdout
+    assert any(row[:2] == ["api", "repos/owner/myrepo/rulesets"] for row in calls(remote))
 
 
 @pytest.mark.parametrize(
