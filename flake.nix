@@ -194,6 +194,8 @@
                   shellPkgs.commitlint
                   # lefthook before 2.1.6 runs hooks under a pty, which agent sandboxes deny.
                   shellUnstable.lefthook
+                  # Same uv as the Home Manager profile; uv fetches the pinned Python itself.
+                  shellUnstable.uv
                 ]
                 ++ import ./nix/lint_tools.nix {
                   pkgs = shellPkgs;
