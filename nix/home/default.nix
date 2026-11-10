@@ -452,6 +452,18 @@ in
           refetchIntervalMinutes = 5;
         };
         smartFilteringAtLaunch = true;
+        issuesSections = [
+          {
+            title = "Open";
+            filters = "is:open -author:app/renovate";
+          }
+        ];
+        prsSections = [
+          {
+            title = "Open";
+            filters = "is:open";
+          }
+        ];
       };
     };
 
