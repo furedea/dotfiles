@@ -54,6 +54,14 @@ width = "85%"
 height = "85%"
 
 [[keys.command]]
+key = "prefix+ctrl+o"
+type = "popup"
+command = 'cd "${HERDR_ACTIVE_PANE_CWD:-$PWD}" && exec /etc/profiles/per-user/kaito/bin/gh-dash'
+description = "open gh-dash issues"
+width = "85%"
+height = "85%"
+
+[[keys.command]]
 key = "prefix+ctrl+e"
 type = "shell"
 command = "HERDR_PANE_ID=\"$HERDR_ACTIVE_PANE_ID\" HERDR_TAB_ID=\"$HERDR_ACTIVE_TAB_ID\" /etc/profiles/per-user/kaito/bin/terminal-browser --split right"
