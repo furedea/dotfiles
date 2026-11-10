@@ -22,3 +22,13 @@ format_markdown() {
   [ "$status" -eq 0 ]
   [ "$output" = $'- parent\n    - child' ]
 }
+
+@test "Markdown formatting with an explicit config accepts an absolute path outside the config directory" {
+  local _outside="$BATS_TEST_TMPDIR/outside/post.md"
+  mkdir -p "${_outside%/*}"
+
+  run dprint fmt --config "$REPO_ROOT/dprint/dprint.json" --stdin "$_outside" < <(printf -- '- parent\n  - child\n')
+
+  [ "$status" -eq 0 ]
+  [ "$output" = $'- parent\n    - child' ]
+}
