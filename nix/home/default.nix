@@ -452,6 +452,17 @@ in
       };
     };
 
+    gh-dash = {
+      enable = true;
+      settings = {
+        defaults = {
+          view = "issues";
+          refetchIntervalMinutes = 5;
+        };
+        smartFilteringAtLaunch = true;
+      };
+    };
+
     lazygit = {
       enable = true;
       settings = {

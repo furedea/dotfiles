@@ -98,7 +98,11 @@ in
         in
         claude.env.NVIM_LOG_FILE == nvimLogFile
         && builtins.elem "~/.local/state/agent-harness" claude.sandbox.filesystem.allowWrite;
-      github-stacked-pr-extension = names home.programs.gh.extensions == [ "gh-stack" ];
+      github-stacked-pr-extension =
+        names home.programs.gh.extensions == [
+          "gh-stack"
+          "gh-dash"
+        ];
       neovim-nix-managed-plugin-loader = names home.programs.neovim.plugins == [ "lazy.nvim" ];
       yazi-bats-icon =
         (home.programs.yazi.theme.icon.prepend_exts or [ ]) == [
