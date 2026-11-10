@@ -5,15 +5,9 @@ return {
     config = function()
       require("conform").setup({
         format_on_save = { timeout_ms = 1000, lsp_format = "fallback" },
-        formatters = {
-          -- Use PRETTIERD_DEFAULT_CONFIG so prettierd finds ~/.prettierrc for files outside ~
-          prettierd = {
-            env = { PRETTIERD_DEFAULT_CONFIG = vim.fn.expand("~/.prettierrc") },
-          },
-        },
         formatters_by_ft = {
           -- Text files: CJK spacing then structure formatting
-          markdown = { "autocorrect", "prettierd" },
+          markdown = { "autocorrect", "dprint" },
           nix = { "nixfmt" },
           lua = { "stylua" },
           tex = { "tex-fmt" },

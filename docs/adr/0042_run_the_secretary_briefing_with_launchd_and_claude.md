@@ -27,22 +27,22 @@ it for a personal account.
 Details that keep the decision testable:
 
 - The launcher (`scripts/secretary/run_morning_briefing.sh`) records the day before it runs, so
-  a day starts at most once even after a failure; `--force` overrides it. launchd uses neither
-  `RunAtLoad` nor `KeepAlive`; a missed 08:00 runs once after wake.
+    a day starts at most once even after a failure; `--force` overrides it. launchd uses neither
+    `RunAtLoad` nor `KeepAlive`; a missed 08:00 runs once after wake.
 - The briefing run may write only the two digest state files (through a temporary file and `mv`).
-  The launcher writes the report to `~/.local/state/secretary/briefings/YYYY-MM-DD.md` on every
-  successful generation and is the only component that sends mail; Claude's settings deny
-  `osascript` and the mail mutation commands.
+    The launcher writes the report to `~/.local/state/secretary/briefings/YYYY-MM-DD.md` on every
+    successful generation and is the only component that sends mail; Claude's settings deny
+    `osascript` and the mail mutation commands.
 - The message has the subject `[briefing] YYYY-MM-DD`, is sent from the account that owns the
-  address so the provider signs it (no spoofing), and stays in the inbox. On a generation failure
-  the launcher mails `[briefing] YYYY-MM-DD 失敗` with the log location. A missing address file or a
-  failed send is logged and ends with a non-zero exit code. `mail-triage` excludes `[briefing]`
-  self-mail.
+    address so the provider signs it (no spoofing), and stays in the inbox. On a generation failure
+    the launcher mails `[briefing] YYYY-MM-DD 失敗` with the log location. A missing address file or a
+    failed send is logged and ends with a non-zero exit code. `mail-triage` excludes `[briefing]`
+    self-mail.
 - `claude -p` passes `--setting-sources project` with `--settings`, so the broad allow rules of the
-  user settings do not merge into the read-only policy. File writes are granted with `Edit(path)`
-  rules, which cover the `Write` tool as well.
+    user settings do not merge into the read-only policy. File writes are granted with `Edit(path)`
+    rules, which cover the `Write` tool as well.
 - Retrieval keeps ADR-0022's primary-source priority and fixed host boundary, but uses the
-  read-only `WebFetch` instead of `curl`, because a `curl` allow rule cannot exclude every
-  state-changing option (such as `--json`). `WebSearch` may only locate primary sources.
+    read-only `WebFetch` instead of `curl`, because a `curl` allow rule cannot exclude every
+    state-changing option (such as `--json`). `WebSearch` may only locate primary sources.
 - ADR-0019 (Apple Mail) and ADR-0021 (`gws`, superseded by ADR-0043) define the provider clients; only their
-  Hermes wording is obsolete. ADR-0010 to ADR-0014 and ADR-0020 were already superseded.
+    Hermes wording is obsolete. ADR-0010 to ADR-0014 and ADR-0020 were already superseded.

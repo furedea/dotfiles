@@ -19,7 +19,7 @@ The primary outputs are:
 - `darwinConfigurations.mbp`: the complete MacBook Pro configuration
 - `darwinConfigurations.mba`: the complete MacBook Air configuration
 - `homeConfigurations."kaito@mbp"` and `homeConfigurations."kaito@mba"`: each
-  host's user environment for faster iteration
+    host's user environment for faster iteration
 - `devShells.<system>.default`: commitlint and lefthook for repository work
 
 The repository currently assumes:
@@ -130,9 +130,9 @@ wait for the old instance to expire or restart the service before reconnecting.
 
 - Nix flakes, weekly garbage collection, and Touch ID authentication for `sudo`
 - keyboard, text input, Finder, Dock, trackpad, screenshots, lock screen, menu
-  clock, Spotlight, and other macOS defaults
+    clock, Spotlight, and other macOS defaults
 - Dock applications: Tinycast, Ghostty, Dia, Obsidian, OrbStack, Slack,
-  System Settings, and Nani
+    System Settings, and Nani
 - display sleep disabled on both battery and charger
 - Homebrew through nix-homebrew, with unlisted packages removed on activation
 
@@ -156,13 +156,13 @@ The cask list in `nix/darwin/default.nix` is authoritative.
 [`nix/home/default.nix`](nix/home/default.nix) installs and configures:
 
 - shell and navigation tools including Zsh plugins, Starship, Atuin, direnv,
-  zoxide, ghq, roots, git-wt, fzf, eza, bat, fd, ripgrep, and Yazi
+    zoxide, ghq, roots, git-wt, fzf, eza, bat, fd, ripgrep, and Yazi
 - Git, Delta, GitHub CLI, Lazygit, Neovim, Tree-sitter, and Vim configuration
 - Nix, Bash, Python, Rust, TypeScript, Lua, LaTeX, formatting, and linting tools
 - Claude Code, Codex, pi, and Herdr
 - `programs.git`, `programs.delta`, `programs.gh`, `programs.lazygit`,
-  `programs.direnv`, `programs.atuin`, `programs.agent-harness`, and
-  `programs.yazi`
+    `programs.direnv`, `programs.atuin`, `programs.agent-harness`, and
+    `programs.yazi`
 
 Activation rebuilds the Zsh completion cache, reports how to export the SSH public key
 from 1Password when it is missing, and reconciles the commit-pinned Herdr plugin set.
@@ -226,7 +226,6 @@ The following repository sources are linked directly into the home directory:
 | `karabiner/karabiner.json`                   | `~/.config/karabiner/karabiner.json`   |
 | `herdr/config.toml`, `herdr/reviewr.toml`    | Herdr config and reviewr plugin config |
 | `dprint/dprint.json`                         | `~/dprint.json`                        |
-| `prettier/.prettierrc`                       | `~/.prettierrc`                        |
 | `.editorconfig`                              | `~/.editorconfig`                      |
 
 Git, GitHub CLI, Lazygit, Atuin, Yazi, Zsh plugin paths, and rendered agent files
@@ -250,7 +249,7 @@ reference files.
 ├── starship/                  # Shell prompt
 ├── github/                    # Repository creation and policy scripts
 ├── tests/                     # Python contracts and Bats integration by domain
-├── dprint/ and prettier/      # Global formatter configuration
+├── dprint/                    # Global formatter configuration
 └── tinycast/                 # Manual settings export
 ```
 
@@ -259,13 +258,13 @@ reference files.
 The Zsh configuration:
 
 - replaces common commands with modern equivalents such as `eza`, `bat`, `rg`,
-  `fd`, and `dust`
+    `fd`, and `dust`
 - initializes zoxide, Starship, direnv, Atuin, and Nix-provided Zsh plugins
 - provides `y` for Yazi directory changes and `gr` for the Git root
 - binds `ctrl+g` to fuzzy repository and monorepo navigation through ghq, roots,
-  and fzf
+    and fzf
 - provides editor-based esa helpers backed by the official esa CLI, with
-  incremental WIP saves from Neovim
+    incremental WIP saves from Neovim
 
 The Bash configuration provides the same core aliases and initializes zoxide,
 Starship, and Atuin.
@@ -357,13 +356,13 @@ and pytest. Tests marked `integration` run in the Bats job; other pytest tests r
 separately without duplicating those cases.
 CI checks all tracked `.sh` files with ShellCheck and shfmt, failing if no scripts
 are selected. Zsh files are not passed to these Bash checks. CI checks Lua with
-Selene and StyLua, checks Nix with Statix, deadnix, and nixfmt, checks JSON/TOML
+Selene and StyLua, checks Nix with Statix, deadnix, and nixfmt, checks JSON/TOML/Markdown
 with dprint, and lints prose with AutoCorrect. GitHub Actions are also checked
 with actionlint, zizmor, and CodeQL.
 
-dprint intentionally owns JSON and TOML only. Markdown is formatted with
-prettierd because its four-space nested-list indentation matches the preferred
-Obsidian style.
+dprint owns JSON, TOML, and Markdown. Markdown uses `listIndentKind:
+pythonMarkdown` so nested lists are indented by four spaces, matching the
+preferred Obsidian style.
 
 ## Manual Setup
 
@@ -372,7 +371,7 @@ After the first switch, configure as needed:
 
 - sign in to GUI applications and iCloud
 - import the SSH key into 1Password, enable its SSH agent, and export the public key
-  to `~/.ssh/id_ed25519.pub` as the Home Manager activation message describes
+    to `~/.ssh/id_ed25519.pub` as the Home Manager activation message describes
 - run `gh auth login`
 - run `esa auth login --scopes "read:post write:post"`
 - configure Atuin synchronization credentials if history sync is wanted
@@ -383,7 +382,7 @@ After the first switch, configure as needed:
     ```
 
 - on MacBook Pro, save that token in the login Keychain without placing it in
-  shell history or a process argument; paste it at the password prompt:
+    shell history or a process argument; paste it at the password prompt:
 
     ```sh
     /usr/bin/security add-generic-password \
@@ -394,7 +393,7 @@ After the first switch, configure as needed:
     ```
 
 - apply the `mbp` nix-darwin configuration; its Hister LaunchAgent reads the
-  token from Keychain at runtime and refuses to start when the item is absent
+    token from Keychain at runtime and refuses to start when the item is absent
 - on MacBook Pro, publish Hister to the tailnet and inspect the resulting route:
 
     ```sh
@@ -403,8 +402,8 @@ After the first switch, configure as needed:
     ```
 
 - install the Hister browser extension on both Macs, set its server URL to
-  `https://mbp.tailbb556b.ts.net/`, and paste the same access token into its
-  authentication setting
+    `https://mbp.tailbb556b.ts.net/`, and paste the same access token into its
+    authentication setting
 - retrieve the token for extension enrollment or rotation without printing it:
 
     ```sh
@@ -422,7 +421,7 @@ After the first switch, configure as needed:
 
 - pair Moshi Hook with the iPhone app when restoring a host
 - configure Night Shift, True Tone, display resolution, and Accessibility
-  display options in System Settings
+    display options in System Settings
 - import `tinycast/*` when restoring Tinycast manually
 
 ## Update Dependencies

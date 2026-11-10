@@ -19,17 +19,17 @@ access and that the Google calendar must already sync to Calendar on this Mac.
 Details that keep the decision testable:
 
 - The launcher writes `~/.local/state/secretary/calendar/YYYY-MM-DD.json` for 00:00 to 24:00
-  local time with the calendar name, title, start, end, all-day flag, and location of every event
-  in every calendar. A failure (no permission, timeout, invalid output) is written as
-  `{"ok":false,"error":...}` and the briefing continues; the report lists it as a coverage gap.
+    local time with the calendar name, title, start, end, all-day flag, and location of every event
+    in every calendar. A failure (no permission, timeout, invalid output) is written as
+    `{"ok":false,"error":...}` and the briefing continues; the report lists it as a coverage gap.
 - Claude's settings keep denying `osascript`; only the launcher runs it. The `google-calendar`
-  Skill is removed and `calendar-briefing` reads the JSON.
+    Skill is removed and `calendar-briefing` reads the JSON.
 - The report's first line is `coverage: complete` or `coverage: partial`. The launcher strips it
-  from the mail body and uses `[briefing] YYYY-MM-DD（一部取得失敗）` as the subject when the line
-  is not `complete` (a missing line counts as partial) or the calendar JSON is not `ok`.
+    from the mail body and uses `[briefing] YYYY-MM-DD（一部取得失敗）` as the subject when the line
+    is not `complete` (a missing line counts as partial) or the calendar JSON is not `ok`.
 - Mail is launched before sending and every Mail command runs inside `with timeout of 300 seconds`.
-  The AppleScript no longer loops over accounts reading `email addresses` (it timed out with -1712 in
-  the second real run); it sets the sender to the address directly and reports the failing step. A
-  failed send is retried once. `--resend` mails the saved report of the day without generating it.
+    The AppleScript no longer loops over accounts reading `email addresses` (it timed out with -1712 in
+    the second real run); it sets the sender to the address directly and reports the failing step. A
+    failed send is retried once. `--resend` mails the saved report of the day without generating it.
 - `gws`, `~/.config/gws`, `calendar_id`, the GCP project, and the contents of ADR-0013 and
-  ADR-0021 stay until the new path is confirmed to deliver; their removal is a separate Issue.
+    ADR-0021 stay until the new path is confirmed to deliver; their removal is a separate Issue.
