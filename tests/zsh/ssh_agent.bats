@@ -1,5 +1,8 @@
 #!/usr/bin/env bats
 # Interactive Zsh points SSH_AUTH_SOCK at the user's 1Password agent, never at another local agent.
+# macOS only: zsh/.zshrc attaches the 1Password agent and validates its socket only when OSTYPE is darwin,
+# so every case here would pass vacuously on Linux.
+# bats file_tags=macos
 
 setup() {
   REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"

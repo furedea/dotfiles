@@ -1,5 +1,8 @@
 #!/usr/bin/env bats
 # Executable specifications for external agent hook composition.
+# macOS only: builds the aarch64-darwin Home Manager activation package, which needs a macOS host or builder.
+# bats file_tags=macos
+
 
 bats_require_minimum_version 1.5.0
 

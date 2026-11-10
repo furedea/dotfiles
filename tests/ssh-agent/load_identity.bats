@@ -31,10 +31,10 @@ evaluate_ssh_directory_permissions() {
   [ "$status" -eq 0 ]
   [ -f "$BATS_TEST_TMPDIR/home/.ssh/existing-file" ]
 
-  run /usr/bin/stat -f "%Lp" "$BATS_TEST_TMPDIR/home/.ssh"
+  run find "$BATS_TEST_TMPDIR/home/.ssh" -maxdepth 0 -perm 0700
 
   [ "$status" -eq 0 ]
-  [ "$output" = "700" ]
+  [ "$output" = "$BATS_TEST_TMPDIR/home/.ssh" ]
 }
 
 @test "home activation reports a missing SSH public key" {

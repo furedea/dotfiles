@@ -14,7 +14,7 @@ setup() {
     ESA_EDIT_POST_NUMBER=1515 \
     ESA_EDIT_FILE="$ARTICLE_FILE" \
     XDG_DATA_HOME="$NVIM_DATA_HOME" \
-    nvim --headless -u "$REPO_ROOT/nvim/init.lua" \
+    nvim --headless --cmd "set runtimepath^=$REPO_ROOT/nvim,$NVIM_DATA_HOME/nvim/lazy/lazy.nvim" -u "$REPO_ROOT/nvim/init.lua" \
     "$ARTICLE_FILE" \
     -c "call setline(1, '# After')" \
     -c write \
@@ -32,7 +32,7 @@ setup() {
     ESA_EDIT_POST_NUMBER=1515 \
     ESA_EDIT_FILE="$ARTICLE_FILE" \
     XDG_DATA_HOME="$NVIM_DATA_HOME" \
-    nvim --headless -u "$REPO_ROOT/nvim/init.lua" \
+    nvim --headless --cmd "set runtimepath^=$REPO_ROOT/nvim,$NVIM_DATA_HOME/nvim/lazy/lazy.nvim" -u "$REPO_ROOT/nvim/init.lua" \
     "$other_file" \
     -c "call setline(1, '# Changed')" \
     -c write \

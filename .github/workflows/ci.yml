@@ -45,7 +45,8 @@ jobs:
           sudo apt-get install -y --no-install-recommends zsh
 
       - name: Run Bats tests
-        run: uv run bats --print-output-on-failure tests/esa/zsh.bats tests/moshi/update_moshi_hook.bats tests/codex/update_codex.bats
+        # Discovery keeps new files in CI; files tagged macos need a macOS host and are excluded.
+        run: uv run bats --recursive --filter-tags '!macos' --print-output-on-failure tests
 
       - name: Run Python integration tests
         # The installed macOS popup profile is checked locally; static TOML checks run on Linux.

@@ -1,5 +1,8 @@
 #!/usr/bin/env bats
 # Executable specifications for the terminal-browser package.
+# macOS only: runs the darwin-arm64 terminal-browser binary.
+# bats file_tags=macos
+
 
 bats_require_minimum_version 1.5.0
 

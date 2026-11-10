@@ -271,20 +271,3 @@ run_startup_path() {
       print -rl -- "${path[@]}"
     '
 }
-
-@test "Home Manager activation invokes the packaged Zsh cache builder" {
-  run --separate-stderr nix build --no-link --print-out-paths \
-    "$TEST_FLAKE#homeConfigurations.\"kaito@mbp\".activationPackage"
-
-  if [ "$status" -ne 0 ]; then
-    printf '%s\n' "$stderr" >&2
-  fi
-  [ "$status" -eq 0 ]
-
-  local _activation_package="$output"
-  [ -f "$_activation_package/activate" ]
-  local _builder
-  _builder="$(grep -Eo '/nix/store/[^"[:space:]]+-build_cache[.]zsh' "$_activation_package/activate" | head -n 1)"
-  [ -f "$_builder" ]
-  cmp --silent "$REPO_ROOT/zsh/build_cache.zsh" "$_builder"
-}

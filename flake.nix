@@ -196,6 +196,8 @@
                   shellPkgs.actionlint
                   shellPkgs.bats
                   shellPkgs.commitlint
+                  # Headless Neovim runs the esa and LSP Bats specs on Linux.
+                  shellPkgs.neovim
                   # lefthook before 2.1.6 runs hooks under a pty, which agent sandboxes deny.
                   shellUnstable.lefthook
                   # Same uv and Python as the Home Manager profile; Nix owns the interpreter, uv owns dependencies.
