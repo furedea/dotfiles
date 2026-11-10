@@ -8,7 +8,7 @@ setup() {
 }
 
 format_markdown() {
-  dprint fmt --config "$REPO_ROOT/dprint/dprint.json" --stdin article.md
+  dprint fmt --config "$REPO_ROOT/dprint.json" --stdin article.md
 }
 
 @test "Markdown formatting preserves line breaks in esa prose" {
@@ -29,7 +29,7 @@ format_markdown() {
   local _outside="$BATS_TEST_TMPDIR/outside/post.md"
   mkdir -p "${_outside%/*}"
 
-  run --separate-stderr dprint fmt --config "$REPO_ROOT/dprint/dprint.json" --stdin "$_outside" < <(printf -- '- parent\n  - child\n')
+  run --separate-stderr dprint fmt --config "$REPO_ROOT/dprint.json" --stdin "$_outside" < <(printf -- '- parent\n  - child\n')
 
   [ "$status" -eq 0 ]
   [ "$output" = $'- parent\n    - child' ]
