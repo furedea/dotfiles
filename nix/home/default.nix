@@ -36,6 +36,8 @@ let
   herdrCorePackage = llm-agents.packages.${system}.herdr-core;
   agentDesktopPackage = pkgs.callPackage ../packages/agent_desktop.nix { };
   agentHarnessPackage = agent-harness.packages.${system}.default;
+  # jev-lint judges the model rules that agent-config's Stop hook runs (furedea/agent-config#74).
+  jevLintPackage = agent-config.packages.${system}.jev-lint;
   nvimLogFile = "${config.xdg.stateHome}/agent-harness/nvim.log";
   moshiHookPackage = pkgs.callPackage ../packages/moshi_hook.nix { };
   moshiHookRuntime = lib.getExe moshiHookPackage;
@@ -249,6 +251,7 @@ in
       # Code quality
       actionlint
       ast-grep
+      jevLintPackage
       zizmor
       commitlint
       unstable.lefthook
