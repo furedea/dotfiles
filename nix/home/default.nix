@@ -452,6 +452,26 @@ in
           refetchIntervalMinutes = 5;
         };
         smartFilteringAtLaunch = true;
+        issuesSections = [
+          {
+            title = "Open";
+            filters = "is:open -author:app/renovate";
+          }
+          {
+            title = "All repos";
+            filters = "is:open user:furedea -author:app/renovate";
+          }
+        ];
+        prsSections = [
+          {
+            title = "Open";
+            filters = "is:open";
+          }
+          {
+            title = "All repos";
+            filters = "is:open user:furedea";
+          }
+        ];
       };
     };
 
