@@ -392,6 +392,7 @@ in
       "font-jetbrains-mono"
       "ghostty"
       "google-chrome"
+      "herdr-app"
       "homerow"
       "karabiner-elements"
       "mactex"
