@@ -2,10 +2,10 @@
 
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 PERSONAL = "Members/k-shigyo"
 # Preserve the exact remote esa post name.

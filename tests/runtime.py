@@ -1,12 +1,11 @@
 """Shared entry-point loading and process-boundary types for repository tests."""
 
+import subprocess
+import sys
 from collections.abc import Callable
 from importlib import util
 from pathlib import Path
-import subprocess
-import sys
 from types import ModuleType
-
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CliRunner = Callable[..., subprocess.CompletedProcess[str]]

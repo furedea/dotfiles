@@ -2,15 +2,14 @@
 """Run the personal GitHub workflow without shell-based data processing."""
 
 import contextlib
-from dataclasses import dataclass
 import getpass
 import json
-from pathlib import Path
 import re
 import shutil
 import subprocess
 import sys
-
+from dataclasses import dataclass
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 VISIBILITIES = {"--public", "--private", "--internal"}

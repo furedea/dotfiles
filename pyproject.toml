@@ -62,8 +62,6 @@ select = [
   "YTT",
   "ANN",
   "ASYNC",
-  "D",
-  "N",
   "B",
   "A",
   "C4",
@@ -90,6 +88,9 @@ select = [
   "PERF",
   "E",
   "W",
+  "D",
+  "DOC",
+  "N",
   "F",
   "PGH",
   "PLC",
@@ -104,33 +105,28 @@ select = [
   "PLR1702",
 ]
 ignore = [
-  "ARG001",
-  "B007",
-  "C401",
+  "G004",
+  "PLC1901",
+  "PLR2004",
+  # PLR0917: PLR0913 (max-args = 3) already caps the total, which bounds the positional count
+  "PLR0917",
+  "ANN401",
+  "ARG002",
+  "INP001",
+  "B008",
+  "A002",
+  "A003",
   "D104",
   "D105",
   "D107",
-  "DTZ005",
-  "E402",
-  "E501",
-  "F541",
-  "FURB110",
-  "FURB122",
-  "FURB162",
-  "FURB171",
-  "I001",
-  "INP001",
-  "PERF401",
-  "PLR2004",
-  "PTH",
-  "PLW2901",
-  "RUF005",
-  "UP015",
-  "UP017",
+  "W191",
+  "E111",
+  "E114",
+  "E117",
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["D", "PLR0913", "PLR0917"]
+"tests/**" = ["D", "PLR0913"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

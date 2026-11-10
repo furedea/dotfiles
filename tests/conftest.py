@@ -2,14 +2,14 @@
 
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
 import textwrap
+from pathlib import Path
 
 import pytest
 
-from tests.runtime import CliRunner, REPO_ROOT, StubWriter
+from tests.runtime import REPO_ROOT, CliRunner, StubWriter
 
 
 @pytest.fixture

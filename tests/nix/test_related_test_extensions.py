@@ -4,9 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
-
 from tests.runtime import REPO_ROOT
-
 
 RULES = REPO_ROOT / ".agents/hooks/rules/related_test_extensions.json"
 

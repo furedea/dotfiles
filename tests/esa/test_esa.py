@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 from pytest_mock import MockerFixture
-
 from tests.runtime import load_script_module
 
 esa = load_script_module("zsh/esa.py", "esa_editor")

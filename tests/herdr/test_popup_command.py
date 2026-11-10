@@ -1,14 +1,12 @@
 """Herdr command configuration works independently of the server's PATH."""
 
-from pathlib import Path
 import shlex
 import sys
 import tomllib
+from pathlib import Path
 
 import pytest
-
 from tests.runtime import REPO_ROOT
-
 
 CONFIG = tomllib.loads((REPO_ROOT / "herdr/config.toml").read_text())
 

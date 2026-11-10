@@ -3,9 +3,7 @@
 import json
 
 import pytest
-
 from tests.runtime import REPO_ROOT
-
 
 ADMIN_ROLE_ID = 5
 
