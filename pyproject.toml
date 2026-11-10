@@ -108,6 +108,8 @@ ignore = [
   "G004",
   "PLC1901",
   "PLR2004",
+  # PLR0917: PLR0913 (max-args = 3) already caps the total, which bounds the positional count
+  "PLR0917",
   "ANN401",
   "ARG002",
   "INP001",
@@ -124,7 +126,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["D", "PLR0913", "PLR0917"]
+"tests/**" = ["D", "PLR0913"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
