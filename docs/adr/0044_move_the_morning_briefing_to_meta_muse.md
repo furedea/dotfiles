@@ -16,9 +16,9 @@ on a cloud service and on mail forwarding configured outside this repository.
 Details that keep the decision testable:
 
 - The `morning-briefing` launchd agent, its launcher script, the `secretary/` project, and the
-  `gws` and `apple-mail-cli` packages and flake inputs are removed from this repository. The
-  `furedea/apple-mail-cli` repository itself is untouched.
+    `gws` and `apple-mail-cli` packages and flake inputs are removed from this repository. The
+    `furedea/apple-mail-cli` repository itself is untouched.
 - Gmail forwarding, Muse settings, `~/.local/state/secretary`, and `~/.config/gws` live outside
-  this repository and are removed or configured by hand.
+    this repository and are removed or configured by hand.
 - ADR-0019 is deprecated because the Apple Mail boundary no longer exists. Older secretary ADRs
-  stay as historical records.
+    stay as historical records.

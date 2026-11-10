@@ -22,7 +22,7 @@ pre-commit:
       glob: "*.{md,txt}"
       run: autocorrect --lint {all_files}
     dprint:
-      glob: "*.{json,toml}"
+      glob: "*.{json,toml,md}"
       run: dprint check --config ~/dprint.json {all_files}
     # ----- lint -----
     shellcheck:

@@ -253,10 +253,6 @@ in
       commitlint
       unstable.lefthook
       ls-lint
-      # prettierd: used for markdown because dprint-plugin-markdown hardcodes 2-space list indent.
-      # tabWidth:4 in ~/.prettierrc gives 4-space list nesting to match Obsidian.
-      # TODO: replace with dprint once https://github.com/dprint/dprint-plugin-markdown/pull/176 merges.
-      prettierd
 
       # Content and media
       esaCliPackage
@@ -776,9 +772,6 @@ in
 
     # dprint (global formatter config — dprint looks for ~/dprint.json by default)
     "dprint.json".source = link "dprint/dprint.json";
-
-    # prettierd (global formatter config)
-    ".prettierrc".source = link "prettier/.prettierrc";
 
     # EditorConfig (global fallback for projects without their own)
     ".editorconfig".source = link ".editorconfig";

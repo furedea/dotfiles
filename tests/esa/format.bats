@@ -3,19 +3,32 @@
 
 setup() {
   load test-helper/setup
-  ARTICLE_FILE="$BATS_TEST_TMPDIR/article.md"
-  printf 'こんにちは．\nこんばんは．\n' >"$ARTICLE_FILE"
+}
+
+format_markdown() {
+  dprint fmt --config "$REPO_ROOT/dprint/dprint.json" --stdin article.md
 }
 
 @test "Markdown formatting preserves line breaks in esa prose" {
-  local _input
-  _input="$(cat "$ARTICLE_FILE")"
-
-  run env \
-    TMPDIR="$BATS_TEST_TMPDIR" \
-    PRETTIERD_DEFAULT_CONFIG="$REPO_ROOT/prettier/.prettierrc" \
-    prettierd "$ARTICLE_FILE" <<<"$_input"
+  run format_markdown < <(printf 'こんにちは．\nこんばんは．\n')
 
   [ "$status" -eq 0 ]
   [ "$output" = $'こんにちは．\nこんばんは．' ]
+}
+
+@test "Markdown formatting indents nested lists by four spaces" {
+  run format_markdown < <(printf -- '- parent\n  - child\n')
+
+  [ "$status" -eq 0 ]
+  [ "$output" = $'- parent\n    - child' ]
+}
+
+@test "Markdown formatting with an explicit config accepts an absolute path outside the config directory" {
+  local _outside="$BATS_TEST_TMPDIR/outside/post.md"
+  mkdir -p "${_outside%/*}"
+
+  run dprint fmt --config "$REPO_ROOT/dprint/dprint.json" --stdin "$_outside" < <(printf -- '- parent\n  - child\n')
+
+  [ "$status" -eq 0 ]
+  [ "$output" = $'- parent\n    - child' ]
 }

@@ -152,7 +152,7 @@ operator instructions when it is missing or unprotected.
 - Use `${pkgs.xxx}/bin/xxx` to reference the exact Nix store binary.
 - Suppress failures with `|| true` only when the operation is explicitly non-fatal.
 - Follow the existing DAG dependencies. Hooks that consume freshly linked files use
-  `entryAfter [ "linkGeneration" ]`.
+    `entryAfter [ "linkGeneration" ]`.
 
 ## macOS System Defaults (nix-darwin)
 
