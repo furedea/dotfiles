@@ -35,6 +35,7 @@ let
   dshPackage = llm-agents.packages.${system}.dsh;
   herdrCorePackage = llm-agents.packages.${system}.herdr-core;
   t3codePackage = llm-agents.packages.${system}.t3code;
+  orcaPackage = llm-agents.packages.${system}.orca;
   agentDesktopPackage = pkgs.callPackage ../packages/agent_desktop.nix { };
   agentHarnessPackage = agent-harness.packages.${system}.default;
   nvimLogFile = "${config.xdg.stateHome}/agent-harness/nvim.log";
@@ -269,6 +270,7 @@ in
       claudePackage
       dshPackage
       herdrCompatibleCodex
+      orcaPackage
       t3codePackage
       unstable.pi-coding-agent
 
