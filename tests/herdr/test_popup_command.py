@@ -35,12 +35,24 @@ def test_popup_tool_paths_do_not_depend_on_server_path() -> None:
     assert Path(lazygit[0]).is_absolute() and Path(lazygit[0]).name == "lazygit"
 
 
+def test_gh_dash_popup_gives_gh_a_profile_path_and_runs_in_the_active_pane() -> None:
+    command = command_for("open gh-dash issues")
+    assert command["key"] == "prefix+ctrl+o"
+    assert command["type"] == "popup"
+    assert command["command"] == (
+        'cd "${HERDR_ACTIVE_PANE_CWD:-$PWD}" && '
+        'PATH="/etc/profiles/per-user/kaito/bin:$PATH" '
+        "exec /etc/profiles/per-user/kaito/bin/gh-dash"
+    )
+
+
 @pytest.mark.integration
 @pytest.mark.skipif(sys.platform != "darwin", reason="requires the installed macOS Home Manager profile")
 def test_popup_tool_paths_exist_in_the_installed_profile() -> None:
     yazi = shlex.split(command_for("run yazi")["command"])
     lazygit = shlex.split(command_for("run lazygit")["command"])
-    for name in (yazi[0], yazi[-1], lazygit[0]):
+    gh_dash = command_for("open gh-dash issues")["command"].rsplit(" ", 1)[-1]
+    for name in (yazi[0], yazi[-1], lazygit[0], gh_dash):
         assert Path(name).is_file(), name
 
 
