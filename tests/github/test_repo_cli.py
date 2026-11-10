@@ -2,13 +2,11 @@
 
 import json
 import os
-from pathlib import Path
 import subprocess
+from pathlib import Path
 
 import pytest
-
-from tests.runtime import CliRunner, REPO_ROOT, StubWriter
-
+from tests.runtime import REPO_ROOT, CliRunner, StubWriter
 
 SCRIPT = "github/repo.py"
 
@@ -43,7 +41,8 @@ def remote(tmp_path: Path, executable: StubWriter, monkeypatch: pytest.MonkeyPat
             destination = Path(args[3])
             (destination / ".git").mkdir(parents=True)
             (destination / "src").mkdir()
-            (destination / "Cargo.toml").write_text('[package]\\nname = "template-rust"\\nversion = "0.1.0"\\nedition = "2024"\\n')
+            manifest = '[package]\\nname = "template-rust"\\nversion = "0.1.0"\\nedition = "2024"\\n'
+            (destination / "Cargo.toml").write_text(manifest)
             (destination / "go.mod").write_text("module github.com/furedea/template-go\\n\\ngo 1.24\\n")
             for name in ("flake.nix", ".envrc", "src/main.rs"):
                 (destination / name).touch()
@@ -60,10 +59,18 @@ def remote(tmp_path: Path, executable: StubWriter, monkeypatch: pytest.MonkeyPat
             print(os.environ.get("GH_VISIBILITY", "public"))
         elif args[0] == "api" and args[1].endswith("/code-scanning/default-setup") and "-X" not in args:
             print(os.environ.get("GH_CODEQL_STATE", "not-configured"))
-        elif args[0] == "api" and args[1].endswith("/code-scanning/default-setup") and os.environ.get("GH_CODEQL_FAILURE") == "1":
+        elif (
+            args[0] == "api"
+            and args[1].endswith("/code-scanning/default-setup")
+            and os.environ.get("GH_CODEQL_FAILURE") == "1"
+        ):
             print("HTTP 422", file=sys.stderr)
             sys.exit(1)
-        elif args[0] == "api" and args[1].endswith("/immutable-releases") and os.environ.get("GH_IMMUTABLE_FAILURE") == "1":
+        elif (
+            args[0] == "api"
+            and args[1].endswith("/immutable-releases")
+            and os.environ.get("GH_IMMUTABLE_FAILURE") == "1"
+        ):
             print("HTTP 403", file=sys.stderr)
             sys.exit(1)
         elif args[0] == "api" and args[1].endswith("/rulesets") and "--jq" in args:
@@ -263,7 +270,8 @@ def test_configure_enables_immutable_releases_for_every_visibility(
     assert "Enabled immutable releases on owner/myrepo" in result.stdout
 
 
-def test_configure_continues_when_immutable_releases_fails(run_cli: CliRunner, remote: Path) -> None:
+@pytest.mark.usefixtures("remote")
+def test_configure_continues_when_immutable_releases_fails(run_cli: CliRunner) -> None:
     result = run_cli(SCRIPT, "configure", "owner/myrepo", env={"GH_IMMUTABLE_FAILURE": "1"})
     assert result.returncode == 0, result.stderr
     assert "warning: could not enable immutable releases on owner/myrepo" in result.stderr

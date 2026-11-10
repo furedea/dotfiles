@@ -1,9 +1,7 @@
 """Plugin reconciliation selects only explicitly managed changes."""
 
 import pytest
-
 from tests.runtime import load_script_module
-
 
 plugins = load_script_module("herdr/plugin_sync.py", "plugin_sync")
 

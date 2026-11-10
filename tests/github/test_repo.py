@@ -4,9 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
-
 from tests.runtime import load_script_module
-
 
 repo = load_script_module("github/repo.py", "repo")
 

@@ -4,9 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
-
 from tests.runtime import CliRunner, StubWriter
-
 
 SCRIPT = "herdr/merge_pull_request.py"
 HEAD = "0123456789abcdef0123456789abcdef01234567"
@@ -45,7 +43,8 @@ def merge_remote(tmp_path: Path, executable: StubWriter, monkeypatch: pytest.Mon
                 "pending": {"status": "IN_PROGRESS", "conclusion": ""},
             }[os.environ.get("PR_CHECKS", "success")]
             approved = os.environ.get("PR_APPROVED_OID")
-            reviews = [{"author": {"login": "furedea"}, "state": "APPROVED", "commit": {"oid": approved}}] if approved else []
+            review = {"author": {"login": "furedea"}, "state": "APPROVED", "commit": {"oid": approved}}
+            reviews = [review] if approved else []
             print(json.dumps({
                 "number": 42,
                 "title": "Merge helper",
@@ -196,7 +195,10 @@ def test_dirty_tree_prevents_merge(run_cli: CliRunner, merge_remote: Path) -> No
 
 
 def test_linked_base_preserves_local_branch(run_cli: CliRunner, merge_remote: Path) -> None:
-    worktrees = f"worktree {merge_remote}\nbranch refs/heads/feature/test\n\nworktree {merge_remote}/elsewhere\nbranch refs/heads/main\n"
+    worktrees = (
+        f"worktree {merge_remote}\nbranch refs/heads/feature/test\n\n"
+        f"worktree {merge_remote}/elsewhere\nbranch refs/heads/main\n"
+    )
     result = run_cli(SCRIPT, str(merge_remote), payload="\n", env={"GIT_WORKTREE_OUTPUT": worktrees})
     assert result.returncode == 0
     assert ["pr", "merge", "--squash", "--match-head-commit", HEAD] in gh_calls(merge_remote)

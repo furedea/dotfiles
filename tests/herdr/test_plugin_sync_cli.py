@@ -4,9 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
-
 from tests.runtime import CliRunner, StubWriter
-
 
 SCRIPT = "herdr/plugin_sync.py"
 PLUGIN = ("persiyanov.reviewr", "persiyanov/herdr-reviewr", "160ad607a195ee35ac9450e887974b3b5ddc4479")

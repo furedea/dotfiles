@@ -1,13 +1,11 @@
 """Review-token contracts; every external command is an isolated process fake."""
 
 import json
-from pathlib import Path
 import subprocess
+from pathlib import Path
 
 import pytest
-
-from tests.runtime import CliRunner, REPO_ROOT, StubWriter
-
+from tests.runtime import REPO_ROOT, CliRunner, StubWriter
 
 SCRIPT = "github/repo.py"
 TOKEN = "sk-ant-oat01-FAKE_token.value-123"
@@ -84,7 +82,8 @@ elif args[:2] in (["item", "create"], ["item", "edit"]):
         sys.exit(1)
     template = json.loads(stdin)
     fields = template["fields"]
-    item_path(args[2] if args[1] == "edit" else template["title"]).write_text(next(field["value"] for field in fields if field["id"] == "credential"))
+    credential = next(field["value"] for field in fields if field["id"] == "credential")
+    item_path(args[2] if args[1] == "edit" else template["title"]).write_text(credential)
 else:
     sys.exit("unexpected op arguments: " + repr(args))
 """
