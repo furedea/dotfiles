@@ -249,7 +249,6 @@ reference files.
 ├── starship/                  # Shell prompt
 ├── github/                    # Repository creation and policy scripts
 ├── tests/                     # Python contracts and Bats integration by domain
-├── dprint/                    # Global formatter configuration
 └── tinycast/                 # Manual settings export
 ```
 
