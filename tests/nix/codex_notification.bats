@@ -2,6 +2,9 @@
 # Codex delegates terminal notifications only when launched inside Herdr.
 # Bats isolates each test's environment.
 # shellcheck disable=SC2030,SC2031
+# macOS only: builds the codex package for aarch64-darwin, which needs a macOS host or builder.
+# bats file_tags=macos
+
 
 setup_file() {
   local _repo_root _derivation _package

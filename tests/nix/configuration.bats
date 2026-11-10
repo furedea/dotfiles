@@ -1,5 +1,8 @@
 #!/usr/bin/env bats
 # The hook's Bats entry point delegates declarative contracts to native flake checks.
+# macOS only: builds the aarch64-darwin flake checks, which need a macOS host or builder.
+# bats file_tags=macos
+
 
 bats_require_minimum_version 1.5.0
 

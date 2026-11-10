@@ -351,6 +351,13 @@ uv run --frozen pytest
 nix flake check
 ```
 
+Bats files that need a macOS host or builder, such as ones that build the
+aarch64-darwin Home Manager configuration, carry `# bats file_tags=macos` and a
+comment stating why. Put such tests in their own file (for example
+`<name>_macos.bats`) so the tag applies to the whole file. CI runs
+`bats --recursive --filter-tags '!macos' tests`, so an untagged file must pass on
+Linux, while `bats --recursive tests` on a Mac runs everything.
+
 CI checks shell integration with Bats and checks Python automation with Ruff, ty,
 and pytest. Tests marked `integration` run in the Bats job; other pytest tests run
 separately without duplicating those cases.
