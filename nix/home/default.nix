@@ -247,6 +247,7 @@ in
 
       # Code quality
       actionlint
+      ast-grep
       zizmor
       commitlint
       unstable.lefthook
