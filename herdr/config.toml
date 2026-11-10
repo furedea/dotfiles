@@ -56,7 +56,7 @@ height = "85%"
 [[keys.command]]
 key = "prefix+ctrl+o"
 type = "popup"
-command = 'cd "${HERDR_ACTIVE_PANE_CWD:-$PWD}" && exec /etc/profiles/per-user/kaito/bin/gh-dash'
+command = 'cd "${HERDR_ACTIVE_PANE_CWD:-$PWD}" && PATH="/etc/profiles/per-user/kaito/bin:$PATH" exec /etc/profiles/per-user/kaito/bin/gh-dash'
 description = "open gh-dash issues"
 width = "85%"
 height = "85%"
