@@ -225,7 +225,7 @@ The following repository sources are linked directly into the home directory:
 | `ghostty/config`                             | `~/.config/ghostty/config`             |
 | `karabiner/karabiner.json`                   | `~/.config/karabiner/karabiner.json`   |
 | `herdr/config.toml`, `herdr/reviewr.toml`    | Herdr config and reviewr plugin config |
-| `dprint/dprint.json`                         | `~/dprint.json`                        |
+| `dprint.json`                                | `~/dprint.json`                        |
 | `.editorconfig`                              | `~/.editorconfig`                      |
 
 Git, GitHub CLI, Lazygit, Atuin, Yazi, Zsh plugin paths, and rendered agent files

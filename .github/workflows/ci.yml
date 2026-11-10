@@ -205,7 +205,7 @@ jobs:
         uses: furedea/reusable-workflows/.github/actions/nix-setup@2ae953294b9a805d0705657adc1d9d4f1bc1f646 # v1.3.0
 
       - name: Run dprint
-        run: dprint check --config dprint/dprint.json --incremental=false
+        run: dprint check --incremental=false
 
       - name: Run autocorrect
         run: autocorrect . --lint --no-diff-bg-color
