@@ -33,6 +33,7 @@ let
   claudePackage = llm-agents.packages.${system}.claude-code;
   agentBrowserPackage = llm-agents.packages.${system}.agent-browser;
   dshPackage = llm-agents.packages.${system}.dsh;
+  herdrCorePackage = llm-agents.packages.${system}.herdr-core;
   t3codePackage = llm-agents.packages.${system}.t3code;
   agentDesktopPackage = pkgs.callPackage ../packages/agent_desktop.nix { };
   agentHarnessPackage = agent-harness.packages.${system}.default;
@@ -236,6 +237,7 @@ in
       ghq
       gitWtPackage
       herdrPackage
+      herdrCorePackage
       herdrZshCompletion
       just
       mosh
