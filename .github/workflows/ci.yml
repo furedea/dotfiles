@@ -28,7 +28,7 @@ jobs:
       contents: read
     defaults:
       run:
-        # bats comes from the flake dev shell, pinned by flake.lock.
+        # bats and zsh come from the flake dev shell, pinned by flake.lock.
         shell: nix develop --command bash -eo pipefail {0}
     steps:
       - name: Checkout repository
@@ -38,11 +38,6 @@ jobs:
 
       - name: Set up Nix
         uses: furedea/reusable-workflows/.github/actions/nix-setup@2ae953294b9a805d0705657adc1d9d4f1bc1f646 # v1.3.0
-
-      - name: Install zsh
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends zsh
 
       - name: Run Bats tests
         # Discovery keeps new files in CI; files tagged macos need a macOS host and are excluded.
