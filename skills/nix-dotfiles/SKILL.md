@@ -104,7 +104,7 @@ See `docs/adr/0027_let_nix_own_python_entry_points.md` for the deployment ration
 | CLI tool in nixpkgs stable        | `nix/home/default.nix` → `home.packages`                | `bat`, `ripgrep`                            |
 | CLI tool only in unstable         | `nix/home/default.nix` → `home.packages`                | `unstable.atuin`, `unstable.oxfmt`          |
 | Tool from a flake input           | `nix/home/default.nix` → `home.packages`                | `llm-agents.packages.${system}.claude-code` |
-| Global fallback language runtime  | `nix/home/default.nix` → `home.packages`                | `python314`, `rustc`, `nodejs_24`           |
+| Global fallback language runtime  | `nix/home/default.nix` → `home.packages`                | `python315`, `rustc`, `nodejs_24`           |
 | GUI app (macOS .app)              | `nix/darwin/default.nix` → `homebrew.casks`             | `"obsidian"`, `"arc"`                       |
 | Mac App Store app                 | `nix/darwin/default.nix` → `homebrew.masApps`           | `LINE = 539883307`                          |
 | Homebrew formula (not in nixpkgs) | `nix/darwin/default.nix` → `homebrew.brews`             | `"winebarrel/kasa/kasa"`                    |

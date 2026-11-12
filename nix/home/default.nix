@@ -53,7 +53,7 @@ let
     MOSHI_HOOK_BIN = moshiHookRuntime;
     SLEEP_BIN = lib.getExe' pkgs.coreutils "sleep";
   };
-  pythonPackage = pkgs.callPackage ../packages/python_315.nix { };
+  pythonPackage = unstable.python315;
   automationPython = lib.getExe pythonPackage;
   agentSource = agent-config.packages.${system}.default;
   repoCommand = pkgs.writeShellScriptBin "repo" ''
