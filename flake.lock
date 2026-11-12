@@ -13,11 +13,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1794467832,
-        "narHash": "sha256-w0qH+lV5jhloyB0YODbF98yr0+zaYReUSS8Xp8D0LAI=",
+        "lastModified": 1794471852,
+        "narHash": "sha256-/MV72wG3fxMJ4lyejJruMyozDJPJ+doH1xENSLS+nto=",
         "owner": "furedea",
         "repo": "agent-config",
-        "rev": "0638e4beba0c8eb6cbcad83a6405946f47cb65c4",
+        "rev": "9e2843ca897f2dbdf30e8dd6473defcdd726e9ec",
         "type": "github"
       },
       "original": {
@@ -37,11 +37,11 @@
         "nixpkgs-unstable": "nixpkgs-unstable"
       },
       "locked": {
-        "lastModified": 1794456925,
-        "narHash": "sha256-88KYOh4NvcCWyd524DtEMS/m6gSggMJeFJUUtfHIflY=",
+        "lastModified": 1794471829,
+        "narHash": "sha256-Way2mI6aMtELXQaUEbZmElhlbDR3/iuvcG+nbj/zPc4=",
         "owner": "furedea",
         "repo": "agent-harness",
-        "rev": "37de3ac34cf41d26de1bcdd101a1b6c043c85545",
+        "rev": "b365277ba3792114e252699a213e5522bfd6e6fd",
         "type": "github"
       },
       "original": {
