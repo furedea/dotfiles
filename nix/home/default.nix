@@ -268,6 +268,7 @@ in
       dshPackage
       herdrCompatibleCodex
       unstable.pi-coding-agent
+      unstable.sandbox-runtime
 
       # Nix tooling
       deadnix
