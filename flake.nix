@@ -202,7 +202,7 @@
                   shellUnstable.lefthook
                   # Same uv and Python as the Home Manager profile; Nix owns the interpreter, uv owns dependencies.
                   shellUnstable.uv
-                  (shellPkgs.callPackage ./nix/packages/python_315.nix { })
+                  shellUnstable.python315
                   # The zsh Bats specs run the startup files under the pinned zsh, not the runner image's.
                   shellPkgs.zsh
                 ]

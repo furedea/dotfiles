@@ -141,7 +141,7 @@ in
         && !(home.home.activation ? uvPythonInstall);
       managed-automation-python =
         toString home.xdg.configFile."dotfiles/bin/python3".source
-        == lib.getExe (pkgs.callPackage ./packages/python_315.nix { });
+        == lib.getExe inputs.nixpkgs-unstable.legacyPackages.${pkgs.stdenv.hostPlatform.system}.python315;
       agent-packages =
         builtins.filter (
           name:
