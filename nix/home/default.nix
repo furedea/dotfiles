@@ -34,8 +34,17 @@ let
   agentBrowserPackage = llm-agents.packages.${system}.agent-browser;
   dshPackage = llm-agents.packages.${system}.dsh;
   herdrCorePackage = llm-agents.packages.${system}.herdr-core;
-  t3codePackage = llm-agents.packages.${system}.t3code;
-  t3codeDesktopPackage = llm-agents.packages.${system}.t3code-desktop;
+  # Replace llm-agents' ad-hoc signed Codex on T3's PATH with the signed release (ADR-0041).
+  t3codeUpstream = llm-agents.packages.${system}.t3code;
+  t3codePackage = t3codeUpstream.override {
+    providerPackages = [
+      codexPackage
+    ]
+    ++ lib.filter (provider: (provider.pname or "") != "codex") t3codeUpstream.providerPackages;
+  };
+  t3codeDesktopPackage = llm-agents.packages.${system}.t3code-desktop.override {
+    t3code = t3codePackage;
+  };
   agentDesktopPackage = pkgs.callPackage ../packages/agent_desktop.nix { };
   agentHarnessPackage = agent-harness.packages.${system}.default;
   # jev-lint judges the model rules that agent-config's Stop hook runs (furedea/agent-config#74).
