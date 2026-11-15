@@ -131,7 +131,8 @@ def test_help_and_invalid_arguments_do_not_contact_remote(
     if arguments == ("--help",):
         assert all(name in result.stderr for name in ("create", "configure", "sync"))
     if arguments == ("create", "--help"):
-        assert all(name in result.stderr for name in ("--template", "--private", "--clone"))
+        assert all(name in result.stderr for name in ("--lang", "--template", "--private", "--clone"))
+        assert "--private --lang rust" in result.stderr
 
 
 @pytest.mark.parametrize("flag", ["--clone", "-c", "--source=.", "-s=.", "--push", "--remote=origin", "-r=origin"])
@@ -172,6 +173,32 @@ def test_create_output_and_template_readiness(run_cli: CliRunner, remote: Path, 
         assert logged.count(["api", "repos/furedea/agent-harness/git/ref/heads/main", "--jq", ".ref // empty"]) == (
             2 if retry else 1
         )
+
+
+@pytest.mark.parametrize("lang", [("--lang", "rust"), ("--lang=rust",)])
+def test_lang_behaves_as_the_mapped_template(run_cli: CliRunner, remote: Path, lang: tuple[str, ...]) -> None:
+    result = run_cli(SCRIPT, "create", "agent-harness", "--private", *lang)
+    assert result.returncode == 0, result.stderr
+    logged = calls(remote)
+    assert ["repo", "create", "agent-harness", "--private", "--template", "furedea/template-rust"] in logged
+    assert ["api", "repos/furedea/agent-harness", "--jq", ".default_branch // empty"] in logged
+    assert 'name = "agent-harness"' in (remote / "ghq/github.com/furedea/agent-harness/Cargo.toml").read_text()
+
+
+@pytest.mark.parametrize(
+    "options,fragment",
+    [
+        (("--lang", "rust", "--template", "furedea/template-go"), "--lang and --template/-p are mutually exclusive"),
+        (("--lang", "cobol"), "supported: python, typescript, rust, go, tex, minimal"),
+    ],
+)
+def test_invalid_lang_does_not_contact_remote(
+    run_cli: CliRunner, remote: Path, options: tuple[str, ...], fragment: str
+) -> None:
+    result = run_cli(SCRIPT, "create", "agent-harness", "--private", *options)
+    assert result.returncode == 1
+    assert fragment in result.stderr
+    assert not calls(remote)
 
 
 def test_existing_destination_prevents_remote_create(run_cli: CliRunner, remote: Path) -> None:

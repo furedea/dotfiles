@@ -26,6 +26,15 @@ def load_sibling(name: str) -> ModuleType:
 
 
 review_token = load_sibling("review_token")
+LANGUAGE_TEMPLATES = {
+    "python": "furedea/template-python",
+    "typescript": "furedea/template-typescript",
+    "rust": "furedea/template-rust",
+    "go": "furedea/template-go",
+    "tex": "furedea/template-tex",
+    "minimal": "furedea/template-minimal",
+}
+TEMPLATE_OPTIONS = {"--template", "-p"}
 VISIBILITIES = {"--public", "--private", "--internal"}
 LOCAL_OPTIONS = {"--clone", "-c", "--source", "-s", "--push", "--remote", "-r"}
 
@@ -56,14 +65,21 @@ def usage(command: str = "") -> int:
     print("Options: --help, -h", file=sys.stderr)
     if command == "create":
         print("Visibility: set exactly one of --public, --private, or --internal.", file=sys.stderr)
-        print("Supports --template/-p, --description/-d, --homepage, --add-readme, --gitignore/-g,", file=sys.stderr)
+        print(
+            "Supports --lang, --template/-p, --description/-d, --homepage, --add-readme, --gitignore/-g,",
+            file=sys.stderr,
+        )
         print("--license/-l, --team/-t, --include-all-branches, --disable-issues and --disable-wiki.", file=sys.stderr)
+        print(
+            f"--lang <{'|'.join(LANGUAGE_TEMPLATES)}> selects the standard template; it excludes --template.",
+            file=sys.stderr,
+        )
         print("Local --clone, --source, --push and --remote options are not supported.", file=sys.stderr)
         print(
             "Other compatible gh repo create options are forwarded. The clone destination is printed to stdout.",
             file=sys.stderr,
         )
-        print("Example: repo create agent-harness --private --template furedea/template-rust", file=sys.stderr)
+        print("Example: repo create agent-harness --private --lang rust", file=sys.stderr)
     if command == "review-token":
         print("rotate issues a review token, stores it in 1Password (or the macOS Keychain) and", file=sys.stderr)
         print("registers it as an Actions secret on every owned, non-archived, non-fork repository:", file=sys.stderr)
@@ -86,7 +102,29 @@ def create_options(arguments: list[str]) -> bool:
             )
     if sum(argument in VISIBILITIES for argument in arguments) != 1:
         raise ValueError("repo create: exactly one of --public, --private, or --internal is required")
-    return any(argument.split("=", 1)[0] in {"--template", "-p"} for argument in arguments)
+    return any(argument.split("=", 1)[0] in TEMPLATE_OPTIONS for argument in arguments)
+
+
+def expand_language(options: list[str]) -> list[str]:
+    """Replace --lang with the --template it stands for, so downstream behaves as if --template was given."""
+    expanded: list[str] = []
+    language: str | None = None
+    remaining = iter(options)
+    for argument in remaining:
+        flag, separator, value = argument.partition("=")
+        if flag != "--lang":
+            expanded.append(argument)
+            continue
+        if language is not None:
+            raise ValueError("repo create: --lang may be given only once")
+        language = value if separator else next(remaining, "")
+    if language is None:
+        return options
+    if any(argument.split("=", 1)[0] in TEMPLATE_OPTIONS for argument in options):
+        raise ValueError("repo create: --lang and --template/-p are mutually exclusive")
+    if language not in LANGUAGE_TEMPLATES:
+        raise ValueError(f"repo create: unsupported language {language!r}; supported: {', '.join(LANGUAGE_TEMPLATES)}")
+    return [*expanded, "--template", LANGUAGE_TEMPLATES[language]]
 
 
 def wait_for_default_branch(repository: str) -> None:
@@ -222,7 +260,8 @@ def create(arguments: list[str]) -> int:
     """Create and configure a repository, printing only its clone destination."""
     if not arguments or any(argument in {"--help", "-h"} for argument in arguments):
         return usage("create")
-    name, *options = arguments
+    name, *requested = arguments
+    options = expand_language(requested)
     has_template = create_options(options)
     repository = repository_name(name)
     destination = Path(output("ghq", "root")) / "github.com" / repository
