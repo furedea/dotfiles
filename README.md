@@ -277,7 +277,9 @@ repository policy:
 repo create <name-or-owner/name> (--public|--private|--internal) [options]
 ```
 
-Common creation options include `--template`, `--description`, `--homepage`,
+`--lang <python|typescript|rust|go|tex|minimal>` selects the standard template
+for that language and behaves as the equivalent `--template`; the two options
+are mutually exclusive. Common creation options include `--template`, `--description`, `--homepage`,
 `--add-readme`, `--gitignore`, `--license`, `--disable-issues`,
 `--disable-wiki`, and `--team`. Options that conflict with the managed ghq
 clone destination (`--clone`, `--source`, `--push`, and `--remote`) are

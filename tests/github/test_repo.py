@@ -33,6 +33,45 @@ def test_template_selection_requires_waiting_for_remote_readiness(arguments: lis
     assert repo.create_options(["--private", *arguments])
 
 
+@pytest.mark.parametrize(
+    "language,template",
+    [
+        ("python", "furedea/template-python"),
+        ("typescript", "furedea/template-typescript"),
+        ("rust", "furedea/template-rust"),
+        ("go", "furedea/template-go"),
+        ("tex", "furedea/template-tex"),
+        ("minimal", "furedea/template-minimal"),
+    ],
+)
+@pytest.mark.parametrize("spelling", ["separate", "equals"])
+def test_language_expands_to_its_template(language: str, template: str, spelling: str) -> None:
+    given = ["--lang", language] if spelling == "separate" else [f"--lang={language}"]
+    expanded = repo.expand_language(["--private", *given, "--description", "d"])
+    assert expanded == ["--private", "--description", "d", "--template", template]
+    assert repo.create_options(expanded)
+
+
+def test_options_without_language_are_unchanged() -> None:
+    options = ["--private", "--template", "owner/template"]
+    assert repo.expand_language(options) == options
+
+
+@pytest.mark.parametrize(
+    "extra", [["--template", "owner/t"], ["--template=owner/t"], ["-p", "owner/t"], ["-p=owner/t"]]
+)
+def test_language_and_template_are_mutually_exclusive(extra: list[str]) -> None:
+    with pytest.raises(ValueError, match=r"--lang and --template/-p are mutually exclusive"):
+        repo.expand_language(["--private", "--lang", "rust", *extra])
+
+
+@pytest.mark.parametrize("given", [["--lang", "cobol"], ["--lang=cobol"], ["--lang"], ["--lang="]])
+def test_unknown_language_lists_supported_values(given: list[str]) -> None:
+    with pytest.raises(ValueError, match="unsupported language") as error:
+        repo.expand_language(["--private", *given])
+    assert all(language in str(error.value) for language in repo.LANGUAGE_TEMPLATES)
+
+
 def test_template_rename_preserves_unrelated_manifest_fields(tmp_path: Path) -> None:
     manifest = tmp_path / "Cargo.toml"
     manifest.write_text('[package]\nname = "template-rust"\nversion = "0.1.0"\n')
