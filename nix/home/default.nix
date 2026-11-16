@@ -49,6 +49,8 @@ let
   agentHarnessPackage = agent-harness.packages.${system}.default;
   # jev-lint judges the model rules that agent-config's Stop hook runs (furedea/agent-config#74).
   jevLintPackage = agent-config.packages.${system}.jev-lint;
+  # adr-check validates docs/adr/ after an ADR edit in agent-config's PostToolUse hook (furedea/agent-config#225).
+  adrCheckPackage = agent-config.packages.${system}.adr-check;
   nvimLogFile = "${config.xdg.stateHome}/agent-harness/nvim.log";
   moshiHookPackage = pkgs.callPackage ../packages/moshi_hook.nix { };
   moshiHookRuntime = lib.getExe moshiHookPackage;
@@ -263,6 +265,7 @@ in
       actionlint
       ast-grep
       jevLintPackage
+      adrCheckPackage
       zizmor
       commitlint
       unstable.lefthook
