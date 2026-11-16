@@ -25,3 +25,8 @@ def test_only_repository_admins_bypass_and_only_through_a_pull_request(ruleset: 
     assert ruleset["bypass_actors"] == [
         {"actor_id": ADMIN_ROLE_ID, "actor_type": "RepositoryRole", "bypass_mode": "pull_request"}
     ]
+
+
+def test_pull_request_rule_requires_every_review_thread_resolved(ruleset: dict) -> None:
+    rule = next(rule for rule in ruleset["rules"] if rule["type"] == "pull_request")
+    assert rule["parameters"]["required_review_thread_resolution"] is True
