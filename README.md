@@ -293,7 +293,8 @@ repo configure <name-or-owner/name>
 ```
 
 The ruleset requires a pull request, the `all-green` check, and one approving
-review that is dismissed by a later push. Only repository admins may bypass it,
+review that is dismissed by a later push, and every review thread to be
+resolved before merging. Only repository admins may bypass it,
 and only when merging a pull request. Approval of the last push is not
 required. See [ADR-0039](docs/adr/0039_require_human_approval_on_main.md) and
 [ADR-0040](docs/adr/0040_drop_last_push_approval_on_main.md).
