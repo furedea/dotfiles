@@ -1,7 +1,9 @@
-# ADR-0027: Let Nix own Python entry points
+---
+status: accepted
+date: 2026-09-14
+---
 
-- Status: Accepted
-- Date: 2026-09-14
+# ADR-0027: Let Nix own Python entry points
 
 In the context of the Python automation adopted in
 [ADR-0026](0026_use_python_for_automation_logic.md), facing repeated handwritten

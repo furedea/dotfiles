@@ -1,7 +1,10 @@
-# ADR-0020: Use gogcli for secretary calendar access
+---
+status: superseded
+date: 2026-08-30
+superseded-by: [ADR-0021]
+---
 
-- Status: Superseded
-- Date: 2026-08-30
+# ADR-0020: Use gogcli for secretary calendar access
 
 In the context of a Hermes secretary that reads the single Google calendar
 managed through Apple Calendar, facing the bundled Hermes Google Workspace

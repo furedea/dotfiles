@@ -1,7 +1,10 @@
-# ADR-0010: Manage Hermes secretary as editable profile files
+---
+status: superseded
+date: 2026-08-24
+superseded-by: [ADR-0011]
+---
 
-- Status: Superseded
-- Date: 2026-08-24
+# ADR-0010: Manage Hermes secretary as editable profile files
 
 In the context of a Hermes secretary that learns and maintains its own identity,
 skills, and routines while credentials and personal history must remain local,

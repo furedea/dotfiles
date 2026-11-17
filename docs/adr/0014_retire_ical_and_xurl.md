@@ -1,8 +1,11 @@
-# ADR-0014: Retire ical and xurl
+---
+status: superseded
+date: 2026-08-24
+supersedes: [ADR-0012, ADR-0013]
+superseded-by: [ADR-0019]
+---
 
-- Status: Superseded
-- Date: 2026-08-24
-- Supersedes: ADR-0012, ADR-0013
+# ADR-0014: Retire ical and xurl
 
 In the context of maintaining a focused personal secretary, facing custom
 `ical` and `xurl` packages that are no longer wanted, we decided for Google

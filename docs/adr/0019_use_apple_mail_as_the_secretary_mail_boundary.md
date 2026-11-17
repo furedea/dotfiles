@@ -1,8 +1,10 @@
-# ADR-0019: Use Apple Mail as the secretary mail boundary
+---
+status: deprecated
+date: 2026-08-30
+supersedes: [ADR-0014]
+---
 
-- Status: Deprecated
-- Date: 2026-08-30
-- Supersedes: ADR-0014
+# ADR-0019: Use Apple Mail as the secretary mail boundary
 
 In the context of a macOS Hermes secretary that must cover multiple mail
 providers already configured in Apple Mail, facing separate provider OAuth

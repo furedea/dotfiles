@@ -1,7 +1,9 @@
-# ADR-0018: Centralize Hister on MacBook Pro
+---
+status: accepted
+date: 2026-08-29
+---
 
-- Status: Accepted
-- Date: 2026-08-29
+# ADR-0018: Centralize Hister on MacBook Pro
 
 In the context of sharing searchable browser history between MacBook Air and MacBook Pro over an
 existing Tailscale tailnet, facing duplicated local indexes, intermittent mobile connectivity, and

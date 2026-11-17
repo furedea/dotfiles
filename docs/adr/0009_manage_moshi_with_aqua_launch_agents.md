@@ -1,9 +1,11 @@
-# ADR-0009: Manage Moshi with Aqua LaunchAgents
+---
+status: superseded
+date: 2026-08-23
+supersedes: [ADR-0004]
+superseded-by: [ADR-0025]
+---
 
-- Status: Superseded
-- Date: 2026-08-23
-- Supersedes: ADR-0004
-- Superseded by: ADR-0025
+# ADR-0009: Manage Moshi with Aqua LaunchAgents
 
 In the context of a MacBook Pro providing an always-available Moshi host, facing Homebrew service
 restarts that can occur outside the logged-in Aqua session while the login Keychain is unavailable,

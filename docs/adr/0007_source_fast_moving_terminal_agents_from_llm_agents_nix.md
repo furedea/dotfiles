@@ -1,8 +1,10 @@
-# ADR-0007: Source fast-moving terminal agents from llm-agents.nix
+---
+status: accepted
+date: 2026-08-23
+supersedes: [ADR-0006]
+---
 
-- Status: Accepted
-- Date: 2026-08-23
-- Supersedes: ADR-0006
+# ADR-0007: Source fast-moving terminal agents from llm-agents.nix
 
 In the context of keeping fast-moving terminal agents reproducible, facing a dedicated Herdr pin
 that lagged both upstream and `llm-agents.nix`, we decided for sourcing exactly Claude Code, Codex,

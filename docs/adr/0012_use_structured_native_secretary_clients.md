@@ -1,7 +1,10 @@
-# ADR-0012: Use structured native secretary clients
+---
+status: superseded
+date: 2026-08-24
+superseded-by: [ADR-0014]
+---
 
-- Status: Superseded
-- Date: 2026-08-24
+# ADR-0012: Use structured native secretary clients
 
 In the context of a macOS Hermes secretary that must read the calendar already
 visible to Apple Calendar, manage every configured mail account, and summarize

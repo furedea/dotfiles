@@ -1,7 +1,9 @@
-# ADR-0024: Manage language runtimes with Nix
+---
+status: accepted
+date: 2026-09-12
+---
 
-- Status: Accepted
-- Date: 2026-09-12
+# ADR-0024: Manage language runtimes with Nix
 
 In the context of needing Python, Node.js, and Rust both for project work and occasional host-shell
 commands, facing mutable runtime installations from uv and rustup that cannot be reproduced from a
