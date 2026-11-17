@@ -1,10 +1,12 @@
 ---
 status: superseded
 date: 2026-09-16
-superseded-by: [agent-config/ADR-0012]  # https://github.com/furedea/agent-config/blob/main/docs/adr/0012_keep_the_personal_agent_source_in_its_own_repository.md
+superseded-by: [agent-config/ADR-0012]
 ---
 
 # ADR-0030: Bootstrap the agent harness on servers without Nix
+
+- Superseded by: [furedea/agent-config ADR-0012](https://github.com/furedea/agent-config/blob/main/docs/adr/0012_keep_the_personal_agent_source_in_its_own_repository.md)
 
 In the context of using the personal agent harness from
 [ADR-0016](0016_own_personal_agent_source.md) on shared Linux servers that offer

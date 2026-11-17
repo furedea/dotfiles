@@ -1,10 +1,12 @@
 ---
 status: superseded
 date: 2026-08-28
-superseded-by: [agent-config/ADR-0012]  # https://github.com/furedea/agent-config/blob/main/docs/adr/0012_keep_the_personal_agent_source_in_its_own_repository.md
+superseded-by: [agent-config/ADR-0012]
 ---
 
 # ADR-0016: Own personal agent source in dotfiles
+
+- Superseded by: [furedea/agent-config ADR-0012](https://github.com/furedea/agent-config/blob/main/docs/adr/0012_keep_the_personal_agent_source_in_its_own_repository.md)
 
 In the context of managing one user's machines with Nix while also deploying the same Claude Code
 and Codex behavior through agent-harness, facing a separate profile repository that would add a
