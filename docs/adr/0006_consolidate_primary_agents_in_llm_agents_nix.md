@@ -1,7 +1,10 @@
-# ADR-0006: Consolidate primary agents in llm-agents.nix
+---
+status: superseded
+date: 2026-08-23
+superseded-by: [ADR-0007]
+---
 
-- Status: Superseded
-- Date: 2026-08-23
+# ADR-0006: Consolidate primary agents in llm-agents.nix
 
 In the context of keeping fast-moving Claude Code and Codex releases reproducible, facing duplicate
 special-purpose flake inputs and a broad catalog of unrelated tools, we decided for sourcing only

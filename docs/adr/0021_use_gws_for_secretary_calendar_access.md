@@ -1,9 +1,11 @@
-# ADR-0021: Use gws for secretary calendar access
+---
+status: superseded
+date: 2026-08-30
+supersedes: [ADR-0020]
+superseded-by: [ADR-0043]
+---
 
-- Status: Superseded
-- Date: 2026-08-30
-- Supersedes: ADR-0020
-- Superseded by: ADR-0043
+# ADR-0021: Use gws for secretary calendar access
 
 In the context of a Hermes secretary that reads the single primary Google
 calendar managed through Apple Calendar, facing an unapproved third-party

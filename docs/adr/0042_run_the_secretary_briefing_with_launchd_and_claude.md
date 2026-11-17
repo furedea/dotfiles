@@ -1,9 +1,11 @@
-# ADR-0042: Run the secretary briefing with launchd and claude -p
+---
+status: superseded
+date: 2026-11-04
+supersedes: [ADR-0022]
+superseded-by: [ADR-0044]
+---
 
-- Status: Superseded
-- Date: 2026-11-04
-- Supersedes: ADR-0022
-- Superseded by: ADR-0044
+# ADR-0042: Run the secretary briefing with launchd and claude -p
 
 In the context of the morning briefing losing its Hermes gateway (removed in Issue #378), facing a
 resident process, Slack delivery, and a Skill store tied to a Hermes profile, we decided for a

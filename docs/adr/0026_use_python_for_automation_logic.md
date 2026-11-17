@@ -1,7 +1,9 @@
-# ADR-0026: Use Python for automation logic
+---
+status: accepted
+date: 2026-09-13
+---
 
-- Status: Accepted
-- Date: 2026-09-13
+# ADR-0026: Use Python for automation logic
 
 In the context of personal hooks and command helpers handling structured input, policy decisions,
 process execution, and persistent state, facing shell implementations that couple these decisions

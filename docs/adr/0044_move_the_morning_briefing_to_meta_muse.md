@@ -1,8 +1,10 @@
-# ADR-0044: Move the morning briefing to Meta Muse
+---
+status: accepted
+date: 2026-11-04
+supersedes: [ADR-0042, ADR-0043]
+---
 
-- Status: Accepted
-- Date: 2026-11-04
-- Supersedes: ADR-0042, ADR-0043
+# ADR-0044: Move the morning briefing to Meta Muse
 
 In the context of the local morning briefing (launchd, `claude -p`, Apple Mail, `gws`) failing to
 deliver a readable report, facing Apple Mail wrapping bodies set through AppleScript as quoted text

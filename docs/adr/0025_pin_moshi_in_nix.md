@@ -1,8 +1,10 @@
-# ADR-0025: Pin Moshi in Nix
+---
+status: accepted
+date: 2026-09-12
+supersedes: [ADR-0003, ADR-0005, ADR-0009]
+---
 
-- Status: Accepted
-- Date: 2026-09-12
-- Supersedes: ADR-0003, ADR-0005, ADR-0009
+# ADR-0025: Pin Moshi in Nix
 
 In the context of generating agent hooks and running the Keychain-backed Moshi host on macOS,
 facing different generator and runtime versions plus automatic Homebrew upgrades, we decided for a

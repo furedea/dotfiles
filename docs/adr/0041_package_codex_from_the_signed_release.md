@@ -1,7 +1,9 @@
-# ADR-0041: Package Codex from the signed release
+---
+status: accepted
+date: 2026-11-02
+---
 
-- Status: Accepted
-- Date: 2026-11-02
+# ADR-0041: Package Codex from the signed release
 
 In the context of Codex keeping its token in the macOS Keychain (`cli_auth_credentials_store =
 "keyring"`), facing the `llm-agents` and nixpkgs builds being ad-hoc signed so that the Keychain

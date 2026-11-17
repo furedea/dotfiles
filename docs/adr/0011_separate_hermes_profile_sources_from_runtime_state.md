@@ -1,8 +1,10 @@
-# ADR-0011: Separate Hermes profile sources from runtime state
+---
+status: deprecated
+date: 2026-08-24
+supersedes: [ADR-0010]
+---
 
-- Status: Deprecated
-- Date: 2026-08-24
-- Supersedes: ADR-0010
+# ADR-0011: Separate Hermes profile sources from runtime state
 
 In the context of a Hermes secretary whose identity, skills, and routine intent
 should evolve through reviewed dotfiles while its scheduler continuously writes

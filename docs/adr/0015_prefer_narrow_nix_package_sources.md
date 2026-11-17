@@ -1,7 +1,9 @@
-# ADR-0015: Prefer narrow Nix package sources
+---
+status: accepted
+date: 2026-08-24
+---
 
-- Status: Accepted
-- Date: 2026-08-24
+# ADR-0015: Prefer narrow Nix package sources
 
 In the context of sourcing user-facing CLI packages from stable Nixpkgs,
 unstable Nixpkgs, upstream flakes, and local derivations, facing stale pins and

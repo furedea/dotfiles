@@ -1,7 +1,10 @@
-# ADR-0013: Pin secretary clients in Nix
+---
+status: superseded
+date: 2026-08-24
+superseded-by: [ADR-0014]
+---
 
-- Status: Superseded
-- Date: 2026-08-24
+# ADR-0013: Pin secretary clients in Nix
 
 In the context of unattended Hermes routines that depend on `ical` and `xurl`,
 facing their absence from the locked nixpkgs revision, automatic Homebrew

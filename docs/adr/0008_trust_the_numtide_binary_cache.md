@@ -1,7 +1,9 @@
-# ADR-0008: Trust the Numtide binary cache
+---
+status: accepted
+date: 2026-08-23
+---
 
-- Status: Accepted
-- Date: 2026-08-23
+# ADR-0008: Trust the Numtide binary cache
 
 In the context of installing `llm-agents.nix` packages on two Macs, facing lengthy local Codex
 builds and the security impact of an additional binary distributor, we decided for pinning

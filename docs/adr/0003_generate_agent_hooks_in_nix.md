@@ -1,8 +1,10 @@
-# ADR-0003: Generate agent hooks in Nix
+---
+status: superseded
+date: 2026-08-20
+superseded-by: [ADR-0025]
+---
 
-- Status: Superseded
-- Date: 2026-08-20
-- Superseded by: ADR-0025
+# ADR-0003: Generate agent hooks in Nix
 
 In the context of Home Manager owning Claude and Codex configuration while Herdr and Moshi own
 their hook protocols, facing direct installers that conflict with immutable Home Manager symlinks
