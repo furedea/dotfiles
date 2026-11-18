@@ -28,6 +28,20 @@ let
   terminalBrowserPackage = pkgs.callPackage ../packages/terminal_browser.nix { };
   nodejsPackage = pkgs.callPackage ../packages/nodejs_bin.nix { };
   uvPackage = unstable.uv;
+  # pnpm 11 reads its own settings only from this YAML file, no longer from rc; JSON is valid YAML.
+  pnpmConfig = builtins.toJSON {
+    # Packages unpack into the shared virtual store outside the project, where the agent sandbox
+    # allows the .idea and .vscode directories some packages ship; node_modules holds only links.
+    storeDir = "${config.xdg.dataHome}/pnpm/store";
+    enableGlobalVirtualStore = true;
+    # Match uv: a version published in the last week is never resolved, and a version whose
+    # publish time is unknown or whose trust evidence is weaker than an earlier one fails.
+    minimumReleaseAge = 7 * 24 * 60;
+    minimumReleaseAgeStrict = true;
+    minimumReleaseAgeIgnoreMissingTime = false;
+    trustPolicy = "no-downgrade";
+    registry = "https://registry.npmjs.org/";
+  };
   lintTools = import ../lint_tools.nix { inherit pkgs unstable; };
   codexPackage = pkgs.callPackage ../packages/codex.nix { };
   claudePackage = llm-agents.packages.${system}.claude-code;
@@ -347,7 +361,16 @@ in
     uv = {
       enable = true;
       package = uvPackage;
-      settings.exclude-newer = "1 week";
+      settings = {
+        exclude-newer = "1 week";
+        index = [
+          {
+            name = "pypi";
+            url = "https://pypi.org/simple";
+            default = true;
+          }
+        ];
+      };
     };
 
     neovim = {
@@ -730,13 +753,7 @@ in
       config.home.file."Library/Application Support/lazygit/config.yml".source;
     # Automation must not inherit a project's virtualenv interpreter or user site packages.
     "dotfiles/bin/python3".source = automationPython;
-    # Packages unpack into the shared virtual store outside the project, where the agent sandbox
-    # allows the .idea and .vscode directories some packages ship; node_modules holds only links.
-    # pnpm 11 reads its own settings only from this YAML file, no longer from rc.
-    "pnpm/config.yaml".text = ''
-      storeDir: ${config.xdg.dataHome}/pnpm/store
-      enableGlobalVirtualStore: true
-    '';
+    "pnpm/config.yaml".text = pnpmConfig;
   };
 
   home.file = {
@@ -802,6 +819,25 @@ in
         "DEVELOPER_DIR",
         "MACOSX_DEPLOYMENT_TARGET",
       ]
+    '';
+
+    # pnpm reads this path instead when XDG_CONFIG_HOME is unset.
+    "Library/Preferences/pnpm/config.yaml".text = pnpmConfig;
+
+    # Cargo has no stable release-age setting, so only the registry is pinned (furedea/agent-config#219).
+    ".cargo/config.toml".text = ''
+      [registry]
+      default = "crates-io"
+
+      [registries.crates-io]
+      protocol = "sparse"
+    '';
+
+    # go env -w writes this file, which overrides $GOROOT/go.env; keep the module mirror and
+    # checksum database that go.env sets, so the file holds no weaker value.
+    "Library/Application Support/go/env".text = ''
+      GOPROXY=https://proxy.golang.org,direct
+      GOSUMDB=sum.golang.org
     '';
 
     # Starship

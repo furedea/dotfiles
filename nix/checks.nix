@@ -68,6 +68,16 @@ let
     runner.runCommand name { passthru = { inherit contracts; }; } ''
       touch "$out"
     '';
+  pnpmConfigText = home.xdg.configFile."pnpm/config.yaml".text;
+  # JSON is a subset of YAML, so the generated pnpm config parses as JSON.
+  pnpmSettings = builtins.fromJSON pnpmConfigText;
+  cargoSettings = builtins.fromTOML home.home.file.".cargo/config.toml".text;
+  # Only trusted users may add substituters or skip signatures through client options.
+  daemonPinsFetchSource =
+    config:
+    config.nix.settings.trusted-users == [ "root" ]
+    && config.nix.settings.require-sigs
+    && config.nix.settings.substituters == [ "https://cache.nixos.org/" ];
   nvimLogFile = "${home.xdg.stateHome}/agent-harness/nvim.log";
   ghConfigDir = home.programs.agent-harness.github.agentToken.configDir;
   claudeEnv = home.programs.agent-harness.claude.composedSettings.env;
@@ -131,10 +141,37 @@ in
         "rustfmt"
       ] homeNames;
       pnpm-shared-virtual-store =
-        home.xdg.configFile."pnpm/config.yaml".text == ''
-          storeDir: ${home.xdg.dataHome}/pnpm/store
-          enableGlobalVirtualStore: true
-        '';
+        pnpmSettings.storeDir == "${home.xdg.dataHome}/pnpm/store" && pnpmSettings.enableGlobalVirtualStore;
+      # A package published in the last week stays out of resolution; the global
+      # config is read from ~/Library/Preferences/pnpm when XDG_CONFIG_HOME is unset.
+      pnpm-pins-release-age-and-registry =
+        pnpmSettings.minimumReleaseAge == 7 * 24 * 60
+        && pnpmSettings.minimumReleaseAgeStrict
+        && !pnpmSettings.minimumReleaseAgeIgnoreMissingTime
+        && pnpmSettings.trustPolicy == "no-downgrade"
+        && pnpmSettings.registry == "https://registry.npmjs.org/"
+        && home.home.file."Library/Preferences/pnpm/config.yaml".text == pnpmConfigText;
+      uv-pins-release-age-and-index =
+        home.programs.uv.settings.exclude-newer == "1 week"
+        &&
+          home.programs.uv.settings.index == [
+            {
+              name = "pypi";
+              url = "https://pypi.org/simple";
+              default = true;
+            }
+          ];
+      cargo-pins-registry =
+        cargoSettings.registry.default == "crates-io"
+        && cargoSettings.registries.crates-io.protocol == "sparse"
+        && !(cargoSettings ? source);
+      # go env -w writes this file, which overrides $GOROOT/go.env.
+      go-pins-proxy-and-checksum-database =
+        lib.splitString "\n" home.home.file."Library/Application Support/go/env".text == [
+          "GOPROXY=https://proxy.golang.org,direct"
+          "GOSUMDB=sum.golang.org"
+          ""
+        ];
       no-mutable-language-installers =
         !(builtins.elem "rustup" homeNames)
         && !(home.home.activation ? rustupInit)
@@ -214,6 +251,7 @@ in
 
     host-configuration = check "host-configuration" {
       binary-cache-trust = cacheTrusted mbp && cacheTrusted mba;
+      nix-daemon-pins-fetch-source = daemonPinsFetchSource mbp && daemonPinsFetchSource mba;
       no-shell-specific-editor-defaults = builtins.all (
         source: builtins.all (definition: !(lib.hasInfix definition source)) shellEditorDefinitions
       ) shellConfigs;
