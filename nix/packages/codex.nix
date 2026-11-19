@@ -9,11 +9,11 @@
 # would replace the vendor signature and break the Keychain ACL match across updates.
 stdenv.mkDerivation (finalAttrs: {
   pname = "codex";
-  version = "0.167.0";
+  version = "0.170.0";
 
   src = fetchurl {
     url = "https://github.com/openai/codex/releases/download/rust-v${finalAttrs.version}/codex-package-aarch64-apple-darwin.tar.gz";
-    hash = "sha256-r0XtRdlA15mICWIsHAKW0wmO19f61pUoRCLCKL1FRRc=";
+    hash = "sha256-l1UkvxOu3RsSLY0OAMCe5nCRuPaIwLN0lD27PPIseJM=";
   };
 
   sourceRoot = ".";
