@@ -31,6 +31,7 @@ let
   lintTools = import ../lint_tools.nix { inherit pkgs unstable; };
   codexPackage = pkgs.callPackage ../packages/codex.nix { };
   claudePackage = llm-agents.packages.${system}.claude-code;
+  antigravityCliPackage = llm-agents.packages.${system}.antigravity-cli;
   agentBrowserPackage = llm-agents.packages.${system}.agent-browser;
   dshPackage = llm-agents.packages.${system}.dsh;
   herdrCorePackage = llm-agents.packages.${system}.herdr-core;
@@ -278,6 +279,7 @@ in
       # AI coding agents
       agentBrowserPackage
       agentDesktopPackage
+      antigravityCliPackage
       claudePackage
       dshPackage
       herdrCompatibleCodex
