@@ -146,12 +146,14 @@ in
         builtins.filter (
           name:
           builtins.elem name [
+            "antigravity-cli"
             "claude-code"
             "codex"
             "herdr"
           ]
         ) homeNames == [
           "herdr"
+          "antigravity-cli"
           "claude-code"
           "codex"
         ];

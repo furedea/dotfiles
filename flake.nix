@@ -55,6 +55,7 @@
         builtins.elem pkg.pname [
           "zsh-abbr"
           "claude-code"
+          "antigravity-cli"
           "moshi-hook"
           "1password-cli"
         ];
@@ -124,6 +125,7 @@
               # accidentally permitting other proprietary packages.
               #   zsh-abbr         : CC-BY-NC-SA-4.0 + Hippocratic License v3.0 (both free=false)
               #   claude-code      : Anthropic proprietary (via numtide/llm-agents.nix)
+              #   antigravity-cli  : Google proprietary (via numtide/llm-agents.nix)
               #   moshi-hook       : upstream binary release without a declared license
               #   1password-cli    : AgileBits proprietary CLI
               nixpkgs.config.allowUnfreePredicate = allowUnfreePredicate;
