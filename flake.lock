@@ -13,11 +13,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795277833,
-        "narHash": "sha256-jjt5M3jmbwQ0oBoh4ROaLVOvEz6OvqP/ghUM5eDH0Pk=",
+        "lastModified": 1795293449,
+        "narHash": "sha256-vvFhAR7eT6XRxA+djMSjWVtPpbfYUew9Uc4glgzWobE=",
         "owner": "furedea",
         "repo": "agent-config",
-        "rev": "7e350e0327ad18766a1d3b3ed0a4c646ba68f762",
+        "rev": "7f39859b26fbe571d75975a3bad32e8ed040f84b",
         "type": "github"
       },
       "original": {
