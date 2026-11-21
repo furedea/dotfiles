@@ -32,6 +32,13 @@ let
     (builtins.head (builtins.filter (package: (package.name or "") == "codex") home.home.packages))
     .text;
   hister = mbp.launchd.user.agents.hister.serviceConfig;
+  t3Service = mbpHome.launchd.agents.t3-server.config;
+  t3Package = builtins.head (
+    builtins.filter (package: (package.pname or "") == "t3code") mbpHome.home.packages
+  );
+  t3ServicePath = lib.splitString ":" t3Service.EnvironmentVariables.PATH;
+  t3ServiceState = "${mbpHome.home.homeDirectory}/.t3";
+  claudePackage = inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.claude-code;
   lsp = home.launchd.agents.lspmux;
   lspSettings =
     builtins.fromTOML
@@ -259,6 +266,43 @@ in
             "mbp"
             "mba"
           ];
+      t3-service-only-on-mbp =
+        mbpHome.launchd.agents ? t3-server && !(mbaHome.launchd.agents ? t3-server);
+      t3-service-login-launcher =
+        t3Service.RunAtLoad
+        && t3Service.LimitLoadToSessionType == "Aqua"
+        &&
+          t3Service.ProgramArguments == [
+            (lib.getExe' t3Package "t3")
+            "serve"
+            "--no-browser"
+          ];
+      # Exit 78 (the desktop owns ~/.t3) must not restart in a tight loop.
+      t3-service-throttled-restart = t3Service.KeepAlive && t3Service.ThrottleInterval == 60;
+      t3-service-existing-state = t3Service.EnvironmentVariables.T3CODE_HOME == t3ServiceState;
+      t3-service-loopback = t3Service.EnvironmentVariables.T3CODE_HOST == "127.0.0.1";
+      t3-service-own-port =
+        t3Service.EnvironmentVariables.T3CODE_PORT == "3774"
+        && t3Service.EnvironmentVariables.T3CODE_PORT != "3773";
+      t3-service-home = t3Service.EnvironmentVariables.HOME == mbpHome.home.homeDirectory;
+      t3-service-path-profiles = hasAll [
+        "/etc/profiles/per-user/kaito/bin"
+        "/run/current-system/sw/bin"
+      ] t3ServicePath;
+      t3-service-path-providers = hasAll [
+        (lib.makeBinPath [ claudePackage ])
+        (lib.makeBinPath [ codexPackage ])
+      ] t3ServicePath;
+      t3-service-path-tailscale = builtins.elem "/usr/local/bin" t3ServicePath;
+      t3-service-logs-under-state =
+        lib.hasPrefix "${t3ServiceState}/userdata/logs/" t3Service.StandardOutPath
+        && lib.hasPrefix "${t3ServiceState}/userdata/logs/" t3Service.StandardErrorPath;
+      t3-service-log-directory-activation =
+        mbpHome.home.activation ? t3LogDirectory && !(mbaHome.home.activation ? t3LogDirectory);
+      t3-service-no-environment-credentials = noSecrets t3Service.EnvironmentVariables;
+      t3-service-mbp-stays-awake-on-charger =
+        lib.hasInfix "pmset -c sleep 0" mbp.system.activationScripts.postActivation.text
+        && !(lib.hasInfix "pmset -c sleep 0" mba.system.activationScripts.postActivation.text);
       hister-login-launcher =
         hister.RunAtLoad
         && lib.hasSuffix "/bin/run_hister_server" (builtins.elemAt hister.ProgramArguments 0)
