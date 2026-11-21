@@ -13,6 +13,7 @@
   agent-config,
   system,
   enableMoshiService,
+  enableT3Service,
   ...
 }:
 let
@@ -62,6 +63,23 @@ let
     text = builtins.readFile ../../scripts/moshi/manage_moshi_hook.sh;
   };
   moshiLifecycleBin = "${moshiLifecycle}/bin/manage_moshi_hook";
+  # The T3 server runs under launchd, so its environment is declared, not inherited from a shell.
+  # T3 serves loopback only; Tailscale Serve (HTTPS 8443) is the sole tailnet entry (ADR-0045).
+  t3ServerPort = "3774";
+  t3ServerState = "${config.home.homeDirectory}/.t3";
+  t3ServerLogDirectory = "${t3ServerState}/userdata/logs";
+  t3ServerLogFile = "${t3ServerLogDirectory}/launchd-server.log";
+  t3ServerPath = lib.concatStringsSep ":" [
+    "/etc/profiles/per-user/${username}/bin"
+    "/run/current-system/sw/bin"
+    (lib.makeBinPath t3codePackage.providerPackages)
+    # The Tailscale app installs its CLI wrapper here; Nix does not manage it.
+    "/usr/local/bin"
+    "/usr/bin"
+    "/bin"
+    "/usr/sbin"
+    "/sbin"
+  ];
   moshiLifecycleEnvironment = {
     JQ_BIN = lib.getExe pkgs.jq;
     MOSHI_HOOK_BIN = moshiHookRuntime;
@@ -671,6 +689,35 @@ in
       };
     };
   }
+  // lib.optionalAttrs enableT3Service {
+    t3-server = {
+      enable = true;
+      config = {
+        ProgramArguments = [
+          (lib.getExe' t3codePackage "t3")
+          "serve"
+          "--no-browser"
+        ];
+        EnvironmentVariables = {
+          HOME = config.home.homeDirectory;
+          PATH = t3ServerPath;
+          T3CODE_HOME = t3ServerState;
+          T3CODE_HOST = "127.0.0.1";
+          T3CODE_PORT = t3ServerPort;
+        };
+        WorkingDirectory = config.home.homeDirectory;
+        # Provider sessions need the login Keychain, which only the Aqua session has.
+        LimitLoadToSessionType = "Aqua";
+        # The server exits 78 while the desktop app owns ~/.t3; the throttle
+        # turns that into one retry a minute until the desktop app lets go.
+        KeepAlive = true;
+        ThrottleInterval = 60;
+        RunAtLoad = true;
+        StandardOutPath = t3ServerLogFile;
+        StandardErrorPath = t3ServerLogFile;
+      };
+    };
+  }
   // lib.optionalAttrs enableMoshiService {
     moshi-hook = {
       enable = true;
@@ -689,6 +736,12 @@ in
   };
 
   home.activation = {
+    # launchd opens the log file before the server runs and does not create its directory.
+    t3LogDirectory = lib.mkIf enableT3Service (
+      lib.hm.dag.entryBetween [ "setupLaunchAgents" ] [ "writeBoundary" ] ''
+        mkdir -p "${t3ServerLogDirectory}"
+      ''
+    );
     zshCache = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
       "${pkgs.zsh}/bin/zsh" -f \
         "${zshCacheBuilder}" \

@@ -87,10 +87,12 @@
         mba = {
           enableHisterService = false;
           enableMoshiService = false;
+          enableT3Service = false;
         };
         mbp = {
           enableHisterService = true;
           enableMoshiService = true;
+          enableT3Service = true;
         };
       };
       homeModules = [
@@ -98,11 +100,13 @@
         ./nix/home/default.nix
       ];
       hostHomeSpecialArgs =
-        { enableMoshiService, ... }: homeSpecialArgs // { inherit enableMoshiService; };
+        { enableMoshiService, enableT3Service, ... }:
+        homeSpecialArgs // { inherit enableMoshiService enableT3Service; };
       mkDarwinConfiguration =
         host@{
           enableHisterService,
           enableMoshiService,
+          enableT3Service,
         }:
         nix-darwin.lib.darwinSystem {
           specialArgs = {
@@ -110,6 +114,7 @@
               username
               enableHisterService
               enableMoshiService
+              enableT3Service
               histerServerUrl
               agent-config
               ;

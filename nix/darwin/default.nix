@@ -3,6 +3,7 @@
   config,
   lib,
   enableHisterService,
+  enableT3Service,
   histerServerUrl,
   username,
   ...
@@ -347,7 +348,10 @@ in
     # Display sleep: never (both battery and charger)
     pmset -b displaysleep 0
     pmset -c displaysleep 0
-
+    ${lib.optionalString enableT3Service ''
+      # System sleep: never on the charger, so the T3 server stays reachable (ADR-0045)
+      pmset -c sleep 0
+    ''}
     # NOTE: com.apple.universalaccess (reduceMotion, reduceTransparency) cannot be
     # written programmatically due to macOS TCC restrictions. Set manually in:
     # System Settings > Accessibility > Display
