@@ -83,6 +83,137 @@ let
   evaluatesToDerivation =
     config:
     lib.hasSuffix ".drv" (builtins.unsafeDiscardStringContext config.system.build.toplevel.drvPath);
+  # T3 settings fixtures and the documents the user chose for them (Issue #489, step 5).
+  t3StopRule = {
+    key = "ctrl+c";
+    command = "thread.stop";
+    when = "turnRunning && !terminalFocus";
+  };
+  t3UnrelatedRule = {
+    key = "mod+b";
+    command = "sidebar.toggle";
+  };
+  t3ManagedClientSettings = {
+    notificationMode = "notifications-and-sound";
+    inAppNotificationsEnabled = true;
+    confirmThreadUnpin = true;
+    confirmThreadArchive = true;
+    confirmThreadDelete = true;
+    confirmQuit = "double-click";
+    language = "ja";
+    fontFamilyCode = "JetBrains Mono";
+    mathRenderingEnabled = true;
+    composerRichTextEnabled = false;
+    diffLayout = "split";
+    browserAutoShowFloatingPreview = false;
+  };
+  t3ManagedThreadDetails = {
+    openIn = false;
+    scripts = false;
+    servers = false;
+    automations = false;
+    usage = true;
+    context = true;
+  };
+  t3ManagedServerSettings = {
+    enableAgentBrowserAccess = false;
+    defaultAutoPull = true;
+    defaultModelSelection = {
+      instanceId = "claudeAgent";
+      model = "claude-opus-5-5";
+      options = [
+        {
+          id = "effort";
+          value = "medium";
+        }
+      ];
+    };
+    fallbackModelSelection = {
+      instanceId = "codex";
+      model = "gpt-6.2-sol";
+      options = [
+        {
+          id = "reasoningEffort";
+          value = "medium";
+        }
+      ];
+    };
+    defaultRuntimeMode = "auto";
+    snoozeLimitedThreads = true;
+    autoResumeLimitedThreads = true;
+    addProjectBaseDirectory = "~/ghq";
+    ghqCloneLayout = true;
+    removeAgentCreditsOnMerge = true;
+    pullRequestMergeMethod = "squash";
+  };
+  t3Fixtures = {
+    keybindings = pkgs.writeText "keybindings.json" (
+      builtins.toJSON [
+        t3UnrelatedRule
+        {
+          key = "escape";
+          command = "thread.stop";
+        }
+        t3StopRule
+      ]
+    );
+    serverSettings = builtins.toJSON {
+      providerInstances.antigravity.driver = "antigravity";
+      idleCompaction = "onReturn";
+      defaultRuntimeMode = "full-access";
+      storageCleanup = {
+        worktreeOnMerge = false;
+        worktreeOnArchive = true;
+      };
+      defaultModelSelection = {
+        instanceId = "codex";
+        model = "gpt-5";
+        options = [
+          {
+            id = "reasoningEffort";
+            value = "high";
+          }
+        ];
+      };
+    };
+    clientSettings = builtins.toJSON {
+      language = "en";
+      fontSizeCode = 13;
+      threadDetailsItems = {
+        openIn = true;
+        branch = false;
+      };
+    };
+  };
+  t3Expected = {
+    mbpKeybindings = builtins.toJSON [
+      t3UnrelatedRule
+      t3StopRule
+    ];
+    mbpServerSettings = builtins.toJSON (
+      t3ManagedServerSettings
+      // {
+        providerInstances.antigravity.driver = "antigravity";
+        idleCompaction = "onReturn";
+        storageCleanup = {
+          worktreeOnMerge = true;
+          worktreeOnDelete = true;
+          worktreeOnArchive = true;
+        };
+      }
+    );
+    mbpClientSettings = builtins.toJSON (
+      t3ManagedClientSettings
+      // {
+        fontSizeCode = 13;
+        threadDetailsItems = t3ManagedThreadDetails // {
+          branch = false;
+        };
+      }
+    );
+    mbpDesktopSettings = builtins.toJSON { localEnvironmentEnabled = false; };
+    mbaKeybindings = builtins.toJSON [ t3StopRule ];
+  };
 in
 {
   evaluation = {
@@ -335,6 +466,68 @@ in
 
     # Building the package runs versionCheckHook against agent-desktop --version.
     agent-desktop-release = agentDesktopPackage;
+
+    # Runs each host's real activation on fixture homes: T3 also writes these files from its UI.
+    t3-settings-merge =
+      pkgs.runCommand "t3-settings-merge"
+        {
+          nativeBuildInputs = [ pkgs.jq ];
+          mbpActivation = mbpHome.home.activation.t3Settings.data;
+          mbaActivation = mbaHome.home.activation.t3Settings.data;
+          inherit (t3Fixtures) keybindings serverSettings clientSettings;
+          expectedMbpKeybindings = t3Expected.mbpKeybindings;
+          expectedMbpServerSettings = t3Expected.mbpServerSettings;
+          expectedMbpClientSettings = t3Expected.mbpClientSettings;
+          expectedMbpDesktopSettings = t3Expected.mbpDesktopSettings;
+          expectedMbaKeybindings = t3Expected.mbaKeybindings;
+        }
+        ''
+          set -euo pipefail
+          activate() {
+            local home="$1" activation="$2"
+            (
+              export HOME="$home"
+              run() { "$@"; }
+              eval "$activation"
+            )
+          }
+          equals() {
+            local file="$1" expected="$2"
+            [ -f "$file" ] && [ ! -L "$file" ]
+            jq -e --argjson expected "$expected" '. == $expected' "$file" >/dev/null || {
+              echo "unexpected $file: $(cat "$file")" >&2
+              exit 1
+            }
+          }
+
+          mbp="$PWD/mbp/.t3/userdata"
+          mkdir -p "$mbp"
+          ln -s "$keybindings" "$mbp/keybindings.json"
+          printf '%s' "$serverSettings" >"$mbp/settings.json"
+          printf '%s' "$clientSettings" >"$mbp/client-settings.json"
+          activate "$PWD/mbp" "$mbpActivation"
+          equals "$mbp/keybindings.json" "$expectedMbpKeybindings"
+          equals "$mbp/settings.json" "$expectedMbpServerSettings"
+          equals "$mbp/client-settings.json" "$expectedMbpClientSettings"
+          equals "$mbp/desktop-settings.json" "$expectedMbpDesktopSettings"
+          cmp "$keybindings" ${t3Fixtures.keybindings}
+
+          before=$(cat "$mbp"/*.json | sha256sum)
+          activate "$PWD/mbp" "$mbpActivation"
+          [ "$(cat "$mbp"/*.json | sha256sum)" = "$before" ]
+
+          mba="$PWD/mba/.t3/userdata"
+          mkdir -p "$mba"
+          printf '%s' "$serverSettings" >"$mba/settings.json"
+          printf '{not json' >"$mba/client-settings.json"
+          activate "$PWD/mba" "$mbaActivation"
+          [ "$(cat "$mba/settings.json")" = "$serverSettings" ]
+          [ ! -e "$mba/desktop-settings.json" ]
+          [ "$(cat "$mba/client-settings.json")" = '{not json' ]
+          equals "$mba/keybindings.json" "$expectedMbaKeybindings"
+
+          touch "$out"
+        '';
 
     # Skills are generated by running the installed Darwin CLIs, so only a build proves the bundled text.
     automation-cli-skills =

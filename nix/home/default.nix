@@ -235,6 +235,8 @@ let
   );
 in
 {
+  imports = [ ./t3_settings.nix ];
+
   home = {
     inherit username;
     homeDirectory = "/Users/${username}";
