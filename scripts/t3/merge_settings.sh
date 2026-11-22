@@ -41,13 +41,16 @@ function main() {
   mkdir -p "$(dirname "$_file")"
   local _temporary
   _temporary=$(mktemp "$_file.XXXXXX")
+  # Keep an existing file's mode; a new file keeps mktemp's owner-only mode.
+  if [[ -f "$_file" && ! -L "$_file" ]]; then
+    cp -p "$_file" "$_temporary"
+  fi
   if ! printf '%s' "$_current" |
     "$JQ_BIN" --argjson managed "$_managed" "$_filter" >"$_temporary" ||
     [[ ! -s "$_temporary" ]]; then
     rm -f "$_temporary"
     return 1
   fi
-  chmod 0644 "$_temporary"
   mv -f "$_temporary" "$_file"
 }
 

@@ -504,6 +504,7 @@ in
           mkdir -p "$mbp"
           ln -s "$keybindings" "$mbp/keybindings.json"
           printf '%s' "$serverSettings" >"$mbp/settings.json"
+          chmod 0600 "$mbp/settings.json"
           printf '%s' "$clientSettings" >"$mbp/client-settings.json"
           activate "$PWD/mbp" "$mbpActivation"
           equals "$mbp/keybindings.json" "$expectedMbpKeybindings"
@@ -511,6 +512,9 @@ in
           equals "$mbp/client-settings.json" "$expectedMbpClientSettings"
           equals "$mbp/desktop-settings.json" "$expectedMbpDesktopSettings"
           cmp "$keybindings" ${t3Fixtures.keybindings}
+          # The merge never widens a file's permissions; new files are private to the user.
+          [ "$(stat -c %a "$mbp/settings.json")" = 600 ]
+          [ "$(stat -c %a "$mbp/desktop-settings.json")" = 600 ]
 
           before=$(cat "$mbp"/*.json | sha256sum)
           activate "$PWD/mbp" "$mbpActivation"
