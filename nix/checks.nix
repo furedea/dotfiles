@@ -36,6 +36,11 @@ let
   t3Package = builtins.head (
     builtins.filter (package: (package.pname or "") == "t3code") mbpHome.home.packages
   );
+  t3DesktopPackage = builtins.head (
+    builtins.filter (
+      package: (package.pname or package.name or "") == "t3code-desktop"
+    ) mbpHome.home.packages
+  );
   t3ServicePath = lib.splitString ":" t3Service.EnvironmentVariables.PATH;
   t3ServiceState = "${mbpHome.home.homeDirectory}/.t3";
   claudePackage = inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.claude-code;
@@ -530,6 +535,44 @@ in
           [ "$(cat "$mba/client-settings.json")" = '{not json' ]
           equals "$mba/keybindings.json" "$expectedMbaKeybindings"
 
+          touch "$out"
+        '';
+
+    # macOS names the Dock and Cmd+Tab entry after the bundle of the running binary, so the
+    # launcher must exec the Electron inside the T3 bundle with the llm-agents wrapper's environment.
+    t3-desktop-app-bundle =
+      pkgs.runCommand "t3-desktop-app-bundle"
+        {
+          nativeBuildInputs = [ pkgs.cctools ];
+          app = "${t3DesktopPackage}/Applications/T3 Code (Beta).app";
+          upstreamApp = "${t3Package.desktop}/Applications/T3 Code (Beta).app";
+          upstreamLauncher = "${t3Package.desktop}/bin/t3code-desktop";
+          unwrappedLauncher = "${t3Package.unwrapped.desktop}/bin/t3code-desktop";
+          appDirectory = "${t3Package.unwrapped.desktop}/libexec/t3code/apps/desktop";
+          signedCodex = lib.makeBinPath [ codexPackage ];
+        }
+        ''
+          info() { /usr/bin/plutil -extract "$2" raw -o - "$1/Contents/Info.plist"; }
+          wrapperPath() { strings "$1" | sed -n "s/^ *--prefix 'PATH' ':' '\(.*\)' .*$/\1/p"; }
+          test "$(info "$app" CFBundleName)" = 'T3 Code (Beta)'
+          test "$(info "$app" CFBundleDisplayName)" = 'T3 Code (Beta)'
+          test "$(info "$app" CFBundleIdentifier)" = "$(info "$upstreamApp" CFBundleIdentifier)"
+          cmp "$app/Contents/Resources/$(info "$app" CFBundleIconFile)" "$upstreamApp/Contents/Resources/t3code.icns"
+
+          launcher="$app/Contents/MacOS/$(info "$app" CFBundleExecutable)"
+          test -f "$launcher" && test -x "$launcher" && test ! -L "$launcher"
+          strings "$launcher" | grep -qF "$app/Contents/MacOS/Electron"
+          strings "$launcher" | grep -qF "$appDirectory"
+          test -n "$(wrapperPath "$upstreamLauncher")"
+          test "$(wrapperPath "$launcher")" = "$(wrapperPath "$upstreamLauncher")"
+          wrapperPath "$launcher" | tr ':' '\n' | grep -qxF "$signedCodex"
+
+          # Electron looks its helpers up as "Electron Helper*.app".
+          test -x "$app/Contents/Frameworks/Electron Helper.app/Contents/MacOS/Electron Helper"
+          upstreamElectron=$(strings "$unwrappedLauncher" | grep -m1 -oE '/nix/store/[^ ]*-electron-[^/ ]*/bin/electron')
+          test "$(info "$app" CFBundleVersion)" = "$(info "''${upstreamElectron%/bin/electron}/Applications/Electron.app" CFBundleVersion)"
+
+          /usr/bin/codesign --verify --deep --strict "$app"
           touch "$out"
         '';
 

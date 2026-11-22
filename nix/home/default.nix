@@ -44,7 +44,10 @@ let
     ]
     ++ lib.filter (provider: (provider.pname or "") != "codex") t3codeUpstream.providerPackages;
   };
-  t3codeDesktopPackage = llm-agents.packages.${system}.t3code-desktop.override {
+  # The Dock shows T3, not Electron, only when the bundle holds the Electron it runs (#494).
+  # llm-agents builds T3 against the Electron of its own nixpkgs, not the dotfiles one.
+  t3codeDesktopPackage = pkgs.callPackage ../packages/t3code_desktop.nix {
+    inherit (llm-agents.inputs.nixpkgs.legacyPackages.${system}) electron_44;
     t3code = t3codePackage;
   };
   agentDesktopPackage = pkgs.callPackage ../packages/agent_desktop.nix { };
