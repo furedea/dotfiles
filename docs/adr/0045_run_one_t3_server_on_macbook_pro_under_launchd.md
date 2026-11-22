@@ -60,8 +60,10 @@ The other options lose on one point each:
     environment off leaves a stale "T3 Code Desktop" authorized client to revoke.
 - Bad, because the iOS app alerts only through push via the T3 relay, which needs a T3 account; none
     is used, so the iPhone gets no alerts. Desktop clients notify locally.
-- Bad, because the iOS app is reported to drop Tailscale connections within minutes
-    (pingdotgg/t3code#25405, #24909).
+- Bad, because the iOS app is reported upstream to drop Tailscale connections within minutes
+    (pingdotgg/t3code#25405, #24909); in the real-device check it did not occur, and the iPhone app
+    stayed connected for several minutes.
 
 Accepted after the real-device check in Issue #489: MacBook Pro, MacBook Air, and the iPhone app are
-paired, and a thread kept running and completed with the MacBook Pro desktop app quit.
+paired, a thread kept running and completed with the MacBook Pro desktop app quit, and approvals
+answered from the MacBook Air desktop app and the iPhone app let the thread continue.
