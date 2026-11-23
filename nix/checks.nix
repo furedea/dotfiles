@@ -556,7 +556,9 @@ in
           wrapperPath() { strings "$1" | sed -n "s/^ *--prefix 'PATH' ':' '\(.*\)' .*$/\1/p"; }
           test "$(info "$app" CFBundleName)" = 'T3 Code (Beta)'
           test "$(info "$app" CFBundleDisplayName)" = 'T3 Code (Beta)'
-          test "$(info "$app" CFBundleIdentifier)" = "$(info "$upstreamApp" CFBundleIdentifier)"
+          # Apple allows only letters, digits, "-" and "." in a bundle identifier.
+          info "$app" CFBundleIdentifier | grep -qxE '[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+'
+          info "$app" CFBundleIdentifier | grep -qF t3code
           cmp "$app/Contents/Resources/$(info "$app" CFBundleIconFile)" "$upstreamApp/Contents/Resources/t3code.icns"
 
           launcher="$app/Contents/MacOS/$(info "$app" CFBundleExecutable)"

@@ -13,6 +13,8 @@ let
   inherit (t3code.unwrapped) appName;
   upstreamApp = "${t3code.desktop}/Applications/${appName}.app";
   appDirectory = "${t3code.unwrapped.desktop}/libexec/t3code/apps/desktop";
+  # llm-agents' "org.nixos.T3 Code (Beta)" has characters Apple does not allow in an identifier.
+  bundleIdentifier = "org.nixos.t3code-desktop";
 in
 stdenvNoCC.mkDerivation {
   pname = "t3code-desktop";
@@ -34,10 +36,9 @@ stdenvNoCC.mkDerivation {
 
     install -m444 "${upstreamApp}/Contents/Resources/t3code.icns" "$app/Contents/Resources/t3code.icns"
     plist="$app/Contents/Info.plist"
-    identifier=$(/usr/bin/plutil -extract CFBundleIdentifier raw -o - "${upstreamApp}/Contents/Info.plist")
     /usr/bin/plutil -replace CFBundleName -string "${appName}" "$plist"
     /usr/bin/plutil -replace CFBundleDisplayName -string "${appName}" "$plist"
-    /usr/bin/plutil -replace CFBundleIdentifier -string "$identifier" "$plist"
+    /usr/bin/plutil -replace CFBundleIdentifier -string ${bundleIdentifier} "$plist"
     /usr/bin/plutil -replace CFBundleIconFile -string t3code.icns "$plist"
     /usr/bin/plutil -replace CFBundleExecutable -string "${appName}" "$plist"
 
