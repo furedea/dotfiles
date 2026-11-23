@@ -37,7 +37,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Nix
-        uses: furedea/reusable-workflows/.github/actions/nix-setup@2ae953294b9a805d0705657adc1d9d4f1bc1f646 # v1.3.0
+        uses: furedea/reusable-workflows/.github/actions/nix-setup@5e16a8d7d92a84a4392de97e3ccc1ccac9c8579b # v1.6.0
 
       - name: Run Bats tests
         # Discovery keeps new files in CI; files tagged macos need a macOS host and are excluded.
@@ -63,7 +63,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Nix
-        uses: furedea/reusable-workflows/.github/actions/nix-setup@2ae953294b9a805d0705657adc1d9d4f1bc1f646 # v1.3.0
+        uses: furedea/reusable-workflows/.github/actions/nix-setup@5e16a8d7d92a84a4392de97e3ccc1ccac9c8579b # v1.6.0
 
       - name: Run ruff format
         run: uv run ruff format --check github herdr zsh tests
@@ -90,7 +90,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Nix
-        uses: furedea/reusable-workflows/.github/actions/nix-setup@2ae953294b9a805d0705657adc1d9d4f1bc1f646 # v1.3.0
+        uses: furedea/reusable-workflows/.github/actions/nix-setup@5e16a8d7d92a84a4392de97e3ccc1ccac9c8579b # v1.6.0
 
       - name: Run Python automation tests
         run: uv run pytest -m 'not integration'
@@ -111,7 +111,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Nix
-        uses: furedea/reusable-workflows/.github/actions/nix-setup@2ae953294b9a805d0705657adc1d9d4f1bc1f646 # v1.3.0
+        uses: furedea/reusable-workflows/.github/actions/nix-setup@5e16a8d7d92a84a4392de97e3ccc1ccac9c8579b # v1.6.0
 
       - name: Run deptry
         run: uv run --group audit deptry .
@@ -135,7 +135,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Nix
-        uses: furedea/reusable-workflows/.github/actions/nix-setup@2ae953294b9a805d0705657adc1d9d4f1bc1f646 # v1.3.0
+        uses: furedea/reusable-workflows/.github/actions/nix-setup@5e16a8d7d92a84a4392de97e3ccc1ccac9c8579b # v1.6.0
 
       - name: Check tracked Bash scripts
         run: |
@@ -163,7 +163,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Nix
-        uses: furedea/reusable-workflows/.github/actions/nix-setup@2ae953294b9a805d0705657adc1d9d4f1bc1f646 # v1.3.0
+        uses: furedea/reusable-workflows/.github/actions/nix-setup@5e16a8d7d92a84a4392de97e3ccc1ccac9c8579b # v1.6.0
 
       - name: Run selene
         run: selene --config nvim/selene.toml nvim/
@@ -172,12 +172,12 @@ jobs:
         run: stylua --check nvim/
 
   nix-lint:
-    uses: furedea/reusable-workflows/.github/workflows/nix-lint.yml@ca7c5f2973a899e209bc60767f434aecbc186bc9 # v1.1.0
+    uses: furedea/reusable-workflows/.github/workflows/nix-lint.yml@5e16a8d7d92a84a4392de97e3ccc1ccac9c8579b # v1.6.0
     permissions:
       contents: read
 
   nix-check:
-    uses: furedea/reusable-workflows/.github/workflows/nix-check.yml@ca7c5f2973a899e209bc60767f434aecbc186bc9 # v1.1.0
+    uses: furedea/reusable-workflows/.github/workflows/nix-check.yml@5e16a8d7d92a84a4392de97e3ccc1ccac9c8579b # v1.6.0
     permissions:
       contents: read
 
@@ -197,7 +197,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Nix
-        uses: furedea/reusable-workflows/.github/actions/nix-setup@2ae953294b9a805d0705657adc1d9d4f1bc1f646 # v1.3.0
+        uses: furedea/reusable-workflows/.github/actions/nix-setup@5e16a8d7d92a84a4392de97e3ccc1ccac9c8579b # v1.6.0
 
       - name: Run dprint
         run: dprint check --incremental=false
@@ -206,7 +206,7 @@ jobs:
         run: autocorrect . --lint --no-diff-bg-color
 
   gha-lint:
-    uses: furedea/reusable-workflows/.github/workflows/gha-lint.yml@ca7c5f2973a899e209bc60767f434aecbc186bc9 # v1.1.0
+    uses: furedea/reusable-workflows/.github/workflows/gha-lint.yml@5e16a8d7d92a84a4392de97e3ccc1ccac9c8579b # v1.6.0
     permissions:
       actions: read
       contents: read
@@ -225,12 +225,12 @@ jobs:
       pull-requests: read
 
   dependency-review:
-    uses: furedea/reusable-workflows/.github/workflows/dependency-review.yml@ca7c5f2973a899e209bc60767f434aecbc186bc9 # v1.1.0
+    uses: furedea/reusable-workflows/.github/workflows/dependency-review.yml@5e16a8d7d92a84a4392de97e3ccc1ccac9c8579b # v1.6.0
     permissions:
       contents: read
 
   claude-review:
-    uses: furedea/reusable-workflows/.github/workflows/claude-review.yml@ca7c5f2973a899e209bc60767f434aecbc186bc9 # v1.1.0
+    uses: furedea/reusable-workflows/.github/workflows/claude-review.yml@5e16a8d7d92a84a4392de97e3ccc1ccac9c8579b # v1.6.0
     permissions:
       contents: read
       pull-requests: write
@@ -238,7 +238,7 @@ jobs:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
   codex-review:
-    uses: furedea/reusable-workflows/.github/workflows/codex-review.yml@ca7c5f2973a899e209bc60767f434aecbc186bc9 # v1.1.0
+    uses: furedea/reusable-workflows/.github/workflows/codex-review.yml@5e16a8d7d92a84a4392de97e3ccc1ccac9c8579b # v1.6.0
     permissions: {}
     secrets:
       codex_review_token: ${{ secrets.CODEX_REVIEW_TOKEN }}
