@@ -204,6 +204,9 @@ in
       # Finder is always pinned to the left by macOS; no need to specify it here
       persistent-apps = [
         { app = "/Applications/Tinycast.app"; }
+        {
+          app = "${config.users.users.${username}.home}/Applications/Home Manager Apps/T3 Code (Beta).app";
+        }
         { app = "/Applications/Ghostty.app"; }
         { app = "/Applications/Dia.app"; }
         { app = "/Applications/Obsidian.app"; }
