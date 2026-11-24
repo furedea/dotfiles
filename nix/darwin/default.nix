@@ -24,6 +24,16 @@ let
 
   t3Telemetry = import ../t3_telemetry.nix;
   t3Policy = pkgs.writeText "t3code-policy.json" (builtins.toJSON t3Telemetry.policy);
+  # Telemetry endpoints of closed-source apps: PostHog cloud ingestion (embedded in Homerow)
+  # and the Nani favicon proxy f.kiok.jp, which receives the origin of viewed pages.
+  appTelemetryHosts = [
+    "us.i.posthog.com"
+    "us-assets.i.posthog.com"
+    "eu.i.posthog.com"
+    "eu-assets.i.posthog.com"
+    "app.posthog.com"
+    "f.kiok.jp"
+  ];
   updateHostsBlock = pkgs.writeShellScript "update_hosts_block" (
     builtins.readFile ../../scripts/t3/update_hosts_block.sh
   );
@@ -291,6 +301,15 @@ in
         "wvous-bl-modifier" = 0;
         "wvous-br-modifier" = 0;
       };
+      # Microsoft Office: minimum diagnostic data and no optional connected
+      # experiences. ConnectedOfficeExperiencesPreference stays untouched:
+      # disabling it breaks OneDrive and co-authoring.
+      "com.microsoft.office" = {
+        "DiagnosticDataTypePreference" = "ZeroDiagnosticData";
+        "OfficeExperiencesAnalyzingContentPreference" = false;
+        "OfficeExperiencesDownloadingContentPreference" = false;
+        "OptionalConnectedExperiencesPreference" = false;
+      };
       # Homerow: keyboard-driven macOS navigation
       "com.superultra.Homerow" = {
         "launch-at-login" = true;
@@ -370,6 +389,9 @@ in
     hostsBefore="$(/usr/bin/cksum < /etc/hosts)"
     ${updateHostsBlock} /etc/hosts ${lib.escapeShellArgs t3Telemetry.blockedHosts} \
       || echo "t3-telemetry: left /etc/hosts unchanged" >&2
+    # Second block, so the T3 block and this one can each change without touching the other.
+    HOSTS_BLOCK_NAME=app-telemetry-block ${updateHostsBlock} /etc/hosts ${lib.escapeShellArgs appTelemetryHosts} \
+      || echo "app-telemetry: left /etc/hosts unchanged" >&2
     # A cached answer for a blocked host would outlive the new block.
     if [ "$(/usr/bin/cksum < /etc/hosts)" != "$hostsBefore" ]; then
       /usr/bin/dscacheutil -flushcache || true

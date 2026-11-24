@@ -130,3 +130,20 @@ setup() {
   [ "$status" -eq 0 ]
   [ "$(ls -i "$HOSTS")" = "$(cat "$BATS_TEST_TMPDIR/inode_before")" ]
 }
+
+@test "a named block lives beside the default block and each rewrite leaves the other alone" {
+  "$SCRIPT" "$HOSTS" ingest.t3.codes
+  HOSTS_BLOCK_NAME=app-telemetry-block run "$SCRIPT" "$HOSTS" us.i.posthog.com
+
+  [ "$status" -eq 0 ]
+  grep -qxF "# BEGIN app-telemetry-block (managed by dotfiles; do not edit)" "$HOSTS"
+  grep -qxF "# END app-telemetry-block" "$HOSTS"
+  grep -qxF "0.0.0.0 ingest.t3.codes" "$HOSTS"
+  grep -qxF "0.0.0.0 us.i.posthog.com" "$HOSTS"
+
+  HOSTS_BLOCK_NAME=app-telemetry-block "$SCRIPT" "$HOSTS" f.kiok.jp
+  run ! grep -q us.i.posthog.com "$HOSTS"
+  grep -qxF "0.0.0.0 f.kiok.jp" "$HOSTS"
+  grep -qxF "0.0.0.0 ingest.t3.codes" "$HOSTS"
+  [ "$(grep -cF "$BEGIN" "$HOSTS")" -eq 1 ]
+}

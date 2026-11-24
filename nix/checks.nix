@@ -43,6 +43,44 @@ let
   );
   t3Telemetry = import ./t3_telemetry.nix;
   t3Activation = host: host.system.activationScripts.postActivation.text;
+  expectedAppTelemetryHosts = [
+    "us.i.posthog.com"
+    "us-assets.i.posthog.com"
+    "eu.i.posthog.com"
+    "eu-assets.i.posthog.com"
+    "app.posthog.com"
+    "f.kiok.jp"
+  ];
+  appTelemetryBlockLine =
+    host:
+    builtins.filter (lib.hasInfix "HOSTS_BLOCK_NAME=app-telemetry-block ") (
+      lib.splitString "\n" (t3Activation host)
+    );
+  appTelemetryBlockedHosts =
+    host:
+    builtins.filter (word: word != "" && word != "\\") (
+      lib.splitString " " (
+        lib.last (lib.splitString "/etc/hosts " (lib.head (appTelemetryBlockLine host ++ [ "" ])))
+      )
+    );
+  blocksOnlyAppTelemetryHosts =
+    host:
+    lib.length (appTelemetryBlockLine host) == 1
+    &&
+      lib.sort (a: b: a < b) (appTelemetryBlockedHosts host)
+      == lib.sort (a: b: a < b) expectedAppTelemetryHosts
+    && !(host.environment.etc ? "hosts");
+  officePreferences = host: host.system.defaults.CustomUserPreferences."com.microsoft.office" or { };
+  officeLimitsTelemetry =
+    host:
+    let
+      office = officePreferences host;
+    in
+    office.DiagnosticDataTypePreference or null == "ZeroDiagnosticData"
+    && office.OfficeExperiencesAnalyzingContentPreference or null == false
+    && office.OfficeExperiencesDownloadingContentPreference or null == false
+    && office.OptionalConnectedExperiencesPreference or null == false
+    && !(office ? ConnectedOfficeExperiencesPreference);
   t3SetenvAgent = host: host.home-manager.users.kaito.launchd.agents.t3-telemetry-off.config;
   t3ServicePath = lib.splitString ":" t3Service.EnvironmentVariables.PATH;
   t3ServiceState = "${mbpHome.home.homeDirectory}/.t3";
@@ -372,6 +410,9 @@ in
       no-homebrew-moshi =
         !(lib.hasInfix "moshi-hook" mba.homebrew.brewfile)
         && !(lib.hasInfix "rjyo/moshi" mba.homebrew.brewfile);
+      app-telemetry-hosts-blocked-only =
+        blocksOnlyAppTelemetryHosts mbp && blocksOnlyAppTelemetryHosts mba;
+      office-telemetry-limited = officeLimitsTelemetry mbp && officeLimitsTelemetry mba;
       noninteractive-homebrew-cleanup = mbp.homebrew.onActivation.extraFlags == [ "--force" ];
       moshi-pinned =
         versions "moshi-hook" mbpHome.home.packages == [ moshiVersion ]
