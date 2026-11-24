@@ -1,7 +1,8 @@
 ---
-status: accepted
+status: superseded
 date: 2026-09-12
 supersedes: [ADR-0003, ADR-0005, ADR-0009]
+superseded-by: [ADR-0050]
 ---
 
 # ADR-0025: Pin Moshi in Nix

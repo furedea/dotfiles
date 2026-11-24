@@ -174,11 +174,8 @@ cross-provider agent source: instructions, policies, hooks, skills, and provider
 Codex, and pi. The
 [agent-harness](https://github.com/furedea/agent-harness) flake renders and deploys
 that source for each provider. This repository also builds release-matched Herdr
-and Moshi hook bundles and composes them through the module's generic `hooks`
-boundary. Herdr comes from the pinned flake input. Moshi Hook is pinned in
-[`nix/packages/moshi_hook.nix`](nix/packages/moshi_hook.nix); on the MacBook Pro, a
-Home Manager LaunchAgent runs that same binary as the daemon used by generated hooks.
-Pairing tokens and mutable Moshi state are never added to the Nix store.
+hook bundle and composes it through the module's generic `hooks`
+boundary. Herdr comes from the pinned flake input.
 
 Servers without Nix use the bootstrap script in agent-config instead of the Home
 Manager module; it still reads host-specific settings from `~/.config/dotfiles/`.
@@ -242,7 +239,7 @@ reference files.
 ├── zsh/ and bash/             # Interactive shell configuration
 ├── nvim/ and vim/             # Editor configuration
 ├── herdr/                     # Herdr UI and plugin synchronization
-├── scripts/                   # Shell launchers for Git signing, Hister, and Moshi
+├── scripts/                   # Shell launchers for Git signing and Hister
 ├── .agents/                   # Repository rules for the agent harness hooks
 ├── ghostty/                   # Terminal configuration
 ├── karabiner/                 # Keyboard remapping
@@ -428,7 +425,6 @@ After the first switch, configure as needed:
     printf '' | /usr/bin/pbcopy
     ```
 
-- pair Moshi Hook with the iPhone app when restoring a host
 - configure Night Shift, True Tone, display resolution, and Accessibility
     display options in System Settings
 - import `tinycast/*` when restoring Tinycast manually
