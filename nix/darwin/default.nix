@@ -374,6 +374,8 @@ in
       upgrade = true;
       cleanup = "uninstall";
       extraFlags = [ "--force" ];
+      # brew bundle runs under sudo and does not inherit the user's shell environment.
+      extraEnv.HOMEBREW_NO_ANALYTICS = "1";
     };
 
     taps = [

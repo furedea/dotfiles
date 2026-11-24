@@ -48,6 +48,17 @@ let
   lspSettings =
     builtins.fromTOML
       home.home.file."Library/Application Support/lspmux/config.toml".text;
+  telemetryOptOuts = {
+    GH_TELEMETRY = "disabled";
+    GH_STACK_NO_UPDATE_NOTIFIER = "1";
+    HOMEBREW_NO_ANALYTICS = "1";
+    DSH_TELEMETRY_DISABLED = "1";
+  };
+  telemetryOptOutExports = lib.mapAttrsToList (
+    name: value: "export ${name}=${value}"
+  ) telemetryOptOuts;
+  codexSettings = home.programs.agent-harness.codex.composedSettings;
+  lspmuxSocket = "${home.home.homeDirectory}/Library/Application Support/lspmux/lspmux.sock";
   serviceNames = config: builtins.attrNames config.launchd.agents;
   hasAll = expected: actual: builtins.all (value: builtins.elem value actual) expected;
   shellEditorDefinitions = [
@@ -229,6 +240,27 @@ in
         && (claudeEnv.GH_CONFIG_DIR or null) == ghConfigDir;
       agent-codex-env-managed-paths =
         (codexEnv.NVIM_LOG_FILE or null) == nvimLogFile && (codexEnv.GH_CONFIG_DIR or null) == ghConfigDir;
+      # Default-on telemetry and update checks stay off in login shells and in agents that skip .zshenv.
+      telemetry-opt-outs-in-agent-envs =
+        builtins.all (name: (claudeEnv.${name} or null) == telemetryOptOuts.${name}) (
+          builtins.attrNames telemetryOptOuts
+        )
+        && builtins.all (name: (codexEnv.${name} or null) == telemetryOptOuts.${name}) (
+          builtins.attrNames telemetryOptOuts
+        );
+      telemetry-opt-outs-in-zshenv = builtins.all (
+        line: lib.hasInfix "${line}\n" (builtins.readFile ../zsh/.zshenv)
+      ) telemetryOptOutExports;
+      codex-analytics-disabled =
+        (codexSettings.analytics.enabled or true) == false
+        && (codexSettings.otel.metrics_exporter or null) == "none"
+        && (codexSettings.feedback.enabled or true) == false;
+      gh-config-telemetry-disabled = (home.programs.gh.settings.telemetry or null) == "disabled";
+      atuin-no-update-check = (home.programs.atuin.settings.update_check or true) == false;
+      lazygit-no-update-check = (home.programs.lazygit.settings.update.method or null) == "never";
+      lspmux-unix-socket-only =
+        (lspSettings.listen or null) == lspmuxSocket && (lspSettings.connect or null) == lspmuxSocket;
+      carapace-no-uninstalled-bridge = !(lib.hasInfix "inshellisense" (builtins.readFile ../zsh/.zshrc));
       hooks-compose-herdr-and-moshi =
         builtins.attrNames home.programs.agent-harness.hooks == [
           "herdr"
@@ -369,6 +401,9 @@ in
       no-homebrew-moshi =
         !(lib.hasInfix "moshi-hook" mba.homebrew.brewfile)
         && !(lib.hasInfix "rjyo/moshi" mba.homebrew.brewfile);
+      homebrew-analytics-disabled =
+        (mbp.homebrew.onActivation.extraEnv.HOMEBREW_NO_ANALYTICS or null) == "1"
+        && (mba.homebrew.onActivation.extraEnv.HOMEBREW_NO_ANALYTICS or null) == "1";
       noninteractive-homebrew-cleanup = mbp.homebrew.onActivation.extraFlags == [ "--force" ];
       moshi-pinned =
         versions "moshi-hook" mbpHome.home.packages == [ moshiVersion ]
