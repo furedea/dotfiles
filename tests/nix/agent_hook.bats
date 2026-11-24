@@ -10,7 +10,7 @@ setup() {
   REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
 }
 
-@test "rendered hooks use managed Herdr assets and the Nix Moshi runtime" {
+@test "rendered hooks use managed Herdr assets and no Moshi hook" {
   run --separate-stderr nix build --no-link --print-out-paths \
     "$REPO_ROOT#homeConfigurations.\"kaito@mbp\".activationPackage"
 
@@ -44,14 +44,8 @@ setup() {
     .hooks.Stop
       | any(.[]; any(.hooks[]; .command == "\"$HOME/.claude/hooks/verification_session.py\" codex stop"))
   ' "$_codex_hooks" >/dev/null
-  local _moshi_version
-  _moshi_version=$(sed -n 's/^  version = "\([0-9.]*\)";$/\1/p' "$REPO_ROOT/nix/packages/moshi_hook.nix")
-  [[ "$_moshi_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
-  local _moshi_runtime="/nix/store/[a-z0-9]+-moshi-hook-${_moshi_version//./\\.}/bin/moshi-hook"
-  grep -Eq -- "'$_moshi_runtime' codex-hook" "$_codex_hooks"
-  grep -Eq -- "'$_moshi_runtime' claude-hook" "$_claude_settings"
-  run ! grep -Fq -- '/opt/homebrew/bin/moshi-hook' "$_codex_hooks"
-  run ! grep -Fq -- '/opt/homebrew/bin/moshi-hook' "$_claude_settings"
+  run ! grep -Fq -- moshi-hook "$_codex_hooks"
+  run ! grep -Fq -- moshi-hook "$_claude_settings"
 }
 
 @test "rendered agents deploy the dotfiles-owned nix-dotfiles skill" {
