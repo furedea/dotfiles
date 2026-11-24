@@ -64,8 +64,9 @@ the check's diff rather than blocked.
     dropped layer surfaces as a warning at the next switch.
 - Bad, because hosts-file blocking is name-based: a hard-coded IP, DNS over HTTPS, or a new host name
     bypasses it, and the check only reports new names after the fact.
-- Bad, because the check runs once per T3 store path; a layer that breaks between updates is noticed at
-    the next update or when the check is run by hand.
+- Bad, because after a clean check the next one waits for a new T3 store path; a layer that breaks
+    between updates is noticed at the next update or when the check is run by hand. A check with
+    warnings is not recorded, so it reruns on every switch until it passes.
 - Bad, because the check reads the unwrapped server bundle only; the desktop app's own bundle is not
     scanned.
 - Bad, because the phone (crash-report toggle, NextDNS), an outbound firewall, and reporting upstream
