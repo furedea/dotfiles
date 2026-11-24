@@ -92,10 +92,8 @@ function check_hosts() {
 }
 
 function resolves_to() {
-  local _address="$1"
-  local _host="$2"
   [[ -r "$HOSTS_FILE" ]] &&
-    awk -v address="$_address" -v host="$_host" '
+    awk -v address="$1" -v host="$2" '
       $0 !~ /^[[:space:]]*#/ && $1 == address {
         for (i = 2; i <= NF; i++) {
           if ($i == host) { found = 1 }

@@ -123,11 +123,10 @@ setup() {
 
 @test "an up-to-date file is not rewritten" {
   "$SCRIPT" "$HOSTS" ingest.t3.codes
-  local _inode_before
-  _inode_before=$(ls -i "$HOSTS")
+  ls -i "$HOSTS" >"$BATS_TEST_TMPDIR/inode_before"
 
   run "$SCRIPT" "$HOSTS" ingest.t3.codes
 
   [ "$status" -eq 0 ]
-  [ "$(ls -i "$HOSTS")" = "$_inode_before" ]
+  [ "$(ls -i "$HOSTS")" = "$(cat "$BATS_TEST_TMPDIR/inode_before")" ]
 }
