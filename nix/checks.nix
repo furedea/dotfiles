@@ -347,7 +347,7 @@ in
         in
         lazygitCommands != [ ]
         && builtins.all pinned lazygitCommands
-        && pinned (builtins.readFile ../zsh/.zshrc);
+        && builtins.any pinned (lib.splitString "\n" (builtins.readFile ../zsh/.zshrc));
       lspmux-persistent = lsp.enable && lsp.config.RunAtLoad && lsp.config.KeepAlive;
       lspmux-server =
         lib.hasPrefix "/nix/store/" (builtins.head lsp.config.ProgramArguments)
