@@ -9,6 +9,8 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
+LIST_ARGUMENTS = ["plugin", "list", "--json"]
+
 
 @dataclass(frozen=True, slots=True)
 class Plugin:
@@ -42,22 +44,27 @@ def changes(
     return updates, removed
 
 
-def install_command(executable: str, plugin: Plugin) -> list[str]:
+def install_arguments(executable: str, plugin: Plugin) -> list[str]:
     """Link a locally built plugin; install any other from its pinned GitHub revision."""
     if plugin.source.startswith("/"):
         return [executable, "plugin", "link", plugin.source]
     return [executable, "plugin", "install", plugin.source, "--ref", plugin.revision, "--yes"]
 
 
+def installed_revisions(executable: str) -> dict[str, str]:
+    """Read each installed plugin's identity from the Herdr CLI."""
+    payload = json.loads(subprocess.check_output([executable, *LIST_ARGUMENTS], text=True))
+    return {item["plugin_id"]: installed_revision(item) for item in payload.get("result", {}).get("plugins", [])}
+
+
 def synchronize(declared: tuple[Plugin, ...], state: Path, executable: str) -> None:
     """Apply installs before removals and atomically publish the completed declaration."""
     state.parent.mkdir(parents=True, exist_ok=True)
-    payload = json.loads(subprocess.check_output([executable, "plugin", "list", "--json"], text=True))
-    installed = {item["plugin_id"]: installed_revision(item) for item in payload.get("result", {}).get("plugins", [])}
+    installed = installed_revisions(executable)
     managed = set(state.read_text().splitlines()) if state.is_file() else set()
     updates, removed = changes(declared, installed, managed)
     for plugin in updates:
-        subprocess.run(install_command(executable, plugin), check=True)
+        subprocess.run(install_arguments(executable, plugin), check=True)
     for identifier in removed:
         subprocess.run([executable, "plugin", "uninstall", identifier], check=True)
     temporary: Path | None = None
