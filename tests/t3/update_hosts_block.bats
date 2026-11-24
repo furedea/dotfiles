@@ -110,7 +110,7 @@ setup() {
   run "$SCRIPT" "$HOSTS" ingest.t3.codes
 
   [ "$status" -eq 0 ]
-  [ "$(stat -f %Lp "$HOSTS" 2>/dev/null || stat -c %a "$HOSTS")" = "644" ]
+  [ "$(stat -c %a "$HOSTS" 2>/dev/null || stat -f %Lp "$HOSTS")" = "644" ]
   [ "$(find "$BATS_TEST_TMPDIR" -name 'hosts.*' | wc -l)" -eq 0 ]
 }
 
