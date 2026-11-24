@@ -3,12 +3,10 @@
 
 bats_require_minimum_version 1.5.0
 
-setup() {
-  REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
-}
-
 @test "blink.cmp builds its matcher locally instead of downloading a binary" {
-  run env DOTFILES_ROOT="$REPO_ROOT" nvim --headless -u NONE -i NONE -l /dev/stdin <<'LUA'
+  local repo_root
+  repo_root="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
+  run env DOTFILES_ROOT="$repo_root" nvim --headless -u NONE -i NONE -l /dev/stdin <<'LUA'
 local root = vim.env.DOTFILES_ROOT
 local spec
 for _, plugin in ipairs(dofile(root .. "/nvim/lua/plugins/completion.lua")) do
@@ -23,7 +21,9 @@ LUA
 }
 
 @test "nvim-regexplainer never installs Python packages on its own" {
-  run env DOTFILES_ROOT="$REPO_ROOT" nvim --headless -u NONE -i NONE -l /dev/stdin <<'LUA'
+  local repo_root
+  repo_root="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
+  run env DOTFILES_ROOT="$repo_root" nvim --headless -u NONE -i NONE -l /dev/stdin <<'LUA'
 local root = vim.env.DOTFILES_ROOT
 local spec
 for _, plugin in ipairs(dofile(root .. "/nvim/lua/plugins/text_edit.lua")) do
