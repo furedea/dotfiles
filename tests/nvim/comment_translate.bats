@@ -6,6 +6,7 @@ bats_require_minimum_version 1.5.0
 @test "comment translation never sends string literals to the translate service" {
   local repo_root
   repo_root="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
+  readonly repo_root
 
   run env DOTFILES_ROOT="$repo_root" nvim --headless -u NONE -i NONE -l /dev/stdin <<'LUA'
 local root = vim.env.DOTFILES_ROOT
