@@ -369,6 +369,10 @@ in
       no-homebrew-moshi =
         !(lib.hasInfix "moshi-hook" mba.homebrew.brewfile)
         && !(lib.hasInfix "rjyo/moshi" mba.homebrew.brewfile);
+      # tinycast resolves from homebrew/cask; no third-party tap is trusted for it.
+      tinycast-from-official-cask =
+        lib.hasInfix ''cask "tinycast"'' mbp.homebrew.brewfile
+        && !(lib.hasInfix "abue-ammar" mbp.homebrew.brewfile);
       noninteractive-homebrew-cleanup = mbp.homebrew.onActivation.extraFlags == [ "--force" ];
       moshi-pinned =
         versions "moshi-hook" mbpHome.home.packages == [ moshiVersion ]
