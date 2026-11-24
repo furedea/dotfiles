@@ -64,6 +64,7 @@ let
     GH_STACK_NO_UPDATE_NOTIFIER = "1";
     HOMEBREW_NO_ANALYTICS = "1";
     DSH_TELEMETRY_DISABLED = "1";
+    AGENT_BROWSER_NO_VERSION_CHECK = "1";
   };
   moshiHookPackage = pkgs.callPackage ../packages/moshi_hook.nix { };
   moshiHookRuntime = lib.getExe moshiHookPackage;
@@ -613,6 +614,7 @@ in
         analytics.enabled = false;
         otel.metrics_exporter = "none";
         feedback.enabled = false;
+        check_for_update_on_startup = false;
         features.daemon_auto_start = false;
       };
       # gh runs sandboxed with a one-hour token minted from this GitHub App; the key stays unreadable.
@@ -822,10 +824,17 @@ in
     "pnpm/config.yaml".text = ''
       storeDir: ${config.xdg.dataHome}/pnpm/store
       enableGlobalVirtualStore: true
+      updateNotifier: false
     '';
   };
 
   home.file = {
+    # omlx runs as a Homebrew launchd service, which does not inherit the shell environment;
+    # `brew services` reads this file when it starts the service.
+    ".homebrew/services/omlx.env".text = ''
+      HF_HUB_DISABLE_TELEMETRY=1
+    '';
+
     # Zsh（dotfileに実ファイル，直接編集可能）
     ".zshrc".source = link "zsh/.zshrc";
     ".zshenv".source = link "zsh/.zshenv";

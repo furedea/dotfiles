@@ -53,6 +53,7 @@ let
     GH_STACK_NO_UPDATE_NOTIFIER = "1";
     HOMEBREW_NO_ANALYTICS = "1";
     DSH_TELEMETRY_DISABLED = "1";
+    AGENT_BROWSER_NO_VERSION_CHECK = "1";
   };
   telemetryOptOutExports = lib.mapAttrsToList (
     name: value: "export ${name}=${value}"
@@ -255,6 +256,10 @@ in
         (codexSettings.analytics.enabled or true) == false
         && (codexSettings.otel.metrics_exporter or null) == "none"
         && (codexSettings.feedback.enabled or true) == false;
+      codex-no-update-check = (codexSettings.check_for_update_on_startup or true) == false;
+      omlx-service-no-hub-telemetry =
+        lib.hasInfix "HF_HUB_DISABLE_TELEMETRY=1\n"
+          home.home.file.".homebrew/services/omlx.env".text;
       codex-daemon-auto-start-disabled = (codexSettings.features.daemon_auto_start or true) == false;
       claude-telemetry-disabled =
         (claudeEnv.DISABLE_TELEMETRY or null) == "1"
@@ -314,6 +319,7 @@ in
         home.xdg.configFile."pnpm/config.yaml".text == ''
           storeDir: ${home.xdg.dataHome}/pnpm/store
           enableGlobalVirtualStore: true
+          updateNotifier: false
         '';
       no-mutable-language-installers =
         !(builtins.elem "rustup" homeNames)

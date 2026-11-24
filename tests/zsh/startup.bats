@@ -78,12 +78,12 @@ EOF
 
 @test "startup exports the telemetry opt-outs" {
   run --separate-stderr env -u GH_TELEMETRY -u GH_STACK_NO_UPDATE_NOTIFIER \
-    -u HOMEBREW_NO_ANALYTICS -u DSH_TELEMETRY_DISABLED \
+    -u HOMEBREW_NO_ANALYTICS -u DSH_TELEMETRY_DISABLED -u AGENT_BROWSER_NO_VERSION_CHECK \
     HOME="$TEST_HOME" \
-    zsh -df -c "source '$REPO_ROOT/zsh/.zshenv'; print -r -- \$GH_TELEMETRY \$GH_STACK_NO_UPDATE_NOTIFIER \$HOMEBREW_NO_ANALYTICS \$DSH_TELEMETRY_DISABLED"
+    zsh -df -c "source '$REPO_ROOT/zsh/.zshenv'; print -r -- \$GH_TELEMETRY \$GH_STACK_NO_UPDATE_NOTIFIER \$HOMEBREW_NO_ANALYTICS \$DSH_TELEMETRY_DISABLED \$AGENT_BROWSER_NO_VERSION_CHECK"
 
   [ "$status" -eq 0 ]
-  [ "$output" = "disabled 1 1 1" ]
+  [ "$output" = "disabled 1 1 1 1" ]
 }
 
 @test "hl expands to the local main Herdr session" {
