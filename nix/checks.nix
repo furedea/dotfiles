@@ -255,6 +255,11 @@ in
         (codexSettings.analytics.enabled or true) == false
         && (codexSettings.otel.metrics_exporter or null) == "none"
         && (codexSettings.feedback.enabled or true) == false;
+      codex-daemon-auto-start-disabled = (codexSettings.features.daemon_auto_start or true) == false;
+      claude-telemetry-disabled =
+        (claudeEnv.DISABLE_TELEMETRY or null) == "1"
+        && (claudeEnv.DISABLE_ERROR_REPORTING or null) == "1"
+        && !(claudeEnv ? CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC);
       gh-config-telemetry-disabled = (home.programs.gh.settings.telemetry or null) == "disabled";
       atuin-no-update-check = (home.programs.atuin.settings.update_check or true) == false;
       lazygit-no-update-check = (home.programs.lazygit.settings.update.method or null) == "never";

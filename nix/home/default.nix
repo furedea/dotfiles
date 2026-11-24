@@ -601,6 +601,8 @@ in
       # Sandboxed Neovim cannot write ~/.local/state/nvim, so log into the writable hook state directory.
       claude.settings.env = {
         NVIM_LOG_FILE = nvimLogFile;
+        DISABLE_TELEMETRY = "1";
+        DISABLE_ERROR_REPORTING = "1";
       }
       // telemetryOptOuts;
       codex.settings = {
@@ -611,6 +613,7 @@ in
         analytics.enabled = false;
         otel.metrics_exporter = "none";
         feedback.enabled = false;
+        features.daemon_auto_start = false;
       };
       # gh runs sandboxed with a one-hour token minted from this GitHub App; the key stays unreadable.
       github.agentToken = {
