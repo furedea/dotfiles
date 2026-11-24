@@ -12,7 +12,6 @@
   agent-harness,
   agent-config,
   system,
-  enableMoshiService,
   enableT3Service,
   ...
 }:
@@ -67,21 +66,20 @@ let
     DSH_TELEMETRY_DISABLED = "1";
     AGENT_BROWSER_NO_VERSION_CHECK = "1";
   };
-  moshiHookPackage = pkgs.callPackage ../packages/moshi_hook.nix { };
-  moshiHookRuntime = lib.getExe moshiHookPackage;
-  moshiLifecycle = pkgs.writeTextFile {
-    name = "manage-moshi-hook";
-    destination = "/bin/manage_moshi_hook";
-    executable = true;
-    text = builtins.readFile ../../scripts/moshi/manage_moshi_hook.sh;
-  };
-  moshiLifecycleBin = "${moshiLifecycle}/bin/manage_moshi_hook";
   # The T3 server runs under launchd, so its environment is declared, not inherited from a shell.
   # T3 serves loopback only; Tailscale Serve (HTTPS 8443) is the sole tailnet entry (ADR-0045).
   t3Telemetry = import ../t3_telemetry.nix;
   t3TelemetryState = "${config.xdg.stateHome}/t3-telemetry";
   t3TelemetryCheck = pkgs.writeShellScript "check_t3_telemetry" ''
     export JQ_BIN=${lib.getExe pkgs.jq}
+    export TOOLS_PATH=${
+      lib.makeBinPath [
+        pkgs.coreutils
+        pkgs.gawk
+        pkgs.gnugrep
+        pkgs.gnused
+      ]
+    }
     export BLOCKED_HOSTS="${lib.concatStringsSep " " t3Telemetry.blockedHosts}"
     export POLICY_FILE="${t3Telemetry.policyFile}"
     export STATE_DIR="${t3TelemetryState}"
@@ -103,11 +101,6 @@ let
     "/usr/sbin"
     "/sbin"
   ];
-  moshiLifecycleEnvironment = {
-    JQ_BIN = lib.getExe pkgs.jq;
-    MOSHI_HOOK_BIN = moshiHookRuntime;
-    SLEEP_BIN = lib.getExe' pkgs.coreutils "sleep";
-  };
   pythonPackage = unstable.python315;
   automationPython = lib.getExe pythonPackage;
   agentSource = agent-config.packages.${system}.default;
@@ -214,23 +207,7 @@ let
       ];
     }
   );
-  moshiHookSpec = pkgs.writeText "moshi-hook-bundle-spec.json" (
-    builtins.toJSON {
-      version = 1;
-      installers = [
-        {
-          executable = moshiHookRuntime;
-          arguments = [
-            "install"
-            "--target"
-            "claude,codex"
-          ];
-        }
-      ];
-    }
-  );
   herdrHookBundle = generateHookBundle "herdr-hook-bundle" herdrHookSpec;
-  moshiHookBundle = generateHookBundle "moshi-hook-bundle" moshiHookSpec;
   herdrZshCompletion = pkgs.runCommand "herdr-zsh-completion" { } ''
     set -euxCo pipefail
     mkdir -p "$out/share/zsh/site-functions"
@@ -306,7 +283,6 @@ in
       repoCommand
       rootsPackage
       terminalBrowserPackage
-      moshiHookPackage
       unstable._1password-cli
 
       # Code quality
@@ -612,7 +588,6 @@ in
       };
       hooks = {
         herdr = herdrHookBundle;
-        moshi = moshiHookBundle;
       };
       # Sandboxed Neovim cannot write ~/.local/state/nvim, so log into the writable hook state directory.
       claude.settings.env = {
@@ -784,22 +759,6 @@ in
         StandardErrorPath = t3ServerLogFile;
       };
     };
-  }
-  // lib.optionalAttrs enableMoshiService {
-    moshi-hook = {
-      enable = true;
-      config = {
-        ProgramArguments = [
-          moshiLifecycleBin
-          "serve"
-        ];
-        EnvironmentVariables = moshiLifecycleEnvironment;
-        KeepAlive = true;
-        LimitLoadToSessionType = "Aqua";
-        ProcessType = "Background";
-        RunAtLoad = true;
-      };
-    };
   };
 
   home.activation = {
@@ -878,7 +837,6 @@ in
     # Zsh（dotfileに実ファイル，直接編集可能）
     ".zshrc".source = link "zsh/.zshrc";
     ".zshenv".source = link "zsh/.zshenv";
-    ".local/bin/moshi-hook".source = moshiHookRuntime;
     ".zprofile".source = link "zsh/.zprofile";
 
     # Bash

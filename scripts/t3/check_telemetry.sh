@@ -13,6 +13,7 @@ Usage:
     $0 <T3_PACKAGE>
 
 Environment:
+    TOOLS_PATH: PATH for every external tool the script runs (required)
     JQ_BIN: jq executable (required)
     STATE_DIR: where results are recorded (default: ~/.local/state/t3-telemetry)
     POLICY_FILE: managed policy (default: /Library/Application Support/T3Code/policy.json)
@@ -25,6 +26,10 @@ Options:
     --help, -h: print this
 EOF2
 }
+
+# Activation runs with a minimal PATH, so every external tool comes from the caller-given TOOLS_PATH.
+readonly TOOLS_PATH="${TOOLS_PATH:?TOOLS_PATH is required}"
+export PATH="$TOOLS_PATH"
 
 readonly JQ_BIN="${JQ_BIN:?JQ_BIN is required}"
 readonly BLOCKED_HOSTS="${BLOCKED_HOSTS:?BLOCKED_HOSTS is required}"

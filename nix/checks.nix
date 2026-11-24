@@ -23,8 +23,6 @@ let
   mba = darwin.mba.config;
   mbpHome = mbp.home-manager.users.kaito;
   mbaHome = mba.home-manager.users.kaito;
-  moshi = mbpHome.launchd.agents.moshi-hook.config;
-  moshiVersion = (pkgs.callPackage ./packages/moshi_hook.nix { }).version;
   codexPackage = pkgs.callPackage ./packages/codex.nix { };
   agentDesktopPackage = pkgs.callPackage ./packages/agent_desktop.nix { };
   chromeExecutable = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
@@ -287,11 +285,7 @@ in
       lspmux-unix-socket-only =
         (lspSettings.listen or null) == lspmuxSocket && (lspSettings.connect or null) == lspmuxSocket;
       carapace-no-uninstalled-bridge = !(lib.hasInfix "inshellisense" (builtins.readFile ../zsh/.zshrc));
-      hooks-compose-herdr-and-moshi =
-        builtins.attrNames home.programs.agent-harness.hooks == [
-          "herdr"
-          "moshi"
-        ];
+      hooks-compose-herdr-only = builtins.attrNames home.programs.agent-harness.hooks == [ "herdr" ];
       # Sandboxed agents cannot write ~/.local/state/nvim, so Neovim would drop nvim.log in the workspace.
       agent-nvim-log-in-writable-state =
         let
@@ -425,34 +419,35 @@ in
       zsh-no-bash-completion = !mba.programs.zsh.enableBashCompletion;
       zsh-starship-prompt = mba.programs.zsh.promptInit == "";
       no-homebrew-zsh-integration = !mba.nix-homebrew.enableZshIntegration;
-      no-homebrew-moshi =
-        !(lib.hasInfix "moshi-hook" mba.homebrew.brewfile)
-        && !(lib.hasInfix "rjyo/moshi" mba.homebrew.brewfile);
+      no-homebrew-moshi = builtins.all (host: !(lib.hasInfix "moshi" host.homebrew.brewfile)) [
+        mbp
+        mba
+      ];
       homebrew-analytics-disabled =
         (mbp.homebrew.onActivation.extraEnv.HOMEBREW_NO_ANALYTICS or null) == "1"
         && (mba.homebrew.onActivation.extraEnv.HOMEBREW_NO_ANALYTICS or null) == "1";
       noninteractive-homebrew-cleanup = mbp.homebrew.onActivation.extraFlags == [ "--force" ];
-      moshi-pinned =
-        versions "moshi-hook" mbpHome.home.packages == [ moshiVersion ]
-        && lib.hasPrefix "/nix/store/" (toString mbpHome.home.file.".local/bin/moshi-hook".source)
-        && lib.hasSuffix "/bin/moshi-hook" (toString mbpHome.home.file.".local/bin/moshi-hook".source);
-      moshi-aqua = moshi.LimitLoadToSessionType == "Aqua";
-      moshi-keychain-launcher =
-        lib.hasSuffix "/bin/manage_moshi_hook" (builtins.head moshi.ProgramArguments)
-        && builtins.tail moshi.ProgramArguments == [ "serve" ];
-      moshi-keep-alive = moshi.KeepAlive;
-      moshi-managed-runtime =
-        lib.hasPrefix "/nix/store/" moshi.EnvironmentVariables.MOSHI_HOOK_BIN
-        && lib.hasInfix "moshi-hook-${moshiVersion}/" moshi.EnvironmentVariables.MOSHI_HOOK_BIN
-        && lib.hasSuffix "/bin/moshi-hook" moshi.EnvironmentVariables.MOSHI_HOOK_BIN;
-      moshi-no-updater = !(mbpHome.launchd.agents ? moshi-hook-updater);
-      moshi-no-environment-credentials = noSecrets moshi.EnvironmentVariables;
-      moshi-only-on-mbp =
-        builtins.filter (name: lib.hasPrefix "moshi-hook" name) (builtins.attrNames mbaHome.launchd.agents)
-        == [ ];
-      moshi-no-migration-hooks =
-        builtins.filter (name: lib.hasPrefix "moshi" name) (builtins.attrNames mbpHome.home.activation)
-        == [ ];
+      no-moshi-hook-package =
+        builtins.all
+          (
+            home:
+            !(builtins.elem "moshi-hook" (names home.home.packages))
+            && !(home.home.file ? ".local/bin/moshi-hook")
+          )
+          [
+            mbpHome
+            mbaHome
+          ];
+      no-moshi-hook-launchd-agent =
+        builtins.all
+          (
+            home:
+            builtins.filter (name: lib.hasPrefix "moshi" name) (builtins.attrNames home.launchd.agents) == [ ]
+          )
+          [
+            mbpHome
+            mbaHome
+          ];
       standalone-home-services-match-host =
         builtins.all
           (
