@@ -86,6 +86,7 @@ def test_failed_install_preserves_previous_state_and_plugins(run_cli: CliRunner,
     assert not any(row[:2] == ["plugin", "uninstall"] for row in calls(plugin_remote))
 
 
+INSTALL_VERB = ["plugin", "install"]
 LOCAL_PLUGIN = ("local.plugin", "/nix/store/plugin", "/nix/store/plugin")
 
 
@@ -93,4 +94,4 @@ def test_local_declaration_is_linked_not_installed(run_cli: CliRunner, plugin_re
     result = run_cli(SCRIPT, *LOCAL_PLUGIN, env=installed(PLUGIN[0], PLUGIN[2]))
     assert result.returncode == 0
     assert ["plugin", "link", LOCAL_PLUGIN[1]] in calls(plugin_remote)
-    assert not any(row[:2] == ["plugin", "install"] for row in calls(plugin_remote))
+    assert not any(row[:2] == INSTALL_VERB for row in calls(plugin_remote))

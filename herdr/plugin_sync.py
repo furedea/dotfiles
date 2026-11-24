@@ -67,6 +67,11 @@ def synchronize(declared: tuple[Plugin, ...], state: Path, executable: str) -> N
         subprocess.run(install_arguments(executable, plugin), check=True)
     for identifier in removed:
         subprocess.run([executable, "plugin", "uninstall", identifier], check=True)
+    record_declaration(declared, state)
+
+
+def record_declaration(declared: tuple[Plugin, ...], state: Path) -> None:
+    """Atomically publish the identifiers this declaration manages."""
     temporary: Path | None = None
     try:
         with tempfile.NamedTemporaryFile(mode="w", dir=state.parent, prefix=f"{state.name}.", delete=False) as stream:
