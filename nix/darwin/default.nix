@@ -367,8 +367,14 @@ in
     /usr/bin/install -d -o root -g wheel -m 0755 "${t3Telemetry.policyDirectory}" \
       && /usr/bin/install -o root -g wheel -m 0644 ${t3Policy} "${t3Telemetry.policyFile}" \
       || echo "t3-telemetry: could not write ${t3Telemetry.policyFile}" >&2
+    hostsBefore="$(/usr/bin/cksum < /etc/hosts)"
     ${updateHostsBlock} /etc/hosts ${lib.escapeShellArgs t3Telemetry.blockedHosts} \
       || echo "t3-telemetry: left /etc/hosts unchanged" >&2
+    # A cached answer for a blocked host would outlive the new block.
+    if [ "$(/usr/bin/cksum < /etc/hosts)" != "$hostsBefore" ]; then
+      /usr/bin/dscacheutil -flushcache || true
+      /usr/bin/killall -HUP mDNSResponder || true
+    fi
     # NOTE: com.apple.universalaccess (reduceMotion, reduceTransparency) cannot be
     # written programmatically due to macOS TCC restrictions. Set manually in:
     # System Settings > Accessibility > Display

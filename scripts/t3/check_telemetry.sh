@@ -164,7 +164,12 @@ function record_result() {
       printf 'warning=%s\n' "$_warning"
     done
   } >"$STATE_DIR/last_check.txt"
-  printf '%s\n' "$_package" >"$STATE_DIR/checked_package"
+  # Only a clean check counts as done, so the activation reruns it on every switch until it passes.
+  if [[ "${#warnings[@]}" -eq 0 ]]; then
+    printf '%s\n' "$_package" >"$STATE_DIR/checked_package"
+  else
+    rm -f "$STATE_DIR/checked_package"
+  fi
 }
 
 main "$@"

@@ -55,6 +55,34 @@ write_package() {
   [ "$(cat "$STATE_DIR/checked_package")" = "$PACKAGE" ]
 }
 
+@test "a package is not recorded as checked while a warning remains" {
+  rm "$POLICY_FILE"
+
+  run "$SCRIPT" "$PACKAGE"
+
+  [ ! -e "$STATE_DIR/checked_package" ]
+}
+
+@test "a warning removes the record of an earlier clean check of the same package" {
+  "$SCRIPT" "$PACKAGE"
+  [ -e "$STATE_DIR/checked_package" ]
+  rm "$POLICY_FILE"
+
+  run "$SCRIPT" "$PACKAGE"
+
+  [ ! -e "$STATE_DIR/checked_package" ]
+}
+
+@test "the package is recorded once the warnings are gone" {
+  rm "$POLICY_FILE"
+  "$SCRIPT" "$PACKAGE" 2>/dev/null
+  write_good_state
+
+  run "$SCRIPT" "$PACKAGE"
+
+  [ "$(cat "$STATE_DIR/checked_package")" = "$PACKAGE" ]
+}
+
 @test "a missing policy warns and still exits 0" {
   rm "$POLICY_FILE"
 
