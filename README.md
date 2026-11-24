@@ -203,7 +203,7 @@ The `persiyanov.reviewr` plugin is built from its pinned source by
 [`nix/home/default.nix`](nix/home/default.nix), linked during Home Manager
 activation by [`herdr/plugin_sync.py`](herdr/plugin_sync.py), and justified by
 [`ADR-0002`](docs/adr/0002_manage_herdr_plugins_through_home_manager_activation.md) and
-[`ADR-0048`](docs/adr/0048_link_the_herdr_reviewr_plugin_built_from_its_pinned_source.md).
+[`ADR-0049`](docs/adr/0049_link_the_herdr_reviewr_plugin_built_from_its_pinned_source.md).
 
 #### Development Cycle
 
