@@ -2,6 +2,8 @@
 status: accepted
 date: 2026-11-25
 related: [ADR-0045, ADR-0047]
+amended:
+  - "2026-11-25: the hosts rewriter names its block with HOSTS_BLOCK_NAME (default t3-telemetry-block, unchanged), so other tools' telemetry hosts get their own app-telemetry-block"
 ---
 
 # Keep T3 Code from sending telemetry
@@ -46,9 +48,6 @@ and the check notices a new endpoint or a lost layer instead of waiting for a le
     option. The rewrite never touches lines outside the block and leaves the file unchanged when the
     markers are duplicated or unpaired. `relay.t3.codes` is blocked because T3 Connect is unused
     (ADR-0045).
-    The rewriter names its block with `HOSTS_BLOCK_NAME` (default `t3-telemetry-block`, so the block
-    already on a machine is rewritten in place); other tools' telemetry hosts use their own block
-    (`app-telemetry-block`), and no block touches another.
 - Check: home-manager activation runs `scripts/t3/check_telemetry.sh` when the T3 server bundle's
     store path changed since the last check. It checks the policy, the hosts, the launchd environment
     and the server agent, and diffs the `https://` hosts and `T3CODE_*` / `OTEL*` names found in the
