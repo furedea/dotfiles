@@ -222,11 +222,13 @@ let
     fi
     exec -a codex ${codexPackage}/bin/codex "$@"
   '';
+  herdrReviewrPlugin = unstable.callPackage ../packages/herdr_reviewr_plugin.nix { };
+  # A source starting with "/" is a local plugin directory that plugin_sync.py links as is.
   herdrPlugins = [
     {
       id = "persiyanov.reviewr";
-      source = "persiyanov/herdr-reviewr";
-      rev = "4c090225af706bf3aaa24b39fea890a72994f40f";
+      source = "${herdrReviewrPlugin}/share/herdr-plugin";
+      rev = "${herdrReviewrPlugin}/share/herdr-plugin";
     }
   ];
   herdrPluginArgs = lib.escapeShellArgs (
