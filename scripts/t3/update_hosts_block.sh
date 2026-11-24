@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Activation runs with a minimal PATH, so every external tool comes from the caller-given TOOLS_PATH.
+readonly TOOLS_PATH="${TOOLS_PATH:?TOOLS_PATH is required}"
+export PATH="$TOOLS_PATH"
+
 readonly BEGIN_MARKER="# BEGIN t3-telemetry-block (managed by dotfiles; do not edit)"
 readonly END_MARKER="# END t3-telemetry-block"
 
@@ -14,6 +18,9 @@ Description:
 
 Usage:
     $0 <HOSTS_FILE> <HOST>...
+
+Environment:
+    TOOLS_PATH: PATH for every external tool the script runs (required)
 
 Options:
     --help, -h: print this
