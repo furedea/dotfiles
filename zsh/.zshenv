@@ -30,3 +30,8 @@ export GH_STACK_NO_UPDATE_NOTIFIER=1
 export HOMEBREW_NO_ANALYTICS=1
 export DSH_TELEMETRY_DISABLED=1
 export AGENT_BROWSER_NO_VERSION_CHECK=1
+
+# T3 Code sends telemetry unless this parses as false; the desktop app forwards it to its server (ADR-0048).
+export T3CODE_TELEMETRY_ENABLED=false
+# Belt and braces: relay tracing also stops when T3 OTel export is disabled (ADR-0048).
+export T3CODE_OTEL_SDK_DISABLED=true
