@@ -5,6 +5,7 @@ bats_require_minimum_version 1.5.0
 
 setup() {
   load test-helper/setup
+  export TOOLS_PATH="$PATH"
   SCRIPT="$REPO_ROOT/scripts/t3/update_hosts_block.sh"
   HOSTS="$BATS_TEST_TMPDIR/hosts"
   BEGIN="# BEGIN t3-telemetry-block (managed by dotfiles; do not edit)"
@@ -146,4 +147,15 @@ setup() {
   grep -qxF "0.0.0.0 f.kiok.jp" "$HOSTS"
   grep -qxF "0.0.0.0 ingest.t3.codes" "$HOSTS"
   [ "$(grep -cF "$BEGIN" "$HOSTS")" -eq 1 ]
+}
+
+@test "external tools come from TOOLS_PATH, not from the caller's PATH" {
+  local _only_bash="$BATS_TEST_TMPDIR/only_bash"
+  mkdir "$_only_bash"
+  ln -s "$(command -v bash)" "$_only_bash/bash"
+
+  run --separate-stderr env PATH="$_only_bash" TOOLS_PATH="$PATH" "$SCRIPT" "$HOSTS" ingest.t3.codes
+
+  [ "$status" -eq 0 ]
+  [ -z "$stderr" ]
 }

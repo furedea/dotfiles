@@ -73,6 +73,14 @@ let
   t3TelemetryState = "${config.xdg.stateHome}/t3-telemetry";
   t3TelemetryCheck = pkgs.writeShellScript "check_t3_telemetry" ''
     export JQ_BIN=${lib.getExe pkgs.jq}
+    export TOOLS_PATH=${
+      lib.makeBinPath [
+        pkgs.coreutils
+        pkgs.gawk
+        pkgs.gnugrep
+        pkgs.gnused
+      ]
+    }
     export BLOCKED_HOSTS="${lib.concatStringsSep " " t3Telemetry.blockedHosts}"
     export POLICY_FILE="${t3Telemetry.policyFile}"
     export STATE_DIR="${t3TelemetryState}"
