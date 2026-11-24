@@ -23,3 +23,5 @@ export EDITOR=nvim
 export VISUAL=nvim
 # agent-browser bundles no browser on Darwin; use the Homebrew cask Chrome.
 export AGENT_BROWSER_EXECUTABLE_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+# T3 Code sends telemetry unless this parses as false; the desktop app forwards it to its server (ADR-0048).
+export T3CODE_TELEMETRY_ENABLED=false

@@ -44,6 +44,7 @@ let
     ]
     ++ lib.filter (provider: (provider.pname or "") != "codex") t3codeUpstream.providerPackages;
   };
+  # The server bundle that the telemetry check scans is t3codePackage.unwrapped; the wrapper holds only bin/.
   # The Dock shows T3, not Electron, only when the bundle holds the Electron it runs (#494).
   # llm-agents builds T3 against the Electron of its own nixpkgs, not the dotfiles one.
   t3codeDesktopPackage = pkgs.callPackage ../packages/t3code_desktop.nix {
@@ -68,6 +69,16 @@ let
   moshiLifecycleBin = "${moshiLifecycle}/bin/manage_moshi_hook";
   # The T3 server runs under launchd, so its environment is declared, not inherited from a shell.
   # T3 serves loopback only; Tailscale Serve (HTTPS 8443) is the sole tailnet entry (ADR-0045).
+  t3Telemetry = import ../t3_telemetry.nix;
+  t3TelemetryState = "${config.xdg.stateHome}/t3-telemetry";
+  t3TelemetryCheck = pkgs.writeShellScript "check_t3_telemetry" ''
+    export JQ_BIN=${lib.getExe pkgs.jq}
+    export BLOCKED_HOSTS="${lib.concatStringsSep " " t3Telemetry.blockedHosts}"
+    export POLICY_FILE="${t3Telemetry.policyFile}"
+    export STATE_DIR="${t3TelemetryState}"
+    ${lib.optionalString enableT3Service ''export SERVICE_LABEL="${t3Telemetry.serverLabel}"''}
+    ${builtins.readFile ../../scripts/t3/check_telemetry.sh}
+  '';
   t3ServerPort = "3774";
   t3ServerState = "${config.home.homeDirectory}/.t3";
   t3ServerLogDirectory = "${t3ServerState}/userdata/logs";
@@ -694,6 +705,21 @@ in
       };
     };
   }
+  // {
+    # GUI apps started from the Dock or Spotlight inherit launchd's environment, not .zshenv (ADR-0048).
+    t3-telemetry-off = {
+      enable = true;
+      config = {
+        ProgramArguments = [
+          "/bin/launchctl"
+          "setenv"
+          t3Telemetry.envName
+          t3Telemetry.envValue
+        ];
+        RunAtLoad = true;
+      };
+    };
+  }
   // lib.optionalAttrs enableT3Service {
     t3-server = {
       enable = true;
@@ -709,6 +735,7 @@ in
           T3CODE_HOME = t3ServerState;
           T3CODE_HOST = "127.0.0.1";
           T3CODE_PORT = t3ServerPort;
+          ${t3Telemetry.envName} = t3Telemetry.envValue;
         };
         WorkingDirectory = config.home.homeDirectory;
         # Provider sessions need the login Keychain, which only the Aqua session has.
@@ -747,6 +774,12 @@ in
         mkdir -p "${t3ServerLogDirectory}"
       ''
     );
+    t3TelemetryCheck = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+      if [ "$(cat "${t3TelemetryState}/checked_package" 2>/dev/null)" != "${t3codePackage.unwrapped}" ]; then
+        ${t3TelemetryCheck} "${t3codePackage.unwrapped}" \
+          || echo "t3-telemetry: the check did not run" >&2
+      fi
+    '';
     zshCache = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
       "${pkgs.zsh}/bin/zsh" -f \
         "${zshCacheBuilder}" \

@@ -41,6 +41,9 @@ let
       package: (package.pname or package.name or "") == "t3code-desktop"
     ) mbpHome.home.packages
   );
+  t3Telemetry = import ./t3_telemetry.nix;
+  t3Activation = host: host.system.activationScripts.postActivation.text;
+  t3SetenvAgent = host: host.home-manager.users.kaito.launchd.agents.t3-telemetry-off.config;
   t3ServicePath = lib.splitString ":" t3Service.EnvironmentVariables.PATH;
   t3ServiceState = "${mbpHome.home.homeDirectory}/.t3";
   claudePackage = inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.claude-code;
@@ -436,6 +439,73 @@ in
       t3-service-log-directory-activation =
         mbpHome.home.activation ? t3LogDirectory && !(mbaHome.home.activation ? t3LogDirectory);
       t3-service-no-environment-credentials = noSecrets t3Service.EnvironmentVariables;
+      # T3 Code telemetry stays off in four layers (ADR-0048): config, policy, hosts, setenv.
+      t3-telemetry-service-env = t3Service.EnvironmentVariables.${t3Telemetry.envName} == "false";
+      t3-telemetry-zshenv-env = lib.hasInfix "export T3CODE_TELEMETRY_ENABLED=false\n" (
+        builtins.readFile ../zsh/.zshenv
+      );
+      t3-telemetry-policy-content =
+        t3Telemetry.policy == {
+          schemaVersion = 1;
+          organization = "dotfiles";
+          limits.telemetry = false;
+        };
+      t3-telemetry-policy-installed-root-owned =
+        builtins.all
+          (
+            host:
+            let
+              text = t3Activation host;
+            in
+            lib.hasInfix "/usr/bin/install -d -o root -g wheel -m 0755 \"/Library/Application Support/T3Code\"" text
+            && lib.hasInfix "/usr/bin/install -o root -g wheel -m 0644" text
+            && lib.hasInfix "\"/Library/Application Support/T3Code/policy.json\"" text
+          )
+          [
+            mbp
+            mba
+          ];
+      t3-telemetry-hosts-blocked-on-both =
+        builtins.all
+          (
+            host:
+            lib.hasInfix "update_hosts_block /etc/hosts" (t3Activation host)
+            && builtins.all (name: lib.hasInfix name (t3Activation host)) [
+              "ingest.t3.codes"
+              "api.axiom.co"
+              "relay.t3.codes"
+            ]
+          )
+          [
+            mbp
+            mba
+          ];
+      t3-telemetry-setenv-agent-on-both =
+        builtins.all
+          (
+            host:
+            let
+              agent = t3SetenvAgent host;
+            in
+            agent.ProgramArguments == [
+              "/bin/launchctl"
+              "setenv"
+              "T3CODE_TELEMETRY_ENABLED"
+              "false"
+            ]
+            && agent.RunAtLoad
+            && agent.KeepAlive == null
+          )
+          [
+            mbp
+            mba
+          ];
+      t3-telemetry-check-on-both =
+        builtins.all (host: host.home-manager.users.kaito.home.activation ? t3TelemetryCheck)
+          [
+            mbp
+            mba
+          ];
       t3-service-mbp-stays-awake-on-charger =
         lib.hasInfix "pmset -c sleep 0" mbp.system.activationScripts.postActivation.text
         && !(lib.hasInfix "pmset -c sleep 0" mba.system.activationScripts.postActivation.text);

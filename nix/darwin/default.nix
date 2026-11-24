@@ -22,6 +22,12 @@ let
   omlxTapUrl = "https://github.com/${omlxTap}";
   omlxFormula = "${omlxTap}/omlx";
 
+  t3Telemetry = import ../t3_telemetry.nix;
+  t3Policy = pkgs.writeText "t3code-policy.json" (builtins.toJSON t3Telemetry.policy);
+  updateHostsBlock = pkgs.writeShellScript "update_hosts_block" (
+    builtins.readFile ../../scripts/t3/update_hosts_block.sh
+  );
+
   tinycastTap = "abue-ammar/tinycast";
 
   # Homebrew refuses to load items from third-party taps until they are
@@ -355,6 +361,14 @@ in
       # System sleep: never on the charger, so the T3 server stays reachable (ADR-0045)
       pmset -c sleep 0
     ''}
+
+    # T3 Code telemetry: a managed policy and blocked hosts (ADR-0048). A failure here must not
+    # stop the activation, so each step only reports.
+    /usr/bin/install -d -o root -g wheel -m 0755 "${t3Telemetry.policyDirectory}" \
+      && /usr/bin/install -o root -g wheel -m 0644 ${t3Policy} "${t3Telemetry.policyFile}" \
+      || echo "t3-telemetry: could not write ${t3Telemetry.policyFile}" >&2
+    ${updateHostsBlock} /etc/hosts ${lib.escapeShellArgs t3Telemetry.blockedHosts} \
+      || echo "t3-telemetry: left /etc/hosts unchanged" >&2
     # NOTE: com.apple.universalaccess (reduceMotion, reduceTransparency) cannot be
     # written programmatically due to macOS TCC restrictions. Set manually in:
     # System Settings > Accessibility > Display
