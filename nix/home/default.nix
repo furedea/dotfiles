@@ -231,6 +231,10 @@ let
     fi
     exec -a codex ${codexPackage}/bin/codex "$@"
   '';
+  # agy is closed source; --disable_telemetry is a hidden global flag it accepts on every command.
+  telemetryFreeAntigravity = pkgs.writeShellScriptBin "agy" ''
+    exec -a agy ${antigravityCliPackage}/bin/agy --disable_telemetry "$@"
+  '';
   herdrPlugins = [
     {
       id = "persiyanov.reviewr";
@@ -311,7 +315,7 @@ in
       # AI coding agents
       agentBrowserPackage
       agentDesktopPackage
-      antigravityCliPackage
+      telemetryFreeAntigravity
       claudePackage
       dshPackage
       herdrCompatibleCodex
@@ -604,6 +608,8 @@ in
         NVIM_LOG_FILE = nvimLogFile;
         DISABLE_TELEMETRY = "1";
         DISABLE_ERROR_REPORTING = "1";
+        DISABLE_FEEDBACK_COMMAND = "1";
+        CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY = "1";
       }
       // telemetryOptOuts;
       codex.settings = {

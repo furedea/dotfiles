@@ -28,6 +28,10 @@ let
   codexPackage = pkgs.callPackage ./packages/codex.nix { };
   agentDesktopPackage = pkgs.callPackage ./packages/agent_desktop.nix { };
   chromeExecutable = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+  antigravityPackage = inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.antigravity-cli;
+  antigravityWrapperText = lib.concatMapStrings (package: package.text or "") (
+    builtins.filter (package: (package.name or "") == "agy") home.home.packages
+  );
   codexWrapperText =
     (builtins.head (builtins.filter (package: (package.name or "") == "codex") home.home.packages))
     .text;
@@ -260,6 +264,15 @@ in
       omlx-service-no-hub-telemetry =
         lib.hasInfix "HF_HUB_DISABLE_TELEMETRY=1\n"
           home.home.file.".homebrew/services/omlx.env".text;
+      # agy's closed binary accepts a hidden global flag; the wrapper replaces the package on PATH.
+      antigravity-telemetry-disabled =
+        lib.hasInfix "--disable_telemetry" antigravityWrapperText
+        && lib.hasInfix (builtins.unsafeDiscardStringContext "${antigravityPackage}/bin/agy") antigravityWrapperText
+        && !(builtins.elem "antigravity-cli" homeNames);
+      claude-feedback-disabled =
+        (claudeEnv.DISABLE_FEEDBACK_COMMAND or null) == "1"
+        && (claudeEnv.CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY or null) == "1"
+        && !(claudeEnv ? CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC);
       codex-daemon-auto-start-disabled = (codexSettings.features.daemon_auto_start or true) == false;
       claude-telemetry-disabled =
         (claudeEnv.DISABLE_TELEMETRY or null) == "1"
@@ -332,14 +345,14 @@ in
         builtins.filter (
           name:
           builtins.elem name [
-            "antigravity-cli"
+            "agy"
             "claude-code"
             "codex"
             "herdr"
           ]
         ) homeNames == [
           "herdr"
-          "antigravity-cli"
+          "agy"
           "claude-code"
           "codex"
         ];
