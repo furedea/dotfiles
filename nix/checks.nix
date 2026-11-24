@@ -338,6 +338,16 @@ in
       plugin-sync-has-git =
         lib.hasInfix "-git-" home.home.activation.herdrPlugins.data
         && lib.hasInfix "/bin:/usr/bin:/bin" home.home.activation.herdrPlugins.data;
+      czg-pinned-commitlint-config =
+        let
+          pinned =
+            command:
+            builtins.match ".*@commitlint/config-conventional@[0-9]+\\.[0-9]+\\.[0-9]+ .*" command != null;
+          lazygitCommands = map (entry: entry.command) (home.programs.lazygit.settings.customCommands or [ ]);
+        in
+        lazygitCommands != [ ]
+        && builtins.all pinned lazygitCommands
+        && pinned (builtins.readFile ../zsh/.zshrc);
       lspmux-persistent = lsp.enable && lsp.config.RunAtLoad && lsp.config.KeepAlive;
       lspmux-server =
         lib.hasPrefix "/nix/store/" (builtins.head lsp.config.ProgramArguments)
@@ -369,6 +379,9 @@ in
       no-homebrew-moshi =
         !(lib.hasInfix "moshi-hook" mba.homebrew.brewfile)
         && !(lib.hasInfix "rjyo/moshi" mba.homebrew.brewfile);
+      no-homebrew-unused-apps =
+        !(lib.hasInfix ''"firefox"'' mbp.homebrew.brewfile)
+        && !(lib.hasInfix ''"herdr-app"'' mbp.homebrew.brewfile);
       noninteractive-homebrew-cleanup = mbp.homebrew.onActivation.extraFlags == [ "--force" ];
       moshi-pinned =
         versions "moshi-hook" mbpHome.home.packages == [ moshiVersion ]

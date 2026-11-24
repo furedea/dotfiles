@@ -35,3 +35,7 @@ nvim/.undo/
 
 # Neovim falls back to a log in the working directory when its state directory is not writable
 /nvim.log
+
+# App backup archives stay out of the repository
+*.tinycast
+*.rayconfig
