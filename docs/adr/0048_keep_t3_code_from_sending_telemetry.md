@@ -32,6 +32,12 @@ and the check notices a new endpoint or a lost layer instead of waiting for a le
 - Config: `T3CODE_TELEMETRY_ENABLED=false` in `zsh/.zshenv` (the desktop app starts `$SHELL -ilc` and
     forwards it to its bundled server), in the `t3-server` agent's environment, and in the launchd
     user environment through a one-shot agent (`launchctl setenv`) for apps started from the Dock.
+    `T3CODE_OTEL_SDK_DISABLED=true` goes to the same three places as belt and braces: relay tracing
+    runs only when telemetry is not false and OTel export is not disabled, so either variable stops it.
+    It does not stop product events and would also stop user-configured OTLP export (none is
+    configured). The desktop app forwards only `T3CODE_TELEMETRY_ENABLED` from the login shell, so
+    for it the launchd environment carries this one. The generic `OTEL_SDK_DISABLED` is not set; it
+    would affect other tools.
 - Policy: darwin activation writes `/Library/Application Support/T3Code/policy.json` with
     `limits.telemetry: false`, root-owned, so no user setting or app regression can turn it on. Only
     the file is used: a native configuration profile together with the file makes T3 refuse to start.

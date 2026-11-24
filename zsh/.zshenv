@@ -25,3 +25,5 @@ export VISUAL=nvim
 export AGENT_BROWSER_EXECUTABLE_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 # T3 Code sends telemetry unless this parses as false; the desktop app forwards it to its server (ADR-0048).
 export T3CODE_TELEMETRY_ENABLED=false
+# Belt and braces: relay tracing also stops when T3 OTel export is disabled (ADR-0048).
+export T3CODE_OTEL_SDK_DISABLED=true

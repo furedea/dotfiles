@@ -4,6 +4,11 @@ rec {
   envName = "T3CODE_TELEMETRY_ENABLED";
   envValue = "false";
 
+  # Redundant with the opt-out above: relay tracing needs telemetry on and OTel export enabled, so either
+  # variable stops it. The generic OTEL_SDK_DISABLED is not set: it would affect other tools.
+  otelEnvName = "T3CODE_OTEL_SDK_DISABLED";
+  otelEnvValue = "true";
+
   # Product events go to ingest.t3.codes, relay traces to api.axiom.co; T3 Connect is unused (ADR-0045).
   blockedHosts = [
     "ingest.t3.codes"

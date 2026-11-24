@@ -441,6 +441,11 @@ in
       t3-service-no-environment-credentials = noSecrets t3Service.EnvironmentVariables;
       # T3 Code telemetry stays off in four layers (ADR-0048): config, policy, hosts, setenv.
       t3-telemetry-service-env = t3Service.EnvironmentVariables.${t3Telemetry.envName} == "false";
+      t3-telemetry-service-otel-disabled =
+        t3Service.EnvironmentVariables.T3CODE_OTEL_SDK_DISABLED == "true";
+      t3-telemetry-zshenv-otel-disabled =
+        lib.hasInfix "export T3CODE_OTEL_SDK_DISABLED=true\n" (builtins.readFile ../zsh/.zshenv)
+        && !(lib.hasInfix "export OTEL_SDK_DISABLED" (builtins.readFile ../zsh/.zshenv));
       t3-telemetry-zshenv-env = lib.hasInfix "export T3CODE_TELEMETRY_ENABLED=false\n" (
         builtins.readFile ../zsh/.zshenv
       );
@@ -488,10 +493,9 @@ in
               agent = t3SetenvAgent host;
             in
             agent.ProgramArguments == [
-              "/bin/launchctl"
-              "setenv"
-              "T3CODE_TELEMETRY_ENABLED"
-              "false"
+              "/bin/sh"
+              "-c"
+              "/bin/launchctl setenv T3CODE_TELEMETRY_ENABLED false && /bin/launchctl setenv T3CODE_OTEL_SDK_DISABLED true"
             ]
             && agent.RunAtLoad
             && agent.KeepAlive == null

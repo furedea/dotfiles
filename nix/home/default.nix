@@ -710,11 +710,11 @@ in
     t3-telemetry-off = {
       enable = true;
       config = {
+        # launchctl setenv sets one variable per call.
         ProgramArguments = [
-          "/bin/launchctl"
-          "setenv"
-          t3Telemetry.envName
-          t3Telemetry.envValue
+          "/bin/sh"
+          "-c"
+          "/bin/launchctl setenv ${t3Telemetry.envName} ${t3Telemetry.envValue} && /bin/launchctl setenv ${t3Telemetry.otelEnvName} ${t3Telemetry.otelEnvValue}"
         ];
         RunAtLoad = true;
       };
@@ -736,6 +736,7 @@ in
           T3CODE_HOST = "127.0.0.1";
           T3CODE_PORT = t3ServerPort;
           ${t3Telemetry.envName} = t3Telemetry.envValue;
+          ${t3Telemetry.otelEnvName} = t3Telemetry.otelEnvValue;
         };
         WorkingDirectory = config.home.homeDirectory;
         # Provider sessions need the login Keychain, which only the Aqua session has.
