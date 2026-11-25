@@ -56,7 +56,16 @@ let
   jevLintPackage = agent-config.packages.${system}.jev-lint;
   # adr-check validates docs/adr/ after an ADR edit in agent-config's PostToolUse hook (furedea/agent-config#225).
   adrCheckPackage = agent-config.packages.${system}.adr-check;
+  lspmuxSocket = "${config.home.homeDirectory}/Library/Application Support/lspmux/lspmux.sock";
   nvimLogFile = "${config.xdg.stateHome}/agent-harness/nvim.log";
+  # Agents started by launchd or T3 do not read .zshenv, so they receive the same opt-outs.
+  telemetryOptOuts = {
+    GH_TELEMETRY = "disabled";
+    GH_STACK_NO_UPDATE_NOTIFIER = "1";
+    HOMEBREW_NO_ANALYTICS = "1";
+    DSH_TELEMETRY_DISABLED = "1";
+    AGENT_BROWSER_NO_VERSION_CHECK = "1";
+  };
   # The T3 server runs under launchd, so its environment is declared, not inherited from a shell.
   # T3 serves loopback only; Tailscale Serve (HTTPS 8443) is the sole tailnet entry (ADR-0045).
   t3Telemetry = import ../t3_telemetry.nix;
@@ -210,6 +219,10 @@ let
     fi
     exec -a codex ${codexPackage}/bin/codex "$@"
   '';
+  # agy is closed source; --disable_telemetry is a hidden global flag it accepts on every command.
+  telemetryFreeAntigravity = pkgs.writeShellScriptBin "agy" ''
+    exec -a agy ${antigravityCliPackage}/bin/agy --disable_telemetry "$@"
+  '';
   herdrPlugins = [
     {
       id = "persiyanov.reviewr";
@@ -289,7 +302,7 @@ in
       # AI coding agents
       agentBrowserPackage
       agentDesktopPackage
-      antigravityCliPackage
+      telemetryFreeAntigravity
       claudePackage
       dshPackage
       herdrCompatibleCodex
@@ -472,6 +485,8 @@ in
       settings = {
         git_protocol = "https";
         prompt = "enabled";
+        # config.yml is a read-only store link, so `gh config set telemetry` cannot be used.
+        telemetry = "disabled";
         aliases.co = "pr checkout";
       };
     };
@@ -516,6 +531,7 @@ in
           expandFocusedSidePanel = true;
           showRandomTip = false;
         };
+        update.method = "never";
         git = {
           pagers = [
             {
@@ -553,6 +569,7 @@ in
       settings = {
         enter_accept = true;
         sync.records = true;
+        update_check = false;
       };
     };
 
@@ -573,8 +590,25 @@ in
         herdr = herdrHookBundle;
       };
       # Sandboxed Neovim cannot write ~/.local/state/nvim, so log into the writable hook state directory.
-      claude.settings.env.NVIM_LOG_FILE = nvimLogFile;
-      codex.settings.shell_environment_policy.set.NVIM_LOG_FILE = nvimLogFile;
+      claude.settings.env = {
+        NVIM_LOG_FILE = nvimLogFile;
+        DISABLE_TELEMETRY = "1";
+        DISABLE_ERROR_REPORTING = "1";
+        DISABLE_FEEDBACK_COMMAND = "1";
+        CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY = "1";
+      }
+      // telemetryOptOuts;
+      codex.settings = {
+        shell_environment_policy.set = {
+          NVIM_LOG_FILE = nvimLogFile;
+        }
+        // telemetryOptOuts;
+        analytics.enabled = false;
+        otel.metrics_exporter = "none";
+        feedback.enabled = false;
+        check_for_update_on_startup = false;
+        features.daemon_auto_start = false;
+      };
       # gh runs sandboxed with a one-hour token minted from this GitHub App; the key stays unreadable.
       github.agentToken = {
         enable = true;
@@ -789,10 +823,17 @@ in
     "pnpm/config.yaml".text = ''
       storeDir: ${config.xdg.dataHome}/pnpm/store
       enableGlobalVirtualStore: true
+      updateNotifier: false
     '';
   };
 
   home.file = {
+    # omlx runs as a Homebrew launchd service, which does not inherit the shell environment;
+    # `brew services` reads this file when it starts the service.
+    ".homebrew/services/omlx.env".text = ''
+      HF_HUB_DISABLE_TELEMETRY=1
+    '';
+
     # Zsh（dotfileに実ファイル，直接編集可能）
     ".zshrc".source = link "zsh/.zshrc";
     ".zshenv".source = link "zsh/.zshenv";
@@ -815,7 +856,10 @@ in
     # Keep the analyzer independent of rustup and discover sources from the project toolchain.
     ".local/bin/rust-analyzer".source = lib.getExe' unstable.rust-analyzer-unwrapped "rust-analyzer";
     # lspmux uses the native macOS config directory, not XDG_CONFIG_HOME.
+    # The server runs whatever binary a client names, so only the owner may reach it through a Unix socket.
     "Library/Application Support/lspmux/config.toml".text = ''
+      listen = "${lspmuxSocket}"
+      connect = "${lspmuxSocket}"
       instance_timeout = 300
       pass_environment = [
         "PATH",

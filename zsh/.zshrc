@@ -19,7 +19,7 @@ compinit -C -d "$ZSH_COMPDUMP"
 zstyle ":completion:*" format $'\e[2;37mCompleting %d\e[m'
 zstyle ":completion:*" group-name ""
 zstyle ":completion:*" list-colors "${(s.:.)LS_COLORS}"
-export CARAPACE_BRIDGES='zsh,fish,bash,inshellisense'
+export CARAPACE_BRIDGES='zsh,fish,bash'
 source <(carapace _carapace)
 setopt no_beep
 setopt auto_pushd

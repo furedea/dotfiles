@@ -164,6 +164,11 @@ The cask list in `nix/darwin/default.nix` is authoritative.
     `programs.direnv`, `programs.atuin`, `programs.agent-harness`, and
     `programs.yazi`
 
+Default-on telemetry and update checks are disabled for GitHub CLI, gh-stack,
+Homebrew, dsh, Codex, Atuin, and Lazygit; the environment opt-outs are exported
+from `zsh/.zshenv` and from the Claude Code and Codex environments. lspmux listens
+on a Unix socket under `~/Library/Application Support/lspmux/` instead of TCP.
+
 Activation rebuilds the Zsh completion cache, reports how to export the SSH public key
 from 1Password when it is missing, and reconciles the commit-pinned Herdr plugin set.
 

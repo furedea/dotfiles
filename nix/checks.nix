@@ -26,6 +26,10 @@ let
   codexPackage = pkgs.callPackage ./packages/codex.nix { };
   agentDesktopPackage = pkgs.callPackage ./packages/agent_desktop.nix { };
   chromeExecutable = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+  antigravityPackage = inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.antigravity-cli;
+  antigravityWrapperText = lib.concatMapStrings (package: package.text or "") (
+    builtins.filter (package: (package.name or "") == "agy") home.home.packages
+  );
   codexWrapperText =
     (builtins.head (builtins.filter (package: (package.name or "") == "codex") home.home.packages))
     .text;
@@ -49,6 +53,18 @@ let
   lspSettings =
     builtins.fromTOML
       home.home.file."Library/Application Support/lspmux/config.toml".text;
+  telemetryOptOuts = {
+    GH_TELEMETRY = "disabled";
+    GH_STACK_NO_UPDATE_NOTIFIER = "1";
+    HOMEBREW_NO_ANALYTICS = "1";
+    DSH_TELEMETRY_DISABLED = "1";
+    AGENT_BROWSER_NO_VERSION_CHECK = "1";
+  };
+  telemetryOptOutExports = lib.mapAttrsToList (
+    name: value: "export ${name}=${value}"
+  ) telemetryOptOuts;
+  codexSettings = home.programs.agent-harness.codex.composedSettings;
+  lspmuxSocket = "${home.home.homeDirectory}/Library/Application Support/lspmux/lspmux.sock";
   serviceNames = config: builtins.attrNames config.launchd.agents;
   hasAll = expected: actual: builtins.all (value: builtins.elem value actual) expected;
   shellEditorDefinitions = [
@@ -230,6 +246,45 @@ in
         && (claudeEnv.GH_CONFIG_DIR or null) == ghConfigDir;
       agent-codex-env-managed-paths =
         (codexEnv.NVIM_LOG_FILE or null) == nvimLogFile && (codexEnv.GH_CONFIG_DIR or null) == ghConfigDir;
+      # Default-on telemetry and update checks stay off in login shells and in agents that skip .zshenv.
+      telemetry-opt-outs-in-agent-envs =
+        builtins.all (name: (claudeEnv.${name} or null) == telemetryOptOuts.${name}) (
+          builtins.attrNames telemetryOptOuts
+        )
+        && builtins.all (name: (codexEnv.${name} or null) == telemetryOptOuts.${name}) (
+          builtins.attrNames telemetryOptOuts
+        );
+      telemetry-opt-outs-in-zshenv = builtins.all (
+        line: lib.hasInfix "${line}\n" (builtins.readFile ../zsh/.zshenv)
+      ) telemetryOptOutExports;
+      codex-analytics-disabled =
+        (codexSettings.analytics.enabled or true) == false
+        && (codexSettings.otel.metrics_exporter or null) == "none"
+        && (codexSettings.feedback.enabled or true) == false;
+      codex-no-update-check = (codexSettings.check_for_update_on_startup or true) == false;
+      omlx-service-no-hub-telemetry =
+        lib.hasInfix "HF_HUB_DISABLE_TELEMETRY=1\n"
+          home.home.file.".homebrew/services/omlx.env".text;
+      # agy's closed binary accepts a hidden global flag; the wrapper replaces the package on PATH.
+      antigravity-telemetry-disabled =
+        lib.hasInfix "--disable_telemetry" antigravityWrapperText
+        && lib.hasInfix (builtins.unsafeDiscardStringContext "${antigravityPackage}/bin/agy") antigravityWrapperText
+        && !(builtins.elem "antigravity-cli" homeNames);
+      claude-feedback-disabled =
+        (claudeEnv.DISABLE_FEEDBACK_COMMAND or null) == "1"
+        && (claudeEnv.CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY or null) == "1"
+        && !(claudeEnv ? CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC);
+      codex-daemon-auto-start-disabled = (codexSettings.features.daemon_auto_start or true) == false;
+      claude-telemetry-disabled =
+        (claudeEnv.DISABLE_TELEMETRY or null) == "1"
+        && (claudeEnv.DISABLE_ERROR_REPORTING or null) == "1"
+        && !(claudeEnv ? CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC);
+      gh-config-telemetry-disabled = (home.programs.gh.settings.telemetry or null) == "disabled";
+      atuin-no-update-check = (home.programs.atuin.settings.update_check or true) == false;
+      lazygit-no-update-check = (home.programs.lazygit.settings.update.method or null) == "never";
+      lspmux-unix-socket-only =
+        (lspSettings.listen or null) == lspmuxSocket && (lspSettings.connect or null) == lspmuxSocket;
+      carapace-no-uninstalled-bridge = !(lib.hasInfix "inshellisense" (builtins.readFile ../zsh/.zshrc));
       hooks-compose-herdr-only = builtins.attrNames home.programs.agent-harness.hooks == [ "herdr" ];
       # Sandboxed agents cannot write ~/.local/state/nvim, so Neovim would drop nvim.log in the workspace.
       agent-nvim-log-in-writable-state =
@@ -274,6 +329,7 @@ in
         home.xdg.configFile."pnpm/config.yaml".text == ''
           storeDir: ${home.xdg.dataHome}/pnpm/store
           enableGlobalVirtualStore: true
+          updateNotifier: false
         '';
       no-mutable-language-installers =
         !(builtins.elem "rustup" homeNames)
@@ -286,14 +342,14 @@ in
         builtins.filter (
           name:
           builtins.elem name [
-            "antigravity-cli"
+            "agy"
             "claude-code"
             "codex"
             "herdr"
           ]
         ) homeNames == [
           "herdr"
-          "antigravity-cli"
+          "agy"
           "claude-code"
           "codex"
         ];
@@ -367,6 +423,9 @@ in
         mbp
         mba
       ];
+      homebrew-analytics-disabled =
+        (mbp.homebrew.onActivation.extraEnv.HOMEBREW_NO_ANALYTICS or null) == "1"
+        && (mba.homebrew.onActivation.extraEnv.HOMEBREW_NO_ANALYTICS or null) == "1";
       noninteractive-homebrew-cleanup = mbp.homebrew.onActivation.extraFlags == [ "--force" ];
       no-moshi-hook-package =
         builtins.all
