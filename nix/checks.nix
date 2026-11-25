@@ -312,10 +312,12 @@ in
       omlx-service-no-hub-telemetry = builtins.all (
         path: (home.home.file.${path}.text or null) == "HF_HUB_DISABLE_TELEMETRY=1\n"
       ) omlxServiceEnvPaths;
-      # agy's closed binary accepts a hidden global flag; the wrapper replaces the package on PATH.
+      # agy accepts --disable_telemetry only after acp; tests/agy runs the script's argument placement.
+      # The wrapper runs that script against the real binary and replaces the package on PATH.
       antigravity-telemetry-disabled =
-        lib.hasInfix "--disable_telemetry" antigravityWrapperText
-        && lib.hasInfix (builtins.unsafeDiscardStringContext "${antigravityPackage}/bin/agy") antigravityWrapperText
+        lib.hasInfix "AGY_BIN=${builtins.unsafeDiscardStringContext "${antigravityPackage}/bin/agy"}\n" antigravityWrapperText
+        && lib.hasInfix (builtins.readFile ../scripts/agy/run_agy.sh) antigravityWrapperText
+        && lib.hasInfix "set -- acp --disable_telemetry" antigravityWrapperText
         && !(builtins.elem "antigravity-cli" homeNames);
       claude-feedback-disabled =
         (claudeEnv.DISABLE_FEEDBACK_COMMAND or null) == "1"
