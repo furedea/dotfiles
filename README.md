@@ -247,7 +247,7 @@ reference files.
 ├── zsh/ and bash/             # Interactive shell configuration
 ├── nvim/ and vim/             # Editor configuration
 ├── herdr/                     # Herdr UI and plugin synchronization
-├── scripts/                   # Shell launchers for Git signing
+├── scripts/                   # Shell launchers for agent CLIs
 ├── .agents/                   # Repository rules for the agent harness hooks
 ├── ghostty/                   # Terminal configuration
 ├── zed/                       # Zed editor settings

@@ -357,9 +357,11 @@ in
       ssh-no-keychain-loader = !(home.launchd.agents ? ssh-agent-loader);
       # ~/.ssh/config holds private host details and stays out of this public repository.
       ssh-client-config-unmanaged = !(home.home.file ? ".ssh/config");
-      git-signs-with-ssh-public-key =
-        home.programs.git.settings.user.signingkey == "~/.ssh/id_ed25519.pub"
-        && home.programs.git.settings.gpg.format == "ssh";
+      git-leaves-local-commits-and-tags-unsigned =
+        !(home.programs.git.settings.commit.gpgsign or false)
+        && !(home.programs.git.settings.tag.gpgsign or false)
+        && !(home.programs.git.settings ? gpg)
+        && !(home.programs.git.settings.user ? signingkey);
       ssh-identity-creation-left-to-user = !(home.home.activation ? sshKeyGen);
       zsh-cache-after-startup-links = home.home.activation.zshCache.after == [ "linkGeneration" ];
       global-language-toolchains = hasAll [
