@@ -37,7 +37,6 @@ let
   codexWrapperText =
     (builtins.head (builtins.filter (package: (package.name or "") == "codex") home.home.packages))
     .text;
-  hister = mbp.launchd.user.agents.hister.serviceConfig;
   t3Service = mbpHome.launchd.agents.t3-server.config;
   t3Package = builtins.head (
     builtins.filter (package: (package.pname or "") == "t3code") mbpHome.home.packages
@@ -648,22 +647,23 @@ in
       t3-service-mbp-stays-awake-on-charger =
         lib.hasInfix "pmset -c sleep 0" mbp.system.activationScripts.postActivation.text
         && !(lib.hasInfix "pmset -c sleep 0" mba.system.activationScripts.postActivation.text);
-      hister-login-launcher =
-        hister.RunAtLoad
-        && lib.hasSuffix "/bin/run_hister_server" (builtins.elemAt hister.ProgramArguments 0)
-        && lib.hasSuffix "/bin/nogon" (builtins.elemAt hister.ProgramArguments 1)
-        && builtins.elemAt hister.ProgramArguments 2 == "kaito"
-        && hister.ThrottleInterval == 60;
-      hister-no-generated-token = !((mbp.services.hister.settings.app or { }) ? access_token);
-      hister-no-environment-credentials = noSecrets hister.EnvironmentVariables;
-      hister-loopback = mbp.services.hister.settings.server.address == "127.0.0.1:4433";
-      hister-https-origin =
-        mbp.services.hister.settings.server.base_url == "https://mbp.tailbb556b.ts.net";
-      hister-no-mba-service = !(mba.launchd.user.agents ? hister);
-      hister-mba-client = builtins.elem "nogon" (names mbaHome.home.packages);
-      hister-mba-origin =
-        (builtins.fromJSON mbaHome.home.file."Library/Preferences/hister/config.yml".text).server.base_url
-        == "https://mbp.tailbb556b.ts.net";
+      nogon-absent =
+        !(mbp.launchd.user.agents ? hister)
+        && !(mba.launchd.user.agents ? hister)
+        && !(mbp.services.hister.enable or false)
+        && !(mba.services.hister.enable or false)
+        &&
+          lib.all
+            (
+              host:
+              !(builtins.elem "nogon" (names host.home.packages))
+              && !(builtins.elem "hister" (names host.home.packages))
+              && !(host.home.file ? "Library/Preferences/hister/config.yml")
+            )
+            [
+              mbpHome
+              mbaHome
+            ];
     };
 
     # A broken module option in any host fails here, long before a switch builds it.
