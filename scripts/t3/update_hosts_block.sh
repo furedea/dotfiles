@@ -5,14 +5,16 @@ set -euo pipefail
 readonly TOOLS_PATH="${TOOLS_PATH:?TOOLS_PATH is required}"
 export PATH="$TOOLS_PATH"
 
-readonly BEGIN_MARKER="# BEGIN t3-telemetry-block (managed by dotfiles; do not edit)"
-readonly END_MARKER="# END t3-telemetry-block"
+readonly BLOCK_NAME="${HOSTS_BLOCK_NAME:-t3-telemetry-block}"
+readonly BEGIN_MARKER="# BEGIN ${BLOCK_NAME} (managed by dotfiles; do not edit)"
+readonly END_MARKER="# END ${BLOCK_NAME}"
 
 function usage() {
   cat <<EOF2
 Description:
     Rewrite the marked block of a hosts file so that each host resolves to 0.0.0.0 and ::.
-    Lines outside the block are never changed. A missing block is appended; an unchanged
+    The block is named by HOSTS_BLOCK_NAME (default t3-telemetry-block), so several blocks can
+    coexist. Lines outside the block are never changed. A missing block is appended; an unchanged
     file is not written. The file stays unchanged, with exit status 1, when it is not a
     regular file or when the markers are duplicated, unpaired, or in the wrong order.
 
@@ -21,6 +23,7 @@ Usage:
 
 Environment:
     TOOLS_PATH: PATH for every external tool the script runs (required)
+    HOSTS_BLOCK_NAME: name used in the block markers (default: t3-telemetry-block)
 
 Options:
     --help, -h: print this

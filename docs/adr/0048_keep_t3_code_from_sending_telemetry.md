@@ -2,6 +2,8 @@
 status: accepted
 date: 2026-11-25
 related: [ADR-0045, ADR-0047]
+amended:
+  - "2026-11-25: the hosts rewriter names its block with HOSTS_BLOCK_NAME (default t3-telemetry-block, unchanged), so other tools' telemetry hosts get their own app-telemetry-block"
 ---
 
 # Keep T3 Code from sending telemetry
