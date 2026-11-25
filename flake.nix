@@ -56,7 +56,6 @@
           "zsh-abbr"
           "claude-code"
           "antigravity-cli"
-          "moshi-hook"
           "1password-cli"
         ];
       pkgs = import nixpkgs {
@@ -86,12 +85,10 @@
       hosts = {
         mba = {
           enableHisterService = false;
-          enableMoshiService = false;
           enableT3Service = false;
         };
         mbp = {
           enableHisterService = true;
-          enableMoshiService = true;
           enableT3Service = true;
         };
       };
@@ -99,13 +96,10 @@
         agent-harness.homeManagerModules.default
         ./nix/home/default.nix
       ];
-      hostHomeSpecialArgs =
-        { enableMoshiService, enableT3Service, ... }:
-        homeSpecialArgs // { inherit enableMoshiService enableT3Service; };
+      hostHomeSpecialArgs = { enableT3Service, ... }: homeSpecialArgs // { inherit enableT3Service; };
       mkDarwinConfiguration =
         host@{
           enableHisterService,
-          enableMoshiService,
           enableT3Service,
         }:
         nix-darwin.lib.darwinSystem {
@@ -113,7 +107,6 @@
             inherit
               username
               enableHisterService
-              enableMoshiService
               enableT3Service
               histerServerUrl
               agent-config
@@ -131,7 +124,6 @@
               #   zsh-abbr         : CC-BY-NC-SA-4.0 + Hippocratic License v3.0 (both free=false)
               #   claude-code      : Anthropic proprietary (via numtide/llm-agents.nix)
               #   antigravity-cli  : Google proprietary (via numtide/llm-agents.nix)
-              #   moshi-hook       : upstream binary release without a declared license
               #   1password-cli    : AgileBits proprietary CLI
               nixpkgs.config.allowUnfreePredicate = allowUnfreePredicate;
 

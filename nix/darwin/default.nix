@@ -22,6 +22,13 @@ let
   omlxTapUrl = "https://github.com/${omlxTap}";
   omlxFormula = "${omlxTap}/omlx";
 
+  t3Telemetry = import ../t3_telemetry.nix;
+  t3Policy = pkgs.writeText "t3code-policy.json" (builtins.toJSON t3Telemetry.policy);
+  updateHostsBlock = pkgs.writeShellScript "update_hosts_block" ''
+    export TOOLS_PATH=${lib.makeBinPath [ pkgs.coreutils ]}
+    ${builtins.readFile ../../scripts/t3/update_hosts_block.sh}
+  '';
+
   tinycastTap = "abue-ammar/tinycast";
 
   # Homebrew refuses to load items from third-party taps until they are
@@ -355,6 +362,20 @@ in
       # System sleep: never on the charger, so the T3 server stays reachable (ADR-0045)
       pmset -c sleep 0
     ''}
+
+    # T3 Code telemetry: a managed policy and blocked hosts (ADR-0048). A failure here must not
+    # stop the activation, so each step only reports.
+    /usr/bin/install -d -o root -g wheel -m 0755 "${t3Telemetry.policyDirectory}" \
+      && /usr/bin/install -o root -g wheel -m 0644 ${t3Policy} "${t3Telemetry.policyFile}" \
+      || echo "t3-telemetry: could not write ${t3Telemetry.policyFile}" >&2
+    hostsBefore="$(/usr/bin/cksum < /etc/hosts)"
+    ${updateHostsBlock} /etc/hosts ${lib.escapeShellArgs t3Telemetry.blockedHosts} \
+      || echo "t3-telemetry: left /etc/hosts unchanged" >&2
+    # A cached answer for a blocked host would outlive the new block.
+    if [ "$(/usr/bin/cksum < /etc/hosts)" != "$hostsBefore" ]; then
+      /usr/bin/dscacheutil -flushcache || true
+      /usr/bin/killall -HUP mDNSResponder || true
+    fi
     # NOTE: com.apple.universalaccess (reduceMotion, reduceTransparency) cannot be
     # written programmatically due to macOS TCC restrictions. Set manually in:
     # System Settings > Accessibility > Display
@@ -374,6 +395,8 @@ in
       upgrade = true;
       cleanup = "uninstall";
       extraFlags = [ "--force" ];
+      # brew bundle runs under sudo and does not inherit the user's shell environment.
+      extraEnv.HOMEBREW_NO_ANALYTICS = "1";
     };
 
     taps = [
