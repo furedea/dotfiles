@@ -222,9 +222,10 @@ let
     fi
     exec -a codex ${codexPackage}/bin/codex "$@"
   '';
-  # agy is closed source; --disable_telemetry is a hidden global flag it accepts on every command.
+  # agy is closed source; only its acp subcommand (T3 Code's entry point) accepts --disable_telemetry.
   telemetryFreeAntigravity = pkgs.writeShellScriptBin "agy" ''
-    exec -a agy ${antigravityCliPackage}/bin/agy --disable_telemetry "$@"
+    AGY_BIN=${antigravityCliPackage}/bin/agy
+    ${builtins.readFile ../../scripts/agy/run_agy.sh}
   '';
   herdrReviewrPlugin = unstable.callPackage ../packages/herdr_reviewr_plugin.nix { };
   # A source starting with "/" is a local plugin directory that plugin_sync.py links as is.
