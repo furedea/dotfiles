@@ -5,7 +5,10 @@ return {
     event = { "InsertEnter", "CmdlineEnter" },
     version = "1.*",
     dependencies = { "L3MON4D3/LuaSnip" },
+    -- Build the fuzzy matcher from the locked checkout instead of downloading a prebuilt binary.
+    build = "cargo build --release",
     opts = {
+      fuzzy = { prebuilt_binaries = { download = false } },
       keymap = {
         preset = "none",
         ["<Tab>"] = { "select_next", "fallback" },

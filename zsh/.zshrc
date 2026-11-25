@@ -19,7 +19,7 @@ compinit -C -d "$ZSH_COMPDUMP"
 zstyle ":completion:*" format $'\e[2;37mCompleting %d\e[m'
 zstyle ":completion:*" group-name ""
 zstyle ":completion:*" list-colors "${(s.:.)LS_COLORS}"
-export CARAPACE_BRIDGES='zsh,fish,bash,inshellisense'
+export CARAPACE_BRIDGES='zsh,fish,bash'
 source <(carapace _carapace)
 setopt no_beep
 setopt auto_pushd
@@ -103,7 +103,7 @@ abbr --quiet -S lt="eza --tree --level=2"
 abbr --quiet -S arm="exec arch -arch arm64e /bin/zsh --login"
 abbr --quiet -S x64="exec arch -arch x86_64 /bin/zsh --login"
 abbr --quiet -S ob="cd ~/Library/Mobile\ Documents/iCloud\~md\~obsidian/Documents/furedea"
-abbr --quiet -S czg="npx --yes --package czg@1.13.0 --package @commitlint/config-conventional --call 'NODE_PATH=\"\$(dirname \"\$(dirname \"\$(command -v czg)\")\")\${NODE_PATH:+:\$NODE_PATH}\" czg'"
+abbr --quiet -S czg="npx --yes --package czg@1.13.0 --package @commitlint/config-conventional@20.5.3 --call 'NODE_PATH=\"\$(dirname \"\$(dirname \"\$(command -v czg)\")\")\${NODE_PATH:+:\$NODE_PATH}\" czg'"
 
 eval "$(zoxide init zsh --cmd j)"
 eval "$(starship init zsh)"

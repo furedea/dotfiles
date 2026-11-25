@@ -139,6 +139,6 @@ return {
       "nvim-treesitter/nvim-treesitter",
       "MunifTanjim/nui.nvim",
     },
-    opts = {},
+    opts = { deps = { auto_install = false } },
   },
 }

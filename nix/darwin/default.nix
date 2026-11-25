@@ -39,8 +39,6 @@ let
     ${builtins.readFile ../../scripts/t3/update_hosts_block.sh}
   '';
 
-  tinycastTap = "abue-ammar/tinycast";
-
   # Homebrew refuses to load items from third-party taps until they are
   # trusted. `brew bundle --cleanup` replaces the whole trust store with
   # entries derived from Brewfile `trusted:` options, so this file only
@@ -54,7 +52,6 @@ let
       trustedtaps = [
         omlxTap
         omlxTapUrl
-        tinycastTap
       ];
     }
   );
@@ -417,6 +414,8 @@ in
       upgrade = true;
       cleanup = "uninstall";
       extraFlags = [ "--force" ];
+      # brew bundle runs under sudo and does not inherit the user's shell environment.
+      extraEnv.HOMEBREW_NO_ANALYTICS = "1";
     };
 
     taps = [
@@ -424,7 +423,6 @@ in
         name = omlxTap;
         clone_target = omlxTapUrl;
       }
-      { name = tinycastTap; }
     ];
 
     # Local MLX inference server. Nixpkgs builds mlx with MLX_BUILD_METAL=false
@@ -438,11 +436,9 @@ in
       "chatgpt"
       "deepl"
       "discord"
-      "firefox"
       "font-jetbrains-mono"
       "ghostty"
       "google-chrome"
-      "herdr-app"
       "homerow"
       "karabiner-elements"
       "mactex"
@@ -467,7 +463,6 @@ in
     # refusing to load these third-party items.
     extraConfig = ''
       tap "${omlxTap}", "${omlxTapUrl}", trusted: true
-      tap "${tinycastTap}", trusted: true
     '';
   };
 }

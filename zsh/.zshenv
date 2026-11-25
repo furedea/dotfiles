@@ -23,6 +23,14 @@ export EDITOR=nvim
 export VISUAL=nvim
 # agent-browser bundles no browser on Darwin; use the Homebrew cask Chrome.
 export AGENT_BROWSER_EXECUTABLE_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+
+# Disable default-on telemetry and update checks (gh, gh-stack, Homebrew, dsh, agent-browser).
+export GH_TELEMETRY=disabled
+export GH_STACK_NO_UPDATE_NOTIFIER=1
+export HOMEBREW_NO_ANALYTICS=1
+export DSH_TELEMETRY_DISABLED=1
+export AGENT_BROWSER_NO_VERSION_CHECK=1
+
 # T3 Code sends telemetry unless this parses as false; the desktop app forwards it to its server (ADR-0048).
 export T3CODE_TELEMETRY_ENABLED=false
 # Belt and braces: relay tracing also stops when T3 OTel export is disabled (ADR-0048).
