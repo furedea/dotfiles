@@ -102,6 +102,10 @@ let
     DSH_TELEMETRY_DISABLED = "1";
     AGENT_BROWSER_NO_VERSION_CHECK = "1";
   };
+  omlxServiceEnvPaths = [
+    ".homebrew/services/omlx.env"
+    ".config/homebrew/services/omlx.env"
+  ];
   telemetryOptOutExports = lib.mapAttrsToList (
     name: value: "export ${name}=${value}"
   ) telemetryOptOuts;
@@ -305,9 +309,9 @@ in
         && (codexSettings.otel.metrics_exporter or null) == "none"
         && (codexSettings.feedback.enabled or true) == false;
       codex-no-update-check = (codexSettings.check_for_update_on_startup or true) == false;
-      omlx-service-no-hub-telemetry =
-        lib.hasInfix "HF_HUB_DISABLE_TELEMETRY=1\n"
-          home.home.file.".homebrew/services/omlx.env".text;
+      omlx-service-no-hub-telemetry = builtins.all (
+        path: (home.home.file.${path}.text or null) == "HF_HUB_DISABLE_TELEMETRY=1\n"
+      ) omlxServiceEnvPaths;
       # agy's closed binary accepts a hidden global flag; the wrapper replaces the package on PATH.
       antigravity-telemetry-disabled =
         lib.hasInfix "--disable_telemetry" antigravityWrapperText
