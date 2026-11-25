@@ -678,6 +678,9 @@ in
     # Building the package runs the vendor signature check on the release binary.
     codex-official-signed = codexPackage;
 
+    # The blacklisted CA bundle fails to build once nixpkgs drops a listed root, which evaluation alone misses.
+    ca-certificate-bundle = mbp.environment.etc."ssl/certs/ca-certificates.crt".source;
+
     # The linked plugin directory must hold the built binary and no download step.
     herdr-reviewr-plugin-layout = pkgs.runCommand "herdr-reviewr-plugin-layout" { } ''
       plugin="${herdrReviewrPlugin}/share/herdr-plugin"

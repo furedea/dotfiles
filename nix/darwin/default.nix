@@ -60,11 +60,11 @@ in
 
   # eMudhra intermediates under these roots have recoverable private keys
   # (https://emudhra.we-have-a-problem.com/); drop once nixpkgs' cacert
-  # distrusts them.
+  # distrusts them. nixpkgs' cacert 3.131.1 already removed "emSign ECC Root CA - G3",
+  # and listing a root the store no longer has fails the bundle build.
   security.pki = {
     caCertificateBlacklist = [
       "Comodo AAA Services root"
-      "emSign ECC Root CA - G3"
     ];
     # The default ca-bundle.crt keeps blacklisted roots as OpenSSL TRUSTED
     # CERTIFICATE blocks marked as rejected, which clients that ignore the mark
