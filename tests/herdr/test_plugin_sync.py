@@ -31,3 +31,18 @@ def test_managed_but_already_missing_plugins_need_no_removal() -> None:
 def test_incomplete_declarations_are_rejected(arguments: list[str]) -> None:
     with pytest.raises(ValueError, match="Usage"):
         plugins.declared_plugins(arguments)
+
+
+def test_local_plugin_is_current_when_linked_from_the_declared_path() -> None:
+    declared = (plugins.Plugin("review", "/nix/store/new", "/nix/store/new"),)
+    assert plugins.changes(declared, {"review": "/nix/store/new"}, {"review"}) == ((), ())
+
+
+def test_local_plugin_is_relinked_when_its_path_changes() -> None:
+    declared = (plugins.Plugin("review", "/nix/store/new", "/nix/store/new"),)
+    assert plugins.changes(declared, {"review": "/nix/store/old"}, {"review"}) == (declared, ())
+
+
+def test_installed_revision_is_the_commit_for_github_and_the_root_for_local() -> None:
+    assert plugins.installed_revision({"source": {"resolved_commit": "abc"}, "plugin_root": "/r"}) == "abc"
+    assert plugins.installed_revision({"source": {"kind": "local"}, "plugin_root": "/r"}) == "/r"

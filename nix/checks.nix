@@ -25,6 +25,10 @@ let
   mbaHome = mba.home-manager.users.kaito;
   codexPackage = pkgs.callPackage ./packages/codex.nix { };
   agentDesktopPackage = pkgs.callPackage ./packages/agent_desktop.nix { };
+  herdrReviewrPlugin =
+    inputs.nixpkgs-unstable.legacyPackages.${pkgs.stdenv.hostPlatform.system}.callPackage
+      ./packages/herdr_reviewr_plugin.nix
+      { };
   chromeExecutable = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
   antigravityPackage = inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.antigravity-cli;
   antigravityWrapperText = lib.concatMapStrings (package: package.text or "") (
@@ -391,6 +395,13 @@ in
       plugin-sync-has-git =
         lib.hasInfix "-git-" home.home.activation.herdrPlugins.data
         && lib.hasInfix "/bin:/usr/bin:/bin" home.home.activation.herdrPlugins.data;
+      # The upstream installer downloads a release binary, so the plugin is linked from a build of the pinned source.
+      herdr-plugin-built-from-source =
+        let
+          activation = builtins.unsafeDiscardStringContext home.home.activation.herdrPlugins.data;
+          pluginRoot = builtins.unsafeDiscardStringContext "${herdrReviewrPlugin}/share/herdr-plugin";
+        in
+        lib.hasInfix pluginRoot activation && !(lib.hasInfix "persiyanov/herdr-reviewr" activation);
       lspmux-persistent = lsp.enable && lsp.config.RunAtLoad && lsp.config.KeepAlive;
       lspmux-server =
         lib.hasPrefix "/nix/store/" (builtins.head lsp.config.ProgramArguments)
@@ -596,6 +607,17 @@ in
   darwinOnly = {
     # Building the package runs the vendor signature check on the release binary.
     codex-official-signed = codexPackage;
+
+    # The linked plugin directory must hold the built binary and no download step.
+    herdr-reviewr-plugin-layout = pkgs.runCommand "herdr-reviewr-plugin-layout" { } ''
+      plugin="${herdrReviewrPlugin}/share/herdr-plugin"
+      test -x "$plugin/bin/herdr-reviewr"
+      test -f "$plugin/herdr/pane.sh"
+      grep -q '^id = "persiyanov.reviewr"' "$plugin/herdr-plugin.toml"
+      grep -q '^\[\[panes\]\]' "$plugin/herdr-plugin.toml"
+      ! grep -q '^\[\[build\]\]' "$plugin/herdr-plugin.toml"
+      touch $out
+    '';
 
     # Building the package runs versionCheckHook against agent-desktop --version.
     agent-desktop-release = agentDesktopPackage;
