@@ -2,20 +2,11 @@
   pkgs,
   config,
   lib,
-  enableHisterService,
   enableT3Service,
-  histerServerUrl,
   username,
   ...
 }:
 let
-  histerServerLauncher = pkgs.writeTextFile {
-    name = "run-hister-server";
-    destination = "/bin/run_hister_server";
-    executable = true;
-    text = builtins.readFile ../../scripts/hister/run_hister_server.sh;
-  };
-
   # The tap repository is `jundot/omlx`, not the conventional
   # `jundot/homebrew-omlx`, so the clone target cannot be inferred.
   omlxTap = "jundot/omlx";
@@ -83,25 +74,6 @@ in
         pkgs.cacert.override { blacklist = config.security.pki.caCertificateBlacklist; }
       }/etc/ssl/certs/ca-no-trust-rules-bundle.crt"
     ];
-  };
-
-  services.hister = {
-    enable = enableHisterService;
-    settings.server = {
-      address = "127.0.0.1:4433";
-      base_url = histerServerUrl;
-    };
-  };
-
-  launchd.user.agents = lib.mkIf enableHisterService {
-    hister.serviceConfig = {
-      ProgramArguments = lib.mkForce [
-        "${histerServerLauncher}/bin/run_hister_server"
-        (lib.getExe config.services.hister.package)
-        username
-      ];
-      ThrottleInterval = 60;
-    };
   };
 
   programs.zsh = {

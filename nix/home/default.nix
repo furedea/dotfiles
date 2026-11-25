@@ -7,8 +7,6 @@
   unstable,
   llm-agents,
   herdrPackage,
-  histerPackage,
-  histerServerUrl,
   agent-harness,
   agent-config,
   system,
@@ -272,7 +270,6 @@ in
       eza
       fd
       fzf
-      histerPackage
       ripgrep
 
       # Editors
@@ -850,11 +847,6 @@ in
 
     # Git ignore
     ".config/git/ignore".source = link "git/ignore";
-
-    # Hister client
-    "Library/Preferences/hister/config.yml".text = builtins.toJSON {
-      server.base_url = histerServerUrl;
-    };
 
     # Neovim（多ファイル・頻繁に編集）
     ".config/nvim".source = link "nvim";

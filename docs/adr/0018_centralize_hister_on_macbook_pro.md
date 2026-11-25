@@ -1,6 +1,7 @@
 ---
-status: accepted
+status: superseded
 date: 2026-08-29
+superseded-by: [ADR-0051]
 ---
 
 # ADR-0018: Centralize Hister on MacBook Pro

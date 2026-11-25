@@ -28,7 +28,6 @@
         nixpkgs-unstable.follows = "nixpkgs-unstable";
       };
     };
-    hister.url = "github:asciimoo/hister";
   };
 
   outputs =
@@ -42,14 +41,12 @@
       llm-agents,
       agent-harness,
       agent-config,
-      hister,
       ...
     }:
     let
       username = "kaito";
       system = "aarch64-darwin";
       dotfilesDir = "/Users/${username}/ghq/github.com/furedea/dotfiles";
-      histerServerUrl = "https://mbp.tailbb556b.ts.net";
       allowUnfreePredicate =
         pkg:
         builtins.elem pkg.pname [
@@ -67,7 +64,6 @@
         config = { inherit allowUnfreePredicate; };
       };
       herdrPackage = llm-agents.packages.${system}.herdr;
-      histerPackage = hister.packages.${system}.default;
       homeSpecialArgs = {
         inherit
           username
@@ -75,8 +71,6 @@
           unstable
           llm-agents
           herdrPackage
-          histerPackage
-          histerServerUrl
           agent-harness
           agent-config
           system
@@ -84,11 +78,9 @@
       };
       hosts = {
         mba = {
-          enableHisterService = false;
           enableT3Service = false;
         };
         mbp = {
-          enableHisterService = true;
           enableT3Service = true;
         };
       };
@@ -99,22 +91,18 @@
       hostHomeSpecialArgs = { enableT3Service, ... }: homeSpecialArgs // { inherit enableT3Service; };
       mkDarwinConfiguration =
         host@{
-          enableHisterService,
           enableT3Service,
         }:
         nix-darwin.lib.darwinSystem {
           specialArgs = {
             inherit
               username
-              enableHisterService
               enableT3Service
-              histerServerUrl
               agent-config
               ;
           };
           modules = [
             ./nix/darwin/default.nix
-            hister.darwinModules.default
             nix-homebrew.darwinModules.nix-homebrew
             home-manager.darwinModules.home-manager
             {
