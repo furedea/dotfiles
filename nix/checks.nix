@@ -651,7 +651,7 @@ in
       hister-login-launcher =
         hister.RunAtLoad
         && lib.hasSuffix "/bin/run_hister_server" (builtins.elemAt hister.ProgramArguments 0)
-        && lib.hasSuffix "/bin/hister" (builtins.elemAt hister.ProgramArguments 1)
+        && lib.hasSuffix "/bin/nogon" (builtins.elemAt hister.ProgramArguments 1)
         && builtins.elemAt hister.ProgramArguments 2 == "kaito"
         && hister.ThrottleInterval == 60;
       hister-no-generated-token = !((mbp.services.hister.settings.app or { }) ? access_token);
@@ -660,7 +660,7 @@ in
       hister-https-origin =
         mbp.services.hister.settings.server.base_url == "https://mbp.tailbb556b.ts.net";
       hister-no-mba-service = !(mba.launchd.user.agents ? hister);
-      hister-mba-client = builtins.elem "hister" (names mbaHome.home.packages);
+      hister-mba-client = builtins.elem "nogon" (names mbaHome.home.packages);
       hister-mba-origin =
         (builtins.fromJSON mbaHome.home.file."Library/Preferences/hister/config.yml".text).server.base_url
         == "https://mbp.tailbb556b.ts.net";
