@@ -692,6 +692,46 @@ in
     # Building the package runs versionCheckHook against agent-desktop --version.
     agent-desktop-release = agentDesktopPackage;
 
+    # Runs the pinned agent-harness Codex sync on a fixture config: the Nix value alone does not show
+    # what reaches the user's ~/.codex/config.toml (the sync owns which keys are written).
+    codex-config-sync =
+      pkgs.runCommand "codex-config-sync"
+        {
+          nativeBuildInputs = [ pkgs.python3 ];
+          agentHarness = lib.getExe home.programs.agent-harness.package;
+          generated = (pkgs.formats.toml { }).generate "codex-config.toml" codexSettings;
+          fixture = ''
+            [projects."/fixture/project"]
+            trust_level = "trusted"
+
+            [analytics]
+            enabled = true
+          '';
+        }
+        ''
+          set -euo pipefail
+          mkdir -p target
+          printf '%s' "$fixture" >target/config.toml
+          "$agentHarness" sync-config --provider codex --source "$generated" --target target/config.toml
+          python3 - target/config.toml <<'PY'
+          import sys, tomllib
+          with open(sys.argv[1], "rb") as f:
+              c = tomllib.load(f)
+          expected = {
+              "analytics.enabled": c.get("analytics", {}).get("enabled") is False,
+              "otel.metrics_exporter": c.get("otel", {}).get("metrics_exporter") == "none",
+              "feedback.enabled": c.get("feedback", {}).get("enabled") is False,
+              "check_for_update_on_startup": c.get("check_for_update_on_startup") is False,
+              "features.daemon_auto_start": c.get("features", {}).get("daemon_auto_start") is False,
+              "unrelated key kept": c.get("projects", {}).get("/fixture/project", {}).get("trust_level") == "trusted",
+          }
+          bad = [k for k, ok in expected.items() if not ok]
+          if bad:
+              sys.exit("sync left wrong values: " + ", ".join(bad) + "\n" + str(c))
+          PY
+          touch "$out"
+        '';
+
     # Runs each host's real activation on fixture homes: T3 also writes these files from its UI.
     t3-settings-merge =
       pkgs.runCommand "t3-settings-merge"
