@@ -549,7 +549,7 @@ in
         customCommands = [
           {
             key = "C";
-            command = ''npx --yes --package czg@1.13.0 --package @commitlint/config-conventional --call 'NODE_PATH="$(dirname "$(dirname "$(command -v czg)")")''${NODE_PATH:+:$NODE_PATH}" czg' '';
+            command = ''npx --yes --package czg@1.13.0 --package @commitlint/config-conventional@20.5.3 --call 'NODE_PATH="$(dirname "$(dirname "$(command -v czg)")")''${NODE_PATH:+:$NODE_PATH}" czg' '';
             context = "files";
             loadingText = "Opening czg";
             output = "terminal";

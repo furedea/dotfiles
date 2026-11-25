@@ -403,6 +403,16 @@ in
           pluginRoot = builtins.unsafeDiscardStringContext "${herdrReviewrPlugin}/share/herdr-plugin";
         in
         lib.hasInfix pluginRoot activation && !(lib.hasInfix "persiyanov/herdr-reviewr" activation);
+      czg-pinned-commitlint-config =
+        let
+          pinned =
+            command:
+            builtins.match ".*@commitlint/config-conventional@[0-9]+\\.[0-9]+\\.[0-9]+ .*" command != null;
+          lazygitCommands = map (entry: entry.command) (home.programs.lazygit.settings.customCommands or [ ]);
+        in
+        lazygitCommands != [ ]
+        && builtins.all pinned lazygitCommands
+        && builtins.any pinned (lib.splitString "\n" (builtins.readFile ../zsh/.zshrc));
       lspmux-persistent = lsp.enable && lsp.config.RunAtLoad && lsp.config.KeepAlive;
       lspmux-server =
         lib.hasPrefix "/nix/store/" (builtins.head lsp.config.ProgramArguments)
@@ -443,6 +453,9 @@ in
       homebrew-analytics-disabled =
         (mbp.homebrew.onActivation.extraEnv.HOMEBREW_NO_ANALYTICS or null) == "1"
         && (mba.homebrew.onActivation.extraEnv.HOMEBREW_NO_ANALYTICS or null) == "1";
+      no-homebrew-unused-apps =
+        !(lib.hasInfix ''"firefox"'' mbp.homebrew.brewfile)
+        && !(lib.hasInfix ''"herdr-app"'' mbp.homebrew.brewfile);
       noninteractive-homebrew-cleanup = mbp.homebrew.onActivation.extraFlags == [ "--force" ];
       no-moshi-hook-package =
         builtins.all

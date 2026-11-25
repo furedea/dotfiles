@@ -139,14 +139,14 @@ wait for the old instance to expire or restart the service before reconnecting.
 The current cask set is:
 
 ```text
-chatgpt                deepl
-discord                firefox                font-jetbrains-mono
-ghostty                google-chrome         homerow
-karabiner-elements     mactex                microsoft-excel
-microsoft-powerpoint   microsoft-word        nani
-obsidian               orbstack              skim
-slack                  steam                  tailscale-app
-thebrowsercompany-dia  tinycast              vimr
+chatgpt                deepl                  discord
+font-jetbrains-mono    ghostty                google-chrome
+homerow                karabiner-elements     mactex
+microsoft-excel        microsoft-powerpoint   microsoft-word
+nani                   obsidian               orbstack
+skim                   slack                  steam
+tailscale-app          thebrowsercompany-dia  tinycast
+vimr
 ```
 
 The cask list in `nix/darwin/default.nix` is authoritative.
@@ -254,8 +254,7 @@ reference files.
 ├── karabiner/                 # Keyboard remapping
 ├── starship/                  # Shell prompt
 ├── github/                    # Repository creation and policy scripts
-├── tests/                     # Python contracts and Bats integration by domain
-└── tinycast/                 # Manual settings export
+└── tests/                     # Python contracts and Bats integration by domain
 ```
 
 ## Shell Behavior
@@ -436,7 +435,6 @@ After the first switch, configure as needed:
 
 - configure Night Shift, True Tone, display resolution, and Accessibility
     display options in System Settings
-- import `tinycast/*` when restoring Tinycast manually
 
 ## Update Dependencies
 
