@@ -164,6 +164,11 @@ The cask list in `nix/darwin/default.nix` is authoritative.
     `programs.direnv`, `programs.atuin`, `programs.agent-harness`, and
     `programs.yazi`
 
+Default-on telemetry and update checks are disabled for GitHub CLI, gh-stack,
+Homebrew, dsh, Codex, Atuin, and Lazygit; the environment opt-outs are exported
+from `zsh/.zshenv` and from the Claude Code and Codex environments. lspmux listens
+on a Unix socket under `~/Library/Application Support/lspmux/` instead of TCP.
+
 Activation rebuilds the Zsh completion cache, reports how to export the SSH public key
 from 1Password when it is missing, and reconciles the commit-pinned Herdr plugin set.
 
@@ -174,11 +179,8 @@ cross-provider agent source: instructions, policies, hooks, skills, and provider
 Codex, and pi. The
 [agent-harness](https://github.com/furedea/agent-harness) flake renders and deploys
 that source for each provider. This repository also builds release-matched Herdr
-and Moshi hook bundles and composes them through the module's generic `hooks`
-boundary. Herdr comes from the pinned flake input. Moshi Hook is pinned in
-[`nix/packages/moshi_hook.nix`](nix/packages/moshi_hook.nix); on the MacBook Pro, a
-Home Manager LaunchAgent runs that same binary as the daemon used by generated hooks.
-Pairing tokens and mutable Moshi state are never added to the Nix store.
+hook bundle and composes it through the module's generic `hooks`
+boundary. Herdr comes from the pinned flake input.
 
 Servers without Nix use the bootstrap script in agent-config instead of the Home
 Manager module; it still reads host-specific settings from `~/.config/dotfiles/`.
@@ -198,10 +200,12 @@ herdr --remote <ssh-target>
 herdr --remote <ssh-target> --session <name>
 ```
 
-The `persiyanov.reviewr` plugin revision is declared in
-[`nix/home/default.nix`](nix/home/default.nix), synchronized during Home Manager
+The `persiyanov.reviewr` plugin is built from its pinned source by
+[`nix/packages/herdr_reviewr_plugin.nix`](nix/packages/herdr_reviewr_plugin.nix), declared in
+[`nix/home/default.nix`](nix/home/default.nix), linked during Home Manager
 activation by [`herdr/plugin_sync.py`](herdr/plugin_sync.py), and justified by
-[`ADR-0002`](docs/adr/0002_manage_herdr_plugins_through_home_manager_activation.md).
+[`ADR-0002`](docs/adr/0002_manage_herdr_plugins_through_home_manager_activation.md) and
+[`ADR-0049`](docs/adr/0049_link_the_herdr_reviewr_plugin_built_from_its_pinned_source.md).
 
 #### Development Cycle
 
@@ -223,6 +227,7 @@ The following repository sources are linked directly into the home directory:
 | `vim/.vimrc`                                 | `~/.vimrc`                             |
 | `starship/starship.toml`                     | `~/.config/starship.toml`              |
 | `ghostty/config`                             | `~/.config/ghostty/config`             |
+| `zed/settings.json`                          | `~/.config/zed/settings.json`          |
 | `karabiner/karabiner.json`                   | `~/.config/karabiner/karabiner.json`   |
 | `herdr/config.toml`, `herdr/reviewr.toml`    | Herdr config and reviewr plugin config |
 | `dprint.json`                                | `~/dprint.json`                        |
@@ -242,9 +247,10 @@ reference files.
 ├── zsh/ and bash/             # Interactive shell configuration
 ├── nvim/ and vim/             # Editor configuration
 ├── herdr/                     # Herdr UI and plugin synchronization
-├── scripts/                   # Shell launchers for Git signing, Hister, and Moshi
+├── scripts/                   # Shell launchers for Git signing and Hister
 ├── .agents/                   # Repository rules for the agent harness hooks
 ├── ghostty/                   # Terminal configuration
+├── zed/                       # Zed editor settings
 ├── karabiner/                 # Keyboard remapping
 ├── starship/                  # Shell prompt
 ├── github/                    # Repository creation and policy scripts
@@ -427,7 +433,6 @@ After the first switch, configure as needed:
     printf '' | /usr/bin/pbcopy
     ```
 
-- pair Moshi Hook with the iPhone app when restoring a host
 - configure Night Shift, True Tone, display resolution, and Accessibility
     display options in System Settings
 

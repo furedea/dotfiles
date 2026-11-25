@@ -9,10 +9,12 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
+LIST_ARGUMENTS = ["plugin", "list", "--json"]
+
 
 @dataclass(frozen=True, slots=True)
 class Plugin:
-    """An explicitly managed plugin revision."""
+    """An explicitly managed plugin: a GitHub revision, or a local path linked as is."""
 
     identifier: str
     source: str
@@ -26,6 +28,12 @@ def declared_plugins(arguments: list[str]) -> tuple[Plugin, ...]:
     return tuple(Plugin(*arguments[index : index + 3]) for index in range(0, len(arguments), 3))
 
 
+def installed_revision(item: dict) -> str:
+    """Identify an installed plugin by its commit, or by its root when it was linked locally."""
+    source = item.get("source") or {}
+    return source.get("resolved_commit") or (item.get("plugin_root", "") if source.get("kind") == "local" else "")
+
+
 def changes(
     declared: tuple[Plugin, ...], installed: dict[str, str], managed: set[str]
 ) -> tuple[tuple[Plugin, ...], tuple[str, ...]]:
@@ -36,20 +44,34 @@ def changes(
     return updates, removed
 
 
+def install_arguments(executable: str, plugin: Plugin) -> list[str]:
+    """Link a locally built plugin; install any other from its pinned GitHub revision."""
+    if plugin.source.startswith("/"):
+        return [executable, "plugin", "link", plugin.source]
+    return [executable, "plugin", "install", plugin.source, "--ref", plugin.revision, "--yes"]
+
+
+def installed_revisions(executable: str) -> dict[str, str]:
+    """Read each installed plugin's identity from the Herdr CLI."""
+    payload = json.loads(subprocess.check_output([executable, *LIST_ARGUMENTS], text=True))
+    return {item["plugin_id"]: installed_revision(item) for item in payload.get("result", {}).get("plugins", [])}
+
+
 def synchronize(declared: tuple[Plugin, ...], state: Path, executable: str) -> None:
     """Apply installs before removals and atomically publish the completed declaration."""
     state.parent.mkdir(parents=True, exist_ok=True)
-    payload = json.loads(subprocess.check_output([executable, "plugin", "list", "--json"], text=True))
-    installed = {
-        item["plugin_id"]: (item.get("source") or {}).get("resolved_commit", "")
-        for item in payload.get("result", {}).get("plugins", [])
-    }
+    installed = installed_revisions(executable)
     managed = set(state.read_text().splitlines()) if state.is_file() else set()
     updates, removed = changes(declared, installed, managed)
     for plugin in updates:
-        subprocess.run([executable, "plugin", "install", plugin.source, "--ref", plugin.revision, "--yes"], check=True)
+        subprocess.run(install_arguments(executable, plugin), check=True)
     for identifier in removed:
         subprocess.run([executable, "plugin", "uninstall", identifier], check=True)
+    record_declaration(declared, state)
+
+
+def record_declaration(declared: tuple[Plugin, ...], state: Path) -> None:
+    """Atomically publish the identifiers this declaration manages."""
     temporary: Path | None = None
     try:
         with tempfile.NamedTemporaryFile(mode="w", dir=state.parent, prefix=f"{state.name}.", delete=False) as stream:
