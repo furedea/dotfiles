@@ -70,6 +70,7 @@ let
   codexSettings = home.programs.agent-harness.codex.composedSettings;
   lspmuxSocket = "${home.home.homeDirectory}/Library/Application Support/lspmux/lspmux.sock";
   serviceNames = config: builtins.attrNames config.launchd.agents;
+  zedSettingLines = map lib.trim (lib.splitString "\n" (builtins.readFile ../zed/settings.json));
   hasAll = expected: actual: builtins.all (value: builtins.elem value actual) expected;
   shellEditorDefinitions = [
     "export EDITOR="
@@ -411,6 +412,11 @@ in
         toString home.home.file.".local/bin/rust-analyzer".source
       );
       lspmux-timeout = lspSettings.instance_timeout == 300;
+      zed-settings-linked = (home.home.file.".config/zed/settings.json" or { }) ? source;
+      zed-telemetry-disabled = hasAll [
+        "\"diagnostics\": false,"
+        "\"metrics\": false,"
+      ] zedSettingLines;
       lspmux-project-environment = hasAll [
         "PATH"
         "RUSTUP_TOOLCHAIN"

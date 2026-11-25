@@ -916,6 +916,7 @@ in
 
     # macOS GUI 設定
     ".config/ghostty/config".source = link "ghostty/config";
+    ".config/zed/settings.json".source = link "zed/settings.json";
     ".config/karabiner/karabiner.json".source = link "karabiner/karabiner.json";
     ".config/herdr/config.toml".source = link "herdr/config.toml";
     ".config/herdr/plugins/config/persiyanov.reviewr/config.toml".source = link "herdr/reviewr.toml";

@@ -227,6 +227,7 @@ The following repository sources are linked directly into the home directory:
 | `vim/.vimrc`                                 | `~/.vimrc`                             |
 | `starship/starship.toml`                     | `~/.config/starship.toml`              |
 | `ghostty/config`                             | `~/.config/ghostty/config`             |
+| `zed/settings.json`                          | `~/.config/zed/settings.json`          |
 | `karabiner/karabiner.json`                   | `~/.config/karabiner/karabiner.json`   |
 | `herdr/config.toml`, `herdr/reviewr.toml`    | Herdr config and reviewr plugin config |
 | `dprint.json`                                | `~/dprint.json`                        |
@@ -249,6 +250,7 @@ reference files.
 ├── scripts/                   # Shell launchers for Git signing and Hister
 ├── .agents/                   # Repository rules for the agent harness hooks
 ├── ghostty/                   # Terminal configuration
+├── zed/                       # Zed editor settings
 ├── karabiner/                 # Keyboard remapping
 ├── starship/                  # Shell prompt
 ├── github/                    # Repository creation and policy scripts
