@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# Executable specifications for the SSH directory and public key that 1Password-backed signing relies on.
+# Executable specifications for the SSH directory and public key that SSH connections may use.
 
 bats_require_minimum_version 1.5.0
 
