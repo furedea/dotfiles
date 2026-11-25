@@ -456,6 +456,10 @@ in
       no-homebrew-unused-apps =
         !(lib.hasInfix ''"firefox"'' mbp.homebrew.brewfile)
         && !(lib.hasInfix ''"herdr-app"'' mbp.homebrew.brewfile);
+      # tinycast resolves from homebrew/cask; no third-party tap is trusted for it.
+      tinycast-from-official-cask =
+        lib.hasInfix ''cask "tinycast"'' mbp.homebrew.brewfile
+        && !(lib.hasInfix "abue-ammar" mbp.homebrew.brewfile);
       noninteractive-homebrew-cleanup = mbp.homebrew.onActivation.extraFlags == [ "--force" ];
       no-moshi-hook-package =
         builtins.all
