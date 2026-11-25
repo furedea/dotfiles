@@ -27,7 +27,7 @@ let
   gitWtPackage = unstable.callPackage ../packages/git_wt.nix { gitWt = unstable.git-wt; };
   rootsPackage = pkgs.callPackage ../packages/roots.nix { };
   terminalBrowserPackage = pkgs.callPackage ../packages/terminal_browser.nix { };
-  nodejsPackage = pkgs.callPackage ../packages/nodejs_bin.nix { };
+  nodejsPackage = unstable.nodejs_24;
   uvPackage = unstable.uv;
   lintTools = import ../lint_tools.nix { inherit pkgs unstable; };
   codexPackage = pkgs.callPackage ../packages/codex.nix { };
