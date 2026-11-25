@@ -24,9 +24,10 @@ let
 
   t3Telemetry = import ../t3_telemetry.nix;
   t3Policy = pkgs.writeText "t3code-policy.json" (builtins.toJSON t3Telemetry.policy);
-  updateHostsBlock = pkgs.writeShellScript "update_hosts_block" (
-    builtins.readFile ../../scripts/t3/update_hosts_block.sh
-  );
+  updateHostsBlock = pkgs.writeShellScript "update_hosts_block" ''
+    export TOOLS_PATH=${lib.makeBinPath [ pkgs.coreutils ]}
+    ${builtins.readFile ../../scripts/t3/update_hosts_block.sh}
+  '';
 
   # Homebrew refuses to load items from third-party taps until they are
   # trusted. `brew bundle --cleanup` replaces the whole trust store with
@@ -391,6 +392,8 @@ in
       upgrade = true;
       cleanup = "uninstall";
       extraFlags = [ "--force" ];
+      # brew bundle runs under sudo and does not inherit the user's shell environment.
+      extraEnv.HOMEBREW_NO_ANALYTICS = "1";
     };
 
     taps = [
@@ -411,11 +414,9 @@ in
       "chatgpt"
       "deepl"
       "discord"
-      "firefox"
       "font-jetbrains-mono"
       "ghostty"
       "google-chrome"
-      "herdr-app"
       "homerow"
       "karabiner-elements"
       "mactex"

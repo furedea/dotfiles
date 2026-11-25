@@ -16,7 +16,7 @@ return {
       target_language = "ja",
       translate_service = "google",
       hover = { enabled = true, delay = 500, auto = false },
-      targets = { comment = true, string = true },
+      targets = { comment = true, string = false },
       keymaps = {
         hover = false,
         hover_manual = "<leader>cc",

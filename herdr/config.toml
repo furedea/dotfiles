@@ -3,6 +3,10 @@ onboarding = false
 name = "catppuccin"
 auto_switch = false
 
+[update]
+version_check = false
+manifest_check = false
+
 [ui.toast]
 delivery = "terminal"
 

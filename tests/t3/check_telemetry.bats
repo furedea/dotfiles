@@ -5,6 +5,7 @@ bats_require_minimum_version 1.5.0
 
 setup() {
   load test-helper/setup
+  export TOOLS_PATH="$PATH"
   SCRIPT="$REPO_ROOT/scripts/t3/check_telemetry.sh"
   JQ_BIN="$(command -v jq)"
   export JQ_BIN
@@ -203,4 +204,15 @@ write_package() {
 
   [ "$status" -eq 1 ]
   [[ "$stderr" == *Usage:* ]]
+}
+
+@test "external tools come from TOOLS_PATH, not from the caller's PATH" {
+  local _only_bash="$BATS_TEST_TMPDIR/only_bash"
+  mkdir "$_only_bash"
+  ln -s "$(command -v bash)" "$_only_bash/bash"
+
+  run --separate-stderr env PATH="$_only_bash" TOOLS_PATH="$PATH" "$SCRIPT" "$PACKAGE"
+
+  [ "$status" -eq 0 ]
+  [ -z "$stderr" ]
 }

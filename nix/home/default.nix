@@ -12,7 +12,6 @@
   agent-harness,
   agent-config,
   system,
-  enableMoshiService,
   enableT3Service,
   ...
 }:
@@ -57,22 +56,30 @@ let
   jevLintPackage = agent-config.packages.${system}.jev-lint;
   # adr-check validates docs/adr/ after an ADR edit in agent-config's PostToolUse hook (furedea/agent-config#225).
   adrCheckPackage = agent-config.packages.${system}.adr-check;
+  lspmuxSocket = "${config.home.homeDirectory}/Library/Application Support/lspmux/lspmux.sock";
   nvimLogFile = "${config.xdg.stateHome}/agent-harness/nvim.log";
-  moshiHookPackage = pkgs.callPackage ../packages/moshi_hook.nix { };
-  moshiHookRuntime = lib.getExe moshiHookPackage;
-  moshiLifecycle = pkgs.writeTextFile {
-    name = "manage-moshi-hook";
-    destination = "/bin/manage_moshi_hook";
-    executable = true;
-    text = builtins.readFile ../../scripts/moshi/manage_moshi_hook.sh;
+  # Agents started by launchd or T3 do not read .zshenv, so they receive the same opt-outs.
+  telemetryOptOuts = {
+    GH_TELEMETRY = "disabled";
+    GH_STACK_NO_UPDATE_NOTIFIER = "1";
+    HOMEBREW_NO_ANALYTICS = "1";
+    DSH_TELEMETRY_DISABLED = "1";
+    AGENT_BROWSER_NO_VERSION_CHECK = "1";
   };
-  moshiLifecycleBin = "${moshiLifecycle}/bin/manage_moshi_hook";
   # The T3 server runs under launchd, so its environment is declared, not inherited from a shell.
   # T3 serves loopback only; Tailscale Serve (HTTPS 8443) is the sole tailnet entry (ADR-0045).
   t3Telemetry = import ../t3_telemetry.nix;
   t3TelemetryState = "${config.xdg.stateHome}/t3-telemetry";
   t3TelemetryCheck = pkgs.writeShellScript "check_t3_telemetry" ''
     export JQ_BIN=${lib.getExe pkgs.jq}
+    export TOOLS_PATH=${
+      lib.makeBinPath [
+        pkgs.coreutils
+        pkgs.gawk
+        pkgs.gnugrep
+        pkgs.gnused
+      ]
+    }
     export BLOCKED_HOSTS="${lib.concatStringsSep " " t3Telemetry.blockedHosts}"
     export POLICY_FILE="${t3Telemetry.policyFile}"
     export STATE_DIR="${t3TelemetryState}"
@@ -94,11 +101,6 @@ let
     "/usr/sbin"
     "/sbin"
   ];
-  moshiLifecycleEnvironment = {
-    JQ_BIN = lib.getExe pkgs.jq;
-    MOSHI_HOOK_BIN = moshiHookRuntime;
-    SLEEP_BIN = lib.getExe' pkgs.coreutils "sleep";
-  };
   pythonPackage = unstable.python315;
   automationPython = lib.getExe pythonPackage;
   agentSource = agent-config.packages.${system}.default;
@@ -205,23 +207,7 @@ let
       ];
     }
   );
-  moshiHookSpec = pkgs.writeText "moshi-hook-bundle-spec.json" (
-    builtins.toJSON {
-      version = 1;
-      installers = [
-        {
-          executable = moshiHookRuntime;
-          arguments = [
-            "install"
-            "--target"
-            "claude,codex"
-          ];
-        }
-      ];
-    }
-  );
   herdrHookBundle = generateHookBundle "herdr-hook-bundle" herdrHookSpec;
-  moshiHookBundle = generateHookBundle "moshi-hook-bundle" moshiHookSpec;
   herdrZshCompletion = pkgs.runCommand "herdr-zsh-completion" { } ''
     set -euxCo pipefail
     mkdir -p "$out/share/zsh/site-functions"
@@ -233,11 +219,17 @@ let
     fi
     exec -a codex ${codexPackage}/bin/codex "$@"
   '';
+  # agy is closed source; --disable_telemetry is a hidden global flag it accepts on every command.
+  telemetryFreeAntigravity = pkgs.writeShellScriptBin "agy" ''
+    exec -a agy ${antigravityCliPackage}/bin/agy --disable_telemetry "$@"
+  '';
+  herdrReviewrPlugin = unstable.callPackage ../packages/herdr_reviewr_plugin.nix { };
+  # A source starting with "/" is a local plugin directory that plugin_sync.py links as is.
   herdrPlugins = [
     {
       id = "persiyanov.reviewr";
-      source = "persiyanov/herdr-reviewr";
-      rev = "4c090225af706bf3aaa24b39fea890a72994f40f";
+      source = "${herdrReviewrPlugin}/share/herdr-plugin";
+      rev = "${herdrReviewrPlugin}/share/herdr-plugin";
     }
   ];
   herdrPluginArgs = lib.escapeShellArgs (
@@ -293,7 +285,6 @@ in
       repoCommand
       rootsPackage
       terminalBrowserPackage
-      moshiHookPackage
       unstable._1password-cli
 
       # Code quality
@@ -313,7 +304,7 @@ in
       # AI coding agents
       agentBrowserPackage
       agentDesktopPackage
-      antigravityCliPackage
+      telemetryFreeAntigravity
       claudePackage
       dshPackage
       herdrCompatibleCodex
@@ -496,6 +487,8 @@ in
       settings = {
         git_protocol = "https";
         prompt = "enabled";
+        # config.yml is a read-only store link, so `gh config set telemetry` cannot be used.
+        telemetry = "disabled";
         aliases.co = "pr checkout";
       };
     };
@@ -540,6 +533,7 @@ in
           expandFocusedSidePanel = true;
           showRandomTip = false;
         };
+        update.method = "never";
         git = {
           pagers = [
             {
@@ -555,7 +549,7 @@ in
         customCommands = [
           {
             key = "C";
-            command = ''npx --yes --package czg@1.13.0 --package @commitlint/config-conventional --call 'NODE_PATH="$(dirname "$(dirname "$(command -v czg)")")''${NODE_PATH:+:$NODE_PATH}" czg' '';
+            command = ''npx --yes --package czg@1.13.0 --package @commitlint/config-conventional@20.5.3 --call 'NODE_PATH="$(dirname "$(dirname "$(command -v czg)")")''${NODE_PATH:+:$NODE_PATH}" czg' '';
             context = "files";
             loadingText = "Opening czg";
             output = "terminal";
@@ -577,6 +571,7 @@ in
       settings = {
         enter_accept = true;
         sync.records = true;
+        update_check = false;
       };
     };
 
@@ -595,11 +590,27 @@ in
       };
       hooks = {
         herdr = herdrHookBundle;
-        moshi = moshiHookBundle;
       };
       # Sandboxed Neovim cannot write ~/.local/state/nvim, so log into the writable hook state directory.
-      claude.settings.env.NVIM_LOG_FILE = nvimLogFile;
-      codex.settings.shell_environment_policy.set.NVIM_LOG_FILE = nvimLogFile;
+      claude.settings.env = {
+        NVIM_LOG_FILE = nvimLogFile;
+        DISABLE_TELEMETRY = "1";
+        DISABLE_ERROR_REPORTING = "1";
+        DISABLE_FEEDBACK_COMMAND = "1";
+        CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY = "1";
+      }
+      // telemetryOptOuts;
+      codex.settings = {
+        shell_environment_policy.set = {
+          NVIM_LOG_FILE = nvimLogFile;
+        }
+        // telemetryOptOuts;
+        analytics.enabled = false;
+        otel.metrics_exporter = "none";
+        feedback.enabled = false;
+        check_for_update_on_startup = false;
+        features.daemon_auto_start = false;
+      };
       # gh runs sandboxed with a one-hour token minted from this GitHub App; the key stays unreadable.
       github.agentToken = {
         enable = true;
@@ -750,22 +761,6 @@ in
         StandardErrorPath = t3ServerLogFile;
       };
     };
-  }
-  // lib.optionalAttrs enableMoshiService {
-    moshi-hook = {
-      enable = true;
-      config = {
-        ProgramArguments = [
-          moshiLifecycleBin
-          "serve"
-        ];
-        EnvironmentVariables = moshiLifecycleEnvironment;
-        KeepAlive = true;
-        LimitLoadToSessionType = "Aqua";
-        ProcessType = "Background";
-        RunAtLoad = true;
-      };
-    };
   };
 
   home.activation = {
@@ -830,14 +825,20 @@ in
     "pnpm/config.yaml".text = ''
       storeDir: ${config.xdg.dataHome}/pnpm/store
       enableGlobalVirtualStore: true
+      updateNotifier: false
     '';
   };
 
   home.file = {
+    # omlx runs as a Homebrew launchd service, which does not inherit the shell environment;
+    # `brew services` reads this file when it starts the service.
+    ".homebrew/services/omlx.env".text = ''
+      HF_HUB_DISABLE_TELEMETRY=1
+    '';
+
     # Zsh（dotfileに実ファイル，直接編集可能）
     ".zshrc".source = link "zsh/.zshrc";
     ".zshenv".source = link "zsh/.zshenv";
-    ".local/bin/moshi-hook".source = moshiHookRuntime;
     ".zprofile".source = link "zsh/.zprofile";
 
     # Bash
@@ -857,7 +858,10 @@ in
     # Keep the analyzer independent of rustup and discover sources from the project toolchain.
     ".local/bin/rust-analyzer".source = lib.getExe' unstable.rust-analyzer-unwrapped "rust-analyzer";
     # lspmux uses the native macOS config directory, not XDG_CONFIG_HOME.
+    # The server runs whatever binary a client names, so only the owner may reach it through a Unix socket.
     "Library/Application Support/lspmux/config.toml".text = ''
+      listen = "${lspmuxSocket}"
+      connect = "${lspmuxSocket}"
       instance_timeout = 300
       pass_environment = [
         "PATH",
@@ -912,6 +916,7 @@ in
 
     # macOS GUI 設定
     ".config/ghostty/config".source = link "ghostty/config";
+    ".config/zed/settings.json".source = link "zed/settings.json";
     ".config/karabiner/karabiner.json".source = link "karabiner/karabiner.json";
     ".config/herdr/config.toml".source = link "herdr/config.toml";
     ".config/herdr/plugins/config/persiyanov.reviewr/config.toml".source = link "herdr/reviewr.toml";
