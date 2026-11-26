@@ -79,19 +79,24 @@
       hosts = {
         mba = {
           enableT3Service = false;
+          enableAtuinServer = false;
         };
         mbp = {
           enableT3Service = true;
+          enableAtuinServer = true;
         };
       };
       homeModules = [
         agent-harness.homeManagerModules.default
         ./nix/home/default.nix
       ];
-      hostHomeSpecialArgs = { enableT3Service, ... }: homeSpecialArgs // { inherit enableT3Service; };
+      hostHomeSpecialArgs =
+        { enableT3Service, enableAtuinServer }:
+        homeSpecialArgs // { inherit enableT3Service enableAtuinServer; };
       mkDarwinConfiguration =
         host@{
           enableT3Service,
+          ...
         }:
         nix-darwin.lib.darwinSystem {
           specialArgs = {

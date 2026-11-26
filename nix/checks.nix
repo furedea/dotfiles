@@ -38,6 +38,10 @@ let
     (builtins.head (builtins.filter (package: (package.name or "") == "codex") home.home.packages))
     .text;
   t3Service = mbpHome.launchd.agents.t3-server.config;
+  atuinServer = mbpHome.launchd.agents.atuin-server.config;
+  atuinServerEnv = atuinServer.EnvironmentVariables;
+  atuinSettings = host: host.programs.atuin.settings;
+  atuinSyncAddress = "https://mbp.tailbb556b.ts.net:8444";
   t3Package = builtins.head (
     builtins.filter (package: (package.pname or "") == "t3code") mbpHome.home.packages
   );
@@ -329,6 +333,60 @@ in
         && !(claudeEnv ? CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC);
       gh-config-telemetry-disabled = (home.programs.gh.settings.telemetry or null) == "disabled";
       atuin-no-update-check = (home.programs.atuin.settings.update_check or true) == false;
+      # Session capture and sync run through a self-hosted server, never Atuin's cloud (ADR-0053).
+      atuin-threads-capture-on-both = builtins.all (host: (atuinSettings host).threads.capture or false) [
+        mbpHome
+        mbaHome
+      ];
+      atuin-daemon-managed-by-launchd =
+        builtins.all
+          (
+            host:
+            host.programs.atuin.daemon.enable
+            && host.launchd.agents ? atuin-daemon
+            && !((atuinSettings host).daemon.autostart or false)
+          )
+          [
+            mbpHome
+            mbaHome
+          ];
+      atuin-sync-through-mbp-server =
+        builtins.all
+          (host: (atuinSettings host).sync_address == atuinSyncAddress && (atuinSettings host).sync.records)
+          [
+            mbpHome
+            mbaHome
+          ];
+      atuin-never-syncs-with-cloud =
+        builtins.all (host: !(lib.hasInfix "atuin.sh" (atuinSettings host).sync_address))
+          [
+            mbpHome
+            mbaHome
+          ];
+      atuin-server-only-on-mbp =
+        mbpHome.launchd.agents ? atuin-server && !(mbaHome.launchd.agents ? atuin-server);
+      atuin-server-loopback = atuinServerEnv.ATUIN_HOST == "127.0.0.1";
+      atuin-server-own-port =
+        atuinServerEnv.ATUIN_PORT == "8888"
+        && atuinSyncAddress != "https://mbp.tailbb556b.ts.net:8443"
+        && lib.hasSuffix ":8444" atuinSyncAddress;
+      atuin-server-registration-closed = atuinServerEnv.ATUIN_OPEN_REGISTRATION == "false";
+      atuin-server-sqlite-under-state =
+        lib.hasPrefix "sqlite://${mbpHome.xdg.stateHome}/atuin-server/" atuinServerEnv.ATUIN_DB_URI
+        && atuinServerEnv.ATUIN_CONFIG_DIR == "${mbpHome.xdg.stateHome}/atuin-server";
+      atuin-server-runs-pinned-server-binary =
+        lib.hasSuffix "/bin/atuin-server" (builtins.head atuinServer.ProgramArguments)
+        && builtins.elemAt atuinServer.ProgramArguments 1 == "start";
+      atuin-server-same-version-as-client =
+        let
+          serverPackage = builtins.head (
+            builtins.filter (package: (package.pname or "") == "atuin") mbpHome.home.packages
+          );
+        in
+        lib.hasInfix "-atuin-server-${serverPackage.version}/" (builtins.head atuinServer.ProgramArguments);
+      atuin-server-no-environment-credentials = noSecrets atuinServerEnv;
+      atuin-server-directory-activation =
+        mbpHome.home.activation ? atuinServerDirectory && !(mbaHome.home.activation ? atuinServerDirectory);
       lazygit-no-update-check = (home.programs.lazygit.settings.update.method or null) == "never";
       lspmux-unix-socket-only =
         (lspSettings.listen or null) == lspmuxSocket && (lspSettings.connect or null) == lspmuxSocket;
