@@ -757,25 +757,32 @@ in
     '';
 
     # The launchd agent runs bin/atuin-server with these variables: it must exist, read them, bind loopback and refuse registration.
-    atuin-server-smoke = pkgs.runCommand "atuin-server-smoke" { nativeBuildInputs = [ pkgs.curl ]; } ''
-      export ATUIN_CONFIG_DIR="$PWD/config" ATUIN_DB_URI="sqlite://$PWD/server.db"
-      export ATUIN_HOST=${atuinServerEnv.ATUIN_HOST} ATUIN_PORT=18991
-      export ATUIN_OPEN_REGISTRATION=${atuinServerEnv.ATUIN_OPEN_REGISTRATION}
-      mkdir -p "$ATUIN_CONFIG_DIR"
-      ${lib.getExe' atuinServerPackage "atuin-server"} start &
-      server=$!
-      trap 'kill $server' EXIT
-      for _ in $(seq 50); do
-        curl -fs "http://$ATUIN_HOST:$ATUIN_PORT/" >/dev/null && break
-        sleep 0.2
-      done
-      curl -fs "http://$ATUIN_HOST:$ATUIN_PORT/" | grep -q '"version":"${atuinServerPackage.version}"'
-      code=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'content-type: application/json' \
-        -d '{"username":"x","email":"x@example.com","password":"pw"}' "http://$ATUIN_HOST:$ATUIN_PORT/register")
-      test "$code" = 400
-      test -f server.db
-      touch $out
-    '';
+    atuin-server-smoke =
+      pkgs.runCommand "atuin-server-smoke"
+        {
+          nativeBuildInputs = [ pkgs.curl ];
+          # The darwin build sandbox denies loopback sockets without this.
+          __darwinAllowLocalNetworking = true;
+        }
+        ''
+          export ATUIN_CONFIG_DIR="$PWD/config" ATUIN_DB_URI="sqlite://$PWD/server.db"
+          export ATUIN_HOST=${atuinServerEnv.ATUIN_HOST} ATUIN_PORT=18991
+          export ATUIN_OPEN_REGISTRATION=${atuinServerEnv.ATUIN_OPEN_REGISTRATION}
+          mkdir -p "$ATUIN_CONFIG_DIR"
+          ${lib.getExe' atuinServerPackage "atuin-server"} start &
+          server=$!
+          trap 'kill $server' EXIT
+          for _ in $(seq 50); do
+            curl -fs "http://$ATUIN_HOST:$ATUIN_PORT/" >/dev/null && break
+            sleep 0.2
+          done
+          curl -fs "http://$ATUIN_HOST:$ATUIN_PORT/" | grep -q '"version":"${atuinServerPackage.version}"'
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'content-type: application/json' \
+            -d '{"username":"x","email":"x@example.com","password":"pw"}' "http://$ATUIN_HOST:$ATUIN_PORT/register")
+          test "$code" = 400
+          test -f server.db
+          touch $out
+        '';
 
     # Building the package runs versionCheckHook against agent-desktop --version.
     agent-desktop-release = agentDesktopPackage;
