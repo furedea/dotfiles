@@ -11,6 +11,7 @@
   agent-config,
   system,
   enableT3Service,
+  enableAtuinServer,
   ...
 }:
 let
@@ -83,6 +84,13 @@ let
     ${lib.optionalString enableT3Service ''export SERVICE_LABEL="${t3Telemetry.serverLabel}"''}
     ${builtins.readFile ../../scripts/t3/check_telemetry.sh}
   '';
+  # The sync server runs on MacBook Pro only; Tailscale Serve (HTTPS 8444) is its sole tailnet entry (ADR-0053).
+  atuinServerPackage = unstable.callPackage ../packages/atuin_server.nix { };
+  atuinServerPort = "8888";
+  atuinServerState = "${config.xdg.stateHome}/atuin-server";
+  atuinServerLogFile = "${atuinServerState}/server.log";
+  # Both Macs sync through the MacBook Pro server that Tailscale Serve publishes on the tailnet.
+  atuinSyncAddress = "https://mbp.tailbb556b.ts.net:8444";
   t3ServerPort = "3774";
   t3ServerState = "${config.home.homeDirectory}/.t3";
   t3ServerLogDirectory = "${t3ServerState}/userdata/logs";
@@ -566,9 +574,14 @@ in
       enable = true;
       package = unstable.atuin;
       enableZshIntegration = false; # .zshrc が dotfile のため手動 eval を使う
+      # A Nix-managed launchd agent runs the daemon; `daemon.autostart` would let atuin
+      # install and rewrite its own agent outside Nix.
+      daemon.enable = true;
       settings = {
         enter_accept = true;
+        sync_address = atuinSyncAddress;
         sync.records = true;
+        threads.capture = true;
         update_check = false;
       };
     };
@@ -729,6 +742,32 @@ in
       };
     };
   }
+  // lib.optionalAttrs enableAtuinServer {
+    atuin-server = {
+      enable = true;
+      config = {
+        ProgramArguments = [
+          (lib.getExe' atuinServerPackage "atuin-server")
+          "start"
+        ];
+        EnvironmentVariables = {
+          HOME = config.home.homeDirectory;
+          # The server writes an example server.toml here when none exists; settings come from below.
+          ATUIN_CONFIG_DIR = atuinServerState;
+          ATUIN_HOST = "127.0.0.1";
+          ATUIN_PORT = atuinServerPort;
+          ATUIN_OPEN_REGISTRATION = "false";
+          ATUIN_DB_URI = "sqlite://${atuinServerState}/server.db";
+        };
+        WorkingDirectory = atuinServerState;
+        KeepAlive = true;
+        ProcessType = "Background";
+        RunAtLoad = true;
+        StandardOutPath = atuinServerLogFile;
+        StandardErrorPath = atuinServerLogFile;
+      };
+    };
+  }
   // lib.optionalAttrs enableT3Service {
     t3-server = {
       enable = true;
@@ -762,6 +801,13 @@ in
   };
 
   home.activation = {
+    # launchd opens the log file before the server runs and does not create its directory.
+    atuinServerDirectory = lib.mkIf enableAtuinServer (
+      lib.hm.dag.entryBetween [ "setupLaunchAgents" ] [ "writeBoundary" ] ''
+        mkdir -p "${atuinServerState}"
+        chmod 0700 "${atuinServerState}"
+      ''
+    );
     # launchd opens the log file before the server runs and does not create its directory.
     t3LogDirectory = lib.mkIf enableT3Service (
       lib.hm.dag.entryBetween [ "setupLaunchAgents" ] [ "writeBoundary" ] ''

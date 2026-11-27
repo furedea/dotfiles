@@ -29,6 +29,10 @@ let
     inputs.nixpkgs-unstable.legacyPackages.${pkgs.stdenv.hostPlatform.system}.callPackage
       ./packages/herdr_reviewr_plugin.nix
       { };
+  atuinServerPackage =
+    inputs.nixpkgs-unstable.legacyPackages.${pkgs.stdenv.hostPlatform.system}.callPackage
+      ./packages/atuin_server.nix
+      { };
   chromeExecutable = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
   antigravityPackage = inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.antigravity-cli;
   antigravityWrapperText = lib.concatMapStrings (package: package.text or "") (
@@ -38,6 +42,10 @@ let
     (builtins.head (builtins.filter (package: (package.name or "") == "codex") home.home.packages))
     .text;
   t3Service = mbpHome.launchd.agents.t3-server.config;
+  atuinServer = mbpHome.launchd.agents.atuin-server.config;
+  atuinServerEnv = atuinServer.EnvironmentVariables;
+  atuinSettings = host: host.programs.atuin.settings;
+  atuinSyncAddress = "https://mbp.tailbb556b.ts.net:8444";
   t3Package = builtins.head (
     builtins.filter (package: (package.pname or "") == "t3code") mbpHome.home.packages
   );
@@ -329,6 +337,60 @@ in
         && !(claudeEnv ? CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC);
       gh-config-telemetry-disabled = (home.programs.gh.settings.telemetry or null) == "disabled";
       atuin-no-update-check = (home.programs.atuin.settings.update_check or true) == false;
+      # Session capture and sync run through a self-hosted server, never Atuin's cloud (ADR-0053).
+      atuin-threads-capture-on-both = builtins.all (host: (atuinSettings host).threads.capture or false) [
+        mbpHome
+        mbaHome
+      ];
+      atuin-daemon-managed-by-launchd =
+        builtins.all
+          (
+            host:
+            host.programs.atuin.daemon.enable
+            && host.launchd.agents ? atuin-daemon
+            && !((atuinSettings host).daemon.autostart or false)
+          )
+          [
+            mbpHome
+            mbaHome
+          ];
+      atuin-sync-through-mbp-server =
+        builtins.all
+          (host: (atuinSettings host).sync_address == atuinSyncAddress && (atuinSettings host).sync.records)
+          [
+            mbpHome
+            mbaHome
+          ];
+      atuin-never-syncs-with-cloud =
+        builtins.all (host: !(lib.hasInfix "atuin.sh" (atuinSettings host).sync_address))
+          [
+            mbpHome
+            mbaHome
+          ];
+      atuin-server-only-on-mbp =
+        mbpHome.launchd.agents ? atuin-server && !(mbaHome.launchd.agents ? atuin-server);
+      atuin-server-loopback = atuinServerEnv.ATUIN_HOST == "127.0.0.1";
+      atuin-server-own-port =
+        atuinServerEnv.ATUIN_PORT == "8888"
+        && atuinSyncAddress != "https://mbp.tailbb556b.ts.net:8443"
+        && lib.hasSuffix ":8444" atuinSyncAddress;
+      atuin-server-registration-closed = atuinServerEnv.ATUIN_OPEN_REGISTRATION == "false";
+      atuin-server-sqlite-under-state =
+        lib.hasPrefix "sqlite://${mbpHome.xdg.stateHome}/atuin-server/" atuinServerEnv.ATUIN_DB_URI
+        && atuinServerEnv.ATUIN_CONFIG_DIR == "${mbpHome.xdg.stateHome}/atuin-server";
+      atuin-server-runs-pinned-server-binary =
+        lib.hasSuffix "/bin/atuin-server" (builtins.head atuinServer.ProgramArguments)
+        && builtins.elemAt atuinServer.ProgramArguments 1 == "start";
+      atuin-server-same-version-as-client =
+        let
+          serverPackage = builtins.head (
+            builtins.filter (package: (package.pname or "") == "atuin") mbpHome.home.packages
+          );
+        in
+        lib.hasInfix "-atuin-server-${serverPackage.version}/" (builtins.head atuinServer.ProgramArguments);
+      atuin-server-no-environment-credentials = noSecrets atuinServerEnv;
+      atuin-server-directory-activation =
+        mbpHome.home.activation ? atuinServerDirectory && !(mbaHome.home.activation ? atuinServerDirectory);
       lazygit-no-update-check = (home.programs.lazygit.settings.update.method or null) == "never";
       lspmux-unix-socket-only =
         (lspSettings.listen or null) == lspmuxSocket && (lspSettings.connect or null) == lspmuxSocket;
@@ -693,6 +755,34 @@ in
       ! grep -q '^\[\[build\]\]' "$plugin/herdr-plugin.toml"
       touch $out
     '';
+
+    # The launchd agent runs bin/atuin-server with these variables: it must exist, read them, bind loopback and refuse registration.
+    atuin-server-smoke =
+      pkgs.runCommand "atuin-server-smoke"
+        {
+          nativeBuildInputs = [ pkgs.curl ];
+          # The darwin build sandbox denies loopback sockets without this.
+          __darwinAllowLocalNetworking = true;
+        }
+        ''
+          export ATUIN_CONFIG_DIR="$PWD/config" ATUIN_DB_URI="sqlite://$PWD/server.db"
+          export ATUIN_HOST=${atuinServerEnv.ATUIN_HOST} ATUIN_PORT=18991
+          export ATUIN_OPEN_REGISTRATION=${atuinServerEnv.ATUIN_OPEN_REGISTRATION}
+          mkdir -p "$ATUIN_CONFIG_DIR"
+          ${lib.getExe' atuinServerPackage "atuin-server"} start &
+          server=$!
+          trap 'kill $server' EXIT
+          for _ in $(seq 50); do
+            curl -fs "http://$ATUIN_HOST:$ATUIN_PORT/" >/dev/null && break
+            sleep 0.2
+          done
+          curl -fs "http://$ATUIN_HOST:$ATUIN_PORT/" | grep -q '"version":"${atuinServerPackage.version}"'
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'content-type: application/json' \
+            -d '{"username":"x","email":"x@example.com","password":"pw"}' "http://$ATUIN_HOST:$ATUIN_PORT/register")
+          test "$code" = 400
+          test -f server.db
+          touch $out
+        '';
 
     # Building the package runs versionCheckHook against agent-desktop --version.
     agent-desktop-release = agentDesktopPackage;
