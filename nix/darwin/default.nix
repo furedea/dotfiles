@@ -406,6 +406,7 @@ in
       "1password"
       "blender"
       "chatgpt"
+      "claude"
       "deepl"
       "discord"
       "font-jetbrains-mono"

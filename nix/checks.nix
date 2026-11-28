@@ -567,6 +567,13 @@ in
       tinycast-from-official-cask =
         lib.hasInfix ''cask "tinycast"'' mbp.homebrew.brewfile
         && !(lib.hasInfix "abue-ammar" mbp.homebrew.brewfile);
+      # Claude Desktop (Projects) comes from homebrew/cask, which serves Anthropic's own build.
+      claude-desktop-cask-on-both-hosts =
+        builtins.all (host: lib.hasInfix ''cask "claude"'' host.homebrew.brewfile)
+          [
+            mbp
+            mba
+          ];
       app-telemetry-hosts-blocked-only =
         blocksOnlyAppTelemetryHosts mbp && blocksOnlyAppTelemetryHosts mba;
       office-telemetry-limited = officeLimitsTelemetry mbp && officeLimitsTelemetry mba;
