@@ -247,7 +247,10 @@ let
   );
 in
 {
-  imports = [ ./t3_settings.nix ];
+  imports = [
+    ./herdr_app_settings.nix
+    ./t3_settings.nix
+  ];
 
   home = {
     inherit username;
