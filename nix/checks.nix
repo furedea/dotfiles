@@ -63,6 +63,7 @@ let
     "eu-assets.i.posthog.com"
     "app.posthog.com"
     "f.kiok.jp"
+    "telemetry.herdr.dev"
   ];
   appTelemetryBlockLine =
     host:
@@ -560,9 +561,7 @@ in
       homebrew-analytics-disabled =
         (mbp.homebrew.onActivation.extraEnv.HOMEBREW_NO_ANALYTICS or null) == "1"
         && (mba.homebrew.onActivation.extraEnv.HOMEBREW_NO_ANALYTICS or null) == "1";
-      no-homebrew-unused-apps =
-        !(lib.hasInfix ''"firefox"'' mbp.homebrew.brewfile)
-        && !(lib.hasInfix ''"herdr-app"'' mbp.homebrew.brewfile);
+      no-homebrew-unused-apps = !(lib.hasInfix ''"firefox"'' mbp.homebrew.brewfile);
       # tinycast resolves from homebrew/cask; no third-party tap is trusted for it.
       tinycast-from-official-cask =
         lib.hasInfix ''cask "tinycast"'' mbp.homebrew.brewfile
@@ -718,6 +717,26 @@ in
       t3-service-mbp-stays-awake-on-charger =
         lib.hasInfix "pmset -c sleep 0" mbp.system.activationScripts.postActivation.text
         && !(lib.hasInfix "pmset -c sleep 0" mba.system.activationScripts.postActivation.text);
+      # The Herdr app sits next to T3 Code; its daily report is stopped by its settings file and by hosts.
+      herdr-app-cask-on-both =
+        builtins.all (host: builtins.elem "herdr-app" (map (cask: cask.name or cask) host.homebrew.casks))
+          [
+            mbp
+            mba
+          ];
+      herdr-app-telemetry-host-blocked =
+        builtins.all (host: builtins.elem "telemetry.herdr.dev" (appTelemetryBlockedHosts host))
+          [
+            mbp
+            mba
+          ];
+      herdr-app-settings-merge-on-all =
+        builtins.all (userHome: userHome.home.activation ? herdrAppSettings)
+          [
+            home
+            mbpHome
+            mbaHome
+          ];
       nogon-absent =
         !(mbp.launchd.user.agents ? hister)
         && !(mba.launchd.user.agents ? hister)
@@ -937,6 +956,62 @@ in
           test "$(info "$app" CFBundleVersion)" = "$(info "''${upstreamElectron%/bin/electron}/Applications/Electron.app" CFBundleVersion)"
 
           /usr/bin/codesign --verify --deep --strict "$app"
+          touch "$out"
+        '';
+
+    # Runs the real activation on fixture homes: the Herdr app also writes its settings file itself.
+    herdr-app-settings-merge =
+      pkgs.runCommand "herdr-app-settings-merge"
+        {
+          nativeBuildInputs = [ pkgs.jq ];
+          herdrActivation = mbpHome.home.activation.herdrAppSettings.data;
+        }
+        ''
+          set -euo pipefail
+          activate() {
+            local home="$1" activation="$2"
+            (
+              export HOME="$home"
+              run() { "$@"; }
+              eval "$activation"
+            )
+          }
+          equals() {
+            local file="$1" expected="$2"
+            [ -f "$file" ] && [ ! -L "$file" ]
+            jq -e --argjson expected "$expected" '. == $expected' "$file" >/dev/null || {
+              echo "unexpected $file: $(cat "$file")" >&2
+              exit 1
+            }
+          }
+          settings() { printf '%s' "$1/.config/herdr-app/settings.json"; }
+
+          # A missing file is created, with only the managed key.
+          home="$PWD/fresh"
+          mkdir -p "$home"
+          activate "$home" "$herdrActivation"
+          equals "$(settings "$home")" '{"telemetry":false}'
+
+          # Keys the app wrote stay; the managed key changed by the app returns to its value.
+          home="$PWD/used"
+          mkdir -p "$(dirname "$(settings "$home")")"
+          printf '%s' '{"telemetry":true,"theme":"dark"}' >"$(settings "$home")"
+          chmod 0600 "$(settings "$home")"
+          activate "$home" "$herdrActivation"
+          equals "$(settings "$home")" '{"telemetry":false,"theme":"dark"}'
+          [ "$(stat -c %a "$(settings "$home")")" = 600 ]
+
+          before=$(sha256sum <"$(settings "$home")")
+          activate "$home" "$herdrActivation"
+          [ "$(sha256sum <"$(settings "$home")")" = "$before" ]
+
+          # A file that is not JSON stays unchanged and does not stop the switch.
+          home="$PWD/broken"
+          mkdir -p "$(dirname "$(settings "$home")")"
+          printf '{not json' >"$(settings "$home")"
+          activate "$home" "$herdrActivation" 2>/dev/null
+          [ "$(cat "$(settings "$home")")" = '{not json' ]
+
           touch "$out"
         '';
 

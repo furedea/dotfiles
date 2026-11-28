@@ -15,8 +15,9 @@ let
 
   t3Telemetry = import ../t3_telemetry.nix;
   t3Policy = pkgs.writeText "t3code-policy.json" (builtins.toJSON t3Telemetry.policy);
-  # Telemetry endpoints of closed-source apps: PostHog cloud ingestion (embedded in Homerow)
-  # and the Nani favicon proxy f.kiok.jp, which receives the origin of viewed pages.
+  # Telemetry endpoints of apps: PostHog cloud ingestion (embedded in Homerow),
+  # the Nani favicon proxy f.kiok.jp, which receives the origin of viewed pages, and the
+  # Herdr app's daily usage report.
   appTelemetryHosts = [
     "us.i.posthog.com"
     "us-assets.i.posthog.com"
@@ -24,6 +25,7 @@ let
     "eu-assets.i.posthog.com"
     "app.posthog.com"
     "f.kiok.jp"
+    "telemetry.herdr.dev"
   ];
   updateHostsBlock = pkgs.writeShellScript "update_hosts_block" ''
     export TOOLS_PATH=${lib.makeBinPath [ pkgs.coreutils ]}
@@ -412,6 +414,7 @@ in
       "font-jetbrains-mono"
       "ghostty"
       "google-chrome"
+      "herdr-app"
       "homerow"
       "karabiner-elements"
       "mactex"
